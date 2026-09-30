@@ -1,0 +1,10 @@
+version: v2
+inputs:
+  - directory: ../../../proto
+    paths:
+      - ../../../proto/elsewise/transport
+plugins:
+  - local: protoc-gen-es
+    out: src/gen
+    opt:
+      - target=js+dts

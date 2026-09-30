@@ -1,0 +1,5 @@
+# Generated protobuf-es bindings.
+src/gen/
+test/gen/
+
+tsconfig.tsbuildinfo

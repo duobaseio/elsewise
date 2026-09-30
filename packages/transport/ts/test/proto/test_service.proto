@@ -1,0 +1,47 @@
+edition = "2023";
+
+package elsewise.transport.test.v1;
+
+service TestService {
+  rpc Unary(UnaryRequest) returns (UnaryResponse);
+
+  rpc ServerStream(ServerStreamRequest) returns (stream ServerStreamResponse);
+
+  rpc ClientStream(stream ClientStreamRequest) returns (ClientStreamResponse);
+
+  rpc BidiStream(stream BidiStreamRequest) returns (stream BidiStreamResponse);
+}
+
+message UnaryRequest {
+  string text = 1;
+}
+
+message UnaryResponse {
+  string text = 1;
+}
+
+message ServerStreamRequest {
+  string text = 1;
+}
+
+message ServerStreamResponse {
+  string text = 1;
+  uint32 seq = 2;
+}
+
+message ClientStreamRequest {
+  string text = 1;
+}
+
+message ClientStreamResponse {
+  string text = 1;
+}
+
+message BidiStreamRequest {
+  string text = 1;
+}
+
+message BidiStreamResponse {
+  string text = 1;
+  uint32 seq = 2;
+}

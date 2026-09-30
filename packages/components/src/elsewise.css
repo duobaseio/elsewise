@@ -1,0 +1,153 @@
+:root {
+  /* Fields */
+  --background: #ffffff;
+  --surface: #fefdfb;
+  --surface-2: #fcfaf6;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: #ffffff;
+  --popover-foreground: var(--foreground);
+  --scrim: rgba(28, 36, 48, 0.45);
+  --shadow-elevated: 0 8px 28px rgba(28, 36, 48, 0.14);
+
+  /* Ink */
+  --foreground: #1c2430;
+  --text-2: #5f5a4c;
+  --text-3: #7d7666;
+  --muted-foreground: var(--text-2);
+  --disabled: #a9a395;
+  --inverse: #fefdfb;
+
+  /* Lines */
+  --border: #f1ecdf;
+  --input: #c9c2b0;
+  --ring: #334a6b;
+
+  /* Actions — primary is the material inversion: ink by day, paper by night. */
+  --primary: var(--foreground);
+  --primary-hover: #334a6b;
+  --primary-foreground: var(--inverse);
+  --secondary: var(--surface-2);
+  --secondary-hover: #f1ecdf;
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  /* Reserved — no consumer yet. Text on an accent surface pairs with it. */
+  --accent: var(--surface-2);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--error);
+  --destructive-hover: #f5dbd7;
+  --destructive-foreground: #ffffff;
+  --link: #334a6b;
+  --link-hover: #293b56;
+
+  /* State layers */
+  --layer-hover: rgba(95, 90, 76, 0.06);
+  --layer-selected: rgba(95, 90, 76, 0.09);
+  --layer-selected-inactive: rgba(95, 90, 76, 0.04);
+  --layer-selection: rgba(51, 74, 107, 0.18);
+
+  /* Skeleton */
+  --skeleton: rgba(95, 90, 76, 0.1);
+
+  /* Semantic voices — ink / wash / line */
+  --success: #2e7a54;
+  --success-wash: rgba(62, 107, 92, 0.1);
+  --success-line: #a9c6bb;
+  --info: #4868b1;
+  --info-wash: rgba(51, 74, 107, 0.08);
+  --info-line: #b3bfd0;
+  --warning: #8f6a24;
+  --warning-fill: #b98d3f;
+  --warning-wash: rgba(185, 141, 63, 0.1);
+  --warning-line: #d9c08a;
+  --match-wash: rgba(185, 141, 63, 0.22);
+  --error: #b3362b;
+  --error-wash: rgba(179, 54, 43, 0.09);
+  --error-line: #e0a49e;
+
+  /* Charts */
+  --chart-1: #334a6b;
+  --chart-2: #3e6b5c;
+  --chart-3: #b98d3f;
+  --chart-4: #7a2e2e;
+  --chart-5: #7d7666;
+}
+
+/*
+ * What `@variant dark` expands to, written out to keep its (0,2,0): a bare `[data-brightness='dark']` ties with `:root`
+ * on <html> and would win by source order alone.
+ */
+[data-brightness]:is([data-brightness="dark"], [data-brightness="dark"] *) {
+  /* Fields — dark elevates by lightening, not by shadow. */
+  --background: #14181f;
+  --surface: #1b2129;
+  --surface-2: #232a34;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: #262e39;
+  --popover-foreground: var(--foreground);
+  --scrim: rgba(0, 0, 0, 0.55);
+  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.45);
+
+  /* Ink */
+  --foreground: #e9e4d8;
+  --text-2: #b3ac9a;
+  --text-3: #8a8474;
+  --muted-foreground: var(--text-2);
+  --disabled: #5e5a4f;
+  --inverse: #14181f;
+
+  /* Lines */
+  --border: #2c333e;
+  --input: #3a4350;
+  --ring: #9fb2c8;
+
+  /* Actions */
+  --primary: var(--foreground);
+  --primary-hover: #fffbec;
+  --primary-foreground: var(--inverse);
+  --secondary: var(--surface-2);
+  --secondary-hover: #3a4350;
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface-2);
+  /* Reserved — see the light block. */
+  --accent: var(--surface-2);
+  --accent-foreground: var(--foreground);
+  --destructive: var(--error);
+  --destructive-hover: #472f2d;
+  --destructive-foreground: #1c2430;
+  --link: #9fb2c8;
+  --link-hover: #b9c8da;
+
+  /* State layers */
+  --layer-hover: rgba(233, 228, 216, 0.05);
+  --layer-selected: rgba(233, 228, 216, 0.08);
+  --layer-selected-inactive: rgba(233, 228, 216, 0.04);
+  --layer-selection: rgba(159, 178, 200, 0.25);
+
+  /* Skeleton */
+  --skeleton: rgba(233, 228, 216, 0.1);
+
+  /* Semantic voices */
+  --success: #8fbcaa;
+  --success-wash: rgba(143, 188, 170, 0.12);
+  --success-line: #3e5a50;
+  --info: #9fb2c8;
+  --info-wash: rgba(159, 178, 200, 0.12);
+  --info-line: #3e4e66;
+  --warning: #d9b36a;
+  --warning-fill: #d9b36a;
+  --warning-wash: rgba(217, 179, 106, 0.12);
+  --warning-line: #6a5630;
+  --match-wash: rgba(217, 179, 106, 0.2);
+  --error: #e08a7e;
+  --error-wash: rgba(224, 138, 126, 0.12);
+  --error-line: #6e3a33;
+
+  /* Charts */
+  --chart-1: #9fb2c8;
+  --chart-2: #8fbcaa;
+  --chart-3: #d9b36a;
+  --chart-4: #d99a97;
+  --chart-5: #8a8474;
+}

@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+._*
+Thumbs.db
+[Dd]esktop.ini
+*~
+
+# JS dependencies (pnpm workspace)
+node_modules/
+
+# Rust build output (cargo workspace)
+/target/
+
+# Local env and logs
+.env
+.env.*
+*.log

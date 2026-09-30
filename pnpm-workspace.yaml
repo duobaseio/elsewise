@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "packages/transport/ts"
+
+allowBuilds:
+  # buf's postinstall selects/links the platform CLI binary.
+  '@bufbuild/buf': true

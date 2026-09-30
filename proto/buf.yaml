@@ -1,0 +1,12 @@
+version: v2
+modules:
+  - path: .
+lint:
+  use:
+    - STANDARD
+  ignore_only:
+    ENUM_ZERO_VALUE_SUFFIX:
+      - elsewise/transport/v1/envelope.proto
+breaking:
+  use:
+    - WIRE

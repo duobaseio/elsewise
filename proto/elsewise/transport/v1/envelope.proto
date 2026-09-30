@@ -1,0 +1,166 @@
+edition = "2024";
+
+// The multiplexing layer that carries every frontend ↔ daemon rpc over one WebRTC data channel or websocket. The
+// channel is assumed to be ordered and reliable. Frames from any number of concurrent streams interleave on it and are
+// keyed by stream_id.
+//
+// The life of a call:
+//  1. Either peer opens a stream: it mints a stream_id and sends Open naming the method. The opener is the stream's
+//     requester and the other peer its responder.
+//  2. The requester sends its request messages as payload frames. Each message travels as one or more consecutive
+//     Fragments on its stream, and the fragment that completes it sets last to true.
+//  3. The requester half-closes with Close once it has nothing more to send, or abandons the call with Cancel.
+//  4. The responder streams its response messages back in a similar fragmented manner. It does not need to wait for
+//     the Close message.
+//  5. The responder finishes the stream with End carrying an outcome.
+
+package elsewise.transport.v1;
+
+// Represents a data-channel message.
+message Envelope {
+  oneof kind {
+    // A frame sent by a requester.
+    RequestEnvelope request = 1;
+
+    // A frame sent by a responder.
+    ResponseEnvelope response = 2;
+  }
+}
+
+// A frame sent by a requester.
+//
+// Exactly one open is sent at the start, followed by any number of payload frames, at most one close, and at most one
+// cancel. A cancel may follow a close: a requester that has half-closed can still abandon the call.
+message RequestEnvelope {
+  // The stream this frame belongs to.
+  //
+  // The requester mints the id when it opens the stream and never reuses one for the lifetime of the channel.
+  //
+  // NOTE: The frontend mints odd ids and the daemon even ones.
+  uint64 stream_id = 1;
+
+  oneof body {
+    // Opens the stream. Must be the first frame that carries this stream_id.
+    Open open = 2;
+
+    // The next fragment of the current request message.
+    Fragment payload = 3;
+
+    // Half-closes the stream: the requester is done sending and now only waits for the responder to finish.
+    Close close = 4;
+
+    // Abandons the stream. The responder stops work and answers with an End carrying CODE_CANCELLED; the requester
+    // treats the stream as dead immediately and discards any frames that race past the cancel.
+    Cancel cancel = 5;
+  }
+}
+
+// A frame sent by a responder.
+//
+// Any number of payload frames can be sent with exactly a single end.
+message ResponseEnvelope {
+  // The stream this frame belongs to.
+  uint64 stream_id = 1;
+
+  oneof body {
+    // The next fragment of the current response message.
+    Fragment payload = 2;
+
+    // Finishes the stream.
+    //
+    // Always the responder's last frame for this stream_id.
+    End end = 3;
+  }
+}
+
+// A slice of a message's serialized bytes.
+message Fragment {
+  // The bytes.
+  bytes data = 1;
+
+  // True on the fragment that completes the message.
+  //
+  // A message small enough for one frame is a single fragment with last set.
+  bool last = 2;
+}
+
+// The first frame of every stream; it names the rpc the stream carries.
+message Open {
+  // The rpc the stream carries, as a fully qualified name: "elsewise.daemon.v1.FileService/ReadFile".
+  //
+  // A method the responder does not implement ends the stream with CODE_UNIMPLEMENTED.
+  string method = 1;
+}
+
+// The requester's half-close.
+//
+// It promises no further payload frames; the stream stays open for the responder.
+message Close {}
+
+// The requester's abandonment of a stream it no longer wants answered.
+message Cancel {}
+
+// The responder's terminal frame for a stream.
+message End {
+  // The outcome of the call.
+  //
+  // CODE_OK is the zero value, so an End that sets nothing reads as success.
+  Code code = 1;
+
+  // Human-readable detail for failures.
+  //
+  // Empty when code is CODE_OK.
+  string message = 2;
+}
+
+// The outcome of a finished stream.
+//
+// The names and numbers match gRPC status codes exactly. The reserved entries are the gRPC codes this protocol has no
+// use for yet.
+enum Code {
+  reserved 4, 10, 11, 15, 16;
+  reserved CODE_DEADLINE_EXCEEDED, CODE_ABORTED, CODE_OUT_OF_RANGE, CODE_DATA_LOSS;
+  reserved CODE_UNAUTHENTICATED;
+
+  // The call succeeded.
+  CODE_OK = 0;
+
+  // The requester cancelled the stream before the call finished.
+  CODE_CANCELLED = 1;
+
+  // The call failed for a reason the responder could not classify.
+  CODE_UNKNOWN = 2;
+
+  // A request message was invalid.
+  CODE_INVALID_ARGUMENT = 3;
+
+  // Something the request named does not exist.
+  CODE_NOT_FOUND = 5;
+
+  // Something the request tried to create already exists.
+  CODE_ALREADY_EXISTS = 6;
+
+  // The requester is not allowed to make this call.
+  CODE_PERMISSION_DENIED = 7;
+
+  // A message exceeded the transport's size cap.
+  CODE_RESOURCE_EXHAUSTED = 8;
+
+  // The system is not in a state the call requires.
+  //
+  // Retrying the same call is useless; re-read the state and build a new request.
+  CODE_FAILED_PRECONDITION = 9;
+
+  // The opened method does not exist on the responder.
+  CODE_UNIMPLEMENTED = 12;
+
+  // The responder broke one of its own invariants.
+  //
+  // Represents a bug and never a caller error.
+  CODE_INTERNAL = 13;
+
+  // A transient failure.
+  //
+  // The responder is unreachable or at capacity; back off and retry the whole call.
+  CODE_UNAVAILABLE = 14;
+}

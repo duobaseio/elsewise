@@ -1,0 +1,2 @@
+# Vitest writes screenshot diffs and attachments here.
+.vitest/

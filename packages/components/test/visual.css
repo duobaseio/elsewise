@@ -1,0 +1,29 @@
+/*
+ * Test-only determinism overrides. Imported by browser-setup.ts; never by the app.
+ */
+
+/**
+ * biome-ignore-all lint/complexity/noImportantStyles: has to outrank the
+ * Tailwind utilities it is neutralising, and this file is never served.
+ */
+
+/*
+ * Playwright already passes `animations: "disabled"` when capturing, which
+ * fast-forwards a running transition to its end state — so this is belt and
+ * braces. It stays because Button carries
+ * `transition-[color,background-color,border-color,translate]` and the pseudo
+ * states are forced rather than entered, which is the case most likely to
+ * expose a gap.
+ */
+*,
+*::before,
+*::after {
+  transition: none !important;
+  animation: none !important;
+  caret-color: transparent !important;
+}
+
+html {
+  /* Grayscale AA, so nothing depends on CoreText's subpixel positioning. */
+  -webkit-font-smoothing: antialiased;
+}

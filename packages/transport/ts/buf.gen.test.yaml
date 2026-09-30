@@ -1,0 +1,8 @@
+version: v2
+inputs:
+  - directory: test/proto
+plugins:
+  - local: protoc-gen-es
+    out: test/gen
+    opt:
+      - target=js+dts

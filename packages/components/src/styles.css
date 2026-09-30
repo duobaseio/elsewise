@@ -1,0 +1,198 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@import "@fontsource-variable/fraunces/full.css";
+@import "@fontsource-variable/work-sans";
+@import "@fontsource-variable/atkinson-hyperlegible-next";
+@import "@fontsource-variable/jetbrains-mono";
+
+@import "./elsewise.css";
+
+@source "./components";
+
+@custom-variant dark (&:is([data-brightness='dark'], [data-brightness='dark'] *));
+
+@utility overlay-hover {
+  background-image: linear-gradient(var(--layer-hover), var(--layer-hover));
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+:root {
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text-2: var(--text-2);
+  --color-text-3: var(--text-3);
+  --color-disabled: var(--disabled);
+  --color-inverse: var(--inverse);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-link: var(--link);
+  --color-link-hover: var(--link-hover);
+  --color-scrim: var(--scrim);
+  --color-skeleton: var(--skeleton);
+
+  --color-success: var(--success);
+  --color-success-wash: var(--success-wash);
+  --color-success-line: var(--success-line);
+  --color-info: var(--info);
+  --color-info-wash: var(--info-wash);
+  --color-info-line: var(--info-line);
+  --color-warning: var(--warning);
+  --color-warning-fill: var(--warning-fill);
+  --color-warning-wash: var(--warning-wash);
+  --color-warning-line: var(--warning-line);
+  --color-match-wash: var(--match-wash);
+  --color-error: var(--error);
+  --color-error-wash: var(--error-wash);
+  --color-error-line: var(--error-line);
+
+  --color-layer-hover: var(--layer-hover);
+  --color-layer-selected: var(--layer-selected);
+  --color-layer-selected-inactive: var(--layer-selected-inactive);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+/*
+ * Not `inline`, so the custom properties are emitted into :root and readable at runtime. CodeMirror and xterm themes
+  consume them.
+ */
+@theme {
+  --font-sans: 'Work Sans Variable', system-ui, sans-serif;
+  --font-heading: var(--font-sans);
+  --font-display: 'Fraunces Variable', Georgia, serif;
+  --font-mono: 'JetBrains Mono Variable', monospace;
+  --font-sans-ligatures: contextual;
+  --font-mono-ligatures: contextual;
+
+  --text-2xs: calc(var(--text-base) - 3px);
+  --text-2xs--line-height: calc(var(--text-base--line-height) - 6px);
+  --text-2xs--font-weight: 500;
+  --text-2xs--letter-spacing: 0.02em;
+
+  --text-xs: calc(var(--text-base) - 2px);
+  --text-xs--line-height: calc(var(--text-base--line-height) - 4px);
+
+  --text-sm: calc(var(--text-base) - 1px);
+  --text-sm--line-height: calc(var(--text-base--line-height) - 4px);
+
+  --text-base: 13px;
+  --text-base--line-height: calc(var(--text-base) + 7px);
+
+  --text-prose: calc(var(--text-base) + 2px);
+  --text-prose--line-height: calc(var(--text-base--line-height) + 4px);
+
+  --text-heading-sm: var(--text-base);
+  --text-heading-sm--line-height: var(--text-base--line-height);
+  --text-heading-sm--font-weight: 500;
+  --text-heading-sm--letter-spacing: 0.01em;
+
+  --text-heading: calc(var(--text-base) + 2px);
+  --text-heading--line-height: var(--text-base--line-height);
+  --text-heading--font-weight: 500;
+
+  --text-heading-lg: calc(var(--text-base) + 4px);
+  --text-heading-lg--line-height: calc(var(--text-base--line-height) + 4px);
+  --text-heading-lg--font-weight: 500;
+
+  --text-display-sm: calc(var(--text-display) - 6px);
+  --text-display-sm--line-height: calc(var(--text-display--line-height) - 6px);
+  --text-display-sm--font-weight: 500;
+
+  --text-display: 26px;
+  --text-display--line-height: calc(var(--text-display) + 6px);
+  --text-display--font-weight: 500;
+
+  --text-display-lg: calc(var(--text-display) + 8px);
+  --text-display-lg--line-height: calc(var(--text-display--line-height) + 8px);
+  --text-display-lg--font-weight: 500;
+
+  --text-code: 12px;
+  --text-code--line-height: round(calc(var(--text-code) * 1.54), 1px);
+
+  --text-code-gutter: calc(var(--text-code) - 2px);
+  --text-code-gutter--line-height: round(calc(var(--text-code) * 1.54), 1px);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+  body {
+    @apply bg-background text-foreground text-base;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+  html {
+    @apply font-sans;
+    font-variant-ligatures: var(--font-sans-ligatures);
+  }
+  ::selection {
+    background-color: var(--layer-selection);
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: none;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 3px;
+    background-clip: content-box;
+    border: 1px solid transparent;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--input);
+  }
+  ::-webkit-scrollbar-thumb:active {
+    background-color: var(--disabled);
+  }
+}
