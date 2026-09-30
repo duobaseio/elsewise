@@ -22,8 +22,7 @@ This is a **source package**: `exports` points straight at `src/` and there is n
 ## Components stay pure
 
 A component takes what it needs as **props**. It never reads settings, the bridge, `window.platform` or a hook over
-any of them — the app owns that wiring and passes values down. This is what lets a sheet render a component with plain
-props, and a settings page preview an unsaved value.
+any of them — the app owns that wiring and passes values down.
 
 ## Imports
 
@@ -32,15 +31,13 @@ alias here resolves to the wrong tree. Nor does the package import itself by nam
 
 ## Styling
 
-`styles.css` is the one stylesheet a consumer imports, at top level, **instead of** `tailwindcss` — it is the Tailwind
-entry. Its `@source` names this package's classes, because Tailwind only scans the consumer's Vite root.
+`styles.css` is the one stylesheet a consumer imports, at top level, **instead of** `tailwindcss`.
 
 The two files split by what a theme may change. Everything in `elsewise.css` is a value a theme overrides; everything
 in `styles.css` is structure no theme touches. Themes are color-only, so `--radius` lives in `styles.css`. A new token
 gets its value in `elsewise.css`, light and dark, and its utility mapping in `styles.css`.
 
-Reach for a token over a raw value; a missing token is a `DESIGN.md` question first. Upstream defaults that survive
-generation — an inherited `md:text-sm`, a hardcoded palette class — are drift, not decisions.
+Reach for a token over a raw value.
 
 ## Adding a component
 
@@ -59,9 +56,9 @@ The CLI writes imports through the package's own name, which does not resolve he
 
 ## Comments
 
-`//` for normal comments, one marker per line; `/** … */` only for doc comments; `/* … */` only where a comment has to
-sit inside an expression, and in CSS. Prose wrapped at 120 columns by hand — Biome reflows code but never a comment.
-Keep comments in test files to a minimum.
+`//` for normal comments, one marker per line; `/** … */` only for doc comments; `/* … */` only where a comment has
+to sit inside an expression, and in CSS. Prose wrapped at 120 columns by hand — Biome reflows code but never a
+comment. Keep comments in test files to a minimum.
 
 ## Tests
 
@@ -81,7 +78,9 @@ reading a computed style belongs in `browser`; anything comparing pixels belongs
 **Screenshot sheets stay in `test/visual/`.** Their scope is the design system rather than any one module, and their
 baselines are binary blobs that do not belong in `src/`.
 
-The first browser run on a cold cache can fail from a mid-run dependency re-optimize. Rerun before reading a failure.
+A dependency discovered mid-run makes Vite re-optimize and reload, which fails whichever file was loading — only on a
+cold cache, so it passes on rerun. `optimizeDeps.include` in `vitest.config.ts` names everything the components import
+to prevent it; a component that brings a new dependency adds it there too.
 
 ### Visual tests
 

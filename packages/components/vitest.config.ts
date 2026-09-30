@@ -24,9 +24,20 @@ function browserProject(name: string, include: readonly string[]): ViteUserConfi
   return {
     ...testGraph(),
     // Discovered mid-run, a dependency reloads the page to re-optimize, which fails whichever test file was loading at
-    // the time — a cold-cache-only failure that passes on every rerun. Naming the ones the suite always needs optimizes
-    // them up front instead.
-    optimizeDeps: { include: ['react', 'react-dom/client'] },
+    // the time — a cold-cache-only failure that passes on every rerun. Naming everything the components import
+    // optimizes it all up front instead.
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom/client',
+        'vitest-browser-react',
+        '@base-ui/react/*',
+        '@phosphor-icons/react',
+        'class-variance-authority',
+        'clsx',
+        'tailwind-merge',
+      ],
+    },
     test: {
       name,
       include: [...include],
