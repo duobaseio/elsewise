@@ -1,20 +1,4 @@
-import {
-  BracketsCurlyIcon,
-  CoffeeIcon,
-  FileSqlIcon,
-  FileIcon as GenericFileIcon,
-  GifIcon,
-  ImageIcon,
-  TerminalIcon,
-} from '@phosphor-icons/react';
-import {
-  type ComponentType,
-  type CSSProperties,
-  createContext,
-  type ReactNode,
-  type SVGProps,
-  useContext,
-} from 'react';
+import { type CSSProperties, createContext, type ReactNode, useContext, useMemo } from 'react';
 
 import {
   EXTENSION_ICONS,
@@ -22,6 +6,7 @@ import {
   FILENAME_ICONS,
   type FileIconData,
   type IconTint,
+  PHOSPHOR_ICONS,
 } from '../lib/file-icons.gen';
 import { cn } from '../lib/utils';
 import type { IconProvider } from './icon';
@@ -33,19 +18,6 @@ const TINT_CLASS = 'text-(--icon-tint-light) dark:text-(--icon-tint-dark)';
 const TINT_LINE_CLASS =
   'border-[color-mix(in_srgb,var(--icon-tint-light)_45%,transparent)] dark:border-[color-mix(in_srgb,var(--icon-tint-dark)_45%,transparent)]';
 
-const PHOSPHOR_ICONS: Record<
-  Extract<FileIconData, { kind: 'phosphor' }>['name'],
-  ComponentType<SVGProps<SVGSVGElement>>
-> = {
-  'brackets-curly': BracketsCurlyIcon,
-  coffee: CoffeeIcon,
-  file: GenericFileIcon,
-  'file-sql': FileSqlIcon,
-  gif: GifIcon,
-  image: ImageIcon,
-  terminal: TerminalIcon,
-};
-
 const LETTER_SIZE: Record<number, string> = {
   0: 'text-[8.5px]/none',
   1: 'text-[8.5px]/none',
@@ -53,42 +25,65 @@ const LETTER_SIZE: Record<number, string> = {
   3: 'text-[5.75px]/none',
 };
 
+function lowercase(icons: Record<string, FileIconData>): Record<string, FileIconData> {
+  const entries = Object.entries(icons).filter(([, icon]) => icon !== undefined);
+  return Object.fromEntries(entries.map(([key, icon]) => [key.toLowerCase(), icon]));
+}
+
 /**
- * Elsewise's file icons used by {@link FileIcon}.
+ * Elsewise's file icons used by {@link FileIcon}. Exact names take precedence over extensions.
  *
- * Additional and overridden icons can be specified. Unspecified icons default to Elsewise's generated file icons.
- * Exact names take precedence over extensions.
- *
- * System icons are overridden via {@link IconProvider}.
+ * See {@link IconProvider} for system icons.
  */
 export type FileIcons = {
-  /** By exact filename, such as `Dockerfile`. */
-  names?: Record<string, FileIconData>;
+  /** By whole filename, such as `Dockerfile`. */
+  names: Record<string, FileIconData>;
   /** By extension without its leading dot, such as `ts` or `d.ts`. */
-  extensions?: Record<string, FileIconData>;
+  extensions: Record<string, FileIconData>;
   /** For a name that has no match. */
-  fallback?: FileIconData;
+  fallback: FileIconData;
 };
 
-const FileIconContext = createContext<FileIcons>({});
+/** Elsewise's generated file icons, keyed in lowercase. */
+export const DEFAULT_FILE_ICONS: FileIcons = {
+  names: lowercase(FILENAME_ICONS),
+  extensions: lowercase(EXTENSION_ICONS),
+  fallback: FALLBACK_FILE_ICON,
+};
+
+const FileIconContext = createContext<FileIcons>(DEFAULT_FILE_ICONS);
 
 /**
- * Provides the app's additional and overridden file icons to every {@link FileIcon} beneath it.
+ * Provides the app's additional and overridden file icons to every {@link FileIcon} beneath it. Unspecified icons
+ * default to Elsewise's generated file icons.
  */
-export function FileIconProvider({ icons, children }: { icons: FileIcons; children: ReactNode }) {
-  return <FileIconContext value={icons}>{children}</FileIconContext>;
+export function FileIconProvider({ icons, children }: { icons: Partial<FileIcons>; children: ReactNode }) {
+  const resolved = useMemo(() => {
+    return {
+      names: { ...DEFAULT_FILE_ICONS.names, ...lowercase(icons.names ?? {}) },
+      extensions: { ...DEFAULT_FILE_ICONS.extensions, ...lowercase(icons.extensions ?? {}) },
+      fallback: icons.fallback ?? FALLBACK_FILE_ICON,
+    };
+  }, [icons]);
+  return <FileIconContext value={resolved}>{children}</FileIconContext>;
+}
+/**
+ * Every file icon, keyed in lowercase.
+ */
+export function useFileIcons(): FileIcons {
+  return useContext(FileIconContext);
 }
 
 /**
  * A file's icon.
  *
- * `name` is a file's base name, e.g. `main.ts`. Matching is case-sensitive. An exact filename wins, then the longest
- * matching extension, e.g. `main.d.ts` uses `d.ts` over `ts`.
+ * `name` is a file's base name, e.g. `main.ts`. Matching is case-insensitive, as it is in the file tree. A whole
+ * filename wins, then the longest matching extension, e.g. `main.d.ts` uses `d.ts` over `ts`.
  *
  * See {@link FileIconProvider} for overriding the default file icons.
  */
 export function FileIcon({ name, className }: { name: string; className?: string }) {
-  const data = resolve(name, useContext(FileIconContext));
+  const data = resolve(name, useFileIcons());
   switch (data.kind) {
     case 'glyph':
       return (
@@ -118,22 +113,23 @@ export function FileIcon({ name, className }: { name: string; className?: string
 }
 
 function resolve(name: string, { names, extensions, fallback }: FileIcons): FileIconData {
-  const filename = names?.[name] ?? FILENAME_ICONS[name];
-  if (filename !== undefined) {
-    return filename;
+  name = name.toLowerCase();
+
+  // `hasOwn`, or a file named `constructor` finds `Object.prototype`'s.
+  if (Object.hasOwn(names, name)) {
+    return names[name];
   }
 
   let dot = name.indexOf('.');
   while (dot !== -1) {
     const extension = name.slice(dot + 1);
-    const icon = extensions?.[extension] ?? EXTENSION_ICONS[extension];
-    if (icon !== undefined) {
-      return icon;
+    if (Object.hasOwn(extensions, extension)) {
+      return extensions[extension];
     }
     dot = name.indexOf('.', dot + 1);
   }
 
-  return fallback ?? FALLBACK_FILE_ICON;
+  return fallback;
 }
 
 function PhosphorIcon({

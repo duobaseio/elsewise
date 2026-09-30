@@ -52,7 +52,7 @@ test.each(THEMES)('file icon resolution (%s)', async (theme) => {
     },
     { label: 'longest suffix', names: ['build.gradle.kts', 'main.kts'] },
     { label: 'shorter suffix', names: ['some.unmapped.ts', 'main.ts'] },
-    { label: 'case-sensitive', names: ['MAIN.TS', 'main.ts'] },
+    { label: 'case-insensitive', names: ['MAIN.TS', 'main.ts', 'dockerfile'] },
     {
       label: 'unmapped',
       names: ['notes.qqqzzz', 'LICENSE-not-a-known-name'],

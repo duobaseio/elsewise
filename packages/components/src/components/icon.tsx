@@ -4,6 +4,8 @@ import {
   CaretUpIcon,
   CheckCircleIcon,
   CheckIcon,
+  FolderIcon,
+  FolderOpenIcon,
   InfoIcon,
   MagnifyingGlassIcon,
   MinusIcon,
@@ -13,7 +15,7 @@ import {
   XCircleIcon,
   XIcon,
 } from '@phosphor-icons/react';
-import { type ComponentProps, type ComponentType, createContext, type ReactNode, useContext } from 'react';
+import { type ComponentProps, type ComponentType, createContext, type ReactNode, useContext, useMemo } from 'react';
 import type { FileIconProvider } from './file-icon';
 
 const DEFAULT_ICONS = {
@@ -31,24 +33,38 @@ const DEFAULT_ICONS = {
   error: XCircleIcon,
   loading: SpinnerIcon,
   'sidebar-toggle': SidebarIcon,
+  folder: FolderIcon,
+  'folder-open': FolderOpenIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;
 
 /**
- * Elsewise's system icons used by all other components. Unspecified icons default to Elsewise's Phosphor icons.
+ * Elsewise's system icons used by all other components.
  *
- * Icons for file names and extensions are overridden via {@link FileIconProvider}.
+ * See {@link FileIconProvider} for file names and extensions' icons.
  */
-export type Icons = Partial<Record<IconName, ComponentType<ComponentProps<'svg'>>>>;
+export type Icons = Record<IconName, ComponentType<ComponentProps<'svg'>>>;
 
-const IconContext = createContext<Icons>({});
+const IconContext = createContext<Icons>(DEFAULT_ICONS);
 
 /**
- * Provides the app's overridden system icons to every {@link Icon} beneath it.
+ * Provides the app's overridden system icons to every {@link Icon} beneath it. Unspecified icons default to Elsewise's
+ * Phosphor icons.
  */
-export function IconProvider({ icons, children }: { icons: Icons; children: ReactNode }) {
-  return <IconContext value={icons}>{children}</IconContext>;
+export function IconProvider({ icons, children }: { icons: Partial<Icons>; children: ReactNode }) {
+  const resolved = useMemo(() => {
+    const overrides = Object.fromEntries(Object.entries(icons).filter(([, icon]) => icon !== undefined));
+    return { ...DEFAULT_ICONS, ...overrides };
+  }, [icons]);
+  return <IconContext value={resolved}>{children}</IconContext>;
+}
+
+/**
+ * Every system icon.
+ */
+export function useIcons(): Icons {
+  return useContext(IconContext);
 }
 
 /**
@@ -57,6 +73,6 @@ export function IconProvider({ icons, children }: { icons: Icons; children: Reac
  * See {@link IconProvider} for overriding the default system icons.
  */
 export function Icon({ name, ...props }: { name: IconName } & ComponentProps<'svg'>) {
-  const Component = useContext(IconContext)[name] ?? DEFAULT_ICONS[name];
+  const Component = useIcons()[name];
   return <Component {...props} />;
 }

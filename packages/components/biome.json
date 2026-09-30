@@ -42,7 +42,7 @@
   },
   "overrides": [
     {
-      "includes": ["**/src/components/icon.tsx", "**/src/components/file-icon.tsx", "**/test/**"],
+      "includes": ["**/src/components/icon.tsx", "**/test/**"],
       "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
     }
   ],

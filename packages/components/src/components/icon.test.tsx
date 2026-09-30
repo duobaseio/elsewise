@@ -34,3 +34,13 @@ test('falls back to the default for a role the provider leaves out', () => {
 
   expect(markup).not.toContain('data-custom');
 });
+
+test('an undefined override keeps the default', () => {
+  const markup = renderToStaticMarkup(
+    <IconProvider icons={{ check: undefined }}>
+      <Icon name="check" />
+    </IconProvider>,
+  );
+
+  expect(markup).toBe(renderToStaticMarkup(<Icon name="check" />));
+});

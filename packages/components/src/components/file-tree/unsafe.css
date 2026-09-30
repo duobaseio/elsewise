@@ -1,0 +1,83 @@
+/* Styles that can't be set through the `--trees-*-override` variables in `file-tree.css`. */
+
+/* The library only renders a chevron for folders, so the folder icon is added with ::after. It defaults to the open
+   icon because sticky rows have no aria-expanded. `FileTree` sets both `--ew-folder-*` on the host. */
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-type="folder"] [data-item-section="icon"] {
+  width: auto;
+  gap: var(--trees-item-row-gap);
+}
+
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-type="folder"] [data-item-section="icon"]::after {
+  content: "";
+  flex: none;
+  width: 16px;
+  height: 16px;
+  background-color: var(--trees-fg);
+  mask-image: var(--ew-folder-open-icon);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-type="folder"][aria-expanded="false"] [data-item-section="icon"]::after {
+  mask-image: var(--ew-folder-icon);
+}
+
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-type="file"] [data-item-section="icon"] {
+  margin-left: calc(var(--trees-icon-width) + var(--trees-item-row-gap));
+}
+
+/* Hover is a background-image so it shows on top of the selected colour. */
+/* noinspection CssUnresolvedCustomProperty */
+[data-type="item"]:hover,
+[data-type="item"][data-item-context-hover="true"] {
+  background-color: var(--trees-bg);
+  background-image: linear-gradient(var(--trees-bg-muted), var(--trees-bg-muted));
+}
+
+/* noinspection CssUnresolvedCustomProperty */
+[data-type="item"][data-item-selected="true"] {
+  background-color: var(--trees-selected-bg);
+}
+
+/* Only show the focus ring for keyboard focus. */
+[data-type="item"][data-item-focused="true"]:not(:focus-visible)::before {
+  outline: none;
+}
+
+/* Don't tint icons with the git status colour. */
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-git-status] > [data-item-section="icon"],
+[data-item-git-status] > [data-item-section="icon"] > * {
+  color: var(--trees-fg-muted);
+  opacity: 1;
+}
+
+[data-item-section="spacing-item"] {
+  opacity: 1;
+  transition: none;
+}
+
+/* Hide the git badge on folders that only contain changed files. */
+[data-item-contains-git-change="true"] > [data-item-section="git"] {
+  display: none;
+}
+
+:host([data-git-status-badges="false"]) [data-item-section="git"] {
+  display: none;
+}
+
+/* Conflicts use the library's `deleted` status, so replace its "D" with "!". */
+[data-item-git-status="deleted"] > [data-item-section="git"] > span {
+  font-size: 0;
+}
+
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-git-status="deleted"] > [data-item-section="git"] > span::after {
+  content: "!";
+  font-size: var(--trees-font-size);
+}

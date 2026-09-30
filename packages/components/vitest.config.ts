@@ -32,9 +32,12 @@ function browserProject(
       include: [
         'react',
         'react-dom/client',
+        'react-dom/server',
         'vitest-browser-react',
         '@base-ui/react/*',
         '@phosphor-icons/react',
+        '@pierre/trees',
+        '@pierre/trees/react',
         'class-variance-authority',
         'clsx',
         'tailwind-merge',

@@ -24,6 +24,8 @@ const ROLES = Object.keys({
   error: true,
   loading: true,
   'sidebar-toggle': true,
+  folder: true,
+  'folder-open': true,
 } as const satisfies Record<IconName, true>) as readonly IconName[];
 
 const PROPS: readonly { key: string; label: string; render: ReactNode }[] = [

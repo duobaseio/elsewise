@@ -2,5 +2,6 @@ include: package:flint/analysis_options.dart.yaml
 analyzer:
   errors:
     avoid_print: ignore
+    public_member_api_docs: ignore
     prefer_asserts_with_message: ignore
     unused_result: ignore

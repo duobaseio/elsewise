@@ -1,0 +1,42 @@
+/* Design tokens onto the `--trees-*-override` surface, by `var()` reference so a `.dark` flip repaints. */
+/* noinspection CssUnresolvedCustomProperty */
+:host {
+  --trees-bg-override: var(--background);
+  --trees-fg-override: var(--foreground);
+  --trees-fg-muted-override: var(--text-3);
+  --trees-bg-muted-override: var(--layer-hover);
+  --trees-selected-bg-override: var(--layer-selected);
+  --trees-selected-fg-override: var(--foreground);
+  /* Their #009fff leaks into every unset fallback. */
+  --trees-accent-override: var(--ring);
+  --trees-border-color-override: var(--border);
+  --trees-indent-guide-bg-override: var(--border);
+
+  --trees-focus-ring-color-override: var(--ring);
+  --trees-focus-ring-width-override: 2px;
+  --trees-focus-ring-offset-override: -2px;
+  --trees-selected-focused-border-color-override: var(--ring);
+
+  --trees-border-radius-override: calc(var(--radius) * 0.8);
+  --trees-font-family-override: var(--font-sans);
+  --trees-font-size-override: var(--text-base);
+  --trees-font-weight-semibold-override: 500;
+
+  --trees-item-padding-x-override: 6px;
+  --trees-item-row-gap-override: 6px;
+  --trees-item-margin-x-override: 2px;
+  --trees-icon-nudge-override: 0px;
+
+  --trees-level-gap-override: calc(var(--trees-icon-width) / 2 + 0.5px);
+  --trees-padding-inline-override: 4px;
+
+  --trees-status-modified-override: var(--info);
+  --trees-status-added-override: var(--success);
+  --trees-status-untracked-override: var(--error);
+  --trees-status-ignored-override: var(--text-3);
+  --trees-status-renamed-override: var(--info);
+  --trees-status-deleted-override: var(--warning);
+
+  --trees-scrollbar-thumb-override: var(--border);
+  --trees-input-bg-override: var(--surface-2);
+}
