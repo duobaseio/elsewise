@@ -18,9 +18,11 @@ function testGraph(): ViteUserConfig {
   return { plugins: [tailwindcss(), viteReact()] };
 }
 
-// Both browser projects want the same painting environment; only their `include` differs. Everything here is chosen to
-// make a screenshot reproducible on two machines, and the behavioural project inherits it rather than drifting from it.
-function browserProject(name: string, include: readonly string[]): ViteUserConfig {
+function browserProject(
+  name: string,
+  include: readonly string[],
+  { frozenMotion }: { frozenMotion: boolean },
+): ViteUserConfig {
   return {
     ...testGraph(),
     // Discovered mid-run, a dependency reloads the page to re-optimize, which fails whichever test file was loading at
@@ -41,7 +43,7 @@ function browserProject(name: string, include: readonly string[]): ViteUserConfi
     test: {
       name,
       include: [...include],
-      setupFiles: ['./test/browser-setup.ts'],
+      setupFiles: ['./test/browser-setup.ts', ...(frozenMotion ? ['./test/visual-setup.ts'] : [])],
       browser: {
         enabled: true,
         headless: true,
@@ -61,7 +63,7 @@ function browserProject(name: string, include: readonly string[]): ViteUserConfi
             // Theming is attribute-based, but UA styles for form controls and
             // scrollbars still follow the media query.
             colorScheme: 'light',
-            reducedMotion: 'reduce',
+            reducedMotion: frozenMotion ? 'reduce' : 'no-preference',
           },
         }),
         // https://vitest.dev/config/browser/playwright
@@ -99,8 +101,8 @@ export default defineConfig({
           exclude: [...configDefaults.exclude, BROWSER_TESTS, VISUAL_TESTS],
         },
       },
-      browserProject('browser', [BROWSER_TESTS]),
-      browserProject('visual', [VISUAL_TESTS]),
+      browserProject('browser', [BROWSER_TESTS], { frozenMotion: false }),
+      browserProject('visual', [VISUAL_TESTS], { frozenMotion: true }),
     ],
   },
 });

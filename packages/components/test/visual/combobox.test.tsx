@@ -251,3 +251,23 @@ test.each(THEMES)('combobox auto width (%s)', async (theme) => {
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`combobox-auto-width-${theme}`);
 });
+
+const LONG_VALUE = 'feat/passport-worktree-commit-panel';
+
+test.each(THEMES)('combobox long value (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <div className="flex flex-col gap-2">
+        {SIZES.map((size) => (
+          <Combobox defaultValue={LONG_VALUE} items={[LONG_VALUE]} key={size.key}>
+            <ComboboxTrigger className="w-40" size={size.size}>
+              <ComboboxValue />
+            </ComboboxTrigger>
+          </Combobox>
+        ))}
+      </div>
+    </Sheet>,
+  );
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`combobox-long-value-${theme}`);
+});

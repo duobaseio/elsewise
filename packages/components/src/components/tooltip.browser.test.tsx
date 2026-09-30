@@ -35,10 +35,12 @@ test('inside a provider, the second tooltip opens instantly and without animatio
 
   await userEvent.hover(first());
   await expect.element(tip('First tip'), { timeout: 2000 }).toBeVisible();
+  expect(getComputedStyle(tip('First tip').element()).transitionDuration).toBe('0.125s');
 
   await userEvent.hover(second());
   await expect.element(tip('Second tip'), { timeout: INSTANT }).toBeVisible();
   expect(tip('Second tip').element()).toHaveAttribute('data-instant');
+  expect(getComputedStyle(tip('Second tip').element()).transitionDuration).toBe('0s');
 });
 
 test('outside a provider, every tooltip waits out the full delay', async () => {
@@ -50,4 +52,5 @@ test('outside a provider, every tooltip waits out the full delay', async () => {
   await userEvent.hover(second());
   await new Promise((resolve) => setTimeout(resolve, INSTANT));
   expect(tip('Second tip').query()).toBeNull();
+  await expect.element(tip('Second tip'), { timeout: 2000 }).toBeVisible();
 });

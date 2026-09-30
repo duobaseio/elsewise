@@ -1,5 +1,6 @@
 export type Os = 'mac' | 'windows' | 'linux';
 
+/** The current detected operating system. */
 export const OS: Os = osFrom(
   (navigator as Navigator & { userAgentData?: { platform: string } }).userAgentData?.platform ?? navigator.platform,
 );
@@ -45,7 +46,7 @@ export function osFrom(platform: string): Os {
 }
 
 /**
- * A ey binding such as `Mod-Alt-f` or `Shift-Enter` in the platform's notation: `⌥⌘F` on a Mac, `Ctrl Alt F` elsewhere.
+ * A key binding such as `Mod-Alt-f` or `Shift-Enter` in the platform's notation: `⌥ ⌘ F` on a Mac, `Ctrl Alt F` elsewhere.
  */
 export function shortcut(binding: string, os: Os = OS): string {
   const parts = binding.split(/-(?!$)/);

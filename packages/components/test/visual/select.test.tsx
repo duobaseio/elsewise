@@ -291,3 +291,23 @@ test.each(THEMES)('select auto width (%s)', async (theme) => {
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`select-auto-width-${theme}`);
 });
+
+const LONG_VALUE = 'feat/passport-worktree-commit-panel';
+
+test.each(THEMES)('select long value (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <div className="flex flex-col gap-2">
+        {SIZES.map((size) => (
+          <Select defaultValue={LONG_VALUE} items={{ [LONG_VALUE]: LONG_VALUE }} key={size.key}>
+            <SelectTrigger className="w-40" size={size.size}>
+              <SelectValue />
+            </SelectTrigger>
+          </Select>
+        ))}
+      </div>
+    </Sheet>,
+  );
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`select-long-value-${theme}`);
+});

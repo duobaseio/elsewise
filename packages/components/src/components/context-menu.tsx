@@ -1,9 +1,7 @@
-'use client';
-
 import { ContextMenu as ContextMenuPrimitive } from '@base-ui/react/context-menu';
-import { CaretRightIcon, CheckIcon } from '@phosphor-icons/react';
-import type * as React from 'react';
+import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
+import { Icon } from './icon';
 
 export function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
@@ -120,18 +118,18 @@ export function ContextMenuSubTrigger({
       data-slot="context-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-base outline-hidden select-none focus:bg-layer-hover focus:text-foreground data-inset:pl-7 data-open:bg-layer-hover data-open:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-base outline-hidden select-none focus:bg-layer-hover focus:text-foreground data-inset:pl-7 data-popup-open:bg-layer-hover data-popup-open:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       {children}
-      <CaretRightIcon className="ml-auto" />
+      <Icon name="submenu" className="ml-auto" />
     </ContextMenuPrimitive.SubmenuTrigger>
   );
 }
 
-export function ContextMenuSubContent({ ...props }: React.ComponentProps<typeof ContextMenuContent>) {
+export function ContextMenuSubContent({ ...props }: ComponentProps<typeof ContextMenuContent>) {
   return <ContextMenuContent data-slot="context-menu-sub-content" className="shadow-lg" side="right" {...props} />;
 }
 
@@ -157,7 +155,7 @@ export function ContextMenuCheckboxItem({
     >
       <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
         <ContextMenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon />
+          <Icon name="check" />
         </ContextMenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}
@@ -189,7 +187,7 @@ export function ContextMenuRadioItem({
     >
       <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
         <ContextMenuPrimitive.RadioItemIndicator>
-          <CheckIcon />
+          <Icon name="check" />
         </ContextMenuPrimitive.RadioItemIndicator>
       </span>
       {children}
@@ -207,7 +205,7 @@ export function ContextMenuSeparator({ className, ...props }: ContextMenuPrimiti
   );
 }
 
-export function ContextMenuShortcut({ className, ...props }: React.ComponentProps<'span'>) {
+export function ContextMenuShortcut({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       data-slot="context-menu-shortcut"

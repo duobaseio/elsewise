@@ -1,4 +1,5 @@
 import { DotsThreeIcon, GitBranchIcon, PlusIcon } from '@phosphor-icons/react';
+import type { ComponentProps } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -10,6 +11,7 @@ import {
   SidebarGroupAction,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarInset,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuBadge,
@@ -20,6 +22,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
+  SidebarRail,
 } from '../../src/components/sidebar';
 
 import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
@@ -145,5 +148,116 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
         </Sidebar>
       </SidebarProvider>
     </Sheet>
+  );
+}
+
+type LayoutSpec = {
+  key: string;
+  label: string;
+  open: boolean;
+  sidebar: Pick<ComponentProps<typeof Sidebar>, 'collapsible' | 'side' | 'variant'>;
+  railHover?: boolean;
+};
+
+const LAYOUTS: readonly LayoutSpec[] = [
+  { key: 'expanded', label: 'sidebar', open: true, sidebar: {} },
+  { key: 'icon', label: 'sidebar · icon', open: false, sidebar: { collapsible: 'icon' } },
+  { key: 'offcanvas', label: 'sidebar · offcanvas + rail hover', open: false, sidebar: {}, railHover: true },
+  { key: 'rail-hover', label: 'sidebar · rail hover', open: true, sidebar: {}, railHover: true },
+  { key: 'right', label: 'sidebar · right', open: true, sidebar: { side: 'right' } },
+  { key: 'right-icon', label: 'sidebar · right · icon', open: false, sidebar: { side: 'right', collapsible: 'icon' } },
+  { key: 'floating', label: 'floating', open: true, sidebar: { variant: 'floating' } },
+  {
+    key: 'floating-icon',
+    label: 'floating · icon',
+    open: false,
+    sidebar: { variant: 'floating', collapsible: 'icon' },
+  },
+  { key: 'inset', label: 'inset', open: true, sidebar: { variant: 'inset' } },
+  { key: 'inset-icon', label: 'inset · icon', open: false, sidebar: { variant: 'inset', collapsible: 'icon' } },
+];
+
+test.each(THEMES)('sidebar layouts (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <div className="grid w-max grid-cols-3 gap-x-5 gap-y-3">
+        {LAYOUTS.map((layout) => (
+          <div className="flex flex-col gap-1" key={layout.key}>
+            <div className="text-muted-foreground text-xs">{layout.label}</div>
+            <LayoutFrame layout={layout} />
+          </div>
+        ))}
+      </div>
+    </Sheet>,
+  );
+
+  await forcePseudoStates(
+    LAYOUTS.filter((layout) => layout.railHover).map((layout) => ({
+      selector: `[data-testid="layout-${layout.key}"] [data-slot="sidebar-rail"]`,
+      pseudoClasses: ['hover'],
+    })),
+  );
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-layouts-${theme}`);
+});
+
+function LayoutFrame({ layout }: { layout: LayoutSpec }) {
+  const inset = (
+    <SidebarInset>
+      <div className="p-3 text-muted-foreground text-xs">inset</div>
+    </SidebarInset>
+  );
+  const right = layout.sidebar.side === 'right';
+
+  return (
+    // The sidebar container is `fixed`; layout containment makes the frame its containing block, and paint containment
+    // clips the offcanvas state to the frame instead of letting it land elsewhere on the sheet.
+    <div
+      className="h-44 w-96 border border-border"
+      data-testid={`layout-${layout.key}`}
+      style={{ contain: 'layout paint' }}
+    >
+      <SidebarProvider className="h-full min-h-0" defaultOpen={layout.open}>
+        {right && inset}
+        <Sidebar {...layout.sidebar}>
+          <SidebarContent>
+            <SidebarGroup>
+              <SidebarGroupLabel>Worktrees</SidebarGroupLabel>
+              <SidebarGroupAction>
+                <PlusIcon />
+              </SidebarGroupAction>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive>
+                      <GitBranchIcon />
+                      <span>main</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton>
+                      <GitBranchIcon />
+                      <span>develop</span>
+                    </SidebarMenuButton>
+                    <SidebarMenuBadge>3</SidebarMenuBadge>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton>
+                      <GitBranchIcon />
+                      <span>feat/passport</span>
+                    </SidebarMenuButton>
+                    <SidebarMenuAction>
+                      <DotsThreeIcon />
+                    </SidebarMenuAction>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </SidebarContent>
+          <SidebarRail />
+        </Sidebar>
+        {!right && inset}
+      </SidebarProvider>
+    </div>
   );
 }

@@ -1,11 +1,8 @@
-'use client';
-
 import { Combobox as ComboboxPrimitive } from '@base-ui/react/combobox';
-import { CaretDownIcon, CheckIcon, MagnifyingGlassIcon, XIcon } from '@phosphor-icons/react';
-import type * as React from 'react';
-import { createContext, useContext } from 'react';
+import { createContext, type ReactNode, useContext } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
+import { Icon } from './icon';
 
 type Items = ComboboxPrimitive.Root.Props<unknown, boolean>['items'];
 
@@ -22,7 +19,7 @@ export function Combobox<Value, Multiple extends boolean | undefined = false, It
   );
 }
 
-function labelsOf(items: Items): { key: string; label: React.ReactNode }[] {
+function labelsOf(items: Items): { key: string; label: ReactNode }[] {
   if (!Array.isArray(items)) {
     return [];
   }
@@ -34,7 +31,7 @@ function labelsOf(items: Items): { key: string; label: React.ReactNode }[] {
       return labelsOf(item.items).map(({ key, label }) => ({ key: `${index}:${key}`, label }));
     }
     if (item && typeof item === 'object' && 'label' in item) {
-      return [{ key: String(item.value), label: item.label as React.ReactNode }];
+      return [{ key: String(item.value), label: item.label as ReactNode }];
     }
     return [];
   });
@@ -42,7 +39,7 @@ function labelsOf(items: Items): { key: string; label: React.ReactNode }[] {
 
 export function ComboboxValue({ className, ...props }: ComboboxPrimitive.Value.Props & { className?: string }) {
   return (
-    <span data-slot="combobox-value" className={cn('flex flex-1 text-left', className)}>
+    <span data-slot="combobox-value" className={cn('min-w-0 flex-1 truncate text-left', className)}>
       <ComboboxPrimitive.Value {...props} />
     </span>
   );
@@ -66,7 +63,7 @@ export function ComboboxTrigger({
       data-slot="combobox-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-base whitespace-nowrap transition-colors outline-none select-none hover:bg-muted focus-visible:border-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:focus-visible:border-destructive data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] [&_[data-slot=combobox-value]]:line-clamp-1 [&_[data-slot=combobox-value]]:flex [&_[data-slot=combobox-value]]:items-center [&_[data-slot=combobox-value]]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-base whitespace-nowrap transition-colors outline-none select-none hover:bg-muted focus-visible:border-foreground disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:focus-visible:border-destructive data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] dark:bg-input/30 dark:hover:bg-input/50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
@@ -84,7 +81,9 @@ export function ComboboxTrigger({
       ) : (
         children
       )}
-      <ComboboxPrimitive.Icon render={<CaretDownIcon className="pointer-events-none size-4 text-muted-foreground" />} />
+      <ComboboxPrimitive.Icon
+        render={<Icon name="expand" className="pointer-events-none size-4 text-muted-foreground" />}
+      />
     </ComboboxPrimitive.Trigger>
   );
 }
@@ -128,7 +127,7 @@ export function ComboboxContent({
 export function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
   return (
     <div className="flex h-8 shrink-0 items-center gap-1.5 border-b px-2.5" data-slot="combobox-search">
-      <MagnifyingGlassIcon className="size-4 shrink-0 text-muted-foreground" />
+      <Icon name="search" className="size-4 shrink-0 text-muted-foreground" />
       <ComboboxPrimitive.Input
         data-slot="combobox-input"
         className={cn(
@@ -197,7 +196,7 @@ export function ComboboxItem({ className, children, ...props }: ComboboxPrimitiv
       <ComboboxPrimitive.ItemIndicator
         render={<span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center" />}
       >
-        <CheckIcon className="pointer-events-none" />
+        <Icon name="check" className="pointer-events-none" />
       </ComboboxPrimitive.ItemIndicator>
     </ComboboxPrimitive.Item>
   );
@@ -245,7 +244,7 @@ export function ComboboxChip({
           data-slot="combobox-chip-remove"
           render={<Button size="icon-xs" variant="ghost" />}
         >
-          <XIcon className="pointer-events-none" />
+          <Icon name="close" className="pointer-events-none" />
         </ComboboxPrimitive.ChipRemove>
       )}
     </ComboboxPrimitive.Chip>

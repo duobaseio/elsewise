@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react';
 import { type Os, shortcut } from '../lib/os';
 import { cn } from '../lib/utils';
 
@@ -11,7 +12,7 @@ export function Kbd({
   os,
   children,
   ...props
-}: React.ComponentProps<'kbd'> & { binding?: string; os?: Os }) {
+}: ComponentProps<'kbd'> & { binding?: string; os?: Os }) {
   return (
     <kbd
       data-slot="kbd"
@@ -26,6 +27,6 @@ export function Kbd({
   );
 }
 
-export function KbdGroup({ className, ...props }: React.ComponentProps<'kbd'>) {
+export function KbdGroup({ className, ...props }: ComponentProps<'kbd'>) {
   return <kbd data-slot="kbd-group" className={cn('inline-flex items-center gap-1', className)} {...props} />;
 }

@@ -1,8 +1,8 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
-import { CheckCircleIcon, InfoIcon, SpinnerIcon, WarningIcon, XCircleIcon, XIcon } from '@phosphor-icons/react';
-import type * as React from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
+import { Icon } from './icon';
 
 export const toast = ToastPrimitive.createToastManager();
 
@@ -114,33 +114,33 @@ export function ToastClose({
       className={cn('shrink-0 text-(--toast-ink-2) hover:text-(--toast-ink)', className)}
       {...props}
     >
-      {children ?? <XIcon aria-hidden="true" />}
+      {children ?? <Icon name="close" aria-hidden="true" />}
     </ToastPrimitive.Close>
   );
 }
 
 export function ToastIcon({ type }: { type: string | undefined }) {
-  let icon: React.ReactNode = null;
+  let icon: ReactNode = null;
 
   // Each type carries its semantic voice; only `loading` has none to carry.
   if (type === 'success') {
-    icon = <CheckCircleIcon className="text-success" aria-hidden="true" />;
+    icon = <Icon name="success" className="text-success" aria-hidden="true" />;
   }
 
   if (type === 'info') {
-    icon = <InfoIcon className="text-info" aria-hidden="true" />;
+    icon = <Icon name="info" className="text-info" aria-hidden="true" />;
   }
 
   if (type === 'warning') {
-    icon = <WarningIcon className="text-warning" aria-hidden="true" />;
+    icon = <Icon name="warning" className="text-warning" aria-hidden="true" />;
   }
 
   if (type === 'error') {
-    icon = <XCircleIcon className="text-destructive" aria-hidden="true" />;
+    icon = <Icon name="error" className="text-destructive" aria-hidden="true" />;
   }
 
   if (type === 'loading') {
-    icon = <SpinnerIcon className="animate-spin" aria-hidden="true" />;
+    icon = <Icon name="loading" className="animate-spin" aria-hidden="true" />;
   }
 
   if (!icon) {

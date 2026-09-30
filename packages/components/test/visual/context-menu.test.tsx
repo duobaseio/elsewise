@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
@@ -59,18 +59,8 @@ const CHECKED = [
 
 test.each(THEMES)('context menu (%s)', async (theme) => {
   await render(<MenuSheet theme={theme} />);
+  await openMenu();
 
-  // Right-clicking with a real pointer would leave the menu anchored to wherever
-  // the pointer landed; a dispatched event pins it to the coordinates below.
-  const trigger = document.querySelector<HTMLElement>('[data-slot="context-menu-trigger"]');
-  if (!trigger) {
-    throw new Error('context menu trigger never mounted');
-  }
-  trigger.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 40 }));
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-
-  // Base UI highlights the first item on open, which would collide with the row
-  // this sheet forces. Blurring hands every highlight to CDP.
   await blurInitialFocus();
 
   await forcePseudoStates(
@@ -83,16 +73,36 @@ test.each(THEMES)('context menu (%s)', async (theme) => {
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`context-menu-${theme}`);
 });
 
-function MenuSheet({ theme }: { theme: 'light' | 'dark' }) {
-  // Plain block, never a grid — a portal *appends* to its container, so a grid
-  // would lay the popup out as an item.
+test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
+  await render(<MenuSheet subOpen theme={theme} />);
+  await openMenu();
+  await vi.waitFor(() => {
+    if (!document.querySelector('[data-slot="context-menu-sub-trigger"][data-popup-open]')) {
+      throw new Error('submenu never opened');
+    }
+  });
+  await blurInitialFocus();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`context-menu-submenu-${theme}`);
+});
+
+async function openMenu() {
+  const trigger = document.querySelector<HTMLElement>('[data-slot="context-menu-trigger"]');
+  if (!trigger) {
+    throw new Error('context menu trigger never mounted');
+  }
+  trigger.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 40, clientY: 40 }));
+  await new Promise((resolve) => requestAnimationFrame(resolve));
+}
+
+function MenuSheet({ theme, subOpen = false }: { theme: 'light' | 'dark'; subOpen?: boolean }) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
 
   return (
     <Sheet theme={theme}>
       <div ref={setContainer}>
         {/* The positioned popup cannot stretch the sheet; this reserves its room. */}
-        <div className="h-72 w-64">
+        <div className={subOpen ? 'h-80 w-[36rem]' : 'h-72 w-64'}>
           <ContextMenu>
             <ContextMenuTrigger className="size-4" />
             <ContextMenuContent container={container}>
@@ -113,9 +123,7 @@ function MenuSheet({ theme }: { theme: 'light' | 'dark' }) {
               <ContextMenuRadioGroup value={CHECKED[1].key}>
                 <ContextMenuRadioItem value={CHECKED[1].key}>{CHECKED[1].label}</ContextMenuRadioItem>
               </ContextMenuRadioGroup>
-              {/* Closed: the trigger row is what carries the type size, and an
-                  open submenu would land outside the reserved room. */}
-              <ContextMenuSub>
+              <ContextMenuSub defaultOpen={subOpen}>
                 <ContextMenuSubTrigger>sub trigger</ContextMenuSubTrigger>
                 <ContextMenuSubContent container={container}>
                   <ContextMenuItem>nested</ContextMenuItem>

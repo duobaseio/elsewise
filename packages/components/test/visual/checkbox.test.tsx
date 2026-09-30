@@ -36,6 +36,7 @@ const STATES: readonly StateSpec[] = [
 const CHECKED_STATES: readonly Omit<StateSpec, 'forced'>[] = [
   { key: 'unchecked', label: 'unchecked' },
   { key: 'checked', label: 'checked', props: { defaultChecked: true } },
+  { key: 'indeterminate', label: 'indeterminate', props: { indeterminate: true } },
 ];
 
 test.each(THEMES)('checkbox states (%s)', async (theme) => {

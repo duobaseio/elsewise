@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { type ComponentProps, useState } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-
 import { Button } from '../../src/components/button';
 import {
   Dialog,
@@ -13,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../src/components/dialog';
-
 import { blurInitialFocus, Sheet, THEMES } from '../sheet.tsx';
 
 test.each(THEMES)('dialog over scrim (%s)', async (theme) => {
@@ -63,7 +61,7 @@ const BRANCHES = ['main', 'feat/passport', 'reykjavik', 'spike/webrtc'] as const
 type PartsSpec = {
   key: string;
   label: string;
-  props?: Partial<React.ComponentProps<typeof DialogContent>>;
+  props?: Partial<ComponentProps<typeof DialogContent>>;
   footer?: boolean;
   title?: string;
 };

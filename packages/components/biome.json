@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**/src/**/*", "**/test/**/*", "**/vitest.config.ts", "!**/src/styles.css", "!**/__screenshots__"]
+    "includes": [
+      "**/src/**/*",
+      "**/test/**/*",
+      "**/vitest.config.ts",
+      "!**/src/styles.css",
+      "!**/src/lib/file-icons.gen.ts",
+      "!**/src/assets",
+      "!**/__screenshots__"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -19,9 +27,25 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@phosphor-icons/react": "Draw it with <Icon name=\"…\" /> from ./icon, adding a role there if none fits."
+            }
+          }
+        }
+      }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/src/components/icon.tsx", "**/src/components/file-icon.tsx", "**/test/**"],
+      "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "single",

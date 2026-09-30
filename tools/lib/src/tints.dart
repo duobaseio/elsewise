@@ -1,21 +1,6 @@
-// Resolves each entry's per-theme tint in assets/languages.json, in place.
-// Two treatments, split by chroma:
-//
-//   achromatic (a deliberately black or white mark) inverts to the theme's ink
-//   — clamping it would only ever yield a gray, which spends the brand color
-//   and buys nothing;
-//   chromatic keeps hue and chroma and moves lightness until it clears 3:1,
-//   because hue is the part of a brand color worth keeping.
-//
-// Idempotent: an already-inverted color still reads achromatic, and an
-// already-clamped one already clears the bar, so re-runs are no-ops.
-// The colour math is lifted from the previous pipeline (old/icons.dart).
-// Run: dart run bin/icons/tints.dart
-import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 
-/// Clamp targets, from apps/web/src/styles.css. Each is that theme's
+/// Clamp targets, from packages/components/src/elsewise.css. Each is that theme's
 /// `--surface-2` — the hardest surface a file icon can land on, being the
 /// darkest of the light theme's and the lightest of the dark theme's. Clearing
 /// the bar there clears it on `--surface` and `--background` too; clamping to
@@ -33,12 +18,7 @@ const minContrast = 3.0;
 /// grays just above it (stylelint #263238, .rego #7d9199) still clamp.
 const achromaticChroma = 0.04;
 
-void main() {
-  // Script lives in bin/icons/; resolve assets against the package root.
-  final root = File.fromUri(Platform.script).parent.parent.parent.absolute.path;
-  final file = File('$root/assets/languages.json');
-  final doc = jsonDecode(file.readAsStringSync()) as Map<String, dynamic>;
-
+Map<String, int> resolveTints(Map<String, dynamic> doc) {
   final counts = {'inverted': 0, 'clamped': 0, 'unmoved': 0};
   for (final section in doc.values) {
     for (final spec in (section as Map<String, dynamic>).values) {
@@ -54,9 +34,7 @@ void main() {
       }
     }
   }
-
-  file.writeAsStringSync('${const JsonEncoder.withIndent('  ').convert(doc)}\n');
-  print('tints: ${counts['clamped']} clamped, ${counts['inverted']} inverted, ${counts['unmoved']} already clear');
+  return counts;
 }
 
 /// One theme's tint for [hex], and which treatment produced it.

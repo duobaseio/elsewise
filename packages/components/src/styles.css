@@ -13,6 +13,9 @@
 
 @custom-variant dark (&:is([data-brightness='dark'], [data-brightness='dark'] *));
 
+/* Zero-specificity, like shadcn's `data-checked`, so an indeterminate box resolves against `aria-invalid` the same way. */
+@custom-variant data-indeterminate (&:where([data-indeterminate]));
+
 @utility overlay-hover {
   background-image: linear-gradient(var(--layer-hover), var(--layer-hover));
 }

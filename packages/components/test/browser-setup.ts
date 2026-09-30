@@ -1,7 +1,6 @@
 import { beforeAll } from 'vitest';
 
 import '../src/styles.css';
-import './visual.css';
 
 // @fontsource only declares @font-face; a browser fetches a face lazily, when a glyph first needs it. Nothing has
 // rendered yet at setup time, so awaiting `document.fonts.ready` on its own would resolve immediately — there is no

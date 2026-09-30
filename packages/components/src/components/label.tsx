@@ -1,10 +1,7 @@
-'use client';
-
-import type * as React from 'react';
-
+import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
 
-export function Label({ className, ...props }: React.ComponentProps<'label'>) {
+export function Label({ className, ...props }: ComponentProps<'label'>) {
   return (
     // biome-ignore lint/a11y/noLabelWithoutControl: htmlFor and children arrive through {...props}, so the rule cannot see the association from here. Call sites supply one or the other.
     <label

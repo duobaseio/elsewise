@@ -1,7 +1,7 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
-import { CaretRightIcon, CheckIcon } from '@phosphor-icons/react';
-import type * as React from 'react';
+import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';
+import { Icon } from './icon';
 
 export function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
@@ -117,13 +117,13 @@ export function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-base outline-hidden select-none focus:bg-layer-hover focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-inset:pl-7 data-popup-open:bg-layer-hover data-popup-open:text-foreground data-open:bg-layer-hover data-open:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-base outline-hidden select-none focus:bg-layer-hover focus:text-foreground not-data-[variant=destructive]:focus:**:text-foreground data-inset:pl-7 data-popup-open:bg-layer-hover data-popup-open:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       {...props}
     >
       {children}
-      <CaretRightIcon className="ml-auto" />
+      <Icon name="submenu" className="ml-auto" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
@@ -135,7 +135,7 @@ export function DropdownMenuSubContent({
   sideOffset = 0,
   className,
   ...props
-}: React.ComponentProps<typeof DropdownMenuContent>) {
+}: ComponentProps<typeof DropdownMenuContent>) {
   return (
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
@@ -177,7 +177,7 @@ export function DropdownMenuCheckboxItem({
         data-slot="dropdown-menu-checkbox-item-indicator"
       >
         <MenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon />
+          <Icon name="check" />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}
@@ -212,7 +212,7 @@ export function DropdownMenuRadioItem({
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
-          <CheckIcon />
+          <Icon name="check" />
         </MenuPrimitive.RadioItemIndicator>
       </span>
       {children}
@@ -230,7 +230,7 @@ export function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Sep
   );
 }
 
-export function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<'span'>) {
+export function DropdownMenuShortcut({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
       data-slot="dropdown-menu-shortcut"

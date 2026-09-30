@@ -1,5 +1,5 @@
 /*
- * Test-only determinism overrides. Imported by browser-setup.ts; never by the app.
+ * Test-only determinism overrides. Imported by visual-setup.ts, for the visual project only; never by the app.
  */
 
 /**
