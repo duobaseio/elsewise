@@ -4,7 +4,7 @@ A cross-platform **agentic development environment (ADE)**.
 
 ## Prerequisites
 
-- **Node** (recent LTS; ≥ 24 recommended) and **pnpm**
+- **Node** (v26 recommended) and **pnpm**
 - **Flutter** (≥ 3.47.0) for the `tools/icons` CLI.
 
 ## Getting started

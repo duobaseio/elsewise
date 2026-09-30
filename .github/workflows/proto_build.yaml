@@ -1,0 +1,27 @@
+name: Proto Build
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/proto_build.yaml
+      - proto/**
+  pull_request:
+    paths:
+      - .github/workflows/proto_build.yaml
+      - proto/**
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - run: buf lint proto
+      - run: buf format --diff --exit-code proto

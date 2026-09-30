@@ -1,0 +1,81 @@
+name: Components Build
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/components_build.yaml
+      - packages/components/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  pull_request:
+    paths:
+      - .github/workflows/components_build.yaml
+      - packages/components/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Components
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @elsewise/components check
+      - run: pnpm --filter @elsewise/components typecheck
+      - run: pnpm --filter @elsewise/components test
+
+  visual:
+    name: Visual Regression
+    # DISABLED. The baselines are currently blessed from a local machine and
+    # have never been compared against a runner, so this would gate PRs on an
+    # unverified environment match. To re-enable, restore:
+    #     if: github.event_name != 'push'
+    # or, to try it manually first without touching PRs:
+    #     if: github.event_name == 'workflow_dispatch'
+    if: false
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # playwright's postinstall is not in pnpm-workspace.yaml's allowBuilds,
+      # so the browser download never runs on install and has to be explicit.
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm --filter @elsewise/components exec playwright install chromium
+      - run: pnpm --filter @elsewise/components test:browser
+      - run: pnpm --filter @elsewise/components test:visual
+      # The -actual/-diff pair for every mismatch, so a failure can be read
+      # without reproducing it locally.
+      - name: Upload visual diffs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-diffs
+          path: packages/components/.vitest/
+          if-no-files-found: ignore
