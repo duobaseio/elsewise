@@ -14,13 +14,14 @@
     "build": "vite build",
     "build:electron": "vite build --mode electron",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
+    "@elsewise/api": "workspace:*",
     "@elsewise/bridge": "workspace:*",
     "@elsewise/components": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",
@@ -44,6 +45,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/browser": "^5.0.2",
     "@vitest/browser-playwright": "^5.0.2",
+    "es-module-lexer": "^3.0.2",
     "playwright": "^1.63.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",

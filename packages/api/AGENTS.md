@@ -18,5 +18,6 @@ This is a **source package**: `exports` points straight at `src/index.ts` and th
 ## Rules
 
 - **Contract only.** No implementation and no runtime dependencies; React is a peer dependency, imported type-only.
-- **Relative imports only.** No aliases.
+- **Relative imports only**, with `.ts` extensions. No aliases. Node loads this source as-is when
+  `apps/web/vite.config.ts` imports it, and Node doesn't map `.js` to `.ts`.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.
