@@ -1,3 +1,5 @@
+'use client';
+
 import { Select as SelectPrimitive } from '@base-ui/react/select';
 import { type ComponentProps, createContext, type ReactNode, useContext } from 'react';
 import { cn } from '../lib/utils';

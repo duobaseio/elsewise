@@ -1,3 +1,5 @@
+'use client';
+
 import { ContextMenu as ContextMenuPrimitive } from '@base-ui/react/context-menu';
 import type { ComponentProps } from 'react';
 import { cn } from '../lib/utils';

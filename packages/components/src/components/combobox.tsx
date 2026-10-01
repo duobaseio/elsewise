@@ -1,3 +1,5 @@
+'use client';
+
 import { Combobox as ComboboxPrimitive } from '@base-ui/react/combobox';
 import { createContext, type ReactNode, useContext } from 'react';
 import { cn } from '../lib/utils';

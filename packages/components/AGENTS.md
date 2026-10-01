@@ -27,6 +27,8 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/components <script>`.
   `window.platform` — the app owns that wiring.
 - **Relative imports only**: `./button`, `../lib/utils`. No `@/` alias and no importing the package by name.
 - **React by name**: `import { type ComponentProps, useState } from 'react'`, never the `React.` namespace.
+- **`'use client'`** opens every file that wraps a Base UI primitive or uses hooks or context, so the package works
+  under React Server Components. Keep the one the shadcn CLI emits; plain-markup components go without.
 - **Comments**: `//` for comments, `/** … */` for doc comments, `/* … */` only inside an expression or in CSS. Wrap
   prose at 120 columns by hand. Keep comments in test files to a minimum.
 

@@ -1,3 +1,5 @@
+'use client';
+
 import { type CSSProperties, createContext, type ReactNode, useContext, useMemo } from 'react';
 
 import {

@@ -1,3 +1,5 @@
+'use client';
+
 import type { FileTreeIconConfig } from '@pierre/trees';
 import { type ComponentProps, type ComponentType, createElement, useMemo } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';

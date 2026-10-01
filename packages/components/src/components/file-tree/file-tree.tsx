@@ -1,3 +1,5 @@
+'use client';
+
 import type {
   FileTreeDropContext,
   FileTreeDropResult,
@@ -43,7 +45,7 @@ export function FileTree({ model, className, gitStatusBadges = true, 'aria-label
 /**
  * Options for {@link useFileTree}.
  *
- * The `initial*` fields are only read on mount; change the tree afterwards through the model. Callbacks can change
+ * The `initial*` fields are only read on mount; change the tree afterward through the model. Callbacks can change
  * between renders.
  */
 export interface FileTreeOptions {
