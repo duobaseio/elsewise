@@ -1,0 +1,44 @@
+name: Web Build
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/web_build.yaml
+      - apps/web/**
+      - packages/bridge/**
+      - packages/components/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  pull_request:
+    paths:
+      - .github/workflows/web_build.yaml
+      - apps/web/**
+      - packages/bridge/**
+      - packages/components/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @elsewise/web check
+      - run: pnpm --filter @elsewise/web typecheck
+      - run: pnpm --filter @elsewise/web build

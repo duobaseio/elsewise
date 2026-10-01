@@ -8,6 +8,21 @@
       "groupName": "misc (non-major)"
     },
     {
+      "matchFileNames": ["apps/desktop/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "desktop (non-major)"
+    },
+    {
+      "matchFileNames": ["apps/web/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "web (non-major)"
+    },
+    {
+      "matchFileNames": ["packages/bridge/**"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "bridge (non-major)"
+    },
+    {
       "matchFileNames": ["packages/components/**"],
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "components (non-major)"

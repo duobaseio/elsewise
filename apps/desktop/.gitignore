@@ -1,0 +1,4 @@
+# Compiled main/preload and packaged app
+out/
+dist/
+*.tsbuildinfo

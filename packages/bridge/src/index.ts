@@ -1,5 +1,5 @@
-import type { SettingsBridge } from './settings.ts';
-import type { WindowBridge } from './window.ts';
+import type { SettingsBridge } from './settings.js';
+import type { WindowBridge } from './window.js';
 
 export {
   type Brightness,
@@ -12,8 +12,8 @@ export {
   type LineSeparator,
   type Settings,
   type SettingsBridge,
-} from './settings.ts';
-export type { WindowBridge } from './window.ts';
+} from './settings.js';
+export type { WindowBridge } from './window.js';
 
 declare global {
   interface Window {

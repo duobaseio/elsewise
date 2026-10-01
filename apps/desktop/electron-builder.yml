@@ -1,0 +1,27 @@
+appId: com.duobase.elsewise
+productName: Elsewise
+directories:
+  output: dist
+asar: true
+# main/preload are compiled by tsc and the renderer is copied in from apps/web —
+# nothing needs a native rebuild, and no node_modules are shipped.
+npmRebuild: false
+files:
+  - out/**/*
+  - package.json
+# Re-apply Electron fuses at package time (see build/afterPack.cjs).
+afterPack: build/afterPack.cjs
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.productivity
+win:
+  target:
+    - nsis
+linux:
+  target:
+    - AppImage
+    - deb
+    - rpm
+  category: Utility

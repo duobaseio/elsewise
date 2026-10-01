@@ -1,7 +1,11 @@
 packages:
+  - "apps/*"
   - "packages/*"
   - "packages/transport/ts"
 
 allowBuilds:
   # buf's postinstall selects/links the platform CLI binary.
   '@bufbuild/buf': true
+  # electron-builder 26 drags in the squirrel target's toolchain. This repo ships nsis
+  # on Windows, so its 7-Zip selection never runs.
+  electron-winstaller: false

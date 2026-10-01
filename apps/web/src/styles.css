@@ -1,0 +1,4 @@
+@import "@elsewise/components/styles.css";
+
+/* Tailwind does not scan outside this app, so point it at the components' sources for their class names. */
+@source "../../../packages/components/src";
