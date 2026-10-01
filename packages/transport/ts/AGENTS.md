@@ -34,6 +34,19 @@ once however the wire ends, a local `close` included, so a caller who kept the w
 (`test/wire/socket.test.ts`) runs the runtime's `WebSocket` against a `ws` server over loopback, so both implementations
 are covered.
 
+## Heartbeat
+
+Liveness is the wire's concern, not the channel's: the channel only multiplexes streams and learns of a dead
+connection through `onClosed` like any other close. `SocketWire` probes its peer with a `HeartbeatEnvelope` carrying
+`Ping` every `heartbeat` ms (`DEFAULT_HEARTBEAT_MS`, 15 s), answers the peer's with one carrying `Pong`, and passes
+neither up. If nothing at all arrives between two consecutive probes it closes with reason `heartbeat timeout`, so a
+peer that vanished without closing the socket (network drop, sleep, NAT expiry) is noticed within two intervals rather
+than never. The heartbeat envelope is defined in the proto so every language agrees on its bytes, but it is always sent
+bare, so the wire matches the two frames byte for byte instead of decoding. The timer is unref'd so it never keeps a Node process alive. A
+WebSocket needs the probe (browsers cannot send protocol pings); a data channel should get `heartbeat: false` and rely
+on ICE, since a probe would give up on a pause an ICE restart could recover from, and the connection layer closes it
+when the peer connection reports `failed`. Every peer implementation's wire must answer `Ping`.
+
 ## Limits
 
 No backpressure: every queue is unbounded. A reassembled message is capped at 16 MiB (`MAX_MESSAGE_BYTES`) — an

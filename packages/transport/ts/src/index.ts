@@ -12,5 +12,5 @@ export { Code } from './gen/elsewise/transport/v1/envelope_pb';
 export type { HandlerContext, ServiceImpl } from './server';
 export { serve } from './server';
 export type { Wire } from './wire';
-export type { Socket } from './wire/socket';
-export { SocketWire } from './wire/socket';
+export type { Socket, SocketWireOptions } from './wire/socket';
+export { DEFAULT_HEARTBEAT_MS, SocketWire } from './wire/socket';
