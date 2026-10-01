@@ -109,6 +109,8 @@ export class SocketWire implements Wire {
       this.#heard = false;
       this.send(PING);
     }, interval);
+    // Check ensures that the runtime is node before calling unref().
+    if (typeof timer === 'object' && 'unref' in timer) timer.unref();
     this.#heartbeat = timer;
   }
 
