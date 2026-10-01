@@ -23,8 +23,8 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/components <script>`.
 
 ## Rules
 
-- **Components stay pure.** A component takes what it needs as props. It never reads settings, the bridge or
-  `window.platform` — the app owns that wiring.
+- **Components stay pure.** A component takes what it needs as props. It never reads settings or `window.bridge` — the
+  app owns that wiring.
 - **Relative imports only**: `./button`, `../lib/utils`. No `@/` alias and no importing the package by name.
 - **React by name**: `import { type ComponentProps, useState } from 'react'`, never the `React.` namespace.
 - **`'use client'`** opens every file that wraps a Base UI primitive or uses hooks or context, so the package works
@@ -86,8 +86,7 @@ After each `add`:
 ### Visual tests
 
 Baselines are **byte-exact**, blessed on macOS, and committed. When one flakes, fix the environment, not the
-comparator. Dependencies are **pinned exactly** so a version bump is reviewed against the baselines; `vitest`,
-`@vitest/browser` and `@vitest/browser-playwright` share one version.
+comparator. `vitest`, `@vitest/browser` and `@vitest/browser-playwright` share one version.
 
 Scope a rebless to a file, **path before the flag** — `--update` swallows a path that follows it and reblesses
 everything:
