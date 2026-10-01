@@ -1,7 +1,9 @@
 import { once } from 'node:events';
-import { afterEach, describe, expect, test } from 'vitest';
+import { create, toBinary } from '@bufbuild/protobuf';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { type WebSocket as ServerSocket, WebSocketServer } from 'ws';
-import { Channel, Code, MAX_FRAGMENT_BYTES, SocketWire } from '../../src';
+import { Channel, Code, MAX_FRAGMENT_BYTES, type Socket, SocketWire } from '../../src';
+import { EnvelopeSchema } from '../../src/gen/elsewise/transport/v1/envelope_pb';
 
 const encode = (value: string) => new TextEncoder().encode(value);
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -55,6 +57,41 @@ async function pair(): Promise<{ front: Channel; daemon: Channel }> {
     front: new Channel(new SocketWire(client)),
     daemon: new Channel(new SocketWire(server), { parity: 'even' }),
   };
+}
+
+function heartbeat(body: 'ping' | 'pong'): Uint8Array {
+  return toBinary(
+    EnvelopeSchema,
+    create(EnvelopeSchema, { kind: { case: 'heartbeat', value: { body: { case: body, value: {} } } } }),
+  );
+}
+
+const PING = heartbeat('ping');
+const PONG = heartbeat('pong');
+
+class FakeSocket implements Socket {
+  binaryType = '';
+  readyState = 1;
+  sent: Uint8Array[] = [];
+  closed: [number | undefined, string | undefined] | undefined;
+  #listeners = new Map<string, ((event: never) => void)[]>();
+
+  send(data: Uint8Array): void {
+    this.sent.push(data);
+  }
+
+  close(code?: number, reason?: string): void {
+    this.closed = [code, reason];
+  }
+
+  addEventListener(type: string, listener: (event: never) => void): void {
+    this.#listeners.set(type, [...(this.#listeners.get(type) ?? []), listener]);
+  }
+
+  deliver(frame: Uint8Array): void {
+    const data = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength);
+    for (const listener of this.#listeners.get('message') ?? []) listener({ data } as never);
+  }
 }
 
 function serveEcho(channel: Channel): void {
@@ -140,6 +177,71 @@ describe('socket wire', () => {
       const pending = collect(stream.responses);
       server.terminate();
       await expect(pending).rejects.toMatchObject({ code: Code.UNAVAILABLE });
+    });
+  });
+
+  describe('heartbeat', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    test('probes every interval and answers the peer', () => {
+      const socket = new FakeSocket();
+      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      const frames: Uint8Array[] = [];
+      wire.onFrame = (frame) => frames.push(frame);
+      vi.advanceTimersByTime(1000);
+      expect(socket.sent).toEqual([PING]);
+      socket.deliver(PING);
+      socket.deliver(PONG);
+      expect(socket.sent).toEqual([PING, PONG]);
+      expect(frames).toEqual([]); // Neither reaches the channel.
+      vi.advanceTimersByTime(1000);
+      expect(socket.sent).toEqual([PING, PONG, PING]);
+    });
+
+    test('a silent peer closes the wire after two intervals', () => {
+      const socket = new FakeSocket();
+      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      let reason: string | undefined;
+      wire.onClosed = (r) => {
+        reason = r;
+      };
+      vi.advanceTimersByTime(1999);
+      expect(socket.closed).toBeUndefined();
+      vi.advanceTimersByTime(1);
+      expect(socket.closed).toEqual([1000, 'heartbeat timeout']);
+      expect(reason).toBe('heartbeat timeout');
+      vi.advanceTimersByTime(5000);
+      expect(socket.sent).toEqual([PING]); // No probes after closing.
+    });
+
+    test('any message counts as hearing the peer', () => {
+      const socket = new FakeSocket();
+      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      wire.onFrame = () => {};
+      for (let i = 0; i < 5; i++) {
+        vi.advanceTimersByTime(1000);
+        socket.deliver(new Uint8Array([1, 2, 3]));
+      }
+      expect(socket.closed).toBeUndefined();
+    });
+
+    test('false never probes but still answers', () => {
+      const socket = new FakeSocket();
+      new SocketWire(socket, { heartbeat: false });
+      vi.advanceTimersByTime(60_000);
+      expect(socket.sent).toEqual([]);
+      expect(socket.closed).toBeUndefined();
+      socket.deliver(PING);
+      expect(socket.sent).toEqual([PONG]);
+    });
+
+    test('closing stops the probes', () => {
+      const socket = new FakeSocket();
+      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      wire.close();
+      vi.advanceTimersByTime(3000);
+      expect(socket.sent).toEqual([]);
     });
   });
 

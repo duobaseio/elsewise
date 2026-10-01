@@ -24,6 +24,9 @@ message Envelope {
 
     // A frame sent by a responder.
     ResponseEnvelope response = 2;
+
+    // A heartbeat message.
+    HeartbeatEnvelope heartbeat = 3;
   }
 }
 
@@ -73,6 +76,17 @@ message ResponseEnvelope {
   }
 }
 
+// A heartbeat message only used on wires without a liveness check (e.g. websockets).
+message HeartbeatEnvelope {
+  oneof body {
+    // A liveness probe.
+    Ping ping = 1;
+
+    // The answer to a Ping.
+    Pong pong = 2;
+  }
+}
+
 // A slice of a message's serialized bytes.
 message Fragment {
   // The bytes.
@@ -99,6 +113,12 @@ message Close {}
 
 // The requester's abandonment of a stream it no longer wants answered.
 message Cancel {}
+
+// A liveness probe.
+message Ping {}
+
+// The answer to a Ping.
+message Pong {}
 
 // The responder's terminal frame for a stream.
 message End {
