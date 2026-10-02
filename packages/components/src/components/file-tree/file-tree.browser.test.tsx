@@ -51,7 +51,9 @@ async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: b
   );
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
-  if (shadowRoot == null) throw new Error('no shadow root');
+  if (shadowRoot == null) {
+    throw new Error('no shadow root');
+  }
   return { model, shadowRoot };
 }
 
@@ -62,13 +64,17 @@ function isExpanded(model: FileTreeModel | null, path: string): boolean {
 
 function row(shadowRoot: ShadowRoot, path: string): HTMLElement {
   const element = shadowRoot.querySelector<HTMLElement>(`[data-item-path="${path}"]`);
-  if (element == null) throw new Error(`no row for ${path}`);
+  if (element == null) {
+    throw new Error(`no row for ${path}`);
+  }
   return element;
 }
 
 function section(shadowRoot: ShadowRoot, path: string, name: string): HTMLElement {
   const element = row(shadowRoot, path).querySelector<HTMLElement>(`[data-item-section="${name}"]`);
-  if (element == null) throw new Error(`no ${name} section for ${path}`);
+  if (element == null) {
+    throw new Error(`no ${name} section for ${path}`);
+  }
   return element;
 }
 
@@ -78,13 +84,17 @@ function iconLane(shadowRoot: ShadowRoot, path: string): DOMRect {
 
 function token(name: string): string {
   const host = document.querySelector<HTMLElement>('file-tree-container');
-  if (host == null) throw new Error('no host');
+  if (host == null) {
+    throw new Error('no host');
+  }
   return getComputedStyle(host).getPropertyValue(name).trim();
 }
 
 function rgb(hex: string): string {
   const [, r, g, b] = /^#(\w{2})(\w{2})(\w{2})$/.exec(hex) ?? [];
-  if (b === undefined) throw new Error(`not a hex colour: ${hex}`);
+  if (b === undefined) {
+    throw new Error(`not a hex colour: ${hex}`);
+  }
   return `rgb(${Number.parseInt(r, 16)}, ${Number.parseInt(g, 16)}, ${Number.parseInt(b, 16)})`;
 }
 
@@ -117,7 +127,9 @@ test('every icon keeps the full lane, chevron included', async () => {
   const { shadowRoot } = await mount();
   const box = (path: string) => {
     const svg = section(shadowRoot, path, 'icon').querySelector('svg');
-    if (svg == null) throw new Error(`no icon svg for ${path}`);
+    if (svg == null) {
+      throw new Error(`no icon svg for ${path}`);
+    }
     return svg.getBoundingClientRect();
   };
 
@@ -131,7 +143,9 @@ test("the chevron sits on the row's vertical centre", async () => {
   const { shadowRoot } = await mount();
   const chevron = section(shadowRoot, 'daemon/', 'icon').querySelector('svg')?.getBoundingClientRect();
   const line = row(shadowRoot, 'daemon/').getBoundingClientRect();
-  if (chevron == null) throw new Error('no chevron');
+  if (chevron == null) {
+    throw new Error('no chevron');
+  }
 
   expect(chevron.top + chevron.height / 2).toBe(line.top + line.height / 2);
 });
@@ -139,7 +153,9 @@ test("the chevron sits on the row's vertical centre", async () => {
 test('theme.css reaches the host, and density keeps the inline style to itself', async () => {
   await mount();
   const host = document.querySelector<HTMLElement>('file-tree-container');
-  if (host == null) throw new Error('no host');
+  if (host == null) {
+    throw new Error('no host');
+  }
 
   expect(getComputedStyle(host).getPropertyValue('--trees-bg').trim()).toBe('#ffffff');
 
@@ -160,7 +176,9 @@ test('a folder with no aria-expanded still renders the open icon', async () => {
   const { shadowRoot } = await mount();
   const folder = row(shadowRoot, 'daemon/');
   const lane = folder.querySelector('[data-item-section="icon"]');
-  if (lane == null) throw new Error('no icon lane');
+  if (lane == null) {
+    throw new Error('no icon lane');
+  }
 
   const open = getComputedStyle(lane, '::after').maskImage;
   expect(open).toMatch(/^url\("data:image\/svg\+xml,/);
@@ -212,7 +230,9 @@ test('a folder marked only by a descendant shows nothing', async () => {
 test('conflict shows "!" and still carries the wrong title', async () => {
   const { shadowRoot } = await mount();
   const lane = row(shadowRoot, 'daemon/src/conflict.rs').querySelector('[data-item-section="git"] > span');
-  if (lane == null) throw new Error('no git lane');
+  if (lane == null) {
+    throw new Error('no git lane');
+  }
 
   expect(getComputedStyle(lane, '::after').content).toBe('"!"');
   // Conflict rides their unused `deleted` slot and CSS cannot reach a `title`. Fails the day upstream grows one.
@@ -277,7 +297,9 @@ test('shift-click selects the range between two rows', async () => {
 test('the indent guides do not wait for a hover', async () => {
   const { shadowRoot } = await mount();
   const guide = row(shadowRoot, 'daemon/src/main.rs').querySelector('[data-item-section="spacing-item"]');
-  if (guide == null) throw new Error('no indent guide');
+  if (guide == null) {
+    throw new Error('no indent guide');
+  }
 
   expect(getComputedStyle(guide).opacity).toBe('1');
   expect(getComputedStyle(guide).transitionDuration).toBe('0s');
@@ -302,7 +324,9 @@ test('F2 opens an inline rename input', async () => {
 
   const input = await vi.waitFor(() => {
     const found = shadowRoot.querySelector('input[data-item-rename-input="true"]');
-    if (found == null) throw new Error('no rename input');
+    if (found == null) {
+      throw new Error('no rename input');
+    }
     return found;
   });
   expect(input.getAttribute('aria-label')).toBe('Rename README.md');
@@ -344,7 +368,9 @@ test('FileIconProvider overrides reach the tree, at mount and on change', async 
   const screen = await render(<Harness icons={first} />);
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
-  if (shadowRoot == null) throw new Error('no shadow root');
+  if (shadowRoot == null) {
+    throw new Error('no shadow root');
+  }
   expect(lettersOf(shadowRoot, 'daemon/src/main.rs')).toBe('XA');
 
   await screen.rerender(<Harness icons={letters('XB')} />);
@@ -372,7 +398,9 @@ test('IconProvider overrides reach the chevron and the folder icons', async () =
   );
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
-  if (shadowRoot == null) throw new Error('no shadow root');
+  if (shadowRoot == null) {
+    throw new Error('no shadow root');
+  }
 
   await vi.waitFor(() =>
     expect(decodeURIComponent(shadowRoot.querySelector('#ew-chevron image')?.getAttribute('href') ?? '')).toContain(

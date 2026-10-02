@@ -152,10 +152,14 @@ async function* decodeRequests<I extends DescMessage>(
   stream: ResponderStream,
   input: I,
 ): AsyncGenerator<MessageShape<I>> {
-  for await (const bytes of stream.requests) yield fromBinary(input, bytes);
+  for await (const bytes of stream.requests) {
+    yield fromBinary(input, bytes);
+  }
 }
 
 async function singleRequest<I extends DescMessage>(stream: ResponderStream, input: I): Promise<MessageShape<I>> {
-  for await (const bytes of stream.requests) return fromBinary(input, bytes);
+  for await (const bytes of stream.requests) {
+    return fromBinary(input, bytes);
+  }
   throw new TransportError(Code.INVALID_ARGUMENT, 'the call carried no request message');
 }

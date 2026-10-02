@@ -23,7 +23,9 @@ function modelOf(initialExpandedPaths: readonly string[]): FileTreeModel {
     return null;
   }
   renderToString(createElement(Harness));
-  if (model == null) throw new Error('no model');
+  if (model == null) {
+    throw new Error('no model');
+  }
   return model;
 }
 
@@ -37,7 +39,9 @@ function watched(initialExpandedPaths: readonly string[] = []) {
 
 function folder(model: FileTreeModel, path: string) {
   const item = model.getItem(path);
-  if (item == null || !('expand' in item)) throw new Error(`no folder at ${path}`);
+  if (item == null || !('expand' in item)) {
+    throw new Error(`no folder at ${path}`);
+  }
   return item;
 }
 

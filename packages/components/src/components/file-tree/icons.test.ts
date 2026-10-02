@@ -50,7 +50,9 @@ test('the sheet is not mistakable for the library’s own', () => {
 
 test('the chevron draws at three quarters of its lane', () => {
   const viewBox = /<symbol id="ew-chevron" viewBox="([^"]+)"/.exec(spriteSheet)?.[1];
-  if (viewBox === undefined) throw new Error('no chevron symbol');
+  if (viewBox === undefined) {
+    throw new Error('no chevron symbol');
+  }
 
   const [x, y, width, height] = viewBox.split(/\s+/).map(Number);
   expect(256 / width).toBeCloseTo(0.75, 4);
@@ -79,7 +81,9 @@ test('letter sizing counts non-space characters', () => {
   const spaced = twoLetterSpecs.find((spec) => spec.kind === 'letters' && spec.letters.includes(' '));
   const plain = twoLetterSpecs.find((spec) => spec.kind === 'letters' && !spec.letters.includes(' '));
 
-  if (spaced?.kind !== 'letters' || plain?.kind !== 'letters') return;
+  if (spaced?.kind !== 'letters' || plain?.kind !== 'letters') {
+    return;
+  }
   expect(sized(spaced.letters)).toBe(sized(plain.letters));
 });
 

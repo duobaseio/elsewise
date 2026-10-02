@@ -1,5 +1,3 @@
-import type { ComponentType } from 'react';
-
 /**
  * Represents an Elsewise plugin.
  */
@@ -8,11 +6,6 @@ export interface Plugin {
    * Called when Elsewise enables the plugin.
    */
   enable(context: PluginContext): void | Promise<void>;
-
-  /**
-   * Called when Elsewise disables the plugin.
-   */
-  disable?(): void | Promise<void>;
 }
 
 /**
@@ -23,13 +16,9 @@ export interface PluginContext {
   readonly id: string;
 
   /**
-   * The plugin's disposables, disposed in reverse order when Elsewise unloads the plugin.
+   * The plugin's disposables, disposed in reverse order when Elsewise disables the plugin.
    */
   readonly subscriptions: Disposable[];
-
-  // TODO: nuke
-  /** See {@link StubRegistry}. */
-  readonly stubRegistry: StubRegistry;
 }
 
 /**
@@ -40,18 +29,4 @@ export interface Disposable {
    * Releases the resource.
    */
   dispose(): void;
-}
-
-/**
- * The panels a plugin contributes.
- *
- * TODO: nuke
- */
-export interface StubRegistry {
-  /**
-   * Registers a React `component` that renders the panel `id`.
-   *
-   * Returns a disposable that unregisters the `component`.
-   */
-  register(id: string, component: ComponentType): Disposable;
 }

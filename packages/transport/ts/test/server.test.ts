@@ -14,12 +14,16 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 // Enough tick() to resolve all tasks broken up into separate microtask queues.
 async function settle(): Promise<void> {
-  for (let i = 0; i < 20; i++) await tick();
+  for (let i = 0; i < 20; i++) {
+    await tick();
+  }
 }
 
 async function take<T>(iterator: AsyncIterator<T>): Promise<T> {
   const result = await iterator.next();
-  if (result.done) throw new Error('iterator ended early');
+  if (result.done) {
+    throw new Error('iterator ended early');
+  }
   return result.value;
 }
 
@@ -97,7 +101,9 @@ describe('serve', () => {
     });
     const client = createClient(front, TestService);
     const texts: string[] = [];
-    for await (const response of client.serverStream({})) texts.push(response.text);
+    for await (const response of client.serverStream({})) {
+      texts.push(response.text);
+    }
     expect(texts).toEqual(['one', 'two']);
     expect(finished).toBe(true);
   });

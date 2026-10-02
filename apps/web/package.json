@@ -12,7 +12,6 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",
-    "build:electron": "vite build --mode electron",
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "format": "biome format",
@@ -21,7 +20,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
-    "@elsewise/api": "workspace:*",
+    "@elsewise/plugin": "workspace:*",
     "@elsewise/bridge": "workspace:*",
     "@elsewise/components": "workspace:*",
     "@phosphor-icons/react": "^2.1.10",

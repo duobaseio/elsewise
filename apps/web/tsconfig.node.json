@@ -2,9 +2,9 @@
   "include": ["vite.config.ts", "vite/**/*.ts"],
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2022",
+    "target": "ES2025",
     "module": "ESNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2025"],
     "types": ["node"],
 
     /* Bundler mode */

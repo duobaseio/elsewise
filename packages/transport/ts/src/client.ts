@@ -182,7 +182,9 @@ function bidiCall<I extends DescMessage, O extends DescMessage>(
 }
 
 function cancelOnAbort(stream: RequesterStream, signal: AbortSignal | undefined): void {
-  if (!signal) return;
+  if (!signal) {
+    return;
+  }
   if (signal.aborted) {
     stream.cancel();
     return;
@@ -196,7 +198,9 @@ async function* decodeResponses<O extends DescMessage>(
   stream: RequesterStream,
   output: O,
 ): AsyncGenerator<MessageShape<O>> {
-  for await (const bytes of stream.responses) yield fromBinary(output, bytes);
+  for await (const bytes of stream.responses) {
+    yield fromBinary(output, bytes);
+  }
 }
 
 async function singleResponse<O extends DescMessage>(
@@ -206,9 +210,13 @@ async function singleResponse<O extends DescMessage>(
 ): Promise<MessageShape<O>> {
   let response: MessageShape<O> | undefined;
   for await (const bytes of stream.responses) {
-    if (response !== undefined) throw new TransportError(Code.INTERNAL, `${name} answered with more than one message`);
+    if (response !== undefined) {
+      throw new TransportError(Code.INTERNAL, `${name} answered with more than one message`);
+    }
     response = fromBinary(output, bytes);
   }
-  if (response === undefined) throw new TransportError(Code.INTERNAL, `${name} ended without a response message`);
+  if (response === undefined) {
+    throw new TransportError(Code.INTERNAL, `${name} ended without a response message`);
+  }
   return response;
 }

@@ -11,7 +11,9 @@ const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
 async function collect(messages: AsyncIterable<Uint8Array>): Promise<string[]> {
   const received: string[] = [];
-  for await (const message of messages) received.push(decode(message));
+  for await (const message of messages) {
+    received.push(decode(message));
+  }
   return received;
 }
 
@@ -27,7 +29,9 @@ const servers: WebSocketServer[] = [];
 
 afterEach(async () => {
   for (const server of servers.splice(0)) {
-    for (const client of server.clients) client.terminate();
+    for (const client of server.clients) {
+      client.terminate();
+    }
     await new Promise((resolve) => server.close(resolve));
   }
 });
@@ -40,7 +44,9 @@ async function createServer(options: { verifyClient?: () => boolean } = {}): Pro
   servers.push(wss);
   await once(wss, 'listening');
   const address = wss.address();
-  if (typeof address !== 'object' || address === null) throw new Error('unexpected address');
+  if (typeof address !== 'object' || address === null) {
+    throw new Error('unexpected address');
+  }
   return { wss, url: `ws://127.0.0.1:${address.port}` };
 }
 
@@ -72,7 +78,9 @@ const PONG = heartbeat('pong');
 
 function serveEcho(channel: Channel): void {
   channel.handle('svc/Echo', async (stream) => {
-    for await (const message of stream.requests) stream.send(message);
+    for await (const message of stream.requests) {
+      stream.send(message);
+    }
   });
 }
 

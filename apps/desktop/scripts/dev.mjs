@@ -59,10 +59,14 @@ function shutdown() {
   }
   process.exit(0);
 }
-for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(signal, shutdown);
+for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
+  process.on(signal, shutdown);
+}
 const parent = process.ppid;
 setInterval(() => {
-  if (process.ppid !== parent) shutdown();
+  if (process.ppid !== parent) {
+    shutdown();
+  }
 }, 1000).unref();
 
 await tscBuild();

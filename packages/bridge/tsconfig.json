@@ -1,9 +1,9 @@
 {
   "include": ["src/**/*.ts"],
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2025",
     "module": "ESNext",
-    "lib": ["ES2022", "DOM"],
+    "lib": ["ES2025", "DOM"],
     "types": [],
 
     /* Bundler mode */

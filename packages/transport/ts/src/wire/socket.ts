@@ -82,7 +82,9 @@ export abstract class SocketWire implements Wire {
     this.highWaterMark = options?.highWaterMark ?? DEFAULT_HIGH_WATER_MARK;
     socket.binaryType = 'arraybuffer';
     socket.addEventListener('message', (event) => {
-      if (!this.#open) return;
+      if (!this.#open) {
+        return;
+      }
       if (event.data instanceof ArrayBuffer) {
         this.receive(new Uint8Array(event.data));
         return;
@@ -130,7 +132,9 @@ export abstract class SocketWire implements Wire {
   }
 
   close(code?: number, reason?: string): void {
-    if (!this.#open) return;
+    if (!this.#open) {
+      return;
+    }
     this.#open = false;
     this.socket.close(code, reason);
     this.onClosed?.(reason);
