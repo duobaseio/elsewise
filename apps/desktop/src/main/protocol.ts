@@ -27,11 +27,6 @@ const MIME_TYPES: Record<string, string> = {
 const RENDERER = path.join(__dirname, '../renderer');
 const PLUGINS = path.join(dataLocalDir(), 'plugins');
 
-// Importing plugins require CORS in development as the renderer is the dev server's page, not 'app://elsewise/...'.
-const CORS: Record<string, string> = process.env.ELECTRON_RENDERER_URL
-  ? { 'Access-Control-Allow-Origin': new URL(process.env.ELECTRON_RENDERER_URL).origin }
-  : {};
-
 /**
  * Serves `app://elsewise/` from two folders:
  *
@@ -70,10 +65,7 @@ export function handleAppScheme(): void {
     const response = await net.fetch(pathToFileURL(file).href).catch(() => undefined);
     if (response) {
       return new Response(response.body, {
-        headers: {
-          'Content-Type': MIME_TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream',
-          ...CORS,
-        },
+        headers: { 'Content-Type': MIME_TYPES[path.extname(file).toLowerCase()] ?? 'application/octet-stream' },
       });
     }
 

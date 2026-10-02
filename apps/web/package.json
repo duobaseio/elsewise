@@ -14,6 +14,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
+    "test": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"

@@ -44,7 +44,6 @@ export class PluginLoader {
 
         await plugin.enable(context);
         return context;
-
       } catch (error) {
         console.error(`Plugin ${id} failed to load`, error);
         this.dispose(context);

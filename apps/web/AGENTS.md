@@ -22,6 +22,8 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/web <script>`.
 - **The embedder through `window.bridge`.** Types come from `@elsewise/bridge`; every surface may be undefined, as in
   a plain browser.
 - **Never hand-edit `routeTree.gen.ts`.**
-- **Node only in `vite.config.ts` and `vite/`.** `tsconfig.node.json` gives them Node's types; `tsconfig.app.json`
-  keeps them out of `src/`.
+- **Node only in `vite.config.ts`, `vitest.config.ts` and `vite/`.** `tsconfig.node.json` gives them Node's types;
+  `tsconfig.app.json` keeps them out of `src/`.
+- **Tests sit beside their source** as `src/**/*.test.ts` and run in Node on Vitest: `test`. Group them in a `describe`
+  per function under test, and name each test for what that function does, without repeating its name.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.
