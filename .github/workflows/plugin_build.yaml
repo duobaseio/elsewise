@@ -1,18 +1,18 @@
-name: API Build
+name: Plugin Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/api_build.yaml
-      - packages/api/**
+      - .github/workflows/plugin_build.yaml
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/api_build.yaml
-      - packages/api/**
+      - .github/workflows/plugin_build.yaml
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    name: Build API
+    name: Build Plugin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,5 +35,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/api check
-      - run: pnpm --filter @elsewise/api typecheck
+      - run: pnpm --filter @elsewise/plugin check
+      - run: pnpm --filter @elsewise/plugin typecheck

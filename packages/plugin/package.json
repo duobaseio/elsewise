@@ -1,5 +1,5 @@
 {
-  "name": "@elsewise/api",
+  "name": "@elsewise/plugin",
   "private": true,
   "type": "module",
   "devEngines": {
@@ -10,7 +10,8 @@
   },
   "description": "The contract between Elsewise and its plugins.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./build": "./src/build.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
