@@ -2,8 +2,9 @@ import { once } from 'node:events';
 import { create, toBinary } from '@bufbuild/protobuf';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { type WebSocket as ServerSocket, WebSocketServer } from 'ws';
-import { Channel, Code, MAX_FRAGMENT_BYTES, type Socket, SocketWire } from '../../src';
+import { Channel, Code, WebSocketWire } from '../../src';
 import { EnvelopeSchema } from '../../src/gen/elsewise/transport/v1/envelope_pb';
+import { FakeSocket } from './fake-socket';
 
 const encode = (value: string) => new TextEncoder().encode(value);
 const decode = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
@@ -54,8 +55,8 @@ async function connect({ wss, url }: Server): Promise<{ client: WebSocket; serve
 async function pair(): Promise<{ front: Channel; daemon: Channel }> {
   const { client, server } = await connect(await createServer());
   return {
-    front: new Channel(new SocketWire(client)),
-    daemon: new Channel(new SocketWire(server), { parity: 'even' }),
+    front: new Channel(new WebSocketWire(client)),
+    daemon: new Channel(new WebSocketWire(server), { parity: 'even' }),
   };
 }
 
@@ -69,69 +70,44 @@ function heartbeat(body: 'ping' | 'pong'): Uint8Array {
 const PING = heartbeat('ping');
 const PONG = heartbeat('pong');
 
-class FakeSocket implements Socket {
-  binaryType = '';
-  readyState = 1;
-  sent: Uint8Array[] = [];
-  closed: [number | undefined, string | undefined] | undefined;
-  #listeners = new Map<string, ((event: never) => void)[]>();
-
-  send(data: Uint8Array): void {
-    this.sent.push(data);
-  }
-
-  close(code?: number, reason?: string): void {
-    this.closed = [code, reason];
-  }
-
-  addEventListener(type: string, listener: (event: never) => void): void {
-    this.#listeners.set(type, [...(this.#listeners.get(type) ?? []), listener]);
-  }
-
-  deliver(frame: Uint8Array): void {
-    const data = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength);
-    for (const listener of this.#listeners.get('message') ?? []) listener({ data } as never);
-  }
-}
-
 function serveEcho(channel: Channel): void {
   channel.handle('svc/Echo', async (stream) => {
     for await (const message of stream.requests) stream.send(message);
   });
 }
 
-describe('socket wire', () => {
+describe('websocket wire', () => {
   describe('open', () => {
     test('opens once the socket connects', async () => {
       const { wss, url } = await createServer();
       const client = new WebSocket(url);
       expect(client.readyState).toBe(WebSocket.CONNECTING);
-      const [wire] = await Promise.all([SocketWire.open(client), once(wss, 'connection')]);
-      expect(wire).toBeInstanceOf(SocketWire);
+      const [wire] = await Promise.all([WebSocketWire.open(client), once(wss, 'connection')]);
+      expect(wire).toBeInstanceOf(WebSocketWire);
     });
 
     test('opens over a socket that is live', async () => {
       const { client } = await connect(await createServer());
-      await expect(SocketWire.open(client)).resolves.toBeInstanceOf(SocketWire);
+      await expect(WebSocketWire.open(client)).resolves.toBeInstanceOf(WebSocketWire);
     });
 
     test('rejects when the socket closes before opening', async () => {
       const { url } = await createServer({ verifyClient: () => false });
-      await expect(SocketWire.open(new WebSocket(url))).rejects.toThrow();
+      await expect(WebSocketWire.open(new WebSocket(url))).rejects.toThrow();
     });
 
     test('rejects a socket that is already closed', async () => {
       const { client } = await connect(await createServer());
       client.close();
       await once(client, 'close');
-      await expect(SocketWire.open(client)).rejects.toThrow('socket closed');
+      await expect(WebSocketWire.open(client)).rejects.toThrow('socket closed');
     });
   });
 
   describe('frames', () => {
     test('frames are views of the socket message', async () => {
       const { client, server } = await connect(await createServer());
-      const wire = new SocketWire(client);
+      const wire = new WebSocketWire(client);
       const frame = deferred<Uint8Array>();
       wire.onFrame = (received) => frame.resolve(received);
       server.send(new Uint8Array([1, 2, 3]));
@@ -140,7 +116,7 @@ describe('socket wire', () => {
 
     test('a text message closes the wire as unsupported data', async () => {
       const { client, server } = await connect(await createServer());
-      const wire = new SocketWire(client);
+      const wire = new WebSocketWire(client);
       const closed = deferred<string | undefined>();
       wire.onClosed = (reason) => closed.resolve(reason);
       const serverClosed = once(server, 'close');
@@ -154,7 +130,7 @@ describe('socket wire', () => {
   describe('closing', () => {
     test('closing sends a close frame and notifies once', async () => {
       const { client, server } = await connect(await createServer());
-      const wire = new SocketWire(client);
+      const wire = new WebSocketWire(client);
       let notified = 0;
       wire.onClosed = () => {
         notified += 1;
@@ -172,7 +148,7 @@ describe('socket wire', () => {
 
     test('the socket dropping fails pending calls with CODE_UNAVAILABLE', async () => {
       const { client, server } = await connect(await createServer());
-      const front = new Channel(new SocketWire(client));
+      const front = new Channel(new WebSocketWire(client));
       const stream = front.open('svc/Echo');
       const pending = collect(stream.responses);
       server.terminate();
@@ -186,7 +162,7 @@ describe('socket wire', () => {
 
     test('probes every interval and answers the peer', () => {
       const socket = new FakeSocket();
-      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      const wire = new WebSocketWire(socket, { heartbeat: 1000 });
       const frames: Uint8Array[] = [];
       wire.onFrame = (frame) => frames.push(frame);
       vi.advanceTimersByTime(1000);
@@ -201,7 +177,7 @@ describe('socket wire', () => {
 
     test('a silent peer closes the wire after two intervals', () => {
       const socket = new FakeSocket();
-      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      const wire = new WebSocketWire(socket, { heartbeat: 1000 });
       let reason: string | undefined;
       wire.onClosed = (r) => {
         reason = r;
@@ -217,7 +193,7 @@ describe('socket wire', () => {
 
     test('any message counts as hearing the peer', () => {
       const socket = new FakeSocket();
-      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      const wire = new WebSocketWire(socket, { heartbeat: 1000 });
       wire.onFrame = () => {};
       for (let i = 0; i < 5; i++) {
         vi.advanceTimersByTime(1000);
@@ -225,23 +201,61 @@ describe('socket wire', () => {
       }
       expect(socket.closed).toBeUndefined();
     });
+  });
 
-    test('false never probes but still answers', () => {
+  describe('backpressure', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    test('writable follows the buffered amount against the high-water mark', () => {
       const socket = new FakeSocket();
-      new SocketWire(socket, { heartbeat: false });
-      vi.advanceTimersByTime(60_000);
-      expect(socket.sent).toEqual([]);
-      expect(socket.closed).toBeUndefined();
-      socket.deliver(PING);
-      expect(socket.sent).toEqual([PONG]);
+      const wire = new WebSocketWire(socket, { highWaterMark: 100 });
+      expect(wire.writable).toBe(true);
+      socket.bufferedAmount = 99;
+      expect(wire.writable).toBe(true);
+      socket.bufferedAmount = 100;
+      expect(wire.writable).toBe(false);
+      socket.bufferedAmount = 0;
+      wire.close();
+      expect(wire.writable).toBe(false);
     });
 
-    test('closing stops the probes', () => {
+    test('a full WebSocket is polled until it drains to half the mark', () => {
       const socket = new FakeSocket();
-      const wire = new SocketWire(socket, { heartbeat: 1000 });
+      const wire = new WebSocketWire(socket, { highWaterMark: 100 });
+      let drained = 0;
+      wire.onDrain = () => {
+        drained += 1;
+      };
+      const timers = vi.getTimerCount();
+      socket.bufferedAmount = 100;
+      wire.send(new Uint8Array([1]));
+      vi.advanceTimersByTime(5);
+      expect(drained).toBe(0);
+      socket.bufferedAmount = 51;
+      vi.advanceTimersByTime(5);
+      expect(drained).toBe(0);
+      socket.bufferedAmount = 50;
+      vi.advanceTimersByTime(5);
+      expect(drained).toBe(1);
+      expect(vi.getTimerCount()).toBe(timers);
+    });
+
+    test('a send while writable starts no poll', () => {
+      const socket = new FakeSocket();
+      const wire = new WebSocketWire(socket, { highWaterMark: 100 });
+      const timers = vi.getTimerCount();
+      wire.send(new Uint8Array([1]));
+      expect(vi.getTimerCount()).toBe(timers);
+    });
+
+    test('closing stops the heartbeat and the poll', () => {
+      const socket = new FakeSocket();
+      const wire = new WebSocketWire(socket, { highWaterMark: 100 });
+      socket.bufferedAmount = 100;
+      wire.send(new Uint8Array([1]));
       wire.close();
-      vi.advanceTimersByTime(3000);
-      expect(socket.sent).toEqual([]);
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 
@@ -256,15 +270,29 @@ describe('socket wire', () => {
       expect(await collect(stream.responses)).toEqual(['one', 'two']);
     });
 
-    test('carries a message spanning several fragments', async () => {
+    test('a small call is not starved by a large one in flight', async () => {
       const { front, daemon } = await pair();
       serveEcho(daemon);
-      const message = new Uint8Array(MAX_FRAGMENT_BYTES * 3 + 1).fill(7);
-      const stream = front.open('svc/Echo');
-      stream.send(message);
-      stream.close();
-      const [echoed] = await collect(stream.responses);
-      expect(echoed).toBe(decode(message));
+      const finished: string[] = [];
+
+      const big = front.open('svc/Echo');
+      void big.send(new Uint8Array(4 * 1024 * 1024).fill(1));
+      big.close();
+      const bigDone = collect(big.responses).then(([echoed]) => {
+        finished.push('big');
+        expect(echoed).toHaveLength(4 * 1024 * 1024);
+      });
+
+      const small = front.open('svc/Echo');
+      void small.send(encode('hi'));
+      small.close();
+      const smallDone = collect(small.responses).then((echoed) => {
+        finished.push('small');
+        expect(echoed).toEqual(['hi']);
+      });
+
+      await Promise.all([bigDone, smallDone]);
+      expect(finished).toEqual(['small', 'big']);
     });
   });
 });

@@ -56,7 +56,8 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
         channel.handle(name, async (stream) => {
           const request = await singleRequest(stream, method.input);
           const response = await fn(request, { signal: stream.signal });
-          stream.send(toBinary(method.output, create(method.output, response)));
+          // Awaited to prevent premature deregistration. The end method is immediately called once serve is done.
+          await stream.send(toBinary(method.output, create(method.output, response)));
         });
         break;
       }
@@ -74,7 +75,8 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
           const response = await fn(decodeRequests(stream, method.input), {
             signal: stream.signal,
           });
-          stream.send(toBinary(method.output, create(method.output, response)));
+          // Awaited to prevent premature deregistration. The end method is immediately called once serve is done.
+          await stream.send(toBinary(method.output, create(method.output, response)));
         });
         break;
       }
@@ -129,7 +131,9 @@ async function relayResponses(
         return;
       }
       if (result.done) return;
-      stream.send(toBinary(output, create(output, result.value)));
+      // Awaited so the impl's iterable applies backpressure. The promise is resolved when the message is sent through
+      // the wire.
+      await stream.send(toBinary(output, create(output, result.value)));
     }
   } finally {
     signal.removeEventListener('abort', onAbort);

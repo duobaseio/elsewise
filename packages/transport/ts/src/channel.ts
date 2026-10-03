@@ -30,7 +30,7 @@ export interface ChannelOptions {
 /** A requester's live call. */
 export interface RequesterStream {
   /** Sends one request message. */
-  send(message: Uint8Array): void;
+  send(message: Uint8Array): Promise<void>;
 
   /** Half-closes the call: promises the responder no further messages. */
   close(): void;
@@ -56,7 +56,7 @@ export interface ResponderStream {
   requests: AsyncIterable<Uint8Array>;
 
   /** Sends one response message. */
-  send(message: Uint8Array): void;
+  send(message: Uint8Array): Promise<void>;
 
   /** Aborted when the requester cancels or the channel dies. */
   signal: AbortSignal;
@@ -67,6 +67,7 @@ export type StreamHandler = (stream: ResponderStream) => Promise<void>;
 
 type RequestBody = NonNullable<MessageInitShape<typeof RequestEnvelopeSchema>['body']>;
 type ResponseBody = NonNullable<MessageInitShape<typeof ResponseEnvelopeSchema>['body']>;
+type Frame = MessageInitShape<typeof EnvelopeSchema>;
 
 /** Slices one message into fragments no larger than MAX_FRAGMENT_BYTES. */
 function eachFragment(message: Uint8Array, emit: (data: Uint8Array, last: boolean) => void): void {
@@ -76,6 +77,51 @@ function eachFragment(message: Uint8Array, emit: (data: Uint8Array, last: boolea
     emit(message.subarray(offset, end), end === message.length);
     offset = end;
   } while (offset < message.length);
+}
+
+/**
+ * One stream's frames waiting for their turn on the wire.
+ */
+class Outbound {
+  #queue: { frame: Frame; settle?: (sent: boolean) => void }[] = [];
+  readonly #schedule: (outbound: Outbound) => void;
+  /** Whether the channel's round-robin holds this queue. */
+  scheduled = false;
+
+  constructor(schedule: (outbound: Outbound) => void) {
+    this.#schedule = schedule;
+  }
+
+  get pending(): boolean {
+    return this.#queue.length > 0;
+  }
+
+  push(frame: Frame, settle?: (sent: boolean) => void): void {
+    this.#queue.push({ frame, settle });
+    this.#schedule(this);
+  }
+
+  /** Queues one message as fragments and resolves once the last fragment has been handed to the wire. */
+  pushMessage(message: Uint8Array, frame: (data: Uint8Array, last: boolean) => Frame): Promise<void> {
+    return new Promise((resolve) => {
+      eachFragment(message, (data, last) => this.push(frame(data, last), last ? () => resolve() : undefined));
+    });
+  }
+
+  /** Hands the oldest frame to the given sender. */
+  shift(send: (frame: Frame) => void): void {
+    const next = this.#queue.shift();
+    if (!next) return;
+    send(next.frame);
+    next.settle?.(true);
+  }
+
+  /** Drops every waiting frame and settling outstanding sends. */
+  clear(): void {
+    const queue = this.#queue;
+    this.#queue = [];
+    for (const { settle } of queue) settle?.(false);
+  }
 }
 
 /** Reassembles one stream's consecutive fragments back into a whole message. */
@@ -106,17 +152,21 @@ class Reassembler {
 class Requester implements RequesterStream {
   readonly responses: AsyncIterable<Uint8Array>;
   readonly finished: Promise<void>;
+  readonly #streamId: bigint;
+  readonly #outbound: Outbound;
   readonly #queue = new AsyncQueue<Uint8Array>();
   readonly #reassembler = new Reassembler();
-  readonly #sendBody: (body: RequestBody) => void;
   readonly #onFinished: () => void;
   /** Set once nothing more travels on the stream: the responder ended it, this side cancelled, or the channel died. */
   #finished = false;
   #halfClosed = false;
+  /** Set once Open has reached the wire: before that a cancel has nothing to abandon on the peer. */
+  #opened = false;
   #settleFinished!: () => void;
 
-  constructor(sendBody: (body: RequestBody) => void, onFinished: () => void) {
-    this.#sendBody = sendBody;
+  constructor(streamId: bigint, outbound: Outbound, onFinished: () => void) {
+    this.#streamId = streamId;
+    this.#outbound = outbound;
     this.#onFinished = onFinished;
     this.responses = this.#responses();
     this.finished = new Promise((resolve) => {
@@ -124,17 +174,28 @@ class Requester implements RequesterStream {
     });
   }
 
-  send(message: Uint8Array): void {
+  /** Queues the Open naming the rpc; the channel calls it once the stream is registered. */
+  open(method: string): void {
+    this.#outbound.push(this.#frame({ case: 'open', value: { method } }), (sent) => {
+      this.#opened = sent;
+    });
+  }
+
+  #frame(body: RequestBody): Frame {
+    return { kind: { case: 'request', value: { streamId: this.#streamId, body } } };
+  }
+
+  send(message: Uint8Array): Promise<void> {
     if (this.#halfClosed) throw new Error('send on a half-closed stream');
-    if (this.#finished) return;
-    eachFragment(message, (data, last) => this.#sendBody({ case: 'payload', value: { data, last } }));
+    if (this.#finished) return Promise.resolve();
+    return this.#outbound.pushMessage(message, (data, last) => this.#frame({ case: 'payload', value: { data, last } }));
   }
 
   close(): void {
     if (this.#halfClosed) return;
     this.#halfClosed = true;
     if (this.#finished) return;
-    this.#sendBody({ case: 'close', value: {} });
+    this.#outbound.push(this.#frame({ case: 'close', value: {} }));
   }
 
   cancel(): void {
@@ -158,6 +219,7 @@ class Requester implements RequesterStream {
     if (this.#finished) return;
     this.#finished = true;
     this.#onFinished();
+    this.#outbound.clear();
     if (error) this.#queue.fail(error);
     else this.#queue.end();
     this.#settleFinished();
@@ -168,7 +230,8 @@ class Requester implements RequesterStream {
     if (this.#finished) return;
     this.#finished = true;
     this.#onFinished();
-    this.#sendBody({ case: 'cancel', value: {} });
+    this.#outbound.clear();
+    if (this.#opened) this.#outbound.push(this.#frame({ case: 'cancel', value: {} }));
     // abort, not fail: an abandoned call does not need to yield responses it already buffered.
     this.#queue.abort(error);
     this.#settleFinished();
@@ -192,23 +255,29 @@ class Responder implements ResponderStream {
   readonly #requests = new AsyncQueue<Uint8Array>();
   readonly #reassembler = new Reassembler();
   readonly #abort = new AbortController();
-  readonly #sendBody: (body: ResponseBody) => void;
+  readonly #streamId: bigint;
+  readonly #outbound: Outbound;
   readonly #onFinished: () => void;
-  #finished = false; // Set once End is sent.
+  #finished = false; // Set once End is queued.
 
-  constructor(method: string, sendBody: (body: ResponseBody) => void, onFinished: () => void) {
+  constructor(streamId: bigint, method: string, outbound: Outbound, onFinished: () => void) {
     this.method = method;
-    this.#sendBody = sendBody;
+    this.#streamId = streamId;
+    this.#outbound = outbound;
     this.#onFinished = onFinished;
+  }
+
+  #frame(body: ResponseBody): Frame {
+    return { kind: { case: 'response', value: { streamId: this.#streamId, body } } };
   }
 
   get signal(): AbortSignal {
     return this.#abort.signal;
   }
 
-  send(message: Uint8Array): void {
-    if (this.#finished) return;
-    eachFragment(message, (data, last) => this.#sendBody({ case: 'payload', value: { data, last } }));
+  send(message: Uint8Array): Promise<void> {
+    if (this.#finished) return Promise.resolve();
+    return this.#outbound.pushMessage(message, (data, last) => this.#frame({ case: 'payload', value: { data, last } }));
   }
 
   /** Sends this side's End. */
@@ -216,10 +285,12 @@ class Responder implements ResponderStream {
     if (this.#finished) return;
     this.#finished = true;
     this.#onFinished();
-    this.#sendBody({
-      case: 'end',
-      value: error ? { code: error.code, message: error.message } : { code: Code.OK },
-    });
+    this.#outbound.push(
+      this.#frame({
+        case: 'end',
+        value: error ? { code: error.code, message: error.message } : { code: Code.OK },
+      }),
+    );
   }
 
   /** Called by the channel with each incoming fragment; delivers the request message the last one completes. */
@@ -241,6 +312,7 @@ class Responder implements ResponderStream {
 
   /** Ends the call and aborts. */
   abort(error: TransportError): void {
+    if (!this.#finished) this.#outbound.clear();
     this.end(error);
     this.#requests.fail(error);
     this.#abort.abort(error);
@@ -260,6 +332,10 @@ export class Channel {
   readonly #requesters = new Map<bigint, Requester>();
   readonly #responders = new Map<bigint, Responder>();
   readonly #handlers = new Map<string, StreamHandler>();
+  /** The queues with frames waiting. */
+  readonly #pendingOutbounds: Outbound[] = [];
+  /** Frames belonging to no live stream. */
+  readonly #streamlessOutbound = new Outbound((outbound) => this.#schedule(outbound));
   #nextStreamId: bigint;
   #closed: TransportError | undefined;
 
@@ -267,6 +343,7 @@ export class Channel {
     this.#wire = wire;
     this.#nextStreamId = options?.parity === 'even' ? 2n : 1n;
     wire.onFrame = (frame) => this.#onFrame(frame);
+    wire.onDrain = () => this.#pump();
     wire.onClosed = (reason) => this.#teardown(new TransportError(Code.UNAVAILABLE, reason ?? 'connection closed'));
   }
 
@@ -278,12 +355,9 @@ export class Channel {
     if (this.#closed) throw this.#closed;
     const streamId = this.#nextStreamId;
     this.#nextStreamId += 2n;
-    const stream = new Requester(
-      (body) => this.#sendRequest(streamId, body),
-      () => this.#requesters.delete(streamId),
-    );
+    const stream = new Requester(streamId, this.#outbound(), () => this.#requesters.delete(streamId));
     this.#requesters.set(streamId, stream);
-    this.#sendRequest(streamId, { case: 'open', value: { method } });
+    stream.open(method);
     return stream;
   }
 
@@ -307,21 +381,38 @@ export class Channel {
     for (const stream of this.#requesters.values()) stream.finish(requesterError);
     const cancelled = new TransportError(Code.CANCELLED, requesterError.message);
     for (const stream of this.#responders.values()) stream.abort(cancelled);
+    for (const outbound of this.#pendingOutbounds.splice(0)) outbound.clear();
     this.#wire.close();
   }
 
-  #sendRequest(streamId: bigint, body: RequestBody): void {
-    if (this.#closed) return;
-    this.#send({ kind: { case: 'request', value: { streamId, body } } });
+  #outbound(): Outbound {
+    return new Outbound((outbound) => this.#schedule(outbound));
   }
 
-  #sendResponse(streamId: bigint, body: ResponseBody): void {
-    if (this.#closed) return;
-    this.#send({ kind: { case: 'response', value: { streamId, body } } });
+  /** Gives an outbound a turn in the round-robin. */
+  #schedule(outbound: Outbound): void {
+    if (this.#closed) {
+      outbound.clear();
+      return;
+    }
+    if (!outbound.scheduled) {
+      outbound.scheduled = true;
+      this.#pendingOutbounds.push(outbound);
+    }
+    this.#pump();
   }
 
-  #send(envelope: MessageInitShape<typeof EnvelopeSchema>): void {
-    this.#wire.send(toBinary(EnvelopeSchema, create(EnvelopeSchema, envelope)));
+  /**
+   * Sends one frame from each waiting queue in turn while the wire has room.
+   */
+  #pump(): void {
+    while (!this.#closed && this.#wire.writable) {
+      const outbound = this.#pendingOutbounds.shift();
+      if (!outbound) return;
+      outbound.shift((frame) => this.#wire.send(toBinary(EnvelopeSchema, create(EnvelopeSchema, frame))));
+      if (outbound.pending) this.#pendingOutbounds.push(outbound);
+      else outbound.scheduled = false;
+    }
   }
 
   #onFrame(frame: Uint8Array): void {
@@ -400,21 +491,19 @@ export class Channel {
 
     const handler = this.#handlers.get(method);
     if (!handler) {
-      this.#sendResponse(streamId, {
-        case: 'end',
-        value: {
-          code: Code.UNIMPLEMENTED,
-          message: `unimplemented method: ${method}`,
+      this.#streamlessOutbound.push({
+        kind: {
+          case: 'response',
+          value: {
+            streamId,
+            body: { case: 'end', value: { code: Code.UNIMPLEMENTED, message: `unimplemented method: ${method}` } },
+          },
         },
       });
       return;
     }
 
-    const stream = new Responder(
-      method,
-      (body) => this.#sendResponse(streamId, body),
-      () => this.#responders.delete(streamId),
-    );
+    const stream = new Responder(streamId, method, this.#outbound(), () => this.#responders.delete(streamId));
     this.#responders.set(streamId, stream);
     void this.#serve(stream, handler);
   }

@@ -22,8 +22,8 @@ export interface CallOptions {
 
 /** A bidirectional-streaming call. */
 export interface BidiCall<In, Out> {
-  /** Sends one request message. */
-  send(request: In): void;
+  /** Sends one request message and resolves once it has been handed to the wire. */
+  send(request: In): Promise<void>;
 
   /** Half-closes the call: promises the responder no further messages. */
   close(): void;
@@ -99,7 +99,7 @@ async function unaryCall<I extends DescMessage, O extends DescMessage>(
 ): Promise<MessageShape<O>> {
   const stream = channel.open(name);
   cancelOnAbort(stream, options?.signal);
-  stream.send(toBinary(method.input, create(method.input, request)));
+  void stream.send(toBinary(method.input, create(method.input, request)));
   stream.close();
   return singleResponse(stream, name, method.output);
 }
@@ -113,7 +113,7 @@ function serverStreamCall<I extends DescMessage, O extends DescMessage>(
 ): AsyncIterable<MessageShape<O>> {
   const stream = channel.open(name);
   cancelOnAbort(stream, options?.signal);
-  stream.send(toBinary(method.input, create(method.input, request)));
+  void stream.send(toBinary(method.input, create(method.input, request)));
   stream.close();
   return decodeResponses(stream, method.output);
 }
@@ -151,7 +151,9 @@ async function clientStreamCall<I extends DescMessage, O extends DescMessage>(
         stream.close();
         break;
       }
-      stream.send(toBinary(method.input, create(method.input, next.value)));
+      // Awaited so the impl's iterable applies backpressure. The promise is resolved when the message is sent through
+      // the wire.
+      await stream.send(toBinary(method.input, create(method.input, next.value)));
     }
   } catch (error) {
     // The caller's iterable threw mid-stream.
