@@ -1,7 +1,9 @@
+import { fromBinary } from '@bufbuild/protobuf';
 import { describe, expect, test } from 'vitest';
-import { Channel, Code, createClient, type ServiceImpl, serve } from '../src';
+import { Channel, Code, createClient, MAX_FRAGMENT_BYTES, type ServiceImpl, serve } from '../src';
+import { type Envelope, EnvelopeSchema } from '../src/gen/elsewise/transport/v1/envelope_pb';
 import { TestService } from './gen/test_service_pb';
-import { wirePair } from './wire/memory';
+import { MemoryWire, wirePair } from './wire/memory';
 
 function pair(): { front: Channel; daemon: Channel } {
   const [a, b] = wirePair();
@@ -138,4 +140,36 @@ describe('serve', () => {
       code: Code.INVALID_ARGUMENT,
     });
   });
+
+  test.each(['Unary', 'ClientStream'])(
+    'cancelling a %s call drops its response still waiting on a full wire',
+    async (method) => {
+      const a = new MemoryWire();
+      const b = new MemoryWire(1);
+      a.peer = b;
+      b.peer = a;
+      const serverSent: Envelope[] = [];
+      const send = b.send.bind(b);
+      b.send = (frame) => {
+        serverSent.push(fromBinary(EnvelopeSchema, frame));
+        send(frame);
+      };
+      const front = new Channel(a);
+      const daemon = new Channel(b, { parity: 'even' });
+      const text = 'x'.repeat(MAX_FRAGMENT_BYTES * 4); // Several fragments, so most of it waits behind the full wire.
+      serve(daemon, TestService, { ...STUB, unary: () => ({ text }), clientStream: async () => ({ text }) });
+
+      const stream = front.open(`${TestService.typeName}/${method}`);
+      void stream.send(new Uint8Array(0));
+      stream.close();
+      await settle();
+      expect(serverSent.map((envelope) => envelope.kind.value?.body.case)).toEqual(['payload']);
+
+      stream.cancel();
+      await settle();
+      for (let i = 0; i < 8; i++) b.drain();
+      expect(serverSent.map((envelope) => envelope.kind.value?.body.case)).toEqual(['payload', 'end']);
+      expect(serverSent[1]?.kind.value?.body.value).toMatchObject({ code: Code.CANCELLED });
+    },
+  );
 });
