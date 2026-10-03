@@ -2,10 +2,37 @@ import { create, toBinary } from '@bufbuild/protobuf';
 import { EnvelopeSchema } from '../gen/elsewise/transport/v1/envelope_pb';
 import type { Wire } from './index';
 
-export const DEFAULT_HEARTBEAT_MS = 15_000;
+/** The outbound bytes a socket may buffer before the wire stops being writable. */
+export const DEFAULT_HIGH_WATER_MARK = 256 * 1024;
 
-const PING = heartbeat('ping');
-const PONG = heartbeat('pong');
+/** WebSocket and an RTCDataChannel shared interface. */
+export interface Socket {
+  binaryType: string;
+  // WebSocket counts its states (0 to 3), RTCDataChannel names them ('connecting' to 'closed').
+  readonly readyState: number | string;
+  readonly bufferedAmount: number; // The bytes sent but not yet handed to the network.
+  send(data: Uint8Array<ArrayBuffer>): void;
+  close(code?: number, reason?: string): void;
+  addEventListener(type: 'open', listener: () => void, options?: { once?: boolean }): void;
+  addEventListener(type: 'message', listener: (event: { data: unknown }) => void, options?: { once?: boolean }): void;
+  addEventListener(
+    type: 'close',
+    listener: (event: { type: string; reason?: string }) => void,
+    options?: { once?: boolean },
+  ): void;
+}
+
+export interface SocketWireOptions {
+  /**
+   * How many outbound bytes the socket may buffer before the wire stops being writable.
+   *
+   * Defaults to `DEFAULT_HIGH_WATER_MARK`.
+   */
+  highWaterMark?: number;
+}
+
+export const PING = heartbeat('ping');
+export const PONG = heartbeat('pong');
 
 function heartbeat(body: 'ping' | 'pong'): Uint8Array<ArrayBuffer> {
   return toBinary(
@@ -20,75 +47,44 @@ function equals(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-/** An open socket carrying binary messages. (WebSocket and RTCDataChannel implement these methods) */
-export interface Socket {
-  binaryType: string;
-  // WebSocket counts its states (0 to 3), RTCDataChannel names them ('connecting' to 'closed').
-  readonly readyState: number | string;
-  send(data: Uint8Array<ArrayBuffer>): void;
-  close(code?: number, reason?: string): void;
-  addEventListener(type: 'open', listener: () => void, options?: { once?: boolean }): void;
-  addEventListener(type: 'message', listener: (event: { data: unknown }) => void, options?: { once?: boolean }): void;
-  addEventListener(
-    type: 'close',
-    listener: (event: { type: string; reason?: string }) => void,
-    options?: { once?: boolean },
-  ): void;
+/** Resolves once the socket is open, or rejects with the close reason if it closes first. */
+export function opened<S extends Socket>(socket: S): Promise<S> {
+  return new Promise((resolve, reject) => {
+    switch (socket.readyState) {
+      case 1:
+      case 'open':
+        resolve(socket);
+        break;
+      case 0:
+      case 'connecting':
+        socket.addEventListener('open', () => resolve(socket), { once: true });
+        socket.addEventListener('close', (event) => reject(new Error(event.reason || 'socket closed')), { once: true });
+        break;
+      default:
+        reject(new Error('socket closed'));
+    }
+  });
 }
 
-export interface SocketWireOptions {
-  /**
-   * How often to probe the peer, in milliseconds, or `false` to disable liveness checks.
-   *
-   * Defaults to `DEFAULT_HEARTBEAT_MS`.
-   */
-  heartbeat?: number | false;
-}
-
-/** The `Wire` over an open socket. */
-export class SocketWire implements Wire {
+/**
+ * The shared implementation across socket wires.
+ */
+export abstract class SocketWire implements Wire {
   onFrame: ((frame: Uint8Array) => void) | null = null;
+  onDrain: (() => void) | null = null;
   onClosed: ((reason?: string) => void) | null = null;
-  readonly #socket: Socket;
+  protected readonly socket: Socket;
+  protected readonly highWaterMark: number;
   #open = true;
 
-  #heartbeat: ReturnType<typeof setInterval> | undefined;
-  #heard = true; // Whether any message arrived since the last probe.
-
-  /** Resolves to a wire once the socket is open, or rejects with the close reason if it closes. */
-  static open(socket: Socket, options?: SocketWireOptions): Promise<SocketWire> {
-    return new Promise((resolve, reject) => {
-      switch (socket.readyState) {
-        case 1:
-        case 'open':
-          resolve(new SocketWire(socket, options));
-          break;
-        case 0:
-        case 'connecting':
-          socket.addEventListener('open', () => resolve(new SocketWire(socket, options)), { once: true });
-          socket.addEventListener('close', (event) => reject(new Error(event.reason || 'socket closed')), {
-            once: true,
-          });
-          break;
-        default:
-          reject(new Error('socket closed'));
-      }
-    });
-  }
-
-  constructor(socket: Socket, options?: SocketWireOptions) {
-    this.#socket = socket;
+  protected constructor(socket: Socket, options?: SocketWireOptions) {
+    this.socket = socket;
+    this.highWaterMark = options?.highWaterMark ?? DEFAULT_HIGH_WATER_MARK;
     socket.binaryType = 'arraybuffer';
     socket.addEventListener('message', (event) => {
       if (!this.#open) return;
       if (event.data instanceof ArrayBuffer) {
-        this.#heard = true;
-        const frame = new Uint8Array(event.data);
-        if (equals(frame, PING)) {
-          this.send(PONG);
-        } else if (!equals(frame, PONG)) {
-          this.onFrame?.(frame);
-        }
+        this.receive(new Uint8Array(event.data));
         return;
       }
       // Invalid protocol detected.
@@ -96,33 +92,47 @@ export class SocketWire implements Wire {
     });
     // The socket is already closed here, so closing it again is a no-op; this only notifies.
     socket.addEventListener('close', (event) => this.close(undefined, event.reason || undefined));
-    const heartbeat = options?.heartbeat ?? DEFAULT_HEARTBEAT_MS;
-    if (heartbeat !== false) this.#startHeartbeat(heartbeat);
   }
 
-  #startHeartbeat(interval: number): void {
-    const timer = setInterval(() => {
-      if (!this.#heard) {
-        this.close(1000, 'heartbeat timeout');
-        return;
-      }
-      this.#heard = false;
-      this.send(PING);
-    }, interval);
-    // Check ensures that the runtime is node before calling unref().
-    if (typeof timer === 'object' && 'unref' in timer) timer.unref();
-    this.#heartbeat = timer;
+  protected get open(): boolean {
+    return this.#open;
+  }
+
+  protected get lowWaterMark(): number {
+    return Math.floor(this.highWaterMark / 2);
+  }
+
+  protected receive(frame: Uint8Array): void {
+    if (equals(frame, PING)) this.send(PONG);
+    else if (!equals(frame, PONG)) this.onFrame?.(frame);
+  }
+
+  /**
+   * Called after a send left the wire full.
+   *
+   * Typically used to call `drained()` when the buffer reaches `lowWaterMark`.
+   */
+  protected abstract watchDrain(): void;
+
+  /** Reports the drain, unless the wire closed meanwhile. */
+  protected drained(): void {
+    if (this.#open) this.onDrain?.();
+  }
+
+  get writable(): boolean {
+    return this.#open && this.socket.bufferedAmount < this.highWaterMark;
   }
 
   send(frame: Uint8Array<ArrayBuffer>): void {
-    if (this.#open) this.#socket.send(frame);
+    if (!this.#open) return;
+    this.socket.send(frame);
+    if (!this.writable) this.watchDrain();
   }
 
   close(code?: number, reason?: string): void {
     if (!this.#open) return;
     this.#open = false;
-    clearInterval(this.#heartbeat);
-    this.#socket.close(code, reason);
+    this.socket.close(code, reason);
     this.onClosed?.(reason);
   }
 }
