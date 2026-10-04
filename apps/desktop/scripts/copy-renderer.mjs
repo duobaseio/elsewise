@@ -31,7 +31,7 @@ if (await exists(webDist)) {
 <body style="font-family: system-ui, sans-serif; padding: 2rem; line-height: 1.5">
   <h1>Renderer not built</h1>
   <p>Build the web app first, then rebuild the desktop package:</p>
-  <pre>pnpm --filter @elsewise/web build:electron</pre>
+  <pre>pnpm --filter @elsewise/web build</pre>
 </body>`;
   await writeFile(path.join(outRenderer, 'index.html'), placeholder);
   console.log('[copy-renderer] apps/web/dist not found — wrote placeholder index.html');

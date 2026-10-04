@@ -10,6 +10,7 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/bridge <script>`.
 | Path              | What it is                                                                         |
 |-------------------|------------------------------------------------------------------------------------|
 | `src/index.ts`    | The public surface; consumers import `@elsewise/bridge`. Declares `window.bridge`. |
+| `src/plugins.ts`  | `PluginsBridge`, the plugins installed on this machine: `window.bridge.plugins`.   |
 | `src/settings.ts` | `SettingsBridge`, the app's and plugins' settings, and the `Settings` model.       |
 | `src/window.ts`   | `WindowBridge`, the native window: `window.bridge.window`.                         |
 

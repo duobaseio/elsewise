@@ -1,9 +1,9 @@
 {
   "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts"],
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2025",
     "module": "ESNext",
-    "lib": ["ES2022"],
+    "lib": ["ES2025"],
     "types": ["node"],
 
     /* Bundler mode */

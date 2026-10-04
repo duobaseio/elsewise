@@ -29,6 +29,7 @@
     "rules": {
       "preset": "recommended",
       "style": {
+        "useBlockStatements": "error",
         "noRestrictedImports": {
           "level": "error",
           "options": {

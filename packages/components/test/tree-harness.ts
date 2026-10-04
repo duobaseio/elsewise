@@ -4,7 +4,9 @@ import { vi } from 'vitest';
 export async function settleTree(expectedRows: number): Promise<void> {
   const shadowRoot = await vi.waitFor(() => {
     const host = document.querySelector('file-tree-container');
-    if (host?.shadowRoot == null) throw new Error('settleTree: no file tree shadow root');
+    if (host?.shadowRoot == null) {
+      throw new Error('settleTree: no file tree shadow root');
+    }
     return host.shadowRoot;
   });
 

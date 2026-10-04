@@ -46,7 +46,9 @@ export class MemoryWire implements Wire {
   }
 
   close(): void {
-    if (!this.#open) return;
+    if (!this.#open) {
+      return;
+    }
     this.#open = false;
     this.#held = [];
     this.peer.#open = false;

@@ -130,15 +130,20 @@ class Reassembler {
   #size = 0;
 
   add(fragment: Fragment): Uint8Array | null {
-    if (this.#size + fragment.data.length > MAX_MESSAGE_BYTES)
+    if (this.#size + fragment.data.length > MAX_MESSAGE_BYTES) {
       throw new TransportError(Code.RESOURCE_EXHAUSTED, 'message exceeds max message size.');
+    }
     this.#size += fragment.data.length;
     this.#parts.push(fragment.data);
-    if (!fragment.last) return null;
+    if (!fragment.last) {
+      return null;
+    }
     const parts = this.#parts;
     this.#parts = [];
     this.#size = 0;
-    if (parts.length === 1) return parts[0];
+    if (parts.length === 1) {
+      return parts[0];
+    }
     const whole = new Uint8Array(parts.reduce((size, part) => size + part.length, 0));
     let offset = 0;
     for (const part of parts) {
@@ -192,7 +197,9 @@ class Requester implements RequesterStream {
   }
 
   close(): void {
-    if (this.#halfClosed) return;
+    if (this.#halfClosed) {
+      return;
+    }
     this.#halfClosed = true;
     if (this.#finished) return;
     this.#outbound.push(this.#frame({ case: 'close', value: {} }));
@@ -211,12 +218,16 @@ class Requester implements RequesterStream {
       this.#abandon(error as TransportError);
       return;
     }
-    if (message !== null) this.#queue.push(message);
+    if (message !== null) {
+      this.#queue.push(message);
+    }
   }
 
   /** Called by the channel when the responder's End arrives or the channel dies. */
   finish(error?: TransportError): void {
-    if (this.#finished) return;
+    if (this.#finished) {
+      return;
+    }
     this.#finished = true;
     this.#onFinished();
     this.#outbound.clear();
@@ -227,7 +238,9 @@ class Requester implements RequesterStream {
 
   /** Abandons the call with the given error. */
   #abandon(error: TransportError): void {
-    if (this.#finished) return;
+    if (this.#finished) {
+      return;
+    }
     this.#finished = true;
     this.#onFinished();
     this.#outbound.clear();
@@ -282,7 +295,9 @@ class Responder implements ResponderStream {
 
   /** Sends this side's End. */
   end(error?: TransportError): void {
-    if (this.#finished) return;
+    if (this.#finished) {
+      return;
+    }
     this.#finished = true;
     this.#onFinished();
     this.#outbound.push(
@@ -302,7 +317,9 @@ class Responder implements ResponderStream {
       this.abort(error as TransportError);
       return;
     }
-    if (message !== null) this.#requests.push(message);
+    if (message !== null) {
+      this.#requests.push(message);
+    }
   }
 
   /** Called by the channel when the requester half-closes: ends the request messages. */
@@ -352,7 +369,9 @@ export class Channel {
    * requester.
    **/
   open(method: string): RequesterStream {
-    if (this.#closed) throw this.#closed;
+    if (this.#closed) {
+      throw this.#closed;
+    }
     const streamId = this.#nextStreamId;
     this.#nextStreamId += 2n;
     const stream = new Requester(streamId, this.#outbound(), () => this.#requesters.delete(streamId));
@@ -376,9 +395,13 @@ export class Channel {
   }
 
   #teardown(requesterError: TransportError): void {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     this.#closed = requesterError; // Prevents further messages from being sent.
-    for (const stream of this.#requesters.values()) stream.finish(requesterError);
+    for (const stream of this.#requesters.values()) {
+      stream.finish(requesterError);
+    }
     const cancelled = new TransportError(Code.CANCELLED, requesterError.message);
     for (const stream of this.#responders.values()) stream.abort(cancelled);
     for (const outbound of this.#pendingOutbounds.splice(0)) outbound.clear();
@@ -416,7 +439,9 @@ export class Channel {
   }
 
   #onFrame(frame: Uint8Array): void {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     let envelope: Envelope;
     try {
       envelope = fromBinary(EnvelopeSchema, frame);
@@ -447,7 +472,9 @@ export class Channel {
 
     const stream = this.#responders.get(frame.streamId);
     // Ignore frames if stream is missing.
-    if (!stream) return;
+    if (!stream) {
+      return;
+    }
     switch (body.case) {
       case 'payload':
         stream.onPayload(body.value);
@@ -466,7 +493,9 @@ export class Channel {
 
   #onResponseFrame(frame: ResponseEnvelope): void {
     const stream = this.#requesters.get(frame.streamId);
-    if (!stream) return;
+    if (!stream) {
+      return;
+    }
     const body = frame.body;
     switch (body.case) {
       case 'payload':
@@ -513,8 +542,11 @@ export class Channel {
       await handler(stream);
       stream.end();
     } catch (error) {
-      if (error instanceof TransportError) stream.end(error);
-      else stream.end(new TransportError(Code.UNKNOWN, error instanceof Error ? error.message : String(error)));
+      if (error instanceof TransportError) {
+        stream.end(error);
+      } else {
+        stream.end(new TransportError(Code.UNKNOWN, error instanceof Error ? error.message : String(error)));
+      }
     }
   }
 }

@@ -1,13 +1,47 @@
 import path from 'node:path';
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, protocol, shell } from 'electron';
 import { dataLocalDir } from './fs';
 import { installMenu } from './menu';
+import { handlePlugins } from './plugins';
+import { handleAppScheme } from './protocol';
 import { loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
 app.setPath('userData', path.join(dataLocalDir(), 'chromium'));
 
-const createWindow = (): void => {
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'app',
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      codeCache: true,
+      corsEnabled: !!process.env.ELECTRON_RENDERER_URL,
+    },
+  },
+]);
+
+app.whenReady().then(() => {
+  handleAppScheme();
+  handlePlugins();
+  installMenu();
+  createWindow();
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+function createWindow() {
   const { maximized, ...rectangle } = loadWindow();
   const main = new BrowserWindow({
     ...rectangle,
@@ -27,9 +61,23 @@ const createWindow = (): void => {
   if (dev) {
     void main.loadURL(dev);
   } else {
-    void main.loadFile(path.join(__dirname, '../renderer/index.html'));
+    void main.loadURL('app://elsewise/');
   }
 
+  // Without this, a link without a target (an `<a href>` in a plugin) replaces Elsewise with the linked page, which
+  // then gets the preload's bridge.
+  const home = new URL(dev ?? 'app://elsewise/');
+  main.webContents.on('will-navigate', (event, url) => {
+    const target = URL.parse(url);
+    if (target?.protocol === home.protocol && target.host === home.host) {
+      return;
+    }
+
+    event.preventDefault();
+    if (target?.protocol === 'http:' || target?.protocol === 'https:') {
+      void shell.openExternal(url);
+    }
+  });
   // Without this, a link the renderer opens (a terminal URL) becomes a bare BrowserWindow.
   main.webContents.setWindowOpenHandler(({ url }) => {
     const protocol = URL.parse(url)?.protocol;
@@ -52,21 +100,4 @@ const createWindow = (): void => {
       main.maximize();
     }
   });
-};
-
-app.whenReady().then(() => {
-  installMenu();
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
-
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+}

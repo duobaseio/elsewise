@@ -42,5 +42,7 @@ exports.default = async function afterPack(context) {
     [FuseV1Options.EnableNodeCliInspectArguments]: false,
     [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
     [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    // The renderer is served over app:// (src/main/protocol.ts), so nothing needs file://'s extra privileges.
+    [FuseV1Options.GrantFileProtocolExtraPrivileges]: false,
   });
 };

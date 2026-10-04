@@ -16,21 +16,27 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
 
   /** Delivers one value. */
   push(value: T): void {
-    if (this.#done) return;
+    if (this.#done) {
+      return;
+    }
     this.#buffered.push(value);
     this.#wake();
   }
 
   /** Ends the queue normally. */
   end(): void {
-    if (this.#done) return;
+    if (this.#done) {
+      return;
+    }
     this.#done = true;
     this.#wake();
   }
 
   /** Ends the queue with an error, thrown to the consumer once the buffered values have drained. */
   fail(error: Error): void {
-    if (this.#done) return;
+    if (this.#done) {
+      return;
+    }
     this.#done = true;
     this.#failure = error;
     this.#wake();
@@ -38,7 +44,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
 
   /** Ends the queue with an error thrown immediately: buffered values are discarded, not drained. */
   abort(error: Error): void {
-    if (this.#done) return;
+    if (this.#done) {
+      return;
+    }
     this.#buffered = [];
     this.#head = 0;
     this.fail(error);
@@ -47,7 +55,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
   #wake(): void {
     const waiters = this.#waiters;
     this.#waiters = [];
-    for (const waiter of waiters) waiter();
+    for (const waiter of waiters) {
+      waiter();
+    }
   }
 
   /**
@@ -57,7 +67,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
    * amortized per poll.
    */
   #poll(): { value: T } | undefined {
-    if (this.#head === this.#buffered.length) return undefined;
+    if (this.#head === this.#buffered.length) {
+      return undefined;
+    }
 
     const value = this.#buffered[this.#head] as T;
     this.#head += 1;
@@ -81,7 +93,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
         continue;
       }
       if (this.#done) {
-        if (this.#failure) throw this.#failure;
+        if (this.#failure) {
+          throw this.#failure;
+        }
         return;
       }
       await new Promise<void>((resolve) => {

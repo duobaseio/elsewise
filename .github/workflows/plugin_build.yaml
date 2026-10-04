@@ -1,0 +1,39 @@
+name: Plugin Build
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/plugin_build.yaml
+      - packages/plugin/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+  pull_request:
+    paths:
+      - .github/workflows/plugin_build.yaml
+      - packages/plugin/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @elsewise/plugin check
+      - run: pnpm --filter @elsewise/plugin typecheck

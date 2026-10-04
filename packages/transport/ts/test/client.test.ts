@@ -10,7 +10,9 @@ function pair(): { front: Channel; daemon: Channel } {
 
 async function take<T>(iterator: AsyncIterator<T>): Promise<T> {
   const result = await iterator.next();
-  if (result.done) throw new Error('iterator ended early');
+  if (result.done) {
+    throw new Error('iterator ended early');
+  }
   return result.value;
 }
 
@@ -22,12 +24,16 @@ const IMPL: ServiceImpl<typeof TestService> = {
   },
   clientStream: async (requests) => {
     let text = '';
-    for await (const request of requests) text += request.text;
+    for await (const request of requests) {
+      text += request.text;
+    }
     return { text };
   },
   bidiStream: async function* (requests) {
     let seq = 0;
-    for await (const request of requests) yield { text: request.text, seq: ++seq };
+    for await (const request of requests) {
+      yield { text: request.text, seq: ++seq };
+    }
   },
 };
 
@@ -114,8 +120,9 @@ describe('client', () => {
       serve(daemon, TestService, IMPL);
       const client = createClient(front, TestService);
       const responses = [];
-      for await (const response of client.serverStream({ text: 'chunk' }))
+      for await (const response of client.serverStream({ text: 'chunk' })) {
         responses.push(`${response.text} ${response.seq}`);
+      }
       expect(responses).toEqual(['chunk 1', 'chunk 2']);
     });
 

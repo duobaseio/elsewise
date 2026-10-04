@@ -3,7 +3,9 @@ import { AsyncQueue } from '../src/async-queue';
 
 async function collect<T>(iterable: AsyncIterable<T>): Promise<T[]> {
   const received: T[] = [];
-  for await (const value of iterable) received.push(value);
+  for await (const value of iterable) {
+    received.push(value);
+  }
   return received;
 }
 
@@ -29,7 +31,9 @@ describe('async queue', () => {
   test('a long drain compacts the buffer without losing or reordering values', async () => {
     // 2048 buffered with 1100 consumed crosses #poll's 1024-slot compaction threshold mid-buffer.
     const queue = new AsyncQueue<number>();
-    for (let value = 0; value < 2048; value += 1) queue.push(value);
+    for (let value = 0; value < 2048; value += 1) {
+      queue.push(value);
+    }
 
     const iterator = queue[Symbol.asyncIterator]();
     const received: number[] = [];
@@ -37,12 +41,16 @@ describe('async queue', () => {
       received.push((await iterator.next()).value);
     }
 
-    for (let value = 2048; value < 2560; value += 1) queue.push(value);
+    for (let value = 2048; value < 2560; value += 1) {
+      queue.push(value);
+    }
     queue.end();
 
     while (true) {
       const result = await iterator.next();
-      if (result.done) break;
+      if (result.done) {
+        break;
+      }
       received.push(result.value);
     }
     expect(received).toEqual(Array.from({ length: 2560 }, (_, value) => value));
@@ -95,7 +103,9 @@ describe('async queue', () => {
 
     await expect(
       (async () => {
-        for await (const value of queue) received.push(value);
+        for await (const value of queue) {
+          received.push(value);
+        }
       })(),
     ).rejects.toBe(error);
     expect(received).toEqual(['a', 'b']);
@@ -111,7 +121,9 @@ describe('async queue', () => {
 
     await expect(
       (async () => {
-        for await (const value of queue) received.push(value);
+        for await (const value of queue) {
+          received.push(value);
+        }
       })(),
     ).rejects.toBe(error);
     expect(received).toEqual([]);

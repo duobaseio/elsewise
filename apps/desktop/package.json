@@ -16,9 +16,11 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "pnpm --filter @elsewise/web build:electron && tsc -p tsconfig.build.json && node scripts/copy-renderer.mjs",
+    "build": "pnpm --filter @elsewise/web build && tsc -p tsconfig.build.json && node scripts/copy-renderer.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --project node",
+    "test:electron": "vitest run --project electron",
+    "test:all": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
@@ -36,6 +38,7 @@
     "@types/node": "^26.4.1",
     "electron": "44.4.3",
     "electron-builder": "^26.15.3",
+    "playwright": "^1.63.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   }

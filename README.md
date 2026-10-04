@@ -23,7 +23,7 @@ alias (`b`, `l`, `t`, `g`).
 ### Building & packaging
 
 ```bash
-make build        # build the web UI (Electron mode) + the desktop bundle
+make build        # build the web UI + the desktop bundle
 pnpm dist:mac     # .app + dmg   (also: dist:win, dist:linux)
 ```
 

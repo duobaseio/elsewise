@@ -1,6 +1,8 @@
+import type { PluginsBridge } from './plugins.js';
 import type { SettingsBridge } from './settings.js';
 import type { WindowBridge } from './window.js';
 
+export type { InstalledPlugin, PluginsBridge } from './plugins.js';
 export {
   type Brightness,
   type CursorStyle,
@@ -21,6 +23,8 @@ declare global {
      * The APIs the embedder additionally provides.
      */
     bridge?: {
+      /** See {@link PluginsBridge}. */
+      plugins?: PluginsBridge;
       /** See {@link SettingsBridge}. */
       settings?: SettingsBridge;
       /** See {@link WindowBridge}. */

@@ -16,7 +16,9 @@ const tick = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 async function collect(messages: AsyncIterable<Uint8Array>): Promise<string[]> {
   const received: string[] = [];
-  for await (const message of messages) received.push(decode(message));
+  for await (const message of messages) {
+    received.push(decode(message));
+  }
   return received;
 }
 
@@ -65,7 +67,9 @@ function settled(promise: Promise<void>): Promise<boolean> {
 
 function serveEcho(channel: Channel, method = 'svc/Echo'): void {
   channel.handle(method, async (stream) => {
-    for await (const message of stream.requests) stream.send(message);
+    for await (const message of stream.requests) {
+      stream.send(message);
+    }
   });
 }
 
