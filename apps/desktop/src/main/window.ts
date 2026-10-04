@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { dataLocalDir, writeJsonSync } from '@elsewise/fs';
 import { type BrowserWindow, type Rectangle, screen } from 'electron';
-import { dataLocalDir, writeJsonSync } from './fs';
 
 interface Window extends Rectangle {
   maximized: boolean;

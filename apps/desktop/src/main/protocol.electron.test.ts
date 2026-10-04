@@ -4,10 +4,10 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { dataLocalDir } from '@elsewise/fs';
 import electron from 'electron';
 import { _electron, type ElectronApplication } from 'playwright';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { dataLocalDir } from './fs';
 
 const DESKTOP = path.join(__dirname, '../..');
 const PLUGIN_PAGE = 'app://elsewise/plugins/test/bundle/page.html';

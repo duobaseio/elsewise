@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, PluginId, Settings } from '@elsewise/bridge';
+import { configLocalDir, dataLocalDir, writeJsonSync } from '@elsewise/fs';
 import { ipcMain } from 'electron';
-import { configLocalDir, dataLocalDir, writeJsonSync } from './fs';
 
 /**
  * Handles the renderer's settings channels:

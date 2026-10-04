@@ -3,7 +3,7 @@ import { PluginId } from './plugins.js';
 
 export type Settings = z.infer<typeof Settings>;
 export type Brightness = z.infer<typeof Brightness>;
-export type Theme = z.infer<typeof Theme>;
+export type Theme = z.infer<typeof ThemeId>;
 export type Font = z.infer<typeof Font>;
 export type FontSize = z.infer<typeof FontSize>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
@@ -71,7 +71,7 @@ export const Settings = z.lazy(() =>
             /**
              * The interface's theme.
              */
-            theme: Theme.catch({ source: 'elsewise', name: 'elsewise' }),
+            theme: ThemeId.catch({ source: 'elsewise', name: 'elsewise' }),
             font: font(13),
             /**
              * Whether the file tree shows a git status's letter, e.g. `M`.
@@ -89,7 +89,7 @@ export const Settings = z.lazy(() =>
             /**
              * The editor's theme, or `null` to follow the interface's.
              */
-            theme: Theme.nullable().catch(null),
+            theme: ThemeId.nullable().catch(null),
             font: font(12),
             lineNumbers: z.boolean().catch(true),
             lineWrapping: z.boolean().catch(false),
@@ -126,7 +126,7 @@ export const Settings = z.lazy(() =>
             /**
              * The terminal's theme, or `null` to follow the interface's.
              */
-            theme: Theme.nullable().catch(null),
+            theme: ThemeId.nullable().catch(null),
             font: font(12),
             cursorStyle: CursorStyle.catch('block'),
             cursorBlink: z.boolean().catch(true),
@@ -150,7 +150,7 @@ export const Settings = z.lazy(() =>
  *
  * `name` is the theme's file name without its extension, e.g. `nord`.
  */
-export const Theme = z.discriminatedUnion('source', [
+export const ThemeId = z.discriminatedUnion('source', [
   z.strictObject({ source: z.literal('elsewise'), name: z.string().min(1) }),
   z.strictObject({ source: z.literal('user'), name: z.string().min(1) }),
   z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),

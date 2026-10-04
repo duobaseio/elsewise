@@ -43,7 +43,10 @@ vi.mock('electron', () => ({
     },
   },
 }));
-vi.mock('./fs', async (original) => ({ ...(await original<typeof import('./fs')>()), dataLocalDir: () => state.dir }));
+vi.mock('@elsewise/fs', async (original) => ({
+  ...(await original<typeof import('@elsewise/fs')>()),
+  dataLocalDir: () => state.dir,
+}));
 
 // A 1920x1080 display whose top 25 pixels are a menu bar, and its key in `window.json`.
 const MAIN: Display = {

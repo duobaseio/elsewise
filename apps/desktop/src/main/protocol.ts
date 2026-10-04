@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { dataLocalDir } from '@elsewise/fs';
 import { net, session } from 'electron';
-import { dataLocalDir } from './fs';
 
 const MIME_TYPES: Record<string, string> = {
   '.css': 'text/css',

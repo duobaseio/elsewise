@@ -1,10 +1,11 @@
 import path from 'node:path';
+import { dataLocalDir } from '@elsewise/fs';
 import { app, BrowserWindow, protocol, shell } from 'electron';
-import { dataLocalDir } from './fs';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
 import { handleSettings } from './settings';
+import { handleThemes } from './themes';
 import { loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
@@ -27,6 +28,7 @@ app.whenReady().then(() => {
   handleAppScheme();
   handlePlugins();
   handleSettings();
+  handleThemes();
   installMenu();
   createWindow();
 

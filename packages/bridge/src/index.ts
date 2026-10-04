@@ -15,7 +15,7 @@ export {
   LineSeparator,
   Settings,
   type SettingsBridge,
-  Theme,
+  ThemeId,
 } from './settings.js';
 export type { WindowBridge } from './window.js';
 
