@@ -51,9 +51,13 @@ export class WebSocketWire extends SocketWire {
   }
 
   protected override watchDrain(): void {
-    if (this.#drainPoll !== undefined) return;
+    if (this.#drainPoll !== undefined) {
+      return;
+    }
     const timer = setInterval(() => {
-      if (this.open && this.socket.bufferedAmount > this.lowWaterMark) return;
+      if (this.open && this.socket.bufferedAmount > this.lowWaterMark) {
+        return;
+      }
       clearInterval(timer);
       this.#drainPoll = undefined;
       this.drained();

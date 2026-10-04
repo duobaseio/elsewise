@@ -24,7 +24,9 @@ export class MemoryWire implements Wire {
   }
 
   send(frame: Uint8Array): void {
-    if (!this.#open) return;
+    if (!this.#open) {
+      return;
+    }
     if (this.#capacity === Number.POSITIVE_INFINITY) {
       this.#deliver(frame);
       return;
@@ -35,8 +37,12 @@ export class MemoryWire implements Wire {
   drain(): void {
     const frames = this.#held;
     this.#held = [];
-    for (const frame of frames) this.#deliver(frame);
-    if (this.#open) this.onDrain?.();
+    for (const frame of frames) {
+      this.#deliver(frame);
+    }
+    if (this.#open) {
+      this.onDrain?.();
+    }
   }
 
   #deliver(frame: Uint8Array): void {

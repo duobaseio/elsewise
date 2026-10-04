@@ -173,7 +173,9 @@ describe('serve', () => {
 
       stream.cancel();
       await settle();
-      for (let i = 0; i < 8; i++) b.drain();
+      for (let i = 0; i < 8; i++) {
+        b.drain();
+      }
       expect(serverSent.map((envelope) => envelope.kind.value?.body.case)).toEqual(['payload', 'end']);
       expect(serverSent[1]?.kind.value?.body.value).toMatchObject({ code: Code.CANCELLED });
     },

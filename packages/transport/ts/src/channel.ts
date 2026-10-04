@@ -111,7 +111,9 @@ class Outbound {
   /** Hands the oldest frame to the given sender. */
   shift(send: (frame: Frame) => void): void {
     const next = this.#queue.shift();
-    if (!next) return;
+    if (!next) {
+      return;
+    }
     send(next.frame);
     next.settle?.(true);
   }
@@ -120,7 +122,9 @@ class Outbound {
   clear(): void {
     const queue = this.#queue;
     this.#queue = [];
-    for (const { settle } of queue) settle?.(false);
+    for (const { settle } of queue) {
+      settle?.(false);
+    }
   }
 }
 
@@ -191,8 +195,12 @@ class Requester implements RequesterStream {
   }
 
   send(message: Uint8Array): Promise<void> {
-    if (this.#halfClosed) throw new Error('send on a half-closed stream');
-    if (this.#finished) return Promise.resolve();
+    if (this.#halfClosed) {
+      throw new Error('send on a half-closed stream');
+    }
+    if (this.#finished) {
+      return Promise.resolve();
+    }
     return this.#outbound.pushMessage(message, (data, last) => this.#frame({ case: 'payload', value: { data, last } }));
   }
 
@@ -201,7 +209,9 @@ class Requester implements RequesterStream {
       return;
     }
     this.#halfClosed = true;
-    if (this.#finished) return;
+    if (this.#finished) {
+      return;
+    }
     this.#outbound.push(this.#frame({ case: 'close', value: {} }));
   }
 
@@ -231,8 +241,11 @@ class Requester implements RequesterStream {
     this.#finished = true;
     this.#onFinished();
     this.#outbound.clear();
-    if (error) this.#queue.fail(error);
-    else this.#queue.end();
+    if (error) {
+      this.#queue.fail(error);
+    } else {
+      this.#queue.end();
+    }
     this.#settleFinished();
   }
 
@@ -244,7 +257,9 @@ class Requester implements RequesterStream {
     this.#finished = true;
     this.#onFinished();
     this.#outbound.clear();
-    if (this.#opened) this.#outbound.push(this.#frame({ case: 'cancel', value: {} }));
+    if (this.#opened) {
+      this.#outbound.push(this.#frame({ case: 'cancel', value: {} }));
+    }
     // abort, not fail: an abandoned call does not need to yield responses it already buffered.
     this.#queue.abort(error);
     this.#settleFinished();
@@ -289,7 +304,9 @@ class Responder implements ResponderStream {
   }
 
   send(message: Uint8Array): Promise<void> {
-    if (this.#finished) return Promise.resolve();
+    if (this.#finished) {
+      return Promise.resolve();
+    }
     return this.#outbound.pushMessage(message, (data, last) => this.#frame({ case: 'payload', value: { data, last } }));
   }
 
@@ -329,7 +346,9 @@ class Responder implements ResponderStream {
 
   /** Ends the call and aborts. */
   abort(error: TransportError): void {
-    if (!this.#finished) this.#outbound.clear();
+    if (!this.#finished) {
+      this.#outbound.clear();
+    }
     this.end(error);
     this.#requests.fail(error);
     this.#abort.abort(error);
@@ -403,8 +422,12 @@ export class Channel {
       stream.finish(requesterError);
     }
     const cancelled = new TransportError(Code.CANCELLED, requesterError.message);
-    for (const stream of this.#responders.values()) stream.abort(cancelled);
-    for (const outbound of this.#pendingOutbounds.splice(0)) outbound.clear();
+    for (const stream of this.#responders.values()) {
+      stream.abort(cancelled);
+    }
+    for (const outbound of this.#pendingOutbounds.splice(0)) {
+      outbound.clear();
+    }
     this.#wire.close();
   }
 
@@ -431,10 +454,15 @@ export class Channel {
   #pump(): void {
     while (!this.#closed && this.#wire.writable) {
       const outbound = this.#pendingOutbounds.shift();
-      if (!outbound) return;
+      if (!outbound) {
+        return;
+      }
       outbound.shift((frame) => this.#wire.send(toBinary(EnvelopeSchema, create(EnvelopeSchema, frame))));
-      if (outbound.pending) this.#pendingOutbounds.push(outbound);
-      else outbound.scheduled = false;
+      if (outbound.pending) {
+        this.#pendingOutbounds.push(outbound);
+      } else {
+        outbound.scheduled = false;
+      }
     }
   }
 

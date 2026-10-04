@@ -130,7 +130,9 @@ async function relayResponses(
         closeImpl(iterator);
         return;
       }
-      if (result.done) return;
+      if (result.done) {
+        return;
+      }
       // Awaited so the impl's iterable applies backpressure. The promise is resolved when the message is sent through
       // the wire.
       await stream.send(toBinary(output, create(output, result.value)));

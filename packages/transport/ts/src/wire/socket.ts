@@ -42,8 +42,14 @@ function heartbeat(body: 'ping' | 'pong'): Uint8Array<ArrayBuffer> {
 }
 
 function equals(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  if (a.length !== b.length) {
+    return false;
+  }
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      return false;
+    }
+  }
   return true;
 }
 
@@ -105,8 +111,11 @@ export abstract class SocketWire implements Wire {
   }
 
   protected receive(frame: Uint8Array): void {
-    if (equals(frame, PING)) this.send(PONG);
-    else if (!equals(frame, PONG)) this.onFrame?.(frame);
+    if (equals(frame, PING)) {
+      this.send(PONG);
+    } else if (!equals(frame, PONG)) {
+      this.onFrame?.(frame);
+    }
   }
 
   /**
@@ -118,7 +127,9 @@ export abstract class SocketWire implements Wire {
 
   /** Reports the drain, unless the wire closed meanwhile. */
   protected drained(): void {
-    if (this.#open) this.onDrain?.();
+    if (this.#open) {
+      this.onDrain?.();
+    }
   }
 
   get writable(): boolean {
@@ -126,9 +137,13 @@ export abstract class SocketWire implements Wire {
   }
 
   send(frame: Uint8Array<ArrayBuffer>): void {
-    if (!this.#open) return;
+    if (!this.#open) {
+      return;
+    }
     this.socket.send(frame);
-    if (!this.writable) this.watchDrain();
+    if (!this.writable) {
+      this.watchDrain();
+    }
   }
 
   close(code?: number, reason?: string): void {

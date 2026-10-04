@@ -23,11 +23,15 @@ export class FakeSocket implements Socket {
 
   deliver(frame: Uint8Array): void {
     const data = frame.buffer.slice(frame.byteOffset, frame.byteOffset + frame.byteLength);
-    for (const listener of this.#listeners.get('message') ?? []) listener({ data } as never);
+    for (const listener of this.#listeners.get('message') ?? []) {
+      listener({ data } as never);
+    }
   }
 
   emit(type: string): void {
-    for (const listener of this.#listeners.get(type) ?? []) listener(undefined as never);
+    for (const listener of this.#listeners.get(type) ?? []) {
+      listener(undefined as never);
+    }
   }
 }
 

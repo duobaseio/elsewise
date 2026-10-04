@@ -56,7 +56,9 @@ function pair(): { front: Channel; daemon: Channel } {
 /** Labels one recorded frame as `<stream id>:<body>` for asserting on the order frames reached the wire. */
 function label(envelope: Envelope): string {
   const value = envelope.kind.value;
-  if (!value || !('streamId' in value)) return envelope.kind.case ?? '?';
+  if (!value || !('streamId' in value)) {
+    return envelope.kind.case ?? '?';
+  }
   return `${value.streamId}:${value.body.case}`;
 }
 
@@ -131,10 +133,14 @@ describe('channel', () => {
       expect(await collect(fromDaemon.responses)).toEqual(['to front']);
 
       for (const envelope of sentByFront) {
-        if (envelope.kind.case === 'request') expect(envelope.kind.value.streamId % 2n).toBe(1n);
+        if (envelope.kind.case === 'request') {
+          expect(envelope.kind.value.streamId % 2n).toBe(1n);
+        }
       }
       for (const envelope of sentByDaemon) {
-        if (envelope.kind.case === 'request') expect(envelope.kind.value.streamId % 2n).toBe(0n);
+        if (envelope.kind.case === 'request') {
+          expect(envelope.kind.value.streamId % 2n).toBe(0n);
+        }
       }
     });
 
@@ -147,13 +153,17 @@ describe('channel', () => {
 
       const big = new Uint8Array(MAX_FRAGMENT_BYTES * 2 + 5);
       // Used a value (250) that isn't ^2 so that the values won't line up perfectly with MAX_FRAGMENT_BYTES.
-      for (let i = 0; i < big.length; i++) big[i] = i % 250;
+      for (let i = 0; i < big.length; i++) {
+        big[i] = i % 250;
+      }
       const stream = front.open('svc/Echo');
       stream.send(big);
       stream.close();
 
       const received: Uint8Array[] = [];
-      for await (const message of stream.responses) received.push(message);
+      for await (const message of stream.responses) {
+        received.push(message);
+      }
       expect(received).toHaveLength(1);
       expect(received[0]).toEqual(big);
 
@@ -245,7 +255,9 @@ describe('channel', () => {
       const { front, daemon } = pair();
       daemon.handle('svc/Count', async (stream) => {
         let count = 0;
-        for await (const _message of stream.requests) count += 1;
+        for await (const _message of stream.requests) {
+          count += 1;
+        }
         stream.send(encode(String(count)));
       });
       const stream = front.open('svc/Count');
@@ -313,7 +325,9 @@ describe('channel', () => {
       const received: string[] = [];
       for await (const message of stream.responses) {
         received.push(decode(message));
-        if (received.length === 3) break;
+        if (received.length === 3) {
+          break;
+        }
       }
       expect(received).toEqual(['0', '1', '2']);
       await aborted.promise;
@@ -336,7 +350,9 @@ describe('channel', () => {
       stream.cancel();
       const received: string[] = [];
       const read = async () => {
-        for await (const message of stream.responses) received.push(decode(message));
+        for await (const message of stream.responses) {
+          received.push(decode(message));
+        }
       };
       await expect(read()).rejects.toMatchObject({ code: Code.CANCELLED });
       expect(received).toEqual([]);
@@ -363,7 +379,9 @@ describe('channel', () => {
       const never = front.open('svc/Never');
       void never.send(encode('x'));
       never.cancel();
-      for (let i = 0; i < 3; i++) a.drain();
+      for (let i = 0; i < 3; i++) {
+        a.drain();
+      }
       expect(sent.map(label)).toEqual(['1:open']); // Belongs to the first stream.
     });
 
@@ -504,7 +522,9 @@ describe('channel', () => {
       small.close();
 
       expect(sent.map(label)).toEqual(['1:open']);
-      for (let i = 0; i < 8; i++) a.drain();
+      for (let i = 0; i < 8; i++) {
+        a.drain();
+      }
       expect(sent.map(label)).toEqual([
         '1:open',
         '1:payload',
