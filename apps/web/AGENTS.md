@@ -10,6 +10,7 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/web <script>`.
 | Path                             | What it is                                                                        |
 |----------------------------------|-----------------------------------------------------------------------------------|
 | `src/components/`                | The app's own components, e.g. the header that drags the desktop's window.        |
+| `src/components/code-editor/`    | The CodeMirror editor: its theme, search bar, context menu and visual guides.     |
 | `src/main.tsx`                   | Entry point; creates the router and mounts it into `#app`.                        |
 | `src/plugins/`                   | Runtime plugin loader, and what it provides plugins, e.g. the appearance.         |
 | `src/routes/`                    | File routes. `__root.tsx` is the root, applying the theme and loading plugins.    |

@@ -17,6 +17,8 @@ const ROLES = Object.keys({
   expand: true,
   'scroll-up': true,
   'scroll-down': true,
+  previous: true,
+  next: true,
   search: true,
   success: true,
   info: true,

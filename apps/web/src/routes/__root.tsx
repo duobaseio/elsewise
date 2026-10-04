@@ -3,7 +3,7 @@ import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { PluginAppearance } from '@/plugins/appearance';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
-import { useBrightness } from '@/settings/settings';
+import { useBrightness, useSettings } from '@/settings/settings';
 import { useTheme } from '@/themes/themes';
 
 import '../styles.css';
@@ -16,6 +16,7 @@ function RootComponent() {
   const installed = usePlugins((plugins) => plugins);
   const brightness = useBrightness();
   const theme = useTheme();
+  const editorFont = useSettings((settings) => settings.appearance.editor.font);
   const [appearance] = useState(() => new PluginAppearance(brightness, theme));
   const [loader] = useState(() => new PluginLoader(appearance));
 
@@ -34,6 +35,20 @@ function RootComponent() {
     appearance.theme = theme;
     appearance.brightness = brightness;
   }, [appearance, brightness, theme]);
+
+  // TODO: apply all fonts.
+  useLayoutEffect(() => {
+    const style = document.documentElement.style;
+    if (editorFont.family === null) {
+      style.removeProperty('--font-mono');
+    } else if (editorFont.family === 'ui-monospace') {
+      style.setProperty('--font-mono', 'ui-monospace, monospace');
+    } else {
+      style.setProperty('--font-mono', `${JSON.stringify(editorFont.family)}, 'JetBrains Mono Variable', monospace`);
+    }
+    style.setProperty('--text-code', `${editorFont.size}px`);
+    style.setProperty('--font-mono-ligatures', editorFont.ligatures ? 'contextual' : 'none');
+  }, [editorFont]);
 
   // TODO: Replace with lazy loading.
   useEffect(() => {

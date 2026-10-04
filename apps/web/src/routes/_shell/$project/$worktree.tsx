@@ -14,6 +14,7 @@ import {
   type IDockviewPanelProps,
 } from 'dockview-react';
 import { useEffect, useRef, useState } from 'react';
+import { CodeEditor } from '@/components/code-editor/code-editor';
 
 export const Route = createFileRoute('/_shell/$project/$worktree')({
   component: WorkTreeDock,
@@ -274,9 +275,16 @@ function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
   }
 }
 
-// TODO: Replace with the code editor once it is migrated.
+// TODO: Back this with the daemon.
+const FAKE_CODE = `pub async fn attach(&self, id: SessionId) -> Result<Channel> {
+    let session = self.sessions.get(&id).ok_or(Error::NotFound)?;
+    let (tx, rx) = channel::bounded(64);
+    session.subscribe(tx).await?;
+    Ok(Channel::new(rx))
+}`;
+
 function EditorPanel(props: IDockviewPanelProps<{ path: string }>) {
-  return <p className="p-2 font-mono text-base text-text-3">{props.params.path}</p>;
+  return <CodeEditor code={FAKE_CODE} path={props.params.path} />;
 }
 
 // TODO: Replace with the terminal once it is migrated.

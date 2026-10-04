@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type EditorLanguageSettings, type Settings } from '@elsewise/bridge';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 
@@ -17,6 +17,21 @@ export const settingsQuery = queryOptions({
  */
 export function useSettings<T>(select: (settings: Settings) => T): T {
   return useSuspenseQuery({ ...settingsQuery, select }).data;
+}
+
+/**
+ * Returns the override for `key` in `language`, or the editor's setting otherwise.
+ *
+ * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
+ */
+export function useEditorSettings<K extends keyof EditorLanguageSettings>(
+  language: string | undefined,
+  key: K,
+): EditorLanguageSettings[K] {
+  return useSettings(({ appearance: { editor } }) => {
+    const override = language === undefined ? undefined : editor.languages[language]?.[key];
+    return override ?? editor[key];
+  });
 }
 
 /**
