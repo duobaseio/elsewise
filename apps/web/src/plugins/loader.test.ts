@@ -1,8 +1,14 @@
 import type { Appearance } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { resolveTheme } from '@/themes/themes';
 import { PluginLoader } from './loader';
 
-const APPEARANCE: Appearance = { brightness: 'dark', onBrightnessChange: () => () => {} };
+const APPEARANCE: Appearance = {
+  brightness: 'dark',
+  onBrightnessChange: () => () => {},
+  theme: resolveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+  onThemeChange: () => () => {},
+};
 
 // What the plugins below did, in order. They reach it as the global `events`.
 let events: string[];

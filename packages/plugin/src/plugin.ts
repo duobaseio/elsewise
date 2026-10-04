@@ -1,3 +1,5 @@
+import type { ThemeVariant } from './theme.ts';
+
 /**
  * Represents an Elsewise plugin.
  */
@@ -41,6 +43,38 @@ export interface Appearance {
    * Returns a disposable that unregisters the `listener`.
    */
   onBrightnessChange(listener: (brightness: 'light' | 'dark') => void): Disposable;
+
+  /**
+   * The colors of the interface, editor and terminal.
+   */
+  readonly theme: ResolvedTheme;
+
+  /**
+   * Registers a `listener` that is called with the new theme when it changes.
+   *
+   * Returns a disposable that unregisters the `listener`.
+   */
+  onThemeChange(listener: (theme: ResolvedTheme) => void): Disposable;
+}
+
+/**
+ * The colors of the interface, editor and terminal, each under its selected theme and the brightness.
+ */
+export interface ResolvedTheme {
+  /**
+   * The interface's colors.
+   */
+  readonly interface: Readonly<Required<ThemeVariant['interface']>>;
+
+  /**
+   * The editor's colors and syntax highlighting.
+   */
+  readonly editor: Readonly<Required<ThemeVariant['editor']>>;
+
+  /**
+   * The terminal's colors.
+   */
+  readonly terminal: Readonly<Required<ThemeVariant['terminal']>>;
 }
 
 /**

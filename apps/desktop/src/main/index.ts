@@ -5,7 +5,6 @@ import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
 import { handleSettings } from './settings';
-import { handleThemes } from './themes';
 import { loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
@@ -28,7 +27,6 @@ app.whenReady().then(() => {
   handleAppScheme();
   handlePlugins();
   handleSettings();
-  handleThemes();
   installMenu();
   createWindow();
 

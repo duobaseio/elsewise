@@ -69,7 +69,7 @@ describe('settings:load', () => {
   });
 
   test('keeps valid leaves and fills the missing ones', () => {
-    write({ appearance: { general: { brightness: 'dark', theme: { source: 'user', name: 'nord' } } } });
+    write({ appearance: { general: { brightness: 'dark', theme: { source: 'elsewise', name: 'nord' } } } });
 
     expect(load()).toEqual({
       appearance: {
@@ -77,7 +77,7 @@ describe('settings:load', () => {
         general: {
           ...DEFAULT_SETTINGS.appearance.general,
           brightness: 'dark',
-          theme: { source: 'user', name: 'nord' },
+          theme: { source: 'elsewise', name: 'nord' },
         },
       },
     });
@@ -158,12 +158,12 @@ describe('settings:load', () => {
 
     for (const bad of [
       'elsewise/elsewise',
-      { source: 'user', name: '' },
+      { source: 'elsewise', name: '' },
       { source: 'acme', name: 'nord' },
       { source: 'plugin', name: 'nord' },
       { source: 'plugin', plugin: '../acme', name: 'nord' },
-      { source: 'user', plugin: 'com.acme.themes', name: 'nord' },
-      { source: 'user', name: 'nord', extra: 1 },
+      { source: 'elsewise', plugin: 'com.acme.themes', name: 'nord' },
+      { source: 'elsewise', name: 'nord', extra: 1 },
     ]) {
       write({ appearance: { general: { theme: bad } } });
       expect(load()).toEqual(DEFAULT_SETTINGS);

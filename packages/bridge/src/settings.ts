@@ -3,7 +3,7 @@ import { PluginId } from './plugins.js';
 
 export type Settings = z.infer<typeof Settings>;
 export type Brightness = z.infer<typeof Brightness>;
-export type Theme = z.infer<typeof ThemeId>;
+export type ThemeId = z.infer<typeof ThemeId>;
 export type Font = z.infer<typeof Font>;
 export type FontSize = z.infer<typeof FontSize>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
@@ -145,14 +145,12 @@ export const Settings = z.lazy(() =>
  * A theme and where it comes from:
  *
  * - `elsewise`: bundled with Elsewise.
- * - `user`: in the user's themes folder.
  * - `plugin`: provided by the plugin whose id is `plugin`.
  *
  * `name` is the theme's file name without its extension, e.g. `nord`.
  */
 export const ThemeId = z.discriminatedUnion('source', [
   z.strictObject({ source: z.literal('elsewise'), name: z.string().min(1) }),
-  z.strictObject({ source: z.literal('user'), name: z.string().min(1) }),
   z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
 ]);
 
