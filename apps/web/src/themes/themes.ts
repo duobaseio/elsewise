@@ -52,10 +52,10 @@ export function useTheme(): ResolvedTheme {
 export function resolveTheme(themes: readonly LoadedTheme[], id: ThemeId, brightness: 'light' | 'dark'): ResolvedTheme {
   const elsewise = THEMES.find((loaded) => loaded.id.name === 'elsewise')?.theme[brightness];
   const variant = themes.find(
-      ({ id: other }) =>
-          other.source === id.source &&
-          other.name === id.name &&
-          (other.source !== 'plugin' || (id.source === 'plugin' && other.plugin === id.plugin)),
+    ({ id: other }) =>
+      other.source === id.source &&
+      other.name === id.name &&
+      (other.source !== 'plugin' || (id.source === 'plugin' && other.plugin === id.plugin)),
   )?.theme[brightness];
 
   return {

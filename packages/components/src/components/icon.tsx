@@ -8,11 +8,14 @@ import {
   CheckIcon,
   FolderIcon,
   FolderOpenIcon,
+  GearIcon,
   InfoIcon,
   MagnifyingGlassIcon,
   MinusIcon,
+  PlusIcon,
   SidebarIcon,
   SpinnerIcon,
+  TreeViewIcon,
   WarningIcon,
   XCircleIcon,
   XIcon,
@@ -37,6 +40,9 @@ const DEFAULT_ICONS = {
   'sidebar-toggle': SidebarIcon,
   folder: FolderIcon,
   'folder-open': FolderOpenIcon,
+  add: PlusIcon,
+  files: TreeViewIcon,
+  settings: GearIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

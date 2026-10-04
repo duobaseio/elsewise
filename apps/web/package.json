@@ -14,7 +14,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "test": "vitest run",
+    "test": "vitest run --project node",
+    "test:browser": "vitest run --project browser",
+    "test:visual": "vitest run --project visual",
+    "test:visual:update": "vitest run --project visual --update",
+    "test:all": "vitest run",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"
@@ -25,6 +29,7 @@
     "@elsewise/plugin": "workspace:*",
     "@tanstack/react-query": "^5.104.0",
     "@tanstack/react-router": "^1.170.38",
+    "dockview-react": "^8.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
@@ -36,10 +41,14 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/browser": "^5.0.2",
+    "@vitest/browser-playwright": "^5.0.2",
     "es-module-lexer": "^3.0.2",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.2"
+    "vitest": "^5.0.2",
+    "vitest-browser-react": "^2.3.0"
   }
 }

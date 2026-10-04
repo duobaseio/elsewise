@@ -1,0 +1,138 @@
+/*
+ * Token-mapped dockview theme. Every value routes through the design tokens
+ * in styles.css, so the one class serves both light and dark.
+ */
+.dockview-theme-elsewise {
+  --dv-group-view-background-color: var(--background);
+  --dv-tabs-and-actions-container-background-color: var(--surface);
+  --dv-floating-box-shadow: var(--shadow-elevated);
+  --dv-floating-border: 1px solid var(--border);
+  --dv-context-menu-background-color: var(--popover);
+  --dv-context-menu-color: var(--foreground);
+  /* Tabs — every tab sits on the pane; state is carried by overlays (see the rules below), not fills. */
+  --dv-activegroup-visiblepanel-tab-background-color: var(--surface);
+  --dv-activegroup-visiblepanel-tab-color: var(--foreground);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--surface);
+  --dv-activegroup-hiddenpanel-tab-color: var(--text-3);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--surface);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--text-2);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--surface);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--text-3);
+  --dv-tab-divider-color: var(--border);
+  --dv-tabs-and-actions-container-height: 32px;
+  --dv-tabs-and-actions-container-font-size: 13px;
+  /* Lines — deckle seams between groups; the active sash inks. */
+  --dv-separator-border: var(--border);
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--border);
+  /* State layers */
+  --dv-drag-over-background-color: var(--layer-selected);
+  --dv-drag-over-border-color: transparent;
+  --dv-icon-hover-background-color: var(--layer-hover);
+  --dv-scrollbar-background-color: var(--layer-selection);
+  --dv-tabs-container-scrollbar-color: var(--disabled);
+}
+
+/*
+ * Overrides of dockview's own rules. Deliberately un-layered: dockview's stylesheet is un-layered, and @layer rules
+ * lose to un-layered ones no matter the specificity.
+ */
+
+/*
+ * The constant cursor changes is extremely distracting. Furthermore, we have disabled dragging of entire groups.
+ */
+.dockview-theme-elsewise :is(.dv-tab, .dv-void-container.dv-draggable) {
+  cursor: default;
+}
+
+/* Seam between the tab bar and the panel content. No --dv-* variable exists for this edge. */
+.dockview-theme-elsewise .dv-tabs-and-actions-container {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Breathing room at the strip's outer edges; the pills' own 3px handles in-between spacing. */
+.dockview-theme-elsewise .dv-groupview:not(:has([data-tool])) .dv-tabs-container {
+  padding: 0 4px;
+}
+
+/*
+ * Tool groups (marked by their tab's data-tool) fuse the tab bar with the panel: same fill, no seam, and no
+ * hover/selected painting on the tab. The tab itself stays — it is the group's only drag handle.
+ */
+.dockview-theme-elsewise .dv-groupview:has([data-tool]) .dv-tabs-and-actions-container {
+  background-color: var(--background);
+  border-bottom: none;
+}
+
+/* Tab fills route through --dv-* variables; re-pointing them at group scope beats fighting core's six-class fill
+   selectors on specificity. */
+.dockview-theme-elsewise .dv-groupview:has([data-tool]) {
+  --dv-activegroup-visiblepanel-tab-background-color: var(--background);
+  --dv-activegroup-hiddenpanel-tab-background-color: var(--background);
+  --dv-inactivegroup-visiblepanel-tab-background-color: var(--background);
+  --dv-inactivegroup-hiddenpanel-tab-background-color: var(--background);
+}
+
+.dockview-theme-elsewise .dv-tab:has([data-tool])::before {
+  content: none;
+}
+
+/*
+ * Tab state as overlays.
+ */
+.dockview-theme-elsewise .dv-tab::before {
+  content: "";
+  position: absolute;
+  inset: 4px 1px;
+  border-radius: var(--radius-md);
+  pointer-events: none;
+}
+
+.dockview-theme-elsewise .dv-tab:hover::before {
+  background-image: linear-gradient(var(--layer-hover), var(--layer-hover));
+}
+
+.dockview-theme-elsewise .dv-active-group .dv-tab.dv-active-tab::before {
+  background-image: linear-gradient(var(--layer-selected), var(--layer-selected));
+}
+
+.dockview-theme-elsewise .dv-active-group .dv-tab.dv-active-tab:hover::before {
+  background-image:
+    linear-gradient(var(--layer-hover), var(--layer-hover)),
+    linear-gradient(var(--layer-selected), var(--layer-selected));
+}
+
+.dockview-theme-elsewise .dv-inactive-group .dv-tab.dv-active-tab::before {
+  background-image: linear-gradient(var(--layer-selected-inactive), var(--layer-selected-inactive));
+}
+
+.dockview-theme-elsewise .dv-inactive-group .dv-tab.dv-active-tab:hover::before {
+  background-image:
+    linear-gradient(var(--layer-hover), var(--layer-hover)),
+    linear-gradient(var(--layer-selected-inactive), var(--layer-selected-inactive));
+}
+
+/*
+ * Pen-box focus, the small-control recipe (matches the sidebar rows) — and keyboard-only: dockview's own ::after
+ * focus box fires on plain :focus, so a mere click outlines the tab. Ours is :focus-visible; theirs is suppressed.
+ */
+.dockview-theme-elsewise .dv-tab:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -1px;
+}
+
+.dockview-theme-elsewise
+  :is(.dv-tab:focus, .dv-tab:focus-within, .dv-tab:focus-visible, .dv-tab:has(:focus-visible))::after {
+  content: none;
+}
+
+/*
+ * The default resize is semantically wrong.
+ */
+.dockview-theme-elsewise .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash.dv-enabled {
+  cursor: col-resize;
+}
+
+.dockview-theme-elsewise .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash.dv-enabled {
+  cursor: row-resize;
+}

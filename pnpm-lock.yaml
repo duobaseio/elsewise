@@ -67,6 +67,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.38
         version: 1.170.40(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      dockview-react:
+        specifier: ^8.4.0
+        version: 8.4.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -95,9 +98,18 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^6.1.1
         version: 6.1.1(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0))
+      '@vitest/browser':
+        specifier: ^5.0.2
+        version: 5.0.2(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vitest@5.0.2)
+      '@vitest/browser-playwright':
+        specifier: ^5.0.2
+        version: 5.0.2(playwright@1.63.0)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))(vitest@5.0.2)
       es-module-lexer:
         specifier: ^3.0.2
         version: 3.0.2
+      playwright:
+        specifier: ^1.63.0
+        version: 1.63.0
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -110,6 +122,9 @@ importers:
       vitest:
         specifier: ^5.0.2
         version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(jiti@2.7.0))
+      vitest-browser-react:
+        specifier: ^2.3.0
+        version: 2.3.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.2)
 
   packages/bridge:
     dependencies:
@@ -1908,6 +1923,18 @@ packages:
 
   dmg-builder@26.15.3:
     resolution: {integrity: sha512-O3zJUFUYHJKgzPqioHxfxzBzlSC1eXCSr79gMSBKBP5AgjjpmrydMsMLotEg9fAJF36vdUncb+4ndRNxoPdlSQ==}
+
+  dockview-core@8.4.0:
+    resolution: {integrity: sha512-aMYJZwxeV5HcXFVwDbSxEcNz+ECZmZKea90DsW/Q2cIQvoopy7C2oJun0uefWaghVeYxFlEsTqFf3c6cDyAUDQ==}
+
+  dockview-react@8.4.0:
+    resolution: {integrity: sha512-1im8xQb5vNDRWS2iiaceIdhOxO2K/wjfvXXLl5QrbZbEMARqx2NIrfu6TG7ekLyb8i1r/Zdv/FIjMXUPHrwYfw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  dockview@8.4.0:
+    resolution: {integrity: sha512-MAxJZREkIdPwxMVFgLFRAni8VE3fXTbbjV2SDaLlsubmvrQNCTM89YexuTSHC5PsWAqQLV87CIF2X7yT2wrY2g==}
 
   dot-prop@6.0.1:
     resolution: {integrity: sha512-tE7ztYzXHIeyvc7N+hR3oi7FIbf/NIjVP9hmAt3yMXzrQ072/fpjGLx2GxNxGxUl5V73MEqYzioOMoVhGMJ5cA==}
@@ -5270,6 +5297,18 @@ snapshots:
     transitivePeerDependencies:
       - electron-builder-squirrel-windows
       - supports-color
+
+  dockview-core@8.4.0: {}
+
+  dockview-react@8.4.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
+    dependencies:
+      dockview: 8.4.0
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+
+  dockview@8.4.0:
+    dependencies:
+      dockview-core: 8.4.0
 
   dot-prop@6.0.1:
     dependencies:

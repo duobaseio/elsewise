@@ -3,3 +3,6 @@ dist/
 
 # TanStack Router plugin temp files. (src/routeTree.gen.ts is generated too, but committed — TanStack convention.)
 .tanstack/
+
+# Vitest writes screenshot diffs and attachments here.
+.vitest/
