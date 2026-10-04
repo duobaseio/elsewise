@@ -16,7 +16,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "pnpm --filter @elsewise/web build && tsc -p tsconfig.build.json && node scripts/copy-renderer.mjs",
+    "build": "pnpm --filter @elsewise/web build && tsc -p tsconfig.json --noEmit && node scripts/bundle.mjs && node scripts/copy-renderer.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --project node",
     "test:electron": "vitest run --project electron",
@@ -38,8 +38,10 @@
     "@types/node": "^26.4.1",
     "electron": "44.4.3",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.2",
     "playwright": "^1.63.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "zod": "^4.6.5"
   }
 }

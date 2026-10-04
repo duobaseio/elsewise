@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-// biome-ignore syntax/correctness/noTypeOnlyImportAttributes: Electron and JS's module system is a clusterfuck.
-import type { InstalledPlugin } from '@elsewise/bridge' with { 'resolution-mode': 'import' };
+import { InstalledPlugin } from '@elsewise/bridge';
 import { ipcMain } from 'electron';
 import { dataLocalDir, writeJsonSync } from './fs';
 
@@ -39,21 +38,15 @@ function validate(plugins: unknown): InstalledPlugin[] {
 
   const ids = new Set<string>();
   return plugins.map((plugin, index) => {
-    const { id, name, version, url, enabled } = (plugin ?? {}) as Record<string, unknown>;
-    if (
-      typeof id !== 'string' ||
-      typeof name !== 'string' ||
-      typeof version !== 'string' ||
-      typeof url !== 'string' ||
-      typeof enabled !== 'boolean'
-    ) {
+    const parsed = InstalledPlugin.safeParse(plugin);
+    if (!parsed.success) {
       throw new Error(`plugins: plugin ${index} is malformed`);
     }
-    if (ids.has(id)) {
-      throw new Error(`plugins: two plugins share the id ${id}`);
+    if (ids.has(parsed.data.id)) {
+      throw new Error(`plugins: two plugins share the id ${parsed.data.id}`);
     }
 
-    ids.add(id);
-    return { id, name, version, url, enabled };
+    ids.add(parsed.data.id);
+    return parsed.data;
   });
 }

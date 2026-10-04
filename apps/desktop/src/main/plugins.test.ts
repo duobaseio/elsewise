@@ -24,6 +24,8 @@ const MALFORMED: [string, unknown, RegExp][] = [
   ['has a null plugin', [PLUGIN, null], /plugin 1 is malformed/],
   ['has a plugin missing a property', [{ ...PLUGIN, url: undefined }], /plugin 0 is malformed/],
   ['has a plugin with a property of the wrong type', [{ ...PLUGIN, enabled: 'true' }], /plugin 0 is malformed/],
+  ['has a plugin with an id that is not a path segment', [{ ...PLUGIN, id: '../hello' }], /plugin 0 is malformed/],
+  ['has a plugin with a version that is not SemVer', [{ ...PLUGIN, version: '1.0' }], /plugin 0 is malformed/],
   ['has two plugins with the same id', [PLUGIN, { ...PLUGIN, name: 'Other' }], /share the id hello/],
 ];
 

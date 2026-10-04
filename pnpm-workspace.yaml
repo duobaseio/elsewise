@@ -1,6 +1,5 @@
 packages:
   - "apps/*"
-  - "examples/*"
   - "packages/*"
   - "packages/transport/ts"
 
@@ -11,5 +10,5 @@ allowBuilds:
   # on Windows, so its 7-Zip selection never runs.
   electron-winstaller: false
   # esbuild's postinstall checks the platform binary its optional dependency installs, and
-  # swaps it in for the CLI's JS shim. The JS API, which examples/ use, doesn't need it.
+  # swaps it in for the CLI's JS shim. The JS API, which apps/desktop uses, doesn't need it.
   esbuild: false

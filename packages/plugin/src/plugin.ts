@@ -16,17 +16,34 @@ export interface PluginContext {
   readonly id: string;
 
   /**
-   * The plugin's disposables, disposed in reverse order when Elsewise disables the plugin.
+   * The interface's appearance.
+   */
+  readonly appearance: Appearance;
+
+  /**
+   * The plugin's disposables, called in reverse order when Elsewise disables the plugin.
    */
   readonly subscriptions: Disposable[];
 }
 
 /**
- * A resource that is released when disposed.
+ * The interface's appearance.
  */
-export interface Disposable {
+export interface Appearance {
   /**
-   * Releases the resource.
+   * The application's brightness.
    */
-  dispose(): void;
+  readonly brightness: 'light' | 'dark';
+
+  /**
+   * Registers a `listener` that is called with the new brightness when it changes.
+   *
+   * Returns a disposable that unregisters the `listener`.
+   */
+  onBrightnessChange(listener: (brightness: 'light' | 'dark') => void): Disposable;
 }
+
+/**
+ * A function that releases a resource when called.
+ */
+export type Disposable = () => void;

@@ -1,1 +1,1 @@
-export type { Disposable, Plugin, PluginContext } from './plugin.ts';
+export type { Appearance, Disposable, Plugin, PluginContext } from './plugin.ts';

@@ -4,6 +4,7 @@ import { dataLocalDir } from './fs';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
+import { handleSettings } from './settings';
 import { loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
@@ -25,6 +26,7 @@ protocol.registerSchemesAsPrivileged([
 app.whenReady().then(() => {
   handleAppScheme();
   handlePlugins();
+  handleSettings();
   installMenu();
   createWindow();
 
