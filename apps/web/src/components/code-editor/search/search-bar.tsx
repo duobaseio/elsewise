@@ -29,7 +29,12 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { describe, replaceRow, toggleReplaceRow, useSearchBarQuery } from '@/components/code-editor/search-bar-query';
+import {
+  describe,
+  replaceRow,
+  toggleReplaceRow,
+  useSearchBarQuery,
+} from '@/components/code-editor/search/search-bar-query';
 
 const OPEN_REPLACE = 'Mod-Alt-f';
 const NEXT = 'Enter';

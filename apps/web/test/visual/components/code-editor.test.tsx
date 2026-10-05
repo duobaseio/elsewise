@@ -7,7 +7,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 import { CodeEditor } from '@/components/code-editor/code-editor';
-import { toggleReplaceRow } from '@/components/code-editor/search-bar-query';
+import { toggleReplaceRow } from '@/components/code-editor/search/search-bar-query';
 import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../sheet';

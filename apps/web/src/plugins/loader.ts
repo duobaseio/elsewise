@@ -1,5 +1,5 @@
 import type { InstalledPlugin } from '@elsewise/bridge';
-import type { Appearance, Plugin, PluginContext } from '@elsewise/plugin';
+import type { Appearance, Editor, Plugin, PluginContext } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 
 /**
@@ -13,9 +13,11 @@ export const pluginsQuery = queryOptions({
 });
 
 /**
- * Returns what `select` picks from the installed plugins.
+ * Returns the installed plugins.
  */
-export function usePlugins<T>(select: (plugins: readonly InstalledPlugin[]) => T): T {
+export function usePlugins(): readonly InstalledPlugin[];
+export function usePlugins<T>(select: (plugins: readonly InstalledPlugin[]) => T): T;
+export function usePlugins<T>(select?: (plugins: readonly InstalledPlugin[]) => T): readonly InstalledPlugin[] | T {
   return useSuspenseQuery({ ...pluginsQuery, select }).data;
 }
 
@@ -28,9 +30,12 @@ export class PluginLoader {
   private readonly plugins = new Map<string, Promise<PluginContext | undefined>>();
 
   /**
-   * Creates a loader that provides `appearance` to the plugins it enables.
+   * Creates a loader that provides `appearance` and `editor` to the plugins it enables.
    */
-  public constructor(private readonly appearance: Appearance) {}
+  public constructor(
+    private readonly appearance: Appearance,
+    private readonly editor: Editor,
+  ) {}
 
   /**
    * Loads and enables the plugin with `id`.
@@ -41,7 +46,7 @@ export class PluginLoader {
         return loaded;
       }
 
-      const context: PluginContext = { id, subscriptions: [], appearance: this.appearance };
+      const context: PluginContext = { id, appearance: this.appearance, editor: this.editor, subscriptions: [] };
       try {
         // As modules are cached by URLs, using a counter makes a reload import the plugin's current code.
         // Unlike a query, a fragment never reaches the server.

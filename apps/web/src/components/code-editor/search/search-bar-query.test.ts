@@ -1,6 +1,6 @@
 import { SearchQuery } from '@codemirror/search';
 import { describe, expect, test } from 'vitest';
-import { describe as describeMatches, LIMIT } from '@/components/code-editor/search-bar-query';
+import { describe as describeMatches, LIMIT } from '@/components/code-editor/search/search-bar-query';
 
 describe('describe', () => {
   test.each([

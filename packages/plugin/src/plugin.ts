@@ -1,3 +1,4 @@
+import type { Editor } from './editor.ts';
 import type { ThemeVariant } from './theme.ts';
 
 /**
@@ -21,6 +22,11 @@ export interface PluginContext {
    * The interface's appearance.
    */
   readonly appearance: Appearance;
+
+  /**
+   * The code editor.
+   */
+  readonly editor: Editor;
 
   /**
    * The plugin's disposables, called in reverse order when Elsewise disables the plugin.

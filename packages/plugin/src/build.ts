@@ -3,4 +3,17 @@
  *
  * Plugins should typically declare these modules as peer dependencies.
  */
-export const PEER_MODULES = ['react', 'react/jsx-runtime', 'react-dom', 'react-dom/client'] as const;
+export const PEER_MODULES = [
+  'react',
+  'react/jsx-runtime',
+  'react-dom',
+  'react-dom/client',
+  '@codemirror/state',
+  '@codemirror/view',
+  '@codemirror/language',
+  '@codemirror/commands',
+  '@codemirror/search',
+  '@codemirror/autocomplete',
+  '@lezer/common',
+  '@lezer/highlight',
+] as const;

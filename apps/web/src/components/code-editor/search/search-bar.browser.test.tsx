@@ -6,8 +6,8 @@ import { useEffect, useRef } from 'react';
 import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { useSearchExtension } from '@/components/code-editor/search-bar';
-import { replaceRow } from '@/components/code-editor/search-bar-query';
+import { useSearchExtension } from '@/components/code-editor/search/search-bar';
+import { replaceRow } from '@/components/code-editor/search/search-bar-query';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
 

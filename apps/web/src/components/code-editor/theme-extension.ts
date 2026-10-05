@@ -8,41 +8,6 @@ import { useBrightness } from '@/settings/settings';
 import { useTheme } from '@/themes/themes';
 
 /**
- * Returns the CodeMirror extension that applies the editor's theme.
- */
-export function useThemeExtension(): Extension {
-  const { editor } = useTheme();
-  const brightness = useBrightness();
-
-  return useMemo(() => {
-    const spec: Record<string, Record<string, string>> = {};
-    for (const [role, [selector, property]] of Object.entries(CHROME) as [
-      keyof typeof CHROME,
-      readonly [string, string],
-    ][]) {
-      spec[selector] ??= {};
-      spec[selector][property] = editor[role];
-    }
-
-    const styles = (Object.entries(editor.tokens) as [keyof typeof TOKENS, TextStyle][]).map(([role, style]) => ({
-      tag: [...TOKENS[role]],
-      color: style.color,
-      fontWeight: 'bold' in style && style.bold ? 'bold' : undefined,
-      fontStyle: 'italic' in style && style.italic ? 'italic' : undefined,
-      textDecoration:
-        [
-          'underline' in style && style.underline && 'underline',
-          'strikethrough' in style && style.strikethrough && 'line-through',
-        ]
-          .filter(Boolean)
-          .join(' ') || undefined,
-    }));
-
-    return [EditorView.theme(spec, { dark: brightness === 'dark' }), syntaxHighlighting(HighlightStyle.define(styles))];
-  }, [editor, brightness]);
-}
-
-/**
  * The CSS selector and property that each of the editor's colors is applied to.
  */
 const CHROME = {
@@ -124,3 +89,88 @@ const TOKENS = {
   deleted: [t.deleted],
   changed: [t.changed],
 } as const satisfies Record<keyof ResolvedTheme['editor']['tokens'], readonly Tag[]>;
+
+/**
+ * The styles that don't depend on the theme.
+ */
+const METRICS = EditorView.theme({
+  '&': { height: '100%' },
+  '&.cm-focused': { outline: 'none' },
+  '.cm-panels': { backgroundColor: 'transparent', color: 'inherit', zIndex: 'auto' },
+  '.cm-panels-top': { borderBottom: 'none' },
+  '.cm-searchMatch-selected': { outline: '1px solid transparent', outlineOffset: '-1px' },
+  '.cm-content': { paddingBottom: '8rem' },
+  '.cm-scroller': {
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+    lineHeight: 'var(--text-code--line-height)',
+  },
+  '.cm-scroller::-webkit-scrollbar': { width: '6px', height: '6px' },
+  '.cm-scroller::-webkit-scrollbar-track, .cm-scroller::-webkit-scrollbar-corner': { background: 'none' },
+  '.cm-scroller::-webkit-scrollbar-thumb': {
+    backgroundColor: 'var(--border)',
+    borderRadius: '3px',
+    backgroundClip: 'content-box',
+    border: '1px solid transparent',
+  },
+  '.cm-scroller::-webkit-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
+  '.cm-scroller::-webkit-scrollbar-thumb:active': { backgroundColor: 'var(--disabled)' },
+  '.cm-gutters': {
+    fontSize: 'var(--text-code-gutter)',
+    lineHeight: 'var(--text-code-gutter--line-height)',
+  },
+  '.cm-lineNumbers .cm-gutterElement': { padding: '0 4px' },
+  '.cm-foldGutter .cm-gutterElement': {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '0 8px 0 8px',
+  },
+  '.cm-fold-marker': {
+    width: '1em',
+    height: '1em',
+    backgroundColor: 'currentColor',
+    mask: 'var(--fold-marker) center / contain no-repeat',
+  },
+  '.cm-fold-marker:not([data-open])': { transform: 'rotate(-90deg)' },
+});
+
+/**
+ * Returns the CodeMirror extension that applies the editor's theme.
+ */
+export function useThemeExtension(): Extension {
+  const { editor } = useTheme();
+  const brightness = useBrightness();
+
+  return useMemo(() => {
+    const spec: Record<string, Record<string, string>> = {};
+    for (const [role, [selector, property]] of Object.entries(CHROME) as [
+      keyof typeof CHROME,
+      readonly [string, string],
+    ][]) {
+      spec[selector] ??= {};
+      spec[selector][property] = editor[role];
+    }
+
+    const styles = (Object.entries(editor.tokens) as [keyof typeof TOKENS, TextStyle][]).map(([role, style]) => ({
+      tag: [...TOKENS[role]],
+      color: style.color,
+      fontWeight: 'bold' in style && style.bold ? 'bold' : undefined,
+      fontStyle: 'italic' in style && style.italic ? 'italic' : undefined,
+      textDecoration:
+        [
+          'underline' in style && style.underline && 'underline',
+          'strikethrough' in style && style.strikethrough && 'line-through',
+        ]
+          .filter(Boolean)
+          .join(' ') || undefined,
+    }));
+
+    return [
+      EditorView.theme(spec, { dark: brightness === 'dark' }),
+      syntaxHighlighting(HighlightStyle.define(styles)),
+      METRICS,
+    ];
+  }, [editor, brightness]);
+}

@@ -2,6 +2,7 @@ import type {} from '@elsewise/bridge';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { PluginAppearance } from '@/plugins/appearance';
+import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { useTheme } from '@/themes/themes';
@@ -12,19 +13,62 @@ export const Route = createRootRoute({
   component: RootComponent,
 });
 
+const GENERIC_FAMILIES = new Set([
+  'serif',
+  'sans-serif',
+  'monospace',
+  'cursive',
+  'fantasy',
+  'math',
+  'emoji',
+  'fangsong',
+  'system-ui',
+  'ui-serif',
+  'ui-sans-serif',
+  'ui-monospace',
+  'ui-rounded',
+]);
+
 function RootComponent() {
-  const installed = usePlugins((plugins) => plugins);
+  const installed = usePlugins();
+  const brightness = useBrightness();
+  const theme = useTheme();
+
+  const [{ appearance, additions, loader }] = useState(() => {
+    const appearance = new PluginAppearance(brightness, theme);
+    const additions = new EditorAdditions();
+    return { appearance, additions, loader: new PluginLoader(appearance, additions) };
+  });
+
+  useCurrentTheme(appearance);
+  useCurrentFonts();
+
+  // TODO: Replace with lazy loading.
+  useEffect(() => {
+    for (const plugin of installed) {
+      if (plugin.enabled) {
+        void loader.load(plugin.id, plugin.url);
+      }
+    }
+  }, [loader, installed]);
+
+  return (
+    <EditorAdditionsContext value={additions}>
+      <Outlet />
+    </EditorAdditionsContext>
+  );
+}
+
+/**
+ * Applies the brightness and the interface's theme.
+ */
+function useCurrentTheme(appearance: PluginAppearance) {
   const brightnessSetting = useSettings((settings) => settings.appearance.general.brightness);
   const brightness = useBrightness();
   const theme = useTheme();
-  const editorFont = useSettings((settings) => settings.appearance.editor.font);
-  const [appearance] = useState(() => new PluginAppearance(brightness, theme));
-  const [loader] = useState(() => new PluginLoader(appearance));
 
   // Uses brightnessSetting instead of brightness to avoid a circular dependency.
-  useLayoutEffect(() => {
-    window.bridge?.window?.setBrightness(brightnessSetting);
-  }, [brightnessSetting]);
+  useLayoutEffect(() => window.bridge?.window?.setBrightness(brightnessSetting), [brightnessSetting]);
 
   useLayoutEffect(() => {
     const root = document.documentElement;
@@ -38,29 +82,32 @@ function RootComponent() {
     appearance.theme = theme;
     appearance.brightness = brightness;
   }, [appearance, brightness, theme]);
+}
 
-  // TODO: apply all fonts.
+/**
+ * Applies the interface's and editor's fonts.
+ */
+function useCurrentFonts() {
+  const general = useSettings((settings) => settings.appearance.general.font);
+  const editor = useSettings((settings) => settings.appearance.editor.font);
+
   useLayoutEffect(() => {
     const style = document.documentElement.style;
-    if (editorFont.family === null) {
-      style.removeProperty('--font-mono');
-    } else if (editorFont.family === 'ui-monospace') {
-      style.setProperty('--font-mono', 'ui-monospace, monospace');
-    } else {
-      style.setProperty('--font-mono', `${JSON.stringify(editorFont.family)}, 'JetBrains Mono Variable', monospace`);
-    }
-    style.setProperty('--text-code', `${editorFont.size}px`);
-    style.setProperty('--font-mono-ligatures', editorFont.ligatures ? 'contextual' : 'none');
-  }, [editorFont]);
-
-  // TODO: Replace with lazy loading.
-  useEffect(() => {
-    for (const plugin of installed) {
-      if (plugin.enabled) {
-        void loader.load(plugin.id, plugin.url);
+    const fonts = [
+      { font: general, name: 'sans', text: 'base', fallback: "'Work Sans Variable', system-ui, sans-serif" },
+      { font: editor, name: 'mono', text: 'code', fallback: "'JetBrains Mono Variable', monospace" },
+    ];
+    for (const { font, name, text, fallback } of fonts) {
+      if (font.family === null) {
+        style.removeProperty(`--font-${name}`);
+      } else {
+        // Generic family is a keyword, quoting it turns it into an installed font.
+        const family = GENERIC_FAMILIES.has(font.family) ? font.family : JSON.stringify(font.family);
+        style.setProperty(`--font-${name}`, `${family}, ${fallback}`);
       }
-    }
-  }, [loader, installed]);
 
-  return <Outlet />;
+      style.setProperty(`--text-${text}`, `${font.size}px`);
+      style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
+    }
+  }, [general, editor]);
 }

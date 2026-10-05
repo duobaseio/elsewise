@@ -122,6 +122,9 @@ importers:
       '@elsewise/plugin':
         specifier: workspace:*
         version: link:../../packages/plugin
+      '@lezer/common':
+        specifier: ^1.5.3
+        version: 1.5.3
       '@lezer/highlight':
         specifier: ^1.2.5
         version: 1.2.5
@@ -305,6 +308,15 @@ importers:
 
   packages/plugin:
     dependencies:
+      '@codemirror/language':
+        specifier: ^6.12.4
+        version: 6.12.4
+      '@codemirror/state':
+        specifier: ^6.7.6
+        version: 6.7.6
+      '@codemirror/view':
+        specifier: ^6.43.13
+        version: 6.43.13
       react:
         specifier: ^19.3.0
         version: 19.3.0
