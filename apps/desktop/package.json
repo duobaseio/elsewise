@@ -37,7 +37,7 @@
     "@elsewise/fs": "workspace:*",
     "@elsewise/web": "workspace:*",
     "@types/node": "^26.4.1",
-    "electron": "44.4.3",
+    "electron": "44.5.1",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "playwright": "^1.63.0",
