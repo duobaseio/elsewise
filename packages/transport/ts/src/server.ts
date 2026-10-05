@@ -52,7 +52,7 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
     const name = `${service.typeName}/${method.name}`;
     switch (method.methodKind) {
       case 'unary': {
-        const fn = methods[method.localName] as UnaryImpl;
+        const fn = (methods[method.localName] as UnaryImpl).bind(impl);
         channel.handle(name, async (stream) => {
           const request = await singleRequest(stream, method.input);
           const response = await fn(request, { signal: stream.signal });
@@ -62,7 +62,7 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
         break;
       }
       case 'server_streaming': {
-        const fn = methods[method.localName] as ServerStreamImpl;
+        const fn = (methods[method.localName] as ServerStreamImpl).bind(impl);
         channel.handle(name, async (stream) => {
           const request = await singleRequest(stream, method.input);
           await relayResponses(stream, fn(request, { signal: stream.signal }), method.output);
@@ -70,7 +70,7 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
         break;
       }
       case 'client_streaming': {
-        const fn = methods[method.localName] as ClientStreamImpl;
+        const fn = (methods[method.localName] as ClientStreamImpl).bind(impl);
         channel.handle(name, async (stream) => {
           const response = await fn(decodeRequests(stream, method.input), {
             signal: stream.signal,
@@ -81,7 +81,7 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
         break;
       }
       case 'bidi_streaming': {
-        const fn = methods[method.localName] as BidiImpl;
+        const fn = (methods[method.localName] as BidiImpl).bind(impl);
         channel.handle(name, (stream) =>
           relayResponses(
             stream,

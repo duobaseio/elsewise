@@ -1,0 +1,7 @@
+# Generated protobuf-es bindings.
+src/gen/
+
+# The bundled daemon.
+dist/
+
+tsconfig.tsbuildinfo
