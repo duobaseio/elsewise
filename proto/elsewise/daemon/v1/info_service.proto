@@ -11,6 +11,6 @@ service InfoService {
 message GetInfoRequest {}
 
 message GetInfoResponse {
-  // The daemon's release version (e.g. 1.0.0).
+  // The daemon's release version in semver (e.g. 1.0.0).
   string version = 1;
 }
