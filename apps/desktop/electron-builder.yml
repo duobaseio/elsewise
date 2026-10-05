@@ -3,7 +3,7 @@ productName: Elsewise
 directories:
   output: dist
 asar: true
-# main/preload are compiled by tsc and the renderer is copied in from apps/web —
+# main/preload are bundled by esbuild and the renderer is copied in from apps/web —
 # nothing needs a native rebuild, and no node_modules are shipped.
 npmRebuild: false
 files:

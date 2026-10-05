@@ -1,18 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { createRoot } from 'react-dom/client';
-import { PluginLoader, pluginsQuery } from './plugins/loader';
-import { routeTree } from './routeTree.gen';
+import { pluginsQuery } from '@/plugins/loader';
+import { routeTree } from '@/routeTree.gen';
+import { settingsQuery } from '@/settings/settings';
 
 const queryClient = new QueryClient();
 
-// TODO: Replace with lazy loading.
-const plugins = new PluginLoader();
-for (const plugin of await queryClient.query(pluginsQuery)) {
-  if (plugin.enabled) {
-    void plugins.load(plugin.id, plugin.url);
-  }
-}
+// Plugins and settings are awaited here so the first render has them and never shows a fallback.
+await Promise.all([queryClient.query(pluginsQuery), queryClient.query(settingsQuery)]);
 
 const router = createRouter({ routeTree });
 

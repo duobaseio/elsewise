@@ -1,12 +1,11 @@
 'use client';
 
 import type { FileTreeIconConfig } from '@pierre/trees';
-import { type ComponentProps, type ComponentType, createElement, useMemo } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+import { useMemo } from 'react';
 
 import { type FileIconData, type IconTint, PHOSPHOR_ICONS } from '../../lib/file-icons.gen';
 import { type FileIcons, useFileIcons } from '../file-icon';
-import { useIcons } from '../icon';
+import { iconUrl, useIcons } from '../icon';
 
 // TODO: This implementation is absolute dogshit and we should reimplement this if/when pierre trees exposes a better API.
 
@@ -20,23 +19,6 @@ const CHEVRON_ID = 'ew-chevron';
 // Phosphor's box widened until the chevron draws at three quarters of its lane: sizing the `<svg>` would shrink the
 // lane every indent is measured from.
 const CHEVRON_VIEW_BOX = '-42.6667 -42.6667 341.3333 341.3333';
-
-const ICON_URLS = new WeakMap<ComponentType<ComponentProps<'svg'>>, string>();
-
-export function iconUrl(icon: ComponentType<ComponentProps<'svg'>>): string {
-  if (typeof document === 'undefined') {
-    return '';
-  }
-
-  let url = ICON_URLS.get(icon);
-  if (url === undefined) {
-    const markup = renderToStaticMarkup(createElement(icon));
-    const svg = markup.includes('xmlns=') ? markup : markup.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-    url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
-    ICON_URLS.set(icon, url);
-  }
-  return url;
-}
 
 export function useFileTreeIcons(): FileTreeIconConfig {
   const chevron = iconUrl(useIcons().expand);

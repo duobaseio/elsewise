@@ -26,7 +26,7 @@ vi.mock('electron', () => ({
   },
   session: { defaultSession: { protocol: { handle: vi.fn() } } },
 }));
-vi.mock('./fs', () => ({ dataLocalDir: () => DATA }));
+vi.mock('@elsewise/fs', () => ({ dataLocalDir: () => DATA }));
 
 beforeEach(() => {
   files.clear();
@@ -44,10 +44,10 @@ function request(url: string, { accept = '*/*' }: { accept?: string } = {}) {
 }
 
 describe('handleAppScheme', () => {
-  test('serves a plugin file from the plugins folder', async () => {
-    files.set(pathToFileURL(path.join(PLUGINS, 'hello', 'main.js')).href, 'plugin');
+  test("serves a file from a plugin's bundle", async () => {
+    files.set(pathToFileURL(path.join(PLUGINS, 'hello', 'bundle', 'main.js')).href, 'plugin');
 
-    const response = await request('app://elsewise/plugins/hello/main.js');
+    const response = await request('app://elsewise/plugins/hello/bundle/main.js');
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/javascript');
@@ -65,9 +65,9 @@ describe('handleAppScheme', () => {
   });
 
   test('serves a file of an unknown type as a byte stream', async () => {
-    files.set(pathToFileURL(path.join(PLUGINS, 'hello', 'data.bin')).href, 'bytes');
+    files.set(pathToFileURL(path.join(PLUGINS, 'hello', 'bundle', 'data.bin')).href, 'bytes');
 
-    const response = await request('app://elsewise/plugins/hello/data.bin');
+    const response = await request('app://elsewise/plugins/hello/bundle/data.bin');
 
     expect(response.headers.get('Content-Type')).toBe('application/octet-stream');
   });
@@ -80,35 +80,64 @@ describe('handleAppScheme', () => {
     expect(await response.text()).toBe('index');
   });
 
+  test("responds 404 for a page load of a missing file in a plugin's bundle", async () => {
+    const response = await request('app://elsewise/plugins/hello/bundle/missing.html', {
+      accept: 'text/html,application/xhtml+xml',
+    });
+
+    expect(response.status).toBe(404);
+  });
+
   test('responds 404 for a missing module', async () => {
-    const response = await request('app://elsewise/plugins/hello/missing.js');
+    const response = await request('app://elsewise/plugins/hello/bundle/missing.js');
 
     expect(response.status).toBe(404);
   });
 
   test('responds 404 for another host', async () => {
-    files.set(pathToFileURL(path.join(PLUGINS, 'hello', 'main.js')).href, 'plugin');
+    files.set(pathToFileURL(path.join(PLUGINS, 'hello', 'bundle', 'main.js')).href, 'plugin');
 
-    const response = await request('app://other/plugins/hello/main.js');
+    const response = await request('app://other/plugins/hello/bundle/main.js');
 
     expect(response.status).toBe(404);
   });
 
   test('responds 400 for a malformed escape', async () => {
-    const response = await request('app://elsewise/plugins/%E0%A4%A');
+    const response = await request('app://elsewise/plugins/hello/bundle/%E0%A4%A');
 
     expect(response.status).toBe(400);
   });
 
   test.each([
+    'app://elsewise/plugins/hello/settings.json',
+    'app://elsewise/plugins/hello/main.js',
     'app://elsewise/plugins/..%2f..%2fsecret.js',
-    'app://elsewise/plugins/hello/..%2f..%2f..%2fsecret.js',
+    'app://elsewise/plugins/hello/bundle',
+  ])('responds 404 for %s, which is outside a bundle', async (url) => {
+    // Everything it could reach exists, so only the check refuses it.
+    for (const file of [
+      path.join(PLUGINS, 'hello', 'settings.json'),
+      path.join(PLUGINS, 'hello', 'main.js'),
+      path.join(DATA, 'secret.js'),
+      path.join(PLUGINS, 'hello', 'bundle'),
+    ]) {
+      files.set(pathToFileURL(file).href, 'secret');
+    }
+
+    const response = await request(url);
+
+    expect(response.status).toBe(404);
+  });
+
+  test.each([
+    'app://elsewise/plugins/hello/bundle/..%2f..%2f..%2f..%2fsecret.js',
+    'app://elsewise/plugins/hello/bundle/..%2fsettings.json',
     'app://elsewise/..%2fsecret.js',
   ])('responds 403 for %s, which climbs out of its folder', async (url) => {
     // Everything it could reach exists, so only the check refuses it.
     for (const file of [
       path.join(DATA, 'secret.js'),
-      path.join(PLUGINS, '..', '..', 'secret.js'),
+      path.join(PLUGINS, 'hello', 'settings.json'),
       path.join(RENDERER, '..', 'secret.js'),
     ]) {
       files.set(pathToFileURL(file).href, 'secret');

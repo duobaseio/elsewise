@@ -1,5 +1,14 @@
+import type { Appearance } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { resolveTheme } from '@/themes/themes';
 import { PluginLoader } from './loader';
+
+const APPEARANCE: Appearance = {
+  brightness: 'dark',
+  onBrightnessChange: () => () => {},
+  theme: resolveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+  onThemeChange: () => () => {},
+};
 
 // What the plugins below did, in order. They reach it as the global `events`.
 let events: string[];
@@ -25,8 +34,8 @@ const RECORDING = plugin(`
   export function enable(context) {
     events.push('enable ' + context.id);
     context.subscriptions.push(
-      { dispose: () => events.push('dispose first') },
-      { dispose: () => events.push('dispose second') },
+      () => events.push('dispose first'),
+      () => events.push('dispose second'),
     );
   }
 `);
@@ -36,40 +45,65 @@ const SLOW = plugin(`
   export async function enable(context) {
     events.push('enable started');
     await gate;
-    context.subscriptions.push({ dispose: () => events.push('dispose') });
+    context.subscriptions.push(() => events.push('dispose'));
     events.push('enable finished');
   }
 `);
 
 describe('load', () => {
   test('enables the plugin with its id', async () => {
-    await new PluginLoader().load('a', RECORDING);
+    await new PluginLoader(APPEARANCE).load('a', RECORDING);
 
     expect(events).toEqual(['enable a']);
+  });
+
+  test('provides the plugin with the appearance', async () => {
+    await new PluginLoader(APPEARANCE).load(
+      'a',
+      plugin(`
+        export function enable(context) {
+          events.push(context.appearance.brightness);
+        }
+      `),
+    );
+
+    expect(events).toEqual(['dark']);
   });
 
   test('does nothing for a loaded plugin', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.load('a', RECORDING);
     await loader.load('a', RECORDING);
 
     expect(events).toEqual(['enable a']);
   });
 
-  test('reports a module that fails to import, and can be retried', async () => {
-    const loader = new PluginLoader();
-    await loader.load('a', plugin('this is not javascript'));
+  test('reports a module that fails to import', async () => {
+    await new PluginLoader(APPEARANCE).load('a', plugin('this is not javascript'));
 
     expect(events).toEqual([]);
     expect(error).toHaveBeenCalledOnce();
+  });
 
-    await loader.load('a', RECORDING);
+  test('imports a module again after it failed to evaluate', async () => {
+    const url = plugin(`
+      if (broken) throw new Error('broken');
+      export function enable(context) {
+        events.push('enable ' + context.id);
+      }
+    `);
+    const loader = new PluginLoader(APPEARANCE);
+    vi.stubGlobal('broken', true);
+    await loader.load('a', url);
+    vi.stubGlobal('broken', false);
+    await loader.load('a', url);
 
     expect(events).toEqual(['enable a']);
+    expect(error).toHaveBeenCalledOnce();
   });
 
   test('reports a module without an enable function', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.load('a', plugin('export const enable = 1;'));
 
     expect(error).toHaveBeenCalledOnce();
@@ -77,12 +111,12 @@ describe('load', () => {
   });
 
   test('disposes the subscriptions of a plugin that throws while enabling', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.load(
       'a',
       plugin(`
         export function enable(context) {
-          context.subscriptions.push({ dispose: () => events.push('dispose') });
+          context.subscriptions.push(() => events.push('dispose'));
           throw new Error('failed');
         }
       `),
@@ -98,7 +132,7 @@ describe('load', () => {
   });
 
   test('enables an unloaded plugin again', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.load('a', RECORDING);
     await loader.unload('a');
     await loader.load('a', RECORDING);
@@ -106,9 +140,22 @@ describe('load', () => {
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first', 'enable a']);
   });
 
+  test('evaluates the module of an unloaded plugin again', async () => {
+    const url = plugin(`
+      events.push('evaluate');
+      export function enable() {}
+    `);
+    const loader = new PluginLoader(APPEARANCE);
+    await loader.load('a', url);
+    await loader.unload('a');
+    await loader.load('a', url);
+
+    expect(events).toEqual(['evaluate', 'evaluate']);
+  });
+
   test('does not wait for another plugin', async () => {
     vi.stubGlobal('gate', Promise.withResolvers<void>().promise);
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
 
     void loader.load('a', SLOW);
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
@@ -120,7 +167,7 @@ describe('load', () => {
 
 describe('unload', () => {
   test('disposes the subscriptions in reverse order', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.load('a', RECORDING);
     await loader.unload('a');
 
@@ -128,7 +175,7 @@ describe('unload', () => {
   });
 
   test('does nothing for a plugin that is not loaded', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.unload('a');
     await loader.load('a', RECORDING);
     await loader.unload('a');
@@ -138,15 +185,15 @@ describe('unload', () => {
   });
 
   test('carries on past a disposable that throws', async () => {
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
     await loader.load(
       'a',
       plugin(`
         export function enable(context) {
           context.subscriptions.push(
-            { dispose: () => events.push('dispose first') },
-            { dispose: () => { throw new Error('failed'); } },
-            { dispose: () => events.push('dispose third') },
+            () => events.push('dispose first'),
+            () => { throw new Error('failed'); },
+            () => events.push('dispose third'),
           );
         }
       `),
@@ -160,7 +207,7 @@ describe('unload', () => {
   test('waits for a pending load', async () => {
     const gate = Promise.withResolvers<void>();
     vi.stubGlobal('gate', gate.promise);
-    const loader = new PluginLoader();
+    const loader = new PluginLoader(APPEARANCE);
 
     void loader.load('a', SLOW);
     const unloaded = loader.unload('a');

@@ -1,9 +1,11 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/')({
-  component: Index,
+  loader: () => {
+    // TODO: Default to the last-visited worktree once that state exists.
+    throw redirect({
+      to: '/$project/$worktree',
+      params: { project: 'Elsewise', worktree: 'Singapore' },
+    });
+  },
 });
-
-function Index() {
-  return <main className="p-8">Elsewise</main>;
-}

@@ -9,6 +9,7 @@
     "ignoreUnknown": false,
     "includes": [
       "**/src/**/*",
+      "**/test/**/*",
       "**/index.html",
       "**/vite.config.ts",
       "**/vitest.config.ts",

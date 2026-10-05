@@ -4,15 +4,15 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
+import { dataLocalDir } from '@elsewise/fs';
 import electron from 'electron';
 import { _electron, type ElectronApplication } from 'playwright';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { dataLocalDir } from './fs';
 
 const DESKTOP = path.join(__dirname, '../..');
-const PLUGIN_PAGE = 'app://elsewise/plugins/test/page.html';
+const PLUGIN_PAGE = 'app://elsewise/plugins/test/bundle/page.html';
 // Evaluated in a page, as a string so that Vitest leaves the import alone.
-const IMPORT_PLUGIN = `import('app://elsewise/plugins/test/main.js').then((module) => module.loaded, () => 'refused')`;
+const IMPORT_PLUGIN = `import('app://elsewise/plugins/test/bundle/main.js').then((module) => module.loaded, () => 'refused')`;
 
 // Two pages on origins of their own: the dev server's, and some other site's.
 let servers: http.Server[];
@@ -23,11 +23,7 @@ let home: string;
 let app: ElectronApplication | undefined;
 
 beforeAll(async () => {
-  execFileSync('pnpm', ['exec', 'tsc', '-p', 'tsconfig.build.json'], {
-    cwd: DESKTOP,
-    stdio: 'inherit',
-    shell: process.platform === 'win32',
-  });
+  execFileSync(process.execPath, ['scripts/bundle.mjs'], { cwd: DESKTOP, stdio: 'inherit' });
 
   servers = [];
   [dev, other] = await Promise.all(
@@ -56,7 +52,7 @@ beforeEach(() => {
   vi.stubEnv('XDG_DATA_HOME', path.join(home, 'data'));
   vi.stubEnv('LOCALAPPDATA', home);
 
-  const plugin = path.join(dataLocalDir(), 'plugins', 'test');
+  const plugin = path.join(dataLocalDir(), 'plugins', 'test', 'bundle');
   fs.mkdirSync(plugin, { recursive: true });
   fs.writeFileSync(path.join(plugin, 'main.js'), 'export const loaded = true;');
   fs.writeFileSync(path.join(plugin, 'page.html'), '<!doctype html><title>test</title>');

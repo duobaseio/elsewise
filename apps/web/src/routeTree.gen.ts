@@ -10,33 +10,49 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ShellRouteRouteImport } from './routes/_shell/route'
+import { Route as ShellProjectWorktreeRouteImport } from './routes/_shell/$project/$worktree'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShellRouteRoute = ShellRouteRouteImport.update({
+  id: '/_shell',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShellProjectWorktreeRoute = ShellProjectWorktreeRouteImport.update({
+  id: '/$project/$worktree',
+  path: '/$project/$worktree',
+  getParentRoute: () => ShellRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$project/$worktree': typeof ShellProjectWorktreeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$project/$worktree': typeof ShellProjectWorktreeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_shell': typeof ShellRouteRouteWithChildren
+  '/_shell/$project/$worktree': typeof ShellProjectWorktreeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/$project/$worktree'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/$project/$worktree'
+  id: '__root__' | '/' | '/_shell' | '/_shell/$project/$worktree'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ShellRouteRoute: typeof ShellRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +64,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_shell': {
+      id: '/_shell'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof ShellRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_shell/$project/$worktree': {
+      id: '/_shell/$project/$worktree'
+      path: '/$project/$worktree'
+      fullPath: '/$project/$worktree'
+      preLoaderRoute: typeof ShellProjectWorktreeRouteImport
+      parentRoute: typeof ShellRouteRoute
+    }
   }
 }
 
+interface ShellRouteRouteChildren {
+  ShellProjectWorktreeRoute: typeof ShellProjectWorktreeRoute
+}
+
+const ShellRouteRouteChildren: ShellRouteRouteChildren = {
+  ShellProjectWorktreeRoute: ShellProjectWorktreeRoute,
+}
+
+const ShellRouteRouteWithChildren = ShellRouteRoute._addFileChildren(
+  ShellRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ShellRouteRoute: ShellRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

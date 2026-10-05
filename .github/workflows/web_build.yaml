@@ -8,6 +8,7 @@ on:
       - apps/web/**
       - packages/bridge/**
       - packages/components/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -17,6 +18,7 @@ on:
       - apps/web/**
       - packages/bridge/**
       - packages/components/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -41,4 +43,5 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @elsewise/web check
       - run: pnpm --filter @elsewise/web typecheck
+      - run: pnpm --filter @elsewise/web test
       - run: pnpm --filter @elsewise/web build

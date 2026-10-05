@@ -8,16 +8,28 @@ import {
   CheckIcon,
   FolderIcon,
   FolderOpenIcon,
+  GearIcon,
   InfoIcon,
   MagnifyingGlassIcon,
   MinusIcon,
+  PlusIcon,
   SidebarIcon,
   SpinnerIcon,
+  TreeViewIcon,
   WarningIcon,
   XCircleIcon,
   XIcon,
 } from '@phosphor-icons/react';
-import { type ComponentProps, type ComponentType, createContext, type ReactNode, useContext, useMemo } from 'react';
+import {
+  type ComponentProps,
+  type ComponentType,
+  createContext,
+  createElement,
+  type ReactNode,
+  useContext,
+  useMemo,
+} from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import type { FileIconProvider } from './file-icon';
 
 const DEFAULT_ICONS = {
@@ -28,6 +40,8 @@ const DEFAULT_ICONS = {
   expand: CaretDownIcon,
   'scroll-up': CaretUpIcon,
   'scroll-down': CaretDownIcon,
+  previous: CaretUpIcon,
+  next: CaretDownIcon,
   search: MagnifyingGlassIcon,
   success: CheckCircleIcon,
   info: InfoIcon,
@@ -37,6 +51,9 @@ const DEFAULT_ICONS = {
   'sidebar-toggle': SidebarIcon,
   folder: FolderIcon,
   'folder-open': FolderOpenIcon,
+  add: PlusIcon,
+  files: TreeViewIcon,
+  settings: GearIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;
@@ -77,4 +94,24 @@ export function useIcons(): Icons {
 export function Icon({ name, ...props }: { name: IconName } & ComponentProps<'svg'>) {
   const Component = useIcons()[name];
   return <Component {...props} />;
+}
+
+const ICON_URLS = new WeakMap<ComponentType<ComponentProps<'svg'>>, string>();
+
+/**
+ * Returns `icon` as a `data:` URI, for use where an icon needs to be rendered outside of React.
+ */
+export function iconUrl(icon: ComponentType<ComponentProps<'svg'>>): string {
+  if (typeof document === 'undefined') {
+    return '';
+  }
+
+  let url = ICON_URLS.get(icon);
+  if (url === undefined) {
+    const markup = renderToStaticMarkup(createElement(icon));
+    const svg = markup.includes('xmlns=') ? markup : markup.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+    url = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+    ICON_URLS.set(icon, url);
+  }
+  return url;
 }

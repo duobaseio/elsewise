@@ -10,9 +10,9 @@ import type {
 import { FileTree as PierreFileTree, useFileTree as usePierreFileTree } from '@pierre/trees/react';
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
-import { useIcons } from '../icon';
+import { iconUrl, useIcons } from '../icon';
 import themeCss from './file-tree.css?inline';
-import { iconUrl, useFileTreeIcons } from './icons';
+import { useFileTreeIcons } from './icons';
 import unsafeCss from './unsafe.css?inline';
 
 const UNSAFE_CSS = `${themeCss}\n${unsafeCss}`;

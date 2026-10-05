@@ -1,18 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { dataLocalDir } from '@elsewise/fs';
 import { ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
-import { dataLocalDir } from './fs';
 import { handlePlugins } from './plugins';
 
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
 // The real `writeJsonSync`, but in a temporary folder rather than the user's data folder.
-vi.mock('./fs', async (importOriginal) => {
+vi.mock('@elsewise/fs', async (importOriginal) => {
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const data = mkdtempSync(join(tmpdir(), 'elsewise-'));
-  return { ...(await importOriginal<typeof import('./fs')>()), dataLocalDir: () => data };
+  return { ...(await importOriginal<typeof import('@elsewise/fs')>()), dataLocalDir: () => data };
 });
 
 const FILE = path.join(dataLocalDir(), 'plugins.json');
@@ -24,6 +24,8 @@ const MALFORMED: [string, unknown, RegExp][] = [
   ['has a null plugin', [PLUGIN, null], /plugin 1 is malformed/],
   ['has a plugin missing a property', [{ ...PLUGIN, url: undefined }], /plugin 0 is malformed/],
   ['has a plugin with a property of the wrong type', [{ ...PLUGIN, enabled: 'true' }], /plugin 0 is malformed/],
+  ['has a plugin with an id that is not a path segment', [{ ...PLUGIN, id: '../hello' }], /plugin 0 is malformed/],
+  ['has a plugin with a version that is not SemVer', [{ ...PLUGIN, version: '1.0' }], /plugin 0 is malformed/],
   ['has two plugins with the same id', [PLUGIN, { ...PLUGIN, name: 'Other' }], /share the id hello/],
 ];
 

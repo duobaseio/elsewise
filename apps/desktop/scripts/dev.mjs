@@ -1,5 +1,5 @@
 // Dev runner for the Electron shell (no electron-vite — plain glue):
-//   1. compile main/preload with tsc
+//   1. bundle main/preload with esbuild
 //   2. wait for the web app's Vite dev server to be reachable
 //   3. launch Electron pointed at it
 //   4. rebuild + restart Electron when main/preload sources change
@@ -13,12 +13,10 @@ import electronPath from 'electron';
 //   ELECTRON_RENDERER_URL=http://localhost:4000 pnpm --filter @elsewise/desktop dev
 const RENDERER_URL = process.env.ELECTRON_RENDERER_URL || 'http://localhost:3000';
 
-const isWin = process.platform === 'win32';
-
-function tscBuild() {
+function bundle() {
   return new Promise((resolve, reject) => {
-    const p = spawn('tsc', ['-p', 'tsconfig.build.json'], { stdio: 'inherit', shell: isWin });
-    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('tsc failed'))));
+    const p = spawn(process.execPath, ['scripts/bundle.mjs'], { stdio: 'inherit' });
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('bundle failed'))));
   });
 }
 
@@ -69,21 +67,24 @@ setInterval(() => {
   }
 }, 1000).unref();
 
-await tscBuild();
+await bundle();
 console.log(`[dev] waiting for renderer at ${RENDERER_URL} ...`);
 await waitForUrl(RENDERER_URL);
 startElectron();
 
-// Rebuild + restart Electron on main/preload changes (debounced).
+// Rebuild + restart Electron on main/preload changes, and on changes to the bridge and fs bundled into them
+// (debounced).
 let timer;
-watch('src', { recursive: true }, () => {
-  clearTimeout(timer);
-  timer = setTimeout(async () => {
-    try {
-      await tscBuild();
-      startElectron();
-    } catch (err) {
-      console.error('[dev]', err.message);
-    }
-  }, 150);
-});
+for (const folder of ['src', '../../packages/bridge/src', '../../packages/fs/src']) {
+  watch(folder, { recursive: true }, () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        await bundle();
+        startElectron();
+      } catch (err) {
+        console.error('[dev]', err.message);
+      }
+    }, 150);
+  });
+}
