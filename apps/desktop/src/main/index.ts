@@ -91,8 +91,8 @@ function createWindow() {
     return { action: 'deny' };
   });
   main.webContents.ipc.on(
-      'window:brightness',
-      (_event, brightness: Brightness) => (nativeTheme.themeSource = brightness),
+    'window:brightness',
+    (_event, brightness: Brightness) => (nativeTheme.themeSource = brightness),
   );
   main.webContents.ipc.on('window:background', (_event, color: string) => main.setBackgroundColor(color));
   main.webContents.ipc.once('window:background', () => {

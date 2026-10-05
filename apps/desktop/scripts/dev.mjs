@@ -72,9 +72,10 @@ console.log(`[dev] waiting for renderer at ${RENDERER_URL} ...`);
 await waitForUrl(RENDERER_URL);
 startElectron();
 
-// Rebuild + restart Electron on main/preload changes, and on changes to the bridge bundled into them (debounced).
+// Rebuild + restart Electron on main/preload changes, and on changes to the bridge and fs bundled into them
+// (debounced).
 let timer;
-for (const folder of ['src', '../../packages/bridge/src']) {
+for (const folder of ['src', '../../packages/bridge/src', '../../packages/fs/src']) {
   watch(folder, { recursive: true }, () => {
     clearTimeout(timer);
     timer = setTimeout(async () => {

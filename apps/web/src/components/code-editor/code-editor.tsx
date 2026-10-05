@@ -108,8 +108,6 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
     useEditorSettings(description?.name, 'lineSeparator') ??
     (code.includes('\r\n') || (!code.includes('\n') && OS === 'windows') ? '\r\n' : '\n');
 
-
-
   // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
   useEffect(() => {
     if (host.current == null) {
