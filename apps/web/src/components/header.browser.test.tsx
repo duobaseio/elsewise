@@ -7,7 +7,12 @@ afterEach(() => {
 });
 
 function desktop() {
-  window.bridge = { window: { getBackground: async () => '', setBackground() {} } };
+  window.bridge = {
+    window: {
+      setBrightness() {},
+      setBackground() {},
+    },
+  };
 }
 
 async function header(props: Parameters<typeof Header>[0] = {}) {

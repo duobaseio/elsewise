@@ -1,6 +1,7 @@
 import path from 'node:path';
+import type { Brightness } from '@elsewise/bridge';
 import { dataLocalDir } from '@elsewise/fs';
-import { app, BrowserWindow, protocol, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, protocol, shell } from 'electron';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
@@ -89,7 +90,10 @@ function createWindow() {
 
     return { action: 'deny' };
   });
-  main.webContents.ipc.handle('window:get-background', () => main.getBackgroundColor());
+  main.webContents.ipc.on(
+      'window:brightness',
+      (_event, brightness: Brightness) => (nativeTheme.themeSource = brightness),
+  );
   main.webContents.ipc.on('window:background', (_event, color: string) => main.setBackgroundColor(color));
   main.webContents.ipc.once('window:background', () => {
     if (dev) {

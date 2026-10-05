@@ -19,7 +19,7 @@ describe('settingsQuery', () => {
       ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, theme: { source: 'elsewise', name: 'nord' } },
+        general: { ...DEFAULT_SETTINGS.appearance.general, theme: { source: 'elsewise', name: 'dracula' } },
       },
     };
     vi.stubGlobal('window', { bridge: { settings: { load: async () => settings } } });

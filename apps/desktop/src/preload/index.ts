@@ -21,7 +21,7 @@ const settings: SettingsBridge = {
 };
 
 const window: WindowBridge = {
-  getBackground: () => ipcRenderer.invoke('window:get-background'),
+  setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
 };
 

@@ -1,6 +1,6 @@
 import { closeBrackets } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentLess, insertTab } from '@codemirror/commands';
-import { bracketMatching, foldGutter, foldKeymap, indentUnit, LanguageDescription } from '@codemirror/language';
+import { bracketMatching, foldGutter, foldKeymap, LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 import { Compartment, EditorState } from '@codemirror/state';
@@ -12,18 +12,17 @@ import {
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
-  lineNumbers,
   rectangularSelection,
 } from '@codemirror/view';
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { OS } from '@elsewise/components/lib/os';
 import { useQuery } from '@tanstack/react-query';
-import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
+import { type CSSProperties, useEffect, useRef } from 'react';
 import { EditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu';
 import { useSearchExtension } from '@/components/code-editor/search-bar';
+import { useSettingsExtension } from '@/components/code-editor/settings-extension';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
-import { visualGuides } from '@/components/code-editor/visual-guides';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 const THEME = new Compartment();
@@ -95,32 +94,21 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
     enabled: description != null,
     staleTime: Number.POSITIVE_INFINITY,
   });
-  const { search, portal } = useSearchExtension();
+
   const theme = useThemeExtension();
+  const { search, portal } = useSearchExtension();
+  const settings = useSettingsExtension(description?.name);
   const icons = useIcons();
 
-  const tabSize = useEditorSettings(description?.name, 'tabSize');
-  const indent = useEditorSettings(description?.name, 'indentUnit');
-  const guides = useEditorSettings(description?.name, 'visualGuides');
-  const showLineNumbers = useSettings((settings) => settings.appearance.editor.lineNumbers);
-  const lineWrapping = useSettings((settings) => settings.appearance.editor.lineWrapping);
   const font = useSettings((settings) => settings.appearance.editor.font);
   const previousFont = useRef(font);
+
   // Defaults to the line separator the file already uses, or the platform's if the file has none.
   const lineSeparator: LineSeparator =
     useEditorSettings(description?.name, 'lineSeparator') ??
     (code.includes('\r\n') || (!code.includes('\n') && OS === 'windows') ? '\r\n' : '\n');
 
-  const settings = useMemo(
-    () => [
-      EditorState.tabSize.of(tabSize),
-      indentUnit.of(indent),
-      showLineNumbers ? lineNumbers() : [],
-      lineWrapping ? EditorView.lineWrapping : [],
-      visualGuides(guides),
-    ],
-    [tabSize, indent, showLineNumbers, lineWrapping, guides],
-  );
+
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
   useEffect(() => {

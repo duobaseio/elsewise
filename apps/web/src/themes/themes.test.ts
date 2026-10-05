@@ -1,8 +1,9 @@
+import { BundledTheme } from '@elsewise/bridge';
 import elsewiseCss from '@elsewise/components/elsewise.css?raw';
 import { Theme, ThemeVariant } from '@elsewise/plugin';
 import { describe, expect, test } from 'vitest';
 import elsewise from './bundled/elsewise.json';
-import { type LoadedTheme, resolveTheme } from './themes';
+import { type LoadedTheme, resolveTheme, THEMES } from './themes';
 
 const NIGHT: LoadedTheme = {
   id: { source: 'plugin', plugin: 'com.acme.themes', name: 'night' },
@@ -18,9 +19,15 @@ const NIGHT: LoadedTheme = {
 
 const ELSEWISE = Theme.parse(elsewise);
 
+describe('THEMES', () => {
+  test('loads every bundled theme', () => {
+    expect(THEMES.map(({ id }) => id.name)).toEqual(BundledTheme.options);
+  });
+});
+
 describe('resolveTheme', () => {
   test("returns Elsewise's colors for an unknown theme", () => {
-    expect(resolveTheme([NIGHT], { source: 'elsewise', name: 'night' }, 'dark')).toEqual(ELSEWISE.dark);
+    expect(resolveTheme([NIGHT], { source: 'elsewise', name: 'dracula' }, 'dark')).toEqual(ELSEWISE.dark);
   });
 
   test("returns Elsewise's colors for a theme of the same name from another plugin", () => {

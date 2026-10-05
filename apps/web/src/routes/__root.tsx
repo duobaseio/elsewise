@@ -14,14 +14,18 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const installed = usePlugins((plugins) => plugins);
+  const brightnessSetting = useSettings((settings) => settings.appearance.general.brightness);
   const brightness = useBrightness();
   const theme = useTheme();
   const editorFont = useSettings((settings) => settings.appearance.editor.font);
   const [appearance] = useState(() => new PluginAppearance(brightness, theme));
   const [loader] = useState(() => new PluginLoader(appearance));
 
-  // Applies the theme before paint. The desktop keeps its window hidden until the page first reports its background,
-  // so the window never flashes a color the page does not paint, and follows it on every change after.
+  // Uses brightnessSetting instead of brightness to avoid a circular dependency.
+  useLayoutEffect(() => {
+    window.bridge?.window?.setBrightness(brightnessSetting);
+  }, [brightnessSetting]);
+
   useLayoutEffect(() => {
     const root = document.documentElement;
     root.dataset.brightness = brightness;
@@ -30,8 +34,7 @@ function RootComponent() {
     }
     window.bridge?.window?.setBackground(getComputedStyle(document.body).backgroundColor);
 
-    // The plugins last, so their listeners find the page already in the new theme. The theme before the brightness,
-    // so a brightness listener reads the theme under the new brightness.
+    // Ensures that their listeners find the page already in the new theme.
     appearance.theme = theme;
     appearance.brightness = brightness;
   }, [appearance, brightness, theme]);

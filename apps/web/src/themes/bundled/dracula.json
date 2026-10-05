@@ -52,7 +52,7 @@
       "caret": "#1F1F1F",
       "selection": "#CFCFDE",
       "selectionMatch": "#ECE9DF",
-      "activeLine": "#E2DECA95",
+      "activeLine": "#6C664B33",
       "gutterBackground": "#FFFBEB",
       "gutterForeground": "#6C664B",
       "gutterBorder": "#DCDEEF",
@@ -66,8 +66,14 @@
       "tooltipBackground": "#FFFBEB",
       "completionSelected": "#CFCFDE",
       "tokens": {
-        "comment": "#6C664B",
-        "docComment": "#6C664B",
+        "comment": {
+          "color": "#6C664B",
+          "italic": true
+        },
+        "docComment": {
+          "color": "#6C664B",
+          "italic": true
+        },
         "punctuation": "#1F1F1F",
         "bracket": "#1F1F1F",
         "operator": "#A3144D",
@@ -89,28 +95,22 @@
         },
         "class": "#036A96",
         "annotation": {
-          "color": "#14710A",
+          "color": "#6C664B",
           "italic": true
         },
         "variable": "#1F1F1F",
-        "parameter": {
-          "color": "#A34D14",
-          "italic": true
-        },
+        "parameter": "#1F1F1F",
         "property": "#1F1F1F",
-        "attribute": {
-          "color": "#14710A",
-          "italic": true
-        },
-        "tag": "#A3144D",
+        "attribute": "#036A96",
+        "tag": "#036A96",
         "constant": "#644AC9",
         "self": {
           "color": "#644AC9",
           "italic": true
         },
         "string": "#846E15",
-        "escape": "#A3144D",
-        "regexp": "#846E15",
+        "escape": "#846E15",
+        "regexp": "#036A96",
         "number": "#644AC9",
         "boolean": "#644AC9",
         "invalid": {
@@ -122,7 +122,10 @@
           "color": "#644AC9",
           "bold": true
         },
-        "link": "#036A96",
+        "link": {
+          "color": "#036A96",
+          "underline": true
+        },
         "emphasis": {
           "color": "#846E15",
           "italic": true
@@ -222,7 +225,7 @@
       "caret": "#F8F8F2",
       "selection": "#44475A",
       "selectionMatch": "#424450",
-      "activeLine": "#44475A75",
+      "activeLine": "#6272A433",
       "gutterBackground": "#282A36",
       "gutterForeground": "#6272A4",
       "gutterBorder": "#FFFFFF1A",
@@ -236,8 +239,14 @@
       "tooltipBackground": "#282A36",
       "completionSelected": "#44475A",
       "tokens": {
-        "comment": "#6272A4",
-        "docComment": "#6272A4",
+        "comment": {
+          "color": "#6272A4",
+          "italic": true
+        },
+        "docComment": {
+          "color": "#6272A4",
+          "italic": true
+        },
         "punctuation": "#F8F8F2",
         "bracket": "#F8F8F2",
         "operator": "#FF79C6",
@@ -259,28 +268,22 @@
         },
         "class": "#8BE9FD",
         "annotation": {
-          "color": "#50FA7B",
+          "color": "#6272A4",
           "italic": true
         },
         "variable": "#F8F8F2",
-        "parameter": {
-          "color": "#FFB86C",
-          "italic": true
-        },
+        "parameter": "#F8F8F2",
         "property": "#F8F8F2",
-        "attribute": {
-          "color": "#50FA7B",
-          "italic": true
-        },
-        "tag": "#FF79C6",
+        "attribute": "#8BE9FD",
+        "tag": "#8BE9FD",
         "constant": "#BD93F9",
         "self": {
           "color": "#BD93F9",
           "italic": true
         },
         "string": "#F1FA8C",
-        "escape": "#FF79C6",
-        "regexp": "#F1FA8C",
+        "escape": "#F1FA8C",
+        "regexp": "#8BE9FD",
         "number": "#BD93F9",
         "boolean": "#BD93F9",
         "invalid": {
@@ -292,7 +295,10 @@
           "color": "#BD93F9",
           "bold": true
         },
-        "link": "#8BE9FD",
+        "link": {
+          "color": "#8BE9FD",
+          "underline": true
+        },
         "emphasis": {
           "color": "#F1FA8C",
           "italic": true

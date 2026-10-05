@@ -5,6 +5,7 @@ import type { WindowBridge } from './window.js';
 export { InstalledPlugin, PluginId, type PluginsBridge } from './plugins.js';
 export {
   Brightness,
+  BundledTheme,
   CursorStyle,
   DEFAULT_SETTINGS,
   EditorLanguageSettings,

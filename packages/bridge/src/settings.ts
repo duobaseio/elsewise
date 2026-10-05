@@ -4,6 +4,7 @@ import { PluginId } from './plugins.js';
 export type Settings = z.infer<typeof Settings>;
 export type Brightness = z.infer<typeof Brightness>;
 export type ThemeId = z.infer<typeof ThemeId>;
+export type BundledTheme = z.infer<typeof BundledTheme>;
 export type Font = z.infer<typeof Font>;
 export type FontSize = z.infer<typeof FontSize>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
@@ -146,12 +147,24 @@ export const Settings = z.lazy(() =>
  *
  * - `elsewise`: bundled with Elsewise.
  * - `plugin`: provided by the plugin whose id is `plugin`.
- *
- * `name` is the theme's file name without its extension, e.g. `nord`.
  */
 export const ThemeId = z.discriminatedUnion('source', [
-  z.strictObject({ source: z.literal('elsewise'), name: z.string().min(1) }),
+  z.strictObject({ source: z.literal('elsewise'), name: z.lazy(() => BundledTheme) }),
   z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
+]);
+
+/**
+ * Elsewise's bundled themes.
+ */
+export const BundledTheme = z.enum([
+  'catppuccin-frappe',
+  'catppuccin-latte',
+  'catppuccin-macchiato',
+  'catppuccin-mocha',
+  'dracula',
+  'elsewise',
+  'solarized',
+  'tokyo-night',
 ]);
 
 export const Brightness = z.enum(['light', 'dark', 'system']);

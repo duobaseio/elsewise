@@ -1,4 +1,4 @@
-import type { ThemeId } from '@elsewise/bridge';
+import { BundledTheme, type ThemeId } from '@elsewise/bridge';
 import { type ResolvedTheme, Theme } from '@elsewise/plugin';
 import { useMemo } from 'react';
 import { useBrightness, useSettings } from '@/settings/settings';
@@ -19,7 +19,7 @@ export interface LoadedTheme {
 export const THEMES: readonly LoadedTheme[] = Object.entries(
   import.meta.glob<unknown>('./bundled/*.json', { eager: true, import: 'default' }),
 ).map(([path, content]) => ({
-  id: { source: 'elsewise', name: path.slice('./bundled/'.length, -'.json'.length) },
+  id: { source: 'elsewise', name: BundledTheme.parse(path.slice('./bundled/'.length, -'.json'.length)) },
   theme: Theme.parse(content),
 }));
 

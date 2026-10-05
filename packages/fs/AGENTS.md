@@ -5,13 +5,6 @@ today the desktop app and the daemon, so they agree on one location.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/fs <script>`.
 
-## Layout
-
-| Path           | What it is                                                                                   |
-|----------------|----------------------------------------------------------------------------------------------|
-| `src/index.ts` | The public surface; consumers import `@elsewise/fs`. The platform's config and data folders, |
-|                | and `writeJsonSync`.                                                                         |
-
 This is a **source package**: `exports` points straight at `src/index.ts` and there is no build step.
 
 ## Rules
