@@ -5,37 +5,7 @@
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "misc (non-major)"
-    },
-    {
-      "matchFileNames": ["apps/desktop/**"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "desktop (non-major)"
-    },
-    {
-      "matchFileNames": ["apps/web/**"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "web (non-major)"
-    },
-    {
-      "matchFileNames": ["packages/bridge/**"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "bridge (non-major)"
-    },
-    {
-      "matchFileNames": ["packages/components/**"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "components (non-major)"
-    },
-    {
-      "matchFileNames": ["packages/transport/ts/**"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "transport ts (non-major)"
-    },
-    {
-      "matchFileNames": ["package.json"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "workspace root (non-major)"
+      "groupName": "all (non-major)"
     },
     {
       "matchFileNames": ["tools/**"],

@@ -1,0 +1,16 @@
+edition = "2024";
+
+package elsewise.daemon.v1;
+
+// Describes the running daemon.
+service InfoService {
+  // Returns the daemon's information.
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+}
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+  // The daemon's release version (e.g. 1.0.0).
+  string version = 1;
+}

@@ -1,0 +1,45 @@
+name: Daemon Build
+
+on:
+  workflow_dispatch: {}
+  push:
+    paths:
+      - .github/workflows/daemon_build.yaml
+      - apps/daemon/**
+      - packages/transport/ts/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - proto/**
+  pull_request:
+    paths:
+      - .github/workflows/daemon_build.yaml
+      - apps/daemon/**
+      - packages/transport/ts/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - proto/**
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Daemon
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @elsewise/daemon check
+      - run: pnpm --filter @elsewise/daemon typecheck
+      - run: pnpm --filter @elsewise/daemon test
+      - run: pnpm --filter @elsewise/daemon build

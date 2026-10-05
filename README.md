@@ -29,10 +29,10 @@ pnpm dist:mac     # .app + dmg   (also: dist:win, dist:linux)
 
 ### Daemon
 
-The daemon is a Node project in the pnpm workspace (`daemon/`).
+The daemon is a Node project in the pnpm workspace (`apps/daemon/`).
 
 ```bash
-pnpm --filter daemon dev      # also: build, test
+pnpm --filter @elsewise/daemon dev      # also: build, test
 ```
 
 ## Conventions

@@ -132,6 +132,37 @@ describe('serve', () => {
     expect(cleaned).toBe(true);
   });
 
+  test('ensures a class impl keeps this accessible', async () => {
+    class Impl implements ServiceImpl<typeof TestService> {
+      readonly text = 'mine';
+
+      unary() {
+        return { text: this.text };
+      }
+
+      async *serverStream() {
+        yield { text: this.text };
+      }
+
+      async clientStream() {
+        return { text: this.text };
+      }
+
+      async *bidiStream() {
+        yield { text: this.text };
+      }
+    }
+    const { front, daemon } = pair();
+    serve(daemon, TestService, new Impl());
+    const client = createClient(front, TestService);
+    const none = async function* () {};
+
+    expect(await client.unary({})).toMatchObject({ text: 'mine' });
+    expect(await take(client.serverStream({})[Symbol.asyncIterator]())).toMatchObject({ text: 'mine' });
+    expect(await client.clientStream(none())).toMatchObject({ text: 'mine' });
+    expect(await take(client.bidiStream().responses[Symbol.asyncIterator]())).toMatchObject({ text: 'mine' });
+  });
+
   test('a call closing without its request message ends with CODE_INVALID_ARGUMENT', async () => {
     const { front, daemon } = pair();
     serve(daemon, TestService, STUB);
