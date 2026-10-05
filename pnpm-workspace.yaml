@@ -2,6 +2,7 @@ packages:
   - "apps/*"
   - "packages/*"
   - "packages/transport/ts"
+  - "plugins/examples/*"
 
 allowBuilds:
   # buf's postinstall selects/links the platform CLI binary.
