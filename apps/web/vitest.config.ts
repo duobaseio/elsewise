@@ -48,6 +48,8 @@ function browserProject(
         '@codemirror/commands',
         '@codemirror/language',
         '@codemirror/language-data',
+        '@codemirror/lint',
+        '@codemirror/lsp-client',
         '@codemirror/search',
         '@codemirror/state',
         '@codemirror/view',
