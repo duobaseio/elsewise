@@ -1,7 +1,7 @@
 # Core
 
-Where Elsewise keeps its files on disk, and how it writes them. Shared by every Node process that touches those files,
-today the desktop app and the daemon, so they agree on one location.
+Node-side code shared by every Elsewise process, today the desktop app and the daemon. It currently holds where
+Elsewise keeps its files on disk and how it writes them, so both agree on one location.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/core <script>`.
 

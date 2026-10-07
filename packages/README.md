@@ -6,7 +6,7 @@ Shared Elsewise libraries.
 |-----------------------------------------|-----------------|-----------------------------------------------------|
 | [`@elsewise/bridge`](./bridge)          | `bridge/`       | The contract between the UI and its embedder        |
 | [`@elsewise/components`](./components)  | `components/`   | Primitive UI components and design system           |
-| [`@elsewise/core`](./core)              | `core/`         | Where Elsewise keeps its files on disk              |
+| [`@elsewise/core`](./core)              | `core/`         | Node-side code shared by every Elsewise process     |
 | [`@elsewise/plugin`](./plugin)          | `plugin/`       | The contract between Elsewise and its plugins       |
 | [`@elsewise/transport`](./transport/ts) | `transport/ts/` | The transport protocol implementation in TypeScript |
 

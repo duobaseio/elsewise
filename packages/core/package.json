@@ -8,7 +8,7 @@
       "onFail": "error"
     }
   },
-  "description": "Where Elsewise keeps its files on disk.",
+  "description": "Node-side code shared by every Elsewise process.",
   "exports": {
     ".": "./src/index.ts"
   },

@@ -1,4 +1,4 @@
-appId: com.duobase.elsewise
+appId: io.duobase.elsewise
 productName: Elsewise
 directories:
   output: dist
