@@ -1,19 +1,8 @@
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
 const ORGANIZATION = 'duobase';
 const APPLICATION = 'elsewise';
-
-/**
- * Atomically writes `value` as pretty-printed JSON to `target`, creating its parent directories if they do not exist.
- */
-export function writeJsonSync(target: string, value: unknown): void {
-  fs.mkdirSync(path.dirname(target), { recursive: true });
-  const temporary = `${target}.tmp`;
-  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
-  fs.renameSync(temporary, target);
-}
 
 /**
  * Returns the directory where the user-facing settings and configuration live.
@@ -23,7 +12,7 @@ export function configLocalDir(): string {
     case 'win32':
       return path.join(localAppData(), ORGANIZATION, APPLICATION, 'config');
     case 'darwin':
-      return path.join(os.homedir(), 'Library', 'Application Support', `com.${ORGANIZATION}.${APPLICATION}`);
+      return path.join(os.homedir(), 'Library', 'Application Support', `io.${ORGANIZATION}.${APPLICATION}`, 'config');
     default:
       return path.join(xdg('XDG_CONFIG_HOME', '.config'), APPLICATION);
   }
@@ -37,7 +26,7 @@ export function dataLocalDir(): string {
     case 'win32':
       return path.join(localAppData(), ORGANIZATION, APPLICATION, 'data');
     case 'darwin':
-      return path.join(os.homedir(), 'Library', 'Application Support', `com.${ORGANIZATION}.${APPLICATION}`);
+      return path.join(os.homedir(), 'Library', 'Application Support', `io.${ORGANIZATION}.${APPLICATION}`, 'data');
     default:
       return path.join(xdg('XDG_DATA_HOME', '.local/share'), APPLICATION);
   }

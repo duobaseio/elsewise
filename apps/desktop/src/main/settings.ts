@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, PluginId, Settings } from '@elsewise/bridge';
-import { configLocalDir, dataLocalDir, writeJsonSync } from '@elsewise/fs';
+import { configLocalDir, dataLocalDir, writeJsonSync } from '@elsewise/core';
 import { ipcMain } from 'electron';
 
 /**

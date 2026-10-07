@@ -43,8 +43,8 @@ vi.mock('electron', () => ({
     },
   },
 }));
-vi.mock('@elsewise/fs', async (original) => ({
-  ...(await original<typeof import('@elsewise/fs')>()),
+vi.mock('@elsewise/core', async (original) => ({
+  ...(await original<typeof import('@elsewise/core')>()),
   dataLocalDir: () => state.dir,
 }));
 

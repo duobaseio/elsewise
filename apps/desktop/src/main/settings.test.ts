@@ -1,20 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import { configLocalDir, dataLocalDir } from '@elsewise/fs';
+import { configLocalDir, dataLocalDir } from '@elsewise/core';
 import { ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handleSettings } from './settings';
 
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
 // The real `writeJsonSync`, but in a temporary folder rather than the user's config and data folders.
-vi.mock('@elsewise/fs', async (importOriginal) => {
+vi.mock('@elsewise/core', async (importOriginal) => {
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const home = mkdtempSync(join(tmpdir(), 'elsewise-'));
   return {
-    ...(await importOriginal<typeof import('@elsewise/fs')>()),
+    ...(await importOriginal<typeof import('@elsewise/core')>()),
     configLocalDir: () => join(home, 'config'),
     dataLocalDir: () => join(home, 'data'),
   };

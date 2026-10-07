@@ -1,18 +1,18 @@
-name: Fs Build
+name: Core Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/fs_build.yaml
-      - packages/fs/**
+      - .github/workflows/core_build.yaml
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/fs_build.yaml
-      - packages/fs/**
+      - .github/workflows/core_build.yaml
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Fs
+    name: Build Core
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,5 +35,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/fs check
-      - run: pnpm --filter @elsewise/fs typecheck
+      - run: pnpm --filter @elsewise/core check
+      - run: pnpm --filter @elsewise/core typecheck

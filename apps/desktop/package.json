@@ -34,7 +34,7 @@
     "@biomejs/biome": "^2.5.14",
     "@electron/fuses": "^2.1.3",
     "@elsewise/bridge": "workspace:*",
-    "@elsewise/fs": "workspace:*",
+    "@elsewise/core": "workspace:*",
     "@elsewise/web": "workspace:*",
     "@types/node": "^26.4.1",
     "electron": "44.5.1",
