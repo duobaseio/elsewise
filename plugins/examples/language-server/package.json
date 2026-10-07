@@ -1,0 +1,27 @@
+{
+  "name": "@elsewise/plugin-example-language-server",
+  "private": true,
+  "type": "module",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "description": "An example plugin that adds TypeScript's language server to the code editor.",
+  "scripts": {
+    "build": "vite build",
+    "serve": "node scripts/serve.mjs",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@elsewise/plugin": "workspace:*",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0",
+    "ws": "^8.22.0"
+  }
+}
