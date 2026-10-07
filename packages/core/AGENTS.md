@@ -1,9 +1,9 @@
-# Fs
+# Core
 
 Where Elsewise keeps its files on disk, and how it writes them. Shared by every Node process that touches those files,
 today the desktop app and the daemon, so they agree on one location.
 
-Run pnpm from the **repo root**: `pnpm --filter @elsewise/fs <script>`.
+Run pnpm from the **repo root**: `pnpm --filter @elsewise/core <script>`.
 
 This is a **source package**: `exports` points straight at `src/index.ts` and there is no build step.
 

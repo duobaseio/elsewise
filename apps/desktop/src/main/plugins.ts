@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { InstalledPlugin } from '@elsewise/bridge';
-import { dataLocalDir, writeJsonSync } from '@elsewise/fs';
+import { dataLocalDir, writeJsonSync } from '@elsewise/core';
 import { ipcMain } from 'electron';
 
 const FILE = path.join(dataLocalDir(), 'plugins.json');

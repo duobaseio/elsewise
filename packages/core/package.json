@@ -1,5 +1,5 @@
 {
-  "name": "@elsewise/fs",
+  "name": "@elsewise/core",
   "private": true,
   "type": "module",
   "devEngines": {
@@ -8,7 +8,7 @@
       "onFail": "error"
     }
   },
-  "description": "Where Elsewise keeps its files on disk, and how it writes them.",
+  "description": "Where Elsewise keeps its files on disk.",
   "exports": {
     ".": "./src/index.ts"
   },

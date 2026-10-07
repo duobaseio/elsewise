@@ -4,7 +4,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { dataLocalDir } from '@elsewise/fs';
+import { dataLocalDir } from '@elsewise/core';
 import electron from 'electron';
 import { _electron, type ElectronApplication } from 'playwright';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { Brightness } from '@elsewise/bridge';
-import { dataLocalDir } from '@elsewise/fs';
+import { dataLocalDir } from '@elsewise/core';
 import { app, BrowserWindow, nativeTheme, protocol, shell } from 'electron';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';

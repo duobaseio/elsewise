@@ -9,7 +9,7 @@ on:
       - apps/web/**
       - packages/bridge/**
       - packages/components/**
-      - packages/fs/**
+      - packages/core/**
       - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
@@ -21,7 +21,7 @@ on:
       - apps/web/**
       - packages/bridge/**
       - packages/components/**
-      - packages/fs/**
+      - packages/core/**
       - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
