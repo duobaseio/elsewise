@@ -43,7 +43,8 @@
     "dockview-react": "^8.4.0",
     "dompurify": "^3.4.16",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "vscode-languageserver-protocol": "^3.18.4"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",

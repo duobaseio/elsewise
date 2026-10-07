@@ -1,8 +1,20 @@
-import { LSPClient, languageServerExtensions } from '@codemirror/lsp-client';
+import {
+  findReferencesKeymap,
+  formatKeymap,
+  jumpToDefinitionKeymap,
+  LSPClient,
+  renameKeymap,
+  serverCompletion,
+  serverDiagnostics,
+  signatureHelp,
+} from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
+import { keymap } from '@codemirror/view';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
+import { serverHover } from '@/language-servers/hover';
 import { EditorAdditions } from '@/plugins/editor';
 
 /**
@@ -107,7 +119,15 @@ export class LanguageServerInstance {
     this.client = new LSPClient({
       rootUri: root.href,
       initializationOptions: server.initializationOptions,
-      extensions: languageServerExtensions(), // TODO: We might need to rip this out.
+      // TODO: We might need to rip out more of these.
+      extensions: [
+        serverCompletion(),
+        serverHover(),
+        keymap.of([...formatKeymap, ...renameKeymap, ...jumpToDefinitionKeymap, ...findReferencesKeymap]),
+        signatureHelp(),
+        serverDiagnostics(),
+        pullDiagnostics(),
+      ],
       sanitizeHTML: (html) => DOMPurify.sanitize(html),
     });
   }
@@ -145,9 +165,12 @@ export class LanguageServerInstance {
           handlers.delete(handler);
         },
       });
-      this.client.initializing.catch((error) => {
-        console.error(`Language server ${this.server.name} failed to initialize`, error);
-      });
+      this.client.initializing.then(
+        () => pullAllDiagnostics(this.client),
+        (error) => {
+          console.error(`Language server ${this.server.name} failed to initialize`, error);
+        },
+      );
     } catch (error) {
       console.error(`Language server ${this.server.name} failed to start`, error);
     } finally {

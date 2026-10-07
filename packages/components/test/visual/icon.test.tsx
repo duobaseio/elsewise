@@ -24,6 +24,7 @@ const ROLES = Object.keys({
   info: true,
   warning: true,
   error: true,
+  external: true,
   loading: true,
   'sidebar-toggle': true,
   folder: true,

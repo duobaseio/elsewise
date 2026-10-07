@@ -120,11 +120,58 @@ as a fill is invisible against at least one other (the light ladder is 1.04:1 en
   `#D9B36A` · `rgba(217,179,106,.12)` · `#6A5630`
 - **Error — madder:** `#B3362B` · `rgba(179,54,43,.09)` · `#E0A49E` — dark: `#E08A7E` · `rgba(224,138,126,.12)` ·
   `#6E3A33`. Madder is the alarm red, not oxblood
-- **Match:** `rgba(185,141,63,.22)` / `rgba(217,179,106,.20)` — the warning wash at strength, for a search landing;
-  mirrors the editor's `searchMatch`
+- **Match:** `rgba(185,141,63,.22)` / `rgba(217,179,106,.20)` — the warning wash at strength, for a search landing. The
+  editor's search matches are opaque gold instead; see Editor
 
 Success and Info light inks were lifted for contrast against ink (3.0 and 2.9); their wash, line and chart colors stay
 on the original pigments (`#3E6B5C`, `#334A6B`).
+
+### Editor
+
+#### Syntax
+
+Most code is ink. Color marks only what is worth finding at a glance, and each role keeps roughly the contrast IntelliJ
+gives it: keywords and properties heavy, strings and numbers in the middle, variables, annotations and comments light.
+A color is tuned within its pigment — darker, lighter or more saturated — never drifting to the next hue.
+
+| Role                   | Light                          | Dark                                   |
+|------------------------|--------------------------------|----------------------------------------|
+| keyword                | `#004393` 9.4                  | `#DA702C` 5.4                          |
+| string                 | `#0D8124` 5.0                  | `#879A39` 5.7                          |
+| number                 | `#7139C9` 6.7                  | `#3AA99F` 6.2                          |
+| property, constant     | `#920E61` 8.5, constant italic | `#CE5D97` 4.8; constant paper          |
+| variable, parameter    | `#008679` 4.5                  | paper                                  |
+| function               | ink                            | `#66A0C8` 6.3                          |
+| type, class, namespace | ink                            | paper                                  |
+| annotation             | `#B68000` 3.5                  | `#D0A215` 7.5                          |
+| comment                | `#888170` 3.9, italic          | `#8A8474` 4.8; doc comment italic      |
+
+- **No olive on white.** A yellow-green cannot be both dark and vivid, so on white it reads washed out and tires the
+  eye. On dark it is light enough to keep its color.
+- **Types are ink.** They are frequent, and a colored type turns every signature into a stripe.
+- **Italic is JetBrains Mono's true italic**, loaded with the upright; a slanted upright reads as a different font.
+
+#### Highlights
+
+- **Selection:** iron gall, as the application's Selection
+- **Matched bracket — verdigris:** `#7AD2B6` / `#00614C`, opaque. No other editor highlight is verdigris, and it is as
+  saturated as its lightness allows: one character, shown only beside the cursor, and something you are looking for
+- **Search match — gold:** `#F0D186` / `#5E4A14`, opaque. The current match keeps the fill and takes a 1px outline in
+  the warning ink (`#8F6A24` / `#D9B36A`), drawn outside the text so it never crosses a glyph. The fill stays light so
+  syntax colors stay legible on it; the current match is told apart by its edge, never a darker fill
+- **Selected-word match, current line:** the Selected and Hover state layers
+
+#### Diagnostics
+
+- **Squiggles:** CodeMirror's wave in the editor's own voices — error `#E50305` / `#FF0C0B`, warning `#BD7200` /
+  `#D9B36A`, info `#4868B1` / `#9FB2C8`. Error and warning are more vivid than the interface's madder and gilt: a thin
+  wave mixes with the paper, so a muted ink reads washed out. The red is madder's hue at full chroma, the amber gilt's
+- **Hint — pencil / dust, dotted:** `#7D7666` / `#8A8474`, a dotted line under the whole range, as IntelliJ draws it.
+  The shape, not a fainter voice, tells it from info
+- **Deprecated:** struck through instead of a squiggle, at the font's own strikeout position. Chrome draws
+  `line-through` from the ascent alone, too high for JetBrains Mono
+- **Unnecessary — pencil / dust:** `#7D7666` / `#8A8474`, and no squiggle, even when it is an error. Unused code is the
+  opposite of worth finding, so it loses its color down the ink ramp; fading it would gray-out the warm inks
 
 ### Terminal
 

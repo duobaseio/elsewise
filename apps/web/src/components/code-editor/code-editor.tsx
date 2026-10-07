@@ -203,8 +203,13 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
         <div
           className="h-full"
           ref={host}
-          // The icon is passed as a CSS variable since CodeMirror creates the fold markers outside React.
-          style={{ '--fold-marker': `url("${iconUrl(icons.expand)}")` } as CSSProperties}
+          // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
+          style={
+            {
+              '--fold-marker': `url("${iconUrl(icons.expand)}")`,
+              '--external-link': `url("${iconUrl(icons.external)}")`,
+            } as CSSProperties
+          }
         />
       </CodeEditorContextMenu>
       {portal}

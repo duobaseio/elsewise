@@ -1,10 +1,8 @@
 # Language server example
 
 A plugin that adds TypeScript's language server to the code editor using [`@elsewise/plugin`](../../../packages/plugin):
-completion, hover, signature help, go to definition, rename and formatting in TypeScript and JavaScript files.
-
-Diagnostics don't show yet: `tsc --lsp` only answers pull requests for them, and `@codemirror/lsp-client` only shows
-the ones a server pushes.
+diagnostics, completion, hover, signature help, go to definition, rename and formatting in TypeScript and JavaScript
+files.
 
 The plugin runs in Elsewise's renderer, which can't start processes. Instead, `serve` runs the server, `tsc --lsp` from
 TypeScript 7, behind a WebSocket on `ws://127.0.0.1:7300`, and the plugin connects to it.

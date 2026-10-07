@@ -65,6 +65,11 @@
       "panelBackground": "#1E2030",
       "tooltipBackground": "#1E2030",
       "completionSelected": "#363A4F",
+      "error": "#EE99A0",
+      "warning": "#EED49F",
+      "info": "#8BD5CA",
+      "hint": "#A5ADCB",
+      "unnecessary": "#A5ADCB",
       "tokens": {
         "comment": {
           "color": "#939AB7",

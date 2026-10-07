@@ -65,6 +65,11 @@
       "panelBackground": "#D6D8DF",
       "tooltipBackground": "#DCDEE3",
       "completionSelected": "#E8E9ED",
+      "error": "#BD4040",
+      "warning": "#8F5E15",
+      "info": "#2959AA",
+      "hint": "#707280",
+      "unnecessary": "#707280",
       "tokens": {
         "comment": {
           "color": "#888B94",
@@ -230,6 +235,11 @@
       "panelBackground": "#16161E",
       "tooltipBackground": "#16161E",
       "completionSelected": "#20222C",
+      "error": "#DB4B4B",
+      "warning": "#E0AF68",
+      "info": "#7AA2F7",
+      "hint": "#787C99",
+      "unnecessary": "#787C99",
       "tokens": {
         "comment": {
           "color": "#51597D",

@@ -1,4 +1,5 @@
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import type { Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { ResolvedTheme, TextStyle } from '@elsewise/plugin';
@@ -32,8 +33,9 @@ const CHROME = {
   panelBackground: ['.cm-panels', 'backgroundColor'],
   tooltipBackground: ['.cm-tooltip', 'backgroundColor'],
   completionSelected: ['.cm-tooltip-autocomplete ul li[aria-selected]', 'backgroundColor'],
+  unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
-  Exclude<keyof ResolvedTheme['editor'], 'tokens'>,
+  Exclude<keyof ResolvedTheme['editor'], 'tokens' | Diagnostic['severity']>,
   readonly [selector: string, property: string]
 >;
 
@@ -90,16 +92,23 @@ const TOKENS = {
   changed: [t.changed],
 } as const satisfies Record<keyof ResolvedTheme['editor']['tokens'], readonly Tag[]>;
 
+const STRIKEOUTS: Partial<Record<string, { ascent: number; position: number; size: number }>> = {
+  'JetBrains Mono Variable': { ascent: 1.02, position: 0.32, size: 0.05 },
+};
+
 /**
  * The styles that don't depend on the theme.
  */
 const METRICS = EditorView.theme({
   '&': { height: '100%' },
   '&.cm-focused': { outline: 'none' },
+
   '.cm-panels': { backgroundColor: 'transparent', color: 'inherit', zIndex: 'auto' },
   '.cm-panels-top': { borderBottom: 'none' },
-  '.cm-searchMatch-selected': { outline: '1px solid transparent', outlineOffset: '-1px' },
+  '.cm-searchMatch-selected': { outline: '1px solid transparent', outlineOffset: '0' },
+
   '.cm-content': { paddingBottom: '8rem' },
+
   '.cm-scroller': {
     fontFamily: 'var(--font-mono)',
     fontVariantLigatures: 'var(--font-mono-ligatures)',
@@ -120,6 +129,7 @@ const METRICS = EditorView.theme({
     fontSize: 'var(--text-code-gutter)',
     lineHeight: 'var(--text-code-gutter--line-height)',
   },
+
   '.cm-lineNumbers .cm-gutterElement': { padding: '0 4px' },
   '.cm-foldGutter .cm-gutterElement': {
     display: 'flex',
@@ -134,6 +144,91 @@ const METRICS = EditorView.theme({
     mask: 'var(--fold-marker) center / contain no-repeat',
   },
   '.cm-fold-marker:not([data-open])': { transform: 'rotate(-90deg)' },
+
+  '.cm-lintRange.cm-lintRange-deprecated': { backgroundImage: 'none', textDecoration: 'line-through' },
+  '.cm-lintRange.cm-lintRange-unnecessary': { backgroundImage: 'none' },
+
+  '.cm-tooltip.cm-tooltip-hover': {
+    border: 'none',
+    borderRadius: 'var(--radius)',
+    boxShadow:
+      '0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+    color: 'var(--popover-foreground)',
+    fontFamily: 'var(--font-sans)',
+    fontVariantLigatures: 'var(--font-sans-ligatures)',
+    fontSize: 'var(--text-base)',
+    lineHeight: 'var(--text-base--line-height)',
+    maxWidth: '500px',
+    maxHeight: '400px',
+    overflowY: 'auto',
+  },
+  '.cm-tooltip-hover .cm-tooltip-section:not(:first-child)': { borderTop: '1px solid var(--border)' },
+  '.cm-tooltip-hover .cm-diagnostic': { margin: '0', padding: '8px 12px', borderLeft: 'none' },
+  '.cm-tooltip-hover .cm-diagnostic + .cm-diagnostic': { borderTop: '1px solid var(--border)' },
+  '.cm-tooltip-hover .cm-diagnosticText': { display: 'block' },
+  '.cm-tooltip-hover .cm-diagnosticMeta': {
+    marginTop: '2px',
+    color: 'var(--text-3)',
+    fontSize: 'var(--text-sm)',
+    lineHeight: 'var(--text-sm--line-height)',
+    whiteSpace: 'normal',
+  },
+  '.cm-tooltip-hover .cm-diagnosticMeta a': { color: 'inherit' },
+  '.cm-tooltip-hover .cm-lsp-hover-definition': { padding: '8px 12px' },
+  '.cm-tooltip-hover pre': {
+    margin: '0',
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+    lineHeight: 'var(--text-code--line-height)',
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
+  },
+  '.cm-tooltip-hover .cm-lsp-hover-content': { padding: '8px 12px', overflowWrap: 'anywhere' },
+  '.cm-tooltip-hover .cm-lsp-hover-definition + .cm-lsp-hover-content': { borderTop: '1px solid var(--border)' },
+  '.cm-tooltip-hover .cm-lsp-hover-content :is(p, ul, ol, pre, blockquote, h1, h2, h3, h4, h5, h6, hr)': {
+    margin: '0',
+  },
+  '.cm-tooltip-hover .cm-lsp-hover-content * + :is(p, ul, ol, pre, blockquote, h1, h2, h3, h4, h5, h6, hr)': {
+    marginTop: '8px',
+  },
+  '.cm-tooltip-hover .cm-lsp-hover-content :is(h1, h2, h3, h4, h5, h6)': { fontSize: 'inherit', fontWeight: '500' },
+  '.cm-tooltip-hover .cm-lsp-hover-content :is(ul, ol)': { paddingLeft: '18px' },
+  '.cm-tooltip-hover .cm-lsp-hover-content ul': { listStyle: 'disc' },
+  '.cm-tooltip-hover .cm-lsp-hover-content ol': { listStyle: 'decimal' },
+  '.cm-tooltip-hover .cm-lsp-hover-content li::marker': { color: 'var(--text-3)' },
+  '.cm-tooltip-hover .cm-lsp-hover-content li :is(ul, ol)': { marginTop: '0' },
+  '.cm-tooltip-hover .cm-lsp-hover-content blockquote': {
+    paddingLeft: '8px',
+    borderLeft: '2px solid var(--border)',
+    color: 'var(--text-2)',
+  },
+  '.cm-tooltip-hover .cm-lsp-hover-content hr': { border: 'none', borderTop: '1px solid var(--border)' },
+  '.cm-tooltip-hover .cm-lsp-hover-content pre': {
+    padding: '8px',
+    borderRadius: 'calc(var(--radius) * 0.8)',
+    backgroundColor: 'var(--layer-selected)',
+  },
+  '.cm-tooltip-hover code': {
+    padding: '1px 4px',
+    borderRadius: '4px',
+    backgroundColor: 'var(--layer-selected)',
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+  },
+  '.cm-tooltip-hover pre code': { padding: '0', backgroundColor: 'transparent' },
+  '.cm-tooltip-hover a': { color: 'var(--link)', textDecoration: 'underline' },
+  '.cm-tooltip-hover a:hover': { color: 'var(--link-hover)' },
+  '.cm-tooltip-hover a[href^="http"]::after': {
+    content: '""',
+    display: 'inline-block',
+    width: '0.85em',
+    height: '0.85em',
+    marginLeft: '2px',
+    backgroundColor: 'currentColor',
+    mask: 'var(--external-link) center / contain no-repeat',
+  },
 });
 
 /**
@@ -151,6 +246,32 @@ export function useThemeExtension(): Extension {
     ][]) {
       spec[selector] ??= {};
       spec[selector][property] = editor[role];
+    }
+
+    // Draws the squiggles like CodeMirror does, in the editor's colors.
+    for (const severity of ['error', 'warning', 'info'] as const) {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="6" height="3"><path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="${editor[severity]}" fill="none" stroke-width=".7"/></svg>`;
+      spec[`.cm-lintRange-${severity}`] = { backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")` };
+    }
+    
+    const dots = `<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><circle cx="1.5" cy="1.5" r=".8" fill="${editor.hint}"/></svg>`;
+    spec['.cm-lintRange-hint'] = { backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(dots)}")` };
+
+    // Chromium ignores a font's `yStrikeoutPosition` and `yStrikeoutSize`, making strikeouts for JetBrains Mono look
+    // terrible. See https://issues.chromium.org/issues/40066668.
+    const family = getComputedStyle(document.documentElement)
+      .getPropertyValue('--font-mono')
+      .split(',')[0]
+      .trim()
+      .replace(/^['"]|['"]$/g, '');
+    const strikeout = STRIKEOUTS[family];
+    if (strikeout) {
+      spec['.cm-lintRange.cm-lintRange-deprecated'] = {
+        backgroundImage: 'linear-gradient(currentColor, currentColor)',
+        backgroundPosition: `0 calc(round(${strikeout.ascent}em, 1px) - ${strikeout.position}em)`,
+        backgroundSize: `100% ${strikeout.size}em`,
+        textDecoration: 'none',
+      };
     }
 
     const styles = (Object.entries(editor.tokens) as [keyof typeof TOKENS, TextStyle][]).map(([role, style]) => ({

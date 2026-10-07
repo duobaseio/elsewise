@@ -81,7 +81,7 @@ describe('elsewise.json', () => {
   test('states every color of the editor', () => {
     const keys = Object.keys(ThemeVariant.unwrap().shape.editor.unwrap().shape).sort();
 
-    expect(keys).toHaveLength(19);
+    expect(keys).toHaveLength(24);
     expect(Object.keys(ELSEWISE.light?.editor ?? {}).sort()).toEqual(keys);
     expect(Object.keys(ELSEWISE.dark?.editor ?? {}).sort()).toEqual(keys);
   });

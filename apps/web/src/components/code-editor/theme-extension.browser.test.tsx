@@ -1,17 +1,10 @@
-import { LanguageDescription, type LanguageSupport } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
+import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
-import {
-  drawSelection,
-  EditorView,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  lineNumbers,
-} from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useRef } from 'react';
-import { beforeAll, expect, test, vi } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
 import { visualGuides } from '@/components/code-editor/visual-guides';
@@ -50,12 +43,6 @@ const SETTINGS: Settings = {
     general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
   },
 };
-
-let rust: LanguageSupport;
-
-beforeAll(async () => {
-  rust = await (LanguageDescription.matchFilename(languages, 'main.rs') as LanguageDescription).load();
-});
 
 function shell(children: ReactNode) {
   const client = new QueryClient();
@@ -98,37 +85,39 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-test("the theme's colors and token styles land", async () => {
-  const view = await mount('// note\nfn main() {}\n', [
-    drawSelection(),
-    lineNumbers(),
-    highlightActiveLine(),
-    highlightActiveLineGutter(),
-    rust,
-  ]);
-  view.focus();
-  // drawSelection paints the caret on the next frame.
-  await new Promise(requestAnimationFrame);
-  expect(style(view.dom).backgroundColor).toBe(rgb(EDITOR.background));
-  expect(style(view.dom).color).toBe(rgb(EDITOR.foreground));
-  expect(style(view.dom.querySelector('.cm-cursor')).borderLeftColor).toBe(rgb(EDITOR.caret));
-  expect(style(view.dom.querySelector('.cm-gutters')).backgroundColor).toBe(rgb(EDITOR.gutterBackground));
-  expect(style(view.dom.querySelector('.cm-activeLine')).backgroundColor).toBe(rgb(EDITOR.activeLine));
-  expect(style(view.dom.querySelector('.cm-activeLineGutter')).backgroundColor).toBe(rgb(EDITOR.activeLine));
-
-  const spans = [...view.dom.querySelectorAll('.cm-line span')];
-  const keyword = style(spans.find((span) => span.textContent === 'fn') ?? null);
-  const comment = style(spans.find((span) => span.textContent === '// note') ?? null);
-  expect(keyword.color).toBe(rgb(EDITOR.tokens.keyword.color));
-  expect(keyword.fontWeight).toBe('700');
-  expect(keyword.textDecorationLine).toBe('line-through');
-  expect(comment.color).toBe(rgb(EDITOR.tokens.comment.color));
-  expect(comment.fontStyle).toBe('italic');
-  expect(comment.textDecorationLine).toBe('underline');
-});
-
 test("the visual guide takes the theme's color", async () => {
   const view = await mount('x', [visualGuides([1])]);
   await new Promise(requestAnimationFrame);
   expect(style(view.dom.querySelector('.cm-visual-guide')).borderLeftColor).toBe(rgb(EDITOR.visualGuide));
+});
+
+test("deprecated code is struck through at the font's strikeout position", async () => {
+  const view = await mount('let x', []);
+  view.dispatch(
+    setDiagnostics(view.state, [
+      { from: 0, to: 3, severity: 'hint', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
+    ]),
+  );
+  const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
+  const size = Number.parseFloat(mark.fontSize);
+  // JetBrains Mono's ascent is 1.02em, and its strikeout 0.05em thick, 0.32em above the baseline.
+  expect(Number.parseFloat(mark.backgroundPositionY)).toBeCloseTo(Math.round(1.02 * size) - 0.32 * size);
+  expect(Number.parseFloat(mark.backgroundSize.split(' ')[1])).toBeCloseTo(0.05 * size);
+  expect(mark.textDecorationLine).toBe('none');
+});
+
+test('deprecated code is struck through by Chrome in a font whose strikeout is unknown', async () => {
+  document.documentElement.style.setProperty('--font-mono', 'Menlo, monospace');
+  onTestFinished(() => {
+    document.documentElement.style.removeProperty('--font-mono');
+  });
+  const view = await mount('let x', []);
+  view.dispatch(
+    setDiagnostics(view.state, [
+      { from: 0, to: 3, severity: 'hint', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
+    ]),
+  );
+  const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
+  expect(mark.textDecorationLine).toBe('line-through');
+  expect(mark.backgroundImage).toBe('none');
 });

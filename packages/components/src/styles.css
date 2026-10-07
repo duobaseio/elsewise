@@ -6,6 +6,7 @@
 @import "@fontsource-variable/work-sans";
 @import "@fontsource-variable/atkinson-hyperlegible-next";
 @import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
 
 @import "./elsewise.css";
 
@@ -103,7 +104,7 @@ body,
 
 /*
  * Not `inline`, so the custom properties are emitted into :root and readable at runtime. CodeMirror and xterm themes
-  consume them.
+ * consume them.
  */
 @theme {
   --font-sans: 'Work Sans Variable', system-ui, sans-serif;

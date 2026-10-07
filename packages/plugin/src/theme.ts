@@ -121,6 +121,13 @@ export const ThemeVariant = z.lazy(() =>
         tooltipBackground: Color,
         completionSelected: Color,
 
+        // Diagnostics
+        error: Color,
+        warning: Color,
+        info: Color,
+        hint: Color,
+        unnecessary: Color,
+
         /**
          * The syntax highlighting tokens.
          */

@@ -9,8 +9,8 @@ import {
   search,
   setSearchQuery,
 } from '@codemirror/search';
-import type { Extension } from '@codemirror/state';
-import { type EditorView, keymap, type Panel, runScopeHandlers } from '@codemirror/view';
+import { EditorSelection, type Extension, type SelectionRange, type StateEffect } from '@codemirror/state';
+import { EditorView, keymap, type Panel, runScopeHandlers } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
@@ -78,7 +78,7 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
     }
 
     return [
-      search({ top: true, createPanel }),
+      search({ top: true, createPanel, scrollToMatch }),
       replaceRow,
       keymap.of([
         {
@@ -122,19 +122,35 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
   }, [query.search]);
 
   function update(spec: Partial<ConstructorParameters<typeof SearchQuery>[0]>) {
-    view.dispatch({
-      effects: setSearchQuery.of(
-        new SearchQuery({
-          search: query.search,
-          caseSensitive: query.caseSensitive,
-          literal: query.literal,
-          regexp: query.regexp,
-          wholeWord: query.wholeWord,
-          replace: query.replace,
-          ...spec,
-        }),
-      ),
+    const next = new SearchQuery({
+      search: query.search,
+      caseSensitive: query.caseSensitive,
+      literal: query.literal,
+      regexp: query.regexp,
+      wholeWord: query.wholeWord,
+      replace: query.replace,
+      ...spec,
     });
+
+    // Selects the next match at or after the cursor, or else the first match in the document. Editing the replace field
+    // keeps the selection.
+    let match: { from: number; to: number } | null = null;
+    if (next.valid && next.replace === query.replace) {
+      const after = next.getCursor(view.state, view.state.selection.main.from).next();
+      const first = after.done ? next.getCursor(view.state).next() : after;
+      match = first.done ? null : first.value;
+    }
+
+    if (match) {
+      const selection = EditorSelection.range(match.from, match.to);
+      view.dispatch({
+        selection,
+        effects: [setSearchQuery.of(next), scrollToMatch(selection, view)],
+        userEvent: 'select.search',
+      });
+    } else {
+      view.dispatch({ effects: setSearchQuery.of(next) });
+    }
   }
 
   function keydown(event: KeyboardEvent<HTMLElement>) {
@@ -237,6 +253,14 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
       )}
     </search>
   );
+}
+
+function scrollToMatch(range: SelectionRange, view: EditorView): StateEffect<unknown> {
+  const bounds = view.scrollDOM.getBoundingClientRect();
+  const start = view.coordsAtPos(range.from);
+  const end = view.coordsAtPos(range.to);
+  const visible = start && end && start.top >= bounds.top && end.bottom <= bounds.bottom;
+  return EditorView.scrollIntoView(range, { y: visible ? 'nearest' : 'center' });
 }
 
 function Option({
