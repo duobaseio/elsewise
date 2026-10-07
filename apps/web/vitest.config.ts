@@ -44,6 +44,7 @@ function browserProject(
         '@tanstack/react-query',
         '@tanstack/react-router',
         'dockview-react',
+        'dompurify',
         '@codemirror/autocomplete',
         '@codemirror/commands',
         '@codemirror/language',

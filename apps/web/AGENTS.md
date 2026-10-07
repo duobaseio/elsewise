@@ -1,7 +1,7 @@
 # Web
 
-The Elsewise UI: a React 19 + TanStack Router SPA on Vite 8 and Tailwind v4. Runs standalone on `:3000` and doubles as
-the desktop's renderer, which loads the dev server, or the `build` output over `app://` in production.
+The Elsewise UI: a React 19 + TanStack Router SPA on Vite 8 and Tailwind v4. It is the desktop's renderer, which loads
+the dev server on `:3000`, or the `build` output over `app://` in production. It is not shipped as a website.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/web <script>`.
 

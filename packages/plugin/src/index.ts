@@ -4,6 +4,8 @@ export type {
   EditorContextMenuItem,
   EditorContextSubmenu,
   EditorDocument,
+  LanguageServer,
+  LanguageServerTransport,
 } from './editor.ts';
 export { DEFAULT_EDITOR_CONTEXT_MENU } from './editor.ts';
 export type { Appearance, Disposable, Plugin, PluginContext, ResolvedTheme } from './plugin.ts';

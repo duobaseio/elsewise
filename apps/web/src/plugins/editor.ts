@@ -8,6 +8,7 @@ import type {
   EditorContextMenuItem,
   EditorContextSubmenu,
   EditorDocument,
+  LanguageServer,
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu/default-context-menu';
@@ -21,6 +22,8 @@ export class EditorAdditions implements Editor {
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
   private addedLanguages: readonly (readonly LanguageDescription[])[] = [DEFAULT_LANGUAGES];
   private currentLanguages: readonly LanguageDescription[] = DEFAULT_LANGUAGES;
+  private addedLanguageServers: readonly (readonly LanguageServer[])[] = [];
+  private currentLanguageServers: readonly LanguageServer[] = [];
   private addedContextMenuItems: readonly EditorContextMenu[] = [DEFAULT_CONTEXT_MENU];
   private currentContextMenuItems: EditorContextMenu = DEFAULT_CONTEXT_MENU;
 
@@ -58,6 +61,25 @@ export class EditorAdditions implements Editor {
     return () => {
       this.addedLanguages = this.addedLanguages.filter((other) => other !== added);
       this.currentLanguages = this.addedLanguages.flat();
+      this.notify();
+    };
+  }
+
+  /**
+   * The added language servers, sorted by most recently added.
+   */
+  public get languageServers(): readonly LanguageServer[] {
+    return this.currentLanguageServers;
+  }
+
+  public addLanguageServers(servers: readonly LanguageServer[]): Disposable {
+    const added = [...servers];
+    this.addedLanguageServers = [added, ...this.addedLanguageServers];
+    this.currentLanguageServers = this.addedLanguageServers.flat();
+    this.notify();
+    return () => {
+      this.addedLanguageServers = this.addedLanguageServers.filter((other) => other !== added);
+      this.currentLanguageServers = this.addedLanguageServers.flat();
       this.notify();
     };
   }

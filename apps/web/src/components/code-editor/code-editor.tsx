@@ -18,6 +18,7 @@ import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { OS } from '@elsewise/components/lib/os';
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
+import { useLanguageServerExtension } from '@/components/code-editor/language-server-extension';
 import { useSearchExtension } from '@/components/code-editor/search/search-bar';
 import { useSettingsExtension } from '@/components/code-editor/settings-extension';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
@@ -27,9 +28,14 @@ import { useEditorSettings, useSettings } from '@/settings/settings';
 const PLUGINS = new Compartment();
 const THEME = new Compartment();
 const LANGUAGE = new Compartment();
+const LANGUAGE_SERVER = new Compartment();
 const SETTINGS = new Compartment();
 
 export interface CodeEditorProps {
+  /**
+   * The root of the worktree that the file is in, ending in `/`.
+   */
+  root?: URL;
   /**
    * The file's path. Used to detect its language.
    */
@@ -40,7 +46,7 @@ export interface CodeEditorProps {
 /**
  * A code editor.
  */
-export function CodeEditor({ path, code }: CodeEditorProps) {
+export function CodeEditor({ path, code, root }: CodeEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView>(null);
 
@@ -50,6 +56,7 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
   const description = LanguageDescription.matchFilename(languages, path);
   const { search, portal } = useSearchExtension();
   const settings = useSettingsExtension(description?.name);
+  const languageServer = useLanguageServerExtension(root, description?.name, path);
   const icons = useIcons();
 
   const font = useSettings((settings) => settings.appearance.editor.font);
@@ -80,6 +87,7 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
         EditorState.lineSeparator.of(lineSeparator),
 
         LANGUAGE.of(description?.support ?? []),
+        LANGUAGE_SERVER.of(languageServer),
         closeBrackets(),
         bracketMatching(),
         // Has to be after lineNumbers to ensure the fold icon is to the right of it.
@@ -169,6 +177,10 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
   useEffect(() => {
     view.current?.dispatch({ effects: SETTINGS.reconfigure(settings) });
   }, [settings]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: LANGUAGE_SERVER.reconfigure(languageServer) });
+  }, [languageServer]);
 
   // Rebuilds the editor when its font changes. CodeMirror caches measurements such as the character width, and does
   // not notice a font that changes through a CSS variable.

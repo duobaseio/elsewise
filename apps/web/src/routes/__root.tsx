@@ -1,6 +1,7 @@
 import type {} from '@elsewise/bridge';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
+import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
 import { PluginAppearance } from '@/plugins/appearance';
 import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
@@ -34,10 +35,15 @@ function RootComponent() {
   const brightness = useBrightness();
   const theme = useTheme();
 
-  const [{ appearance, additions, loader }] = useState(() => {
+  const [{ appearance, additions, languageServers, loader }] = useState(() => {
     const appearance = new PluginAppearance(brightness, theme);
     const additions = new EditorAdditions();
-    return { appearance, additions, loader: new PluginLoader(appearance, additions) };
+    return {
+      appearance,
+      additions,
+      languageServers: new LanguageServers(additions),
+      loader: new PluginLoader(appearance, additions),
+    };
   });
 
   useCurrentTheme(appearance);
@@ -54,7 +60,9 @@ function RootComponent() {
 
   return (
     <EditorAdditionsContext value={additions}>
-      <Outlet />
+      <LanguageServersContext value={languageServers}>
+        <Outlet />
+      </LanguageServersContext>
     </EditorAdditionsContext>
   );
 }

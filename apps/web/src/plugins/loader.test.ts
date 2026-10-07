@@ -13,6 +13,7 @@ const APPEARANCE: Appearance = {
 const EDITOR: Editor = {
   addExtensions: () => () => {},
   addLanguages: () => () => {},
+  addLanguageServers: () => () => {},
   addContextMenuItems: () => () => {},
 };
 

@@ -2,12 +2,14 @@ import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirro
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import type { LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CodeEditor } from '@/components/code-editor/code-editor';
+import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
 import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { settingsQuery } from '@/settings/settings';
 
@@ -49,13 +51,20 @@ function shell(children: ReactNode) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-async function mountEditor(code: string, path = 'main.rs', additions = new EditorAdditions()): Promise<EditorView> {
+async function mountEditor(
+  code: string,
+  path = 'main.rs',
+  additions = new EditorAdditions(),
+  root?: URL,
+): Promise<EditorView> {
   const screen = await render(
     shell(
       <EditorAdditionsContext value={additions}>
-        <div style={{ height: 300 }}>
-          <CodeEditor code={code} path={path} />
-        </div>
+        <LanguageServersContext value={new LanguageServers(additions)}>
+          <div style={{ height: 300 }}>
+            <CodeEditor code={code} path={path} root={root} />
+          </div>
+        </LanguageServersContext>
       </EditorAdditionsContext>,
     ),
   );
@@ -94,6 +103,37 @@ function commentLanguage(extensions: string[]): LanguageDescription {
         }),
       ),
   });
+}
+
+// Returns a language server for Rust files that only answers `initialize`, and the messages it was sent.
+function rustServer(): { server: LanguageServer; sent: { method?: string; params?: unknown }[] } {
+  const sent: { method?: string; params?: unknown }[] = [];
+  const listeners = new Set<(message: string) => void>();
+  return {
+    sent,
+    server: {
+      id: 'rust',
+      name: 'Rust',
+      languages: { Rust: 'rust' },
+      start: () => ({
+        send(message) {
+          const parsed = JSON.parse(message);
+          sent.push(parsed);
+          if (parsed.method === 'initialize') {
+            for (const listener of listeners) {
+              listener(JSON.stringify({ jsonrpc: '2.0', id: parsed.id, result: { capabilities: {} } }));
+            }
+          }
+        },
+        onMessage(listener) {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        onClose: () => () => {},
+        close() {},
+      }),
+    },
+  };
 }
 
 // Returns the color of the first token on the first line, once there is one.
@@ -170,4 +210,52 @@ test("a plugin's language wins over a built-in one until disposed", async () => 
 
   dispose();
   await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.keyword.color));
+});
+
+test("a plugin's language server opens files in its language", async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+
+  await expect
+    .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
+    .toMatchObject({
+      params: { textDocument: { uri: 'file:///worktree/src/main.rs', languageId: 'rust', text: 'fn main() {}\n' } },
+    });
+  expect(sent[0]).toMatchObject({ method: 'initialize', params: { rootUri: 'file:///worktree/' } });
+});
+
+test("a plugin's language server opens files that were open before it was added", async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+  additions.addLanguageServers([server]);
+
+  await expect
+    .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
+    .toMatchObject({ params: { textDocument: { uri: 'file:///worktree/src/main.rs' } } });
+});
+
+test("a plugin's language server keeps a file open when a server for another language is added", async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+  await expect.poll(() => sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
+
+  additions.addLanguageServers([{ ...rustServer().server, id: 'toy', languages: { Toy: 'toy' } }]);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
+});
+
+test('a file without a root has no language server', async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions);
+  await new Promise((resolve) => setTimeout(resolve));
+
+  expect(sent).toEqual([]);
 });

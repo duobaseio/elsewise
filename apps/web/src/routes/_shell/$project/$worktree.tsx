@@ -30,7 +30,6 @@ const PANELS = {
   fileTree: FileTreePanel,
 };
 
-// TODO: Make it injectable.
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 
 export function WorkTreeDock({
@@ -284,7 +283,11 @@ const FAKE_CODE = `pub async fn attach(&self, id: SessionId) -> Result<Channel> 
 }`;
 
 function EditorPanel(props: IDockviewPanelProps<{ path: string }>) {
-  return <CodeEditor code={FAKE_CODE} path={props.params.path} />;
+  const { project, worktree } = Route.useParams();
+  // TODO: Back this with the daemon.
+  const root = new URL(`file:///${encodeURIComponent(project)}/${encodeURIComponent(worktree)}/`);
+
+  return <CodeEditor code={FAKE_CODE} path={props.params.path} root={root} />;
 }
 
 // TODO: Replace with the terminal once it is migrated.

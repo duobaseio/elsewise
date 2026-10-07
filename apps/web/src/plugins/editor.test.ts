@@ -6,6 +6,7 @@ import {
   type EditorContextMenu,
   type EditorContextMenuItem,
   type EditorContextSubmenu,
+  type LanguageServer,
 } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu/default-context-menu';
@@ -14,6 +15,11 @@ import { EditorAdditions } from './editor';
 // Returns a language named `name` whose grammar never loads.
 function language(name: string): LanguageDescription {
   return LanguageDescription.of({ name, extensions: ['toy'], load: () => new Promise(() => {}) });
+}
+
+// Returns a language server with `id` that never starts.
+function server(id: string): LanguageServer {
+  return { id, name: id, languages: { Toy: 'toy' }, start: () => new Promise(() => {}) };
 }
 
 // Returns a submenu with `id`, `label` and `items`.
@@ -74,6 +80,32 @@ describe('addLanguages', () => {
     dispose();
 
     expect(additions.languages).toEqual([...languages, ...DEFAULT_LANGUAGES]);
+  });
+});
+
+describe('addLanguageServers', () => {
+  test('adds the servers before the earlier ones until disposed', () => {
+    const additions = new EditorAdditions();
+    const first = [server('a'), server('b')];
+    const second = [server('c')];
+    const dispose = additions.addLanguageServers(first);
+    additions.addLanguageServers(second);
+
+    expect(additions.languageServers).toEqual([...second, ...first]);
+
+    dispose();
+
+    expect(additions.languageServers).toEqual(second);
+  });
+
+  test('removes only the disposed servers when the same ones are added twice', () => {
+    const additions = new EditorAdditions();
+    const servers = [server('a')];
+    const dispose = additions.addLanguageServers(servers);
+    additions.addLanguageServers(servers);
+    dispose();
+
+    expect(additions.languageServers).toEqual(servers);
   });
 });
 
