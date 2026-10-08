@@ -136,13 +136,13 @@ describe('serverHover', () => {
 
     const tooltip = await hover(view);
 
-    const definition = tooltip.querySelector('.cm-lsp-hover-definition');
+    const definition = tooltip.querySelector('.cm-lsp-definition');
     expect([...(definition?.querySelectorAll('pre') ?? [])].map((pre) => pre.textContent)).toEqual([
       'elsewise::session',
       'pub fn attach(id: u32)',
     ]);
     expect(definition?.querySelector('pre:last-child span')).not.toBeNull();
-    const content = tooltip.querySelector('.cm-lsp-hover-content');
+    const content = tooltip.querySelector('.cm-lsp-content');
     expect(definition?.nextElementSibling).toBe(content);
     expect(content?.querySelector('hr')).toBeNull();
     expect([...(content?.querySelectorAll('li') ?? [])].map((li) => li.textContent)).toEqual([
@@ -160,9 +160,9 @@ describe('serverHover', () => {
 
     const tooltip = await hover(view);
 
-    const definition = tooltip.querySelector('.cm-lsp-hover-definition');
+    const definition = tooltip.querySelector('.cm-lsp-definition');
     expect([...(definition?.querySelectorAll('pre') ?? [])].map((pre) => pre.textContent)).toEqual(['fn attach()']);
-    expect(tooltip.querySelector('.cm-lsp-hover-content pre')?.textContent).toContain('let channel = attach();');
+    expect(tooltip.querySelector('.cm-lsp-content pre')?.textContent).toContain('let channel = attach();');
   });
 
   test('leaves a code block in another language plain', async () => {
@@ -170,7 +170,7 @@ describe('serverHover', () => {
 
     const tooltip = await hover(view);
 
-    const pre = tooltip.querySelector('.cm-lsp-hover-definition pre');
+    const pre = tooltip.querySelector('.cm-lsp-definition pre');
     expect(pre?.textContent).toBe('def attach(): pass');
     expect(pre?.querySelector('span')).toBeNull();
   });
@@ -180,9 +180,9 @@ describe('serverHover', () => {
 
     const tooltip = await hover(view);
 
-    expect(tooltip.querySelector('.cm-lsp-hover-definition')).toBeNull();
-    expect(tooltip.querySelector('.cm-lsp-hover-content b')).toBeNull();
-    expect(tooltip.querySelector('.cm-lsp-hover-content')?.textContent).toContain('<b>bold</b>');
+    expect(tooltip.querySelector('.cm-lsp-definition')).toBeNull();
+    expect(tooltip.querySelector('.cm-lsp-content b')).toBeNull();
+    expect(tooltip.querySelector('.cm-lsp-content')?.textContent).toContain('<b>bold</b>');
   });
 
   test('shows marked strings, a code string as the definition', async () => {
@@ -190,8 +190,8 @@ describe('serverHover', () => {
 
     const tooltip = await hover(view);
 
-    expect(tooltip.querySelector('.cm-lsp-hover-definition pre')?.textContent).toBe('fn attach()');
-    expect(tooltip.querySelector('.cm-lsp-hover-content em')?.textContent).toBe('now');
+    expect(tooltip.querySelector('.cm-lsp-definition pre')?.textContent).toBe('fn attach()');
+    expect(tooltip.querySelector('.cm-lsp-content em')?.textContent).toBe('now');
   });
 
   test('shows nothing when the server has no documentation', async () => {
@@ -228,6 +228,6 @@ describe('serverHover', () => {
     await vi.waitFor(() => expect(tooltip.querySelectorAll('.cm-tooltip-section')).toHaveLength(2));
     const [first, second] = tooltip.querySelectorAll('.cm-tooltip-section');
     expect(first.querySelector('.cm-diagnostic-error')).not.toBeNull();
-    expect(second.querySelector('.cm-lsp-hover-definition')).not.toBeNull();
+    expect(second.querySelector('.cm-lsp-definition')).not.toBeNull();
   });
 });

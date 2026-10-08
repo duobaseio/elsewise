@@ -1,3 +1,4 @@
+import { startCompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
@@ -84,7 +85,51 @@ const DIAGNOSTICS = [
   },
 ];
 
-// A Rust language server that answers hovers from `HOVERS` and diagnostics from `DIAGNOSTICS`.
+// The completions after `channel.se`, as rust-analyzer gives them.
+const MEMBERS = [
+  {
+    label: 'send',
+    kind: 2,
+    labelDetails: { detail: '(&self, bytes: Bytes)', description: 'Result<()>' },
+    detail: 'pub fn send(&self, bytes: Bytes) -> Result<()>',
+  },
+  {
+    label: 'send_timeout',
+    kind: 2,
+    labelDetails: { detail: '(&self, bytes: Bytes, timeout: Duration)', description: 'Result<()>' },
+  },
+  { label: 'session', kind: 5, labelDetails: { description: 'SessionId' } },
+  { label: 'set_retries', kind: 2, labelDetails: { detail: '(&mut self, retries: u32)', description: '()' } },
+  { label: 'subscribe', kind: 2, labelDetails: { detail: '(&self)', description: 'Receiver<Event>' } },
+  { label: 'is_secure', kind: 2, labelDetails: { detail: '(&self)', description: 'bool' } },
+  {
+    label: 'send_raw',
+    kind: 2,
+    tags: [1],
+    labelDetails: { detail: '(&self, bytes: &[u8])', description: 'Result<()>' },
+  },
+];
+
+// The completions at the start of a statement, after `ma`.
+const STATEMENTS = [
+  { label: 'match', kind: 14 },
+  { label: 'matches!', kind: 3, labelDetails: { detail: '(…)', description: 'macro' } },
+  { label: 'max', kind: 3, labelDetails: { detail: ' (use std::cmp::max)', description: 'fn(T, T) -> T' } },
+  { label: 'Mailbox', kind: 22, labelDetails: { detail: ' (use elsewise::mail::Mailbox)', description: 'struct' } },
+  { label: 'macro_rules!', kind: 15, labelDetails: { description: 'snippet' } },
+  { label: 'format', kind: 6, labelDetails: { description: 'Format' } },
+];
+
+// The documentation each completion resolves to, by label.
+const RESOLVED: Record<string, string> = {
+  send: [
+    'Sends `bytes` to the session as one frame, retrying as its `Options` allow.',
+    '- Returns `Error::Closed` if the channel was closed.\n- Waits until the transport accepts the write.',
+  ].join('\n\n'),
+};
+
+// A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, and completions after a
+// dot from `MEMBERS`, else from `STATEMENTS`.
 const RUST: LanguageServer = {
   id: 'rust',
   name: 'Rust',
@@ -100,12 +145,24 @@ const RUST: LanguageServer = {
       send(message) {
         const { id, method, params } = JSON.parse(message);
         if (method === 'initialize') {
-          reply(id, { capabilities: { textDocumentSync: 2, hoverProvider: true, diagnosticProvider: {} } });
+          reply(id, {
+            capabilities: {
+              textDocumentSync: 2,
+              hoverProvider: true,
+              diagnosticProvider: {},
+              completionProvider: { triggerCharacters: ['.'], resolveProvider: true },
+            },
+          });
         } else if (method === 'textDocument/hover') {
           const value = HOVERS[params.position.line];
           reply(id, value === undefined ? null : { contents: { kind: 'markdown', value } });
         } else if (method === 'textDocument/diagnostic') {
           reply(id, { kind: 'full', items: DIAGNOSTICS });
+        } else if (method === 'textDocument/completion') {
+          reply(id, params.position.character > 8 ? MEMBERS : STATEMENTS);
+        } else if (method === 'completionItem/resolve') {
+          const value = RESOLVED[params.label];
+          reply(id, value === undefined ? params : { ...params, documentation: { kind: 'markdown', value } });
         }
       },
       onMessage(listener) {
@@ -180,6 +237,21 @@ async function hover(view: EditorView, text: string, sections: number): Promise<
   );
 }
 
+// Types `line` below the one that attaches, and waits for its completions to open with documentation if `documented`.
+async function complete(view: EditorView, line: string, documented: boolean): Promise<void> {
+  const end = view.state.doc.lineAt(view.state.doc.toString().indexOf('let channel')).to;
+  view.dispatch({ changes: { from: end, insert: `\n${line}` }, selection: { anchor: end + 1 + line.length } });
+  view.focus();
+  startCompletion(view);
+  await vi.waitFor(
+    () => {
+      expect(document.querySelector('.cm-tooltip-autocomplete li[aria-selected]')).not.toBeNull();
+      expect(document.querySelector('.cm-completionInfo .cm-lsp-content') !== null).toBe(documented);
+    },
+    { timeout: 2000 },
+  );
+}
+
 describe.each(THEMES)('code editor (%s)', (theme) => {
   test('plain', async () => {
     await mount(theme);
@@ -219,27 +291,47 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-diagnostics-${theme}`);
   });
 
-  test('hover', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    await hover(view, 'attach(id', 1);
+  describe('hover', () => {
+    test('over a symbol', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await hover(view, 'attach(id', 1);
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-${theme}`);
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-${theme}`);
+    });
+
+    test('over a problem', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await hover(view, 'undefined_name', 1);
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-problem-${theme}`);
+    });
+
+    test('over a problem with documentation', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await hover(view, 'send_raw', 2);
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-problem-documentation-${theme}`);
+    });
   });
 
-  test('hover over a problem', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    await hover(view, 'undefined_name', 1);
+  describe('completion', () => {
+    test('with documentation', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await complete(view, '    channel.se', true);
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-problem-${theme}`);
-  });
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-completion-documentation-${theme}`);
+    });
 
-  test('hover over a problem with documentation', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    await hover(view, 'send_raw', 2);
+    test('of a statement', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await complete(view, '    ma', false);
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-problem-documentation-${theme}`);
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-completion-statement-${theme}`);
+    });
   });
 });

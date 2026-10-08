@@ -120,6 +120,7 @@ class DiagnosticsPuller implements PluginValue {
         return;
       }
 
+      // Based on `@codemirror/lsp-client`'s `serverDiagnostics`, which waits for the server to push them.
       this.view.dispatch(
         setDiagnostics(
           this.view.state,

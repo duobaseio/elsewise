@@ -1,3 +1,4 @@
+import { autocompletion, startCompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
@@ -120,4 +121,21 @@ test('deprecated code is struck through by Chrome in a font whose strikeout is u
   const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
   expect(mark.textDecorationLine).toBe('line-through');
   expect(mark.backgroundImage).toBe('none');
+});
+
+test('a selected completion keeps the text color, and the list shows whole rows', async () => {
+  const options = Array.from({ length: 20 }, (_, i) => ({ label: `option${i}` }));
+  const view = await mount('', [autocompletion({ override: [() => ({ from: 0, options })] })]);
+  startCompletion(view);
+  const selected = await vi.waitFor(() => {
+    const selected = view.dom.querySelector('.cm-tooltip-autocomplete li[aria-selected]');
+    expect(selected).not.toBeNull();
+    return selected;
+  });
+  const tooltip = view.dom.querySelector('.cm-tooltip-autocomplete');
+  expect(style(selected).color).toBe(style(tooltip).color);
+  expect(style(selected).color).not.toBe('rgb(255, 255, 255)');
+  expect(style(tooltip).borderStyle).toBe('none');
+  const list = style(tooltip?.querySelector('ul') ?? null);
+  expect(Number.parseFloat(list.maxHeight)).toBe(10 * 22 + 8);
 });

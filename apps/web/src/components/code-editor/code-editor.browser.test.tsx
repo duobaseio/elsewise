@@ -157,7 +157,7 @@ test('search match roles', async () => {
   expect(current.outlineColor).toBe(rgb(EDITOR.searchMatchSelectedBorder));
   expect(current.outlineStyle).toBe('solid');
   expect(current.outlineWidth).toBe('1px');
-  expect(current.outlineOffset).toBe('-1px');
+  expect(current.outlineOffset).toBe('0px');
 });
 
 test('tooltips above the search bar', async () => {

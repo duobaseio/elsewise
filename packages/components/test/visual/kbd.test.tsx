@@ -39,8 +39,7 @@ const CONTENTS: readonly { key: string; label: string; render: ReactNode }[] = [
   },
 ];
 
-// The fill is `bg-muted`, and `--muted` resolves to `--surface-2`. These are the
-// grounds that decides whether a keycap has an edge at all.
+// The text is `--text-3`. These are the grounds it must stay legible on.
 const GROUNDS: readonly { key: string; label: string; className: string }[] = [
   { key: 'background', label: 'on background', className: 'bg-background' },
   { key: 'surface', label: 'on surface', className: 'bg-surface' },

@@ -4,7 +4,6 @@ import {
   jumpToDefinitionKeymap,
   LSPClient,
   renameKeymap,
-  serverCompletion,
   serverDiagnostics,
   signatureHelp,
 } from '@codemirror/lsp-client';
@@ -13,6 +12,7 @@ import { keymap } from '@codemirror/view';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { serverCompletion } from '@/language-servers/completion';
 import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
 import { serverHover } from '@/language-servers/hover';
 import { EditorAdditions } from '@/plugins/editor';

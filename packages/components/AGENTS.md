@@ -42,7 +42,7 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/components <script>`.
 - The app overrides either set through `IconProvider` and `FileIconProvider`; `useIcons()` and `useFileIcons()` return
   the merged maps.
 - The file tree's rows live in a shadow root and cannot render components, so `file-tree/icons.ts` builds a sprite and
-  `data:` URIs instead. Its letterform tile mirrors `file-icon.tsx`; change both.
+  `data:` URIs instead. Its letterform tile mirrors `letter-icon.tsx`; change both.
 
 ## Styling
 

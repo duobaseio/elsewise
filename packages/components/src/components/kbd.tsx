@@ -3,8 +3,8 @@ import { type Os, shortcut } from '../lib/os';
 import { cn } from '../lib/utils';
 
 /**
- * A keycap. Given a `binding` such as `Mod-Alt-f`, shows the chord in this platform's notation — `⌥⌘F` on a Mac,
- * `Ctrl Alt F` elsewhere — and `os` shows another platform's. Otherwise shows its children.
+ * A shortcut, as muted text. Given a `binding` such as `Mod-Alt-f`, shows the chord in this platform's notation —
+ * `⌥⌘F` on a Mac, `Ctrl Alt F` elsewhere — and `os` shows another platform's. Otherwise shows its children.
  */
 export function Kbd({
   className,
@@ -17,7 +17,7 @@ export function Kbd({
     <kbd
       data-slot="kbd"
       className={cn(
-        "pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 rounded-sm border border-border bg-muted px-1 font-sans text-xs font-medium text-muted-foreground select-none [&_svg:not([class*='size-'])]:size-3",
+        "pointer-events-none inline-flex w-fit items-center gap-1 font-sans text-text-3 select-none [&_svg:not([class*='size-'])]:size-3",
         className,
       )}
       {...props}
