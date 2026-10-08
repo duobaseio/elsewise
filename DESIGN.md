@@ -294,6 +294,8 @@ whole set natively. `text-2xs` is unmapped until a mobile surface needs an overl
 - **400** — everything at rest
 - **500** — emphasis, headings, active states
 - **No 600+, no 300** in chrome — the ink ramp carries hierarchy before weight does
+- **600 in code** marks a completion's matched letters and the active parameter of a signature — JetBrains Mono at 500
+  barely differs from 400
 - Fraunces: 500 only in-app (400 reserved for large marketing settings)
 
 ## Icons

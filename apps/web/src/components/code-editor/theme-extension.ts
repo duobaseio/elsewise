@@ -149,13 +149,14 @@ const METRICS = EditorView.theme({
   '.cm-lintRange.cm-lintRange-deprecated': { backgroundImage: 'none', textDecoration: 'line-through' },
   '.cm-lintRange.cm-lintRange-unnecessary': { backgroundImage: 'none' },
 
-  '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo': {
-    border: 'none',
-    borderRadius: 'var(--radius)',
-    boxShadow:
-      '0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
-    color: 'var(--popover-foreground)',
-  },
+  '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo, .cm-tooltip.cm-lsp-signatures':
+    {
+      border: 'none',
+      borderRadius: 'var(--radius)',
+      boxShadow:
+        '0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+      color: 'var(--popover-foreground)',
+    },
   '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-completionInfo': {
     fontFamily: 'var(--font-sans)',
     fontVariantLigatures: 'var(--font-sans-ligatures)',
@@ -268,6 +269,7 @@ const METRICS = EditorView.theme({
     color: 'var(--text-3)',
     fontStyle: 'normal',
   },
+
   '.cm-completionMatchedText': { textDecoration: 'none', color: 'var(--link)', fontWeight: '600' },
   '.cm-completion-deprecated .cm-completionLabel': { color: 'var(--text-3)' },
   '.cm-completion-deprecated .cm-completionLabel, .cm-completion-deprecated .cm-completionTail': {
@@ -288,6 +290,31 @@ const METRICS = EditorView.theme({
   '.cm-tooltip.cm-completionInfo': { width: '360px', padding: '0', whiteSpace: 'normal' },
   '.cm-completionInfo.cm-completionInfo-right': { marginLeft: '4px' },
   '.cm-completionInfo.cm-completionInfo-left': { marginRight: '4px' },
+
+  '.cm-tooltip.cm-lsp-signatures > ul': {
+    position: 'relative',
+    margin: '0',
+    padding: '4px',
+    minWidth: '240px',
+    maxWidth: '500px',
+    maxHeight: 'calc(10 * 22px + 8px)',
+    overflowY: 'auto',
+    listStyle: 'none',
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+    lineHeight: 'var(--text-code--line-height)',
+  },
+  // A signature too long for one line indents the lines it wraps onto by four characters.
+  '.cm-tooltip.cm-lsp-signatures > ul > li': {
+    padding: '2px 8px 2px calc(8px + 4ch)',
+    textIndent: '-4ch',
+  },
+  '.cm-tooltip.cm-lsp-signatures > ul > li + li': { borderTop: '1px solid var(--border)' },
+  '.cm-lsp-signature-part': { whiteSpace: 'nowrap' },
+  // 600, against DESIGN.md, since JetBrains Mono at 500 barely differs from 400.
+  '.cm-lsp-active-parameter': { fontWeight: '600' },
+  '.cm-lsp-signature-inapplicable, .cm-lsp-signature-inapplicable *': { color: 'var(--text-3)' },
 });
 
 /**

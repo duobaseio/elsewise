@@ -128,8 +128,43 @@ const RESOLVED: Record<string, string> = {
   ].join('\n\n'),
 };
 
-// A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, and completions after a
-// dot from `MEMBERS`, else from `STATEMENTS`.
+// The signatures of `channel.send_timeout(b"ping", `, as rust-analyzer gives them.
+const SEND_TIMEOUT = {
+  signatures: [
+    {
+      label: 'fn send_timeout(&self, bytes: Bytes, timeout: Duration) -> Result<()>',
+      parameters: [{ label: '&self' }, { label: 'bytes: Bytes' }, { label: 'timeout: Duration' }],
+    },
+  ],
+  activeSignature: 0,
+  activeParameter: 2,
+};
+
+// The signatures of `attach(id, `: one it has outgrown, the active one, and one that wraps.
+const ATTACH = {
+  signatures: [
+    { label: 'fn attach(id: SessionId) -> Channel', parameters: [{ label: 'id: SessionId' }] },
+    {
+      label: 'fn attach(id: SessionId, options: Options) -> Result<Channel>',
+      parameters: [{ label: 'id: SessionId' }, { label: 'options: Options' }],
+    },
+    {
+      label:
+        'fn attach(id: SessionId, options: Options, timeout: Duration, on_close: impl FnOnce(SessionId) -> Result<()>) -> Result<Channel>',
+      parameters: [
+        { label: 'id: SessionId' },
+        { label: 'options: Options' },
+        { label: 'timeout: Duration' },
+        { label: 'on_close: impl FnOnce(SessionId) -> Result<()>' },
+      ],
+    },
+  ],
+  activeSignature: 1,
+  activeParameter: 1,
+};
+
+// A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, completions after a dot
+// from `MEMBERS`, else from `STATEMENTS`, and signatures in a method call from `SEND_TIMEOUT`, else from `ATTACH`.
 const RUST: LanguageServer = {
   id: 'rust',
   name: 'Rust',
@@ -151,6 +186,7 @@ const RUST: LanguageServer = {
               hoverProvider: true,
               diagnosticProvider: {},
               completionProvider: { triggerCharacters: ['.'], resolveProvider: true },
+              signatureHelpProvider: { triggerCharacters: ['(', ','] },
             },
           });
         } else if (method === 'textDocument/hover') {
@@ -160,6 +196,8 @@ const RUST: LanguageServer = {
           reply(id, { kind: 'full', items: DIAGNOSTICS });
         } else if (method === 'textDocument/completion') {
           reply(id, params.position.character > 8 ? MEMBERS : STATEMENTS);
+        } else if (method === 'textDocument/signatureHelp') {
+          reply(id, params.position.character > 20 ? SEND_TIMEOUT : ATTACH);
         } else if (method === 'completionItem/resolve') {
           const value = RESOLVED[params.label];
           reply(id, value === undefined ? params : { ...params, documentation: { kind: 'markdown', value } });
@@ -252,6 +290,20 @@ async function complete(view: EditorView, line: string, documented: boolean): Pr
   );
 }
 
+// Types `line` below the one that attaches, and waits for its signatures to open with `rows`.
+async function sign(view: EditorView, line: string, rows: number): Promise<void> {
+  const end = view.state.doc.lineAt(view.state.doc.toString().indexOf('let channel')).to;
+  view.focus();
+  view.dispatch({
+    changes: { from: end, insert: `\n${line}` },
+    selection: { anchor: end + 1 + line.length },
+    userEvent: 'input.type',
+  });
+  await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-signatures li')).toHaveLength(rows), {
+    timeout: 2000,
+  });
+}
+
 describe.each(THEMES)('code editor (%s)', (theme) => {
   test('plain', async () => {
     await mount(theme);
@@ -332,6 +384,24 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await complete(view, '    ma', false);
 
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-completion-statement-${theme}`);
+    });
+  });
+
+  describe('signature help', () => {
+    test('of one signature', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await sign(view, '    channel.send_timeout(b"ping", ', 1);
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-signature-help-${theme}`);
+    });
+
+    test('of overloads', async () => {
+      const view = await mount(theme, true);
+      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+      await sign(view, '    attach(id, ', 3);
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-signature-help-overloads-${theme}`);
     });
   });
 });

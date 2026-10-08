@@ -5,7 +5,6 @@ import {
   LSPClient,
   renameKeymap,
   serverDiagnostics,
-  signatureHelp,
 } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
@@ -15,6 +14,7 @@ import { createContext, useCallback, useContext, useSyncExternalStore } from 're
 import { serverCompletion } from '@/language-servers/completion';
 import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
 import { serverHover } from '@/language-servers/hover';
+import { serverSignatureHelp } from '@/language-servers/signature-help';
 import { EditorAdditions } from '@/plugins/editor';
 
 /**
@@ -124,7 +124,7 @@ export class LanguageServerInstance {
         serverCompletion(),
         serverHover(),
         keymap.of([...formatKeymap, ...renameKeymap, ...jumpToDefinitionKeymap, ...findReferencesKeymap]),
-        signatureHelp(),
+        serverSignatureHelp(),
         serverDiagnostics(),
         pullDiagnostics(),
       ],

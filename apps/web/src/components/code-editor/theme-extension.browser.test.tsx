@@ -1,7 +1,7 @@
 import { autocompletion, startCompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, showTooltip } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useRef } from 'react';
@@ -138,4 +138,17 @@ test('a selected completion keeps the text color, and the list shows whole rows'
   expect(style(tooltip).borderStyle).toBe('none');
   const list = style(tooltip?.querySelector('ul') ?? null);
   expect(Number.parseFloat(list.maxHeight)).toBe(10 * 22 + 8);
+});
+
+test('signatures are parted by dividers, and wrap with a hanging indent', async () => {
+  const dom = document.createElement('div');
+  dom.className = 'cm-lsp-signatures';
+  dom.innerHTML = '<ul><li>fn send()</li><li>fn send(bytes: Bytes)</li></ul>';
+  await mount('send(', [showTooltip.of({ pos: 5, above: true, create: () => ({ dom }) })]);
+  const [first, second] = dom.querySelectorAll('li');
+
+  expect(style(first).borderTopWidth).toBe('0px');
+  expect(style(second).borderTopWidth).toBe('1px');
+  expect(Number.parseFloat(style(first).textIndent)).toBeLessThan(0);
+  expect(style(dom).borderStyle).toBe('none');
 });

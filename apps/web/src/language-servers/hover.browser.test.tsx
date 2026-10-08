@@ -6,7 +6,7 @@ import {
 } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { EditorState } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
+import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
@@ -192,6 +192,16 @@ describe('serverHover', () => {
 
     expect(tooltip.querySelector('.cm-lsp-definition pre')?.textContent).toBe('fn attach()');
     expect(tooltip.querySelector('.cm-lsp-content em')?.textContent).toBe('now');
+  });
+
+  test('closes on Escape', async () => {
+    const view = await open(transport(markdown('Attaches.')));
+    await hover(view);
+
+    const close = () => runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Escape' }), 'editor');
+    expect(close()).toBe(true);
+    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+    expect(close()).toBe(false);
   });
 
   test('shows nothing when the server has no documentation', async () => {
