@@ -71,14 +71,8 @@
       "hint": "#93A1A1",
       "unnecessary": "#93A1A1",
       "tokens": {
-        "comment": {
-          "color": "#93A1A1",
-          "italic": true
-        },
-        "docComment": {
-          "color": "#93A1A1",
-          "italic": true
-        },
+        "comment": "#93A1A1",
+        "docComment": "#93A1A1",
         "operator": "#859900",
         "keyword": "#859900",
         "controlKeyword": "#859900",
@@ -233,14 +227,8 @@
       "hint": "#586E75",
       "unnecessary": "#586E75",
       "tokens": {
-        "comment": {
-          "color": "#586E75",
-          "italic": true
-        },
-        "docComment": {
-          "color": "#586E75",
-          "italic": true
-        },
+        "comment": "#586E75",
+        "docComment": "#586E75",
         "operator": "#859900",
         "keyword": "#859900",
         "controlKeyword": "#859900",

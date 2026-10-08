@@ -71,14 +71,8 @@
       "hint": "#A5ADCE",
       "unnecessary": "#A5ADCE",
       "tokens": {
-        "comment": {
-          "color": "#949CBB",
-          "italic": true
-        },
-        "docComment": {
-          "color": "#949CBB",
-          "italic": true
-        },
+        "comment": "#949CBB",
+        "docComment": "#949CBB",
         "punctuation": "#949CBB",
         "bracket": "#949CBB",
         "operator": "#81C8BE",

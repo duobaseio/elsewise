@@ -86,14 +86,8 @@
         "string": "#0D8124",
         "regexp": "#0D8124",
         "number": "#7139C9",
-        "comment": {
-          "color": "#888170",
-          "italic": true
-        },
-        "docComment": {
-          "color": "#888170",
-          "italic": true
-        },
+        "comment": "#888170",
+        "docComment": "#888170",
         "annotation": "#B68000",
         "meta": "#B68000",
         "attribute": "#004393",
@@ -243,10 +237,7 @@
         "regexp": "#879A39",
         "number": "#3AA99F",
         "comment": "#8A8474",
-        "docComment": {
-          "color": "#8A8474",
-          "italic": true
-        },
+        "docComment": "#8A8474",
         "annotation": "#D0A215",
         "meta": "#D0A215",
         "attribute": "#4385BE",
