@@ -59,10 +59,10 @@ function server(start: LanguageServer['start']): LanguageServer {
 
 const views: EditorView[] = [];
 
-// Opens `uri` on `instance` in a new editor.
-function open(instance: LanguageServerInstance, uri = URI): EditorView {
+// Opens `uri` on `instance` in a new editor, with `doc` in it.
+function open(instance: LanguageServerInstance, uri = URI, doc = 'let bad = 1'): EditorView {
   const view = new EditorView({
-    state: EditorState.create({ doc: 'let bad = 1', extensions: instance.client.plugin(uri, 'toy') }),
+    state: EditorState.create({ doc, extensions: instance.client.plugin(uri, 'toy') }),
     parent: document.body,
   });
   views.push(view);
@@ -202,6 +202,30 @@ describe('serverDiagnostics', () => {
         [4, 7, 'error'],
         [8, 9, 'error'],
         [10, 11, 'error'],
+      ]);
+    });
+  });
+
+  test('underlines the last character before a problem reported on an empty line', async () => {
+    const fake = transport();
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    const view = open(instance, URI, 'let list = [1,\n\n');
+    await instance.start();
+    await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
+    const point = (line: number) => ({ start: { line, character: 0 }, end: { line, character: 0 } });
+
+    fake.requests[0].reply([
+      { range: point(1), severity: 1, message: 'on a blank line' },
+      { range: point(2), severity: 1, message: "']' expected" },
+    ]);
+
+    await vi.waitFor(() => {
+      expect(shown(view)).toEqual([
+        [13, 14, 'error'],
+        [13, 14, 'error'],
       ]);
     });
   });

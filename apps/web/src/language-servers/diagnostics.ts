@@ -153,6 +153,7 @@ class DiagnosticsSyncer implements PluginValue {
       plugin.client.cancelRequest(this.pending);
     }
 
+    // TODO: Send the previous result id, so the server can answer "unchanged", once multiple files are supported.
     const parameters: DocumentDiagnosticParams = { textDocument: { uri: plugin.uri } };
     const version = file.version;
     this.pending = parameters;
@@ -207,8 +208,8 @@ function replaceProblems(view: EditorView, plugin: LSPPlugin, items: LSPDiagnost
 function convert(plugin: LSPPlugin, item: LSPDiagnostic): Diagnostic {
   let from = plugin.unsyncedChanges.mapPos(plugin.fromPosition(item.range.start, plugin.syncedDoc));
   let to = plugin.unsyncedChanges.mapPos(plugin.fromPosition(item.range.end, plugin.syncedDoc));
-  // Widens a problem at a point, which the linter would mark with a triangle, to the word there or else a character
-  // beside it.
+  // Widens a problem at a point, which the linter would mark with a triangle, to the word there, or else a character
+  // beside it, or the last one before its empty line.
   if (from === to) {
     const { state } = plugin.view;
     const word = state.wordAt(from);
@@ -219,6 +220,16 @@ function convert(plugin: LSPPlugin, item: LSPDiagnostic): Diagnostic {
       to += 1;
     } else if (from > line.from) {
       from -= 1;
+    } else {
+      for (let number = line.number - 1; number >= 1; number--) {
+        const previous = state.doc.line(number);
+        const end = previous.text.trimEnd().length;
+        if (end > 0) {
+          from = previous.from + end - 1;
+          to = from + 1;
+          break;
+        }
+      }
     }
   }
 
