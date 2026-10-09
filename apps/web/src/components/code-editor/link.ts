@@ -11,7 +11,7 @@ import {
 } from '@codemirror/view';
 import { OS } from '@elsewise/components/lib/os';
 import { tags } from '@lezer/highlight';
-import { hint } from '@/components/code-editor/hint';
+import { hint } from '@/components/code-editor/tooltip';
 
 interface Link {
   from: number;

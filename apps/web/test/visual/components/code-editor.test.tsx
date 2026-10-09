@@ -10,6 +10,7 @@ import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import type {
+  CodeActionParams,
   CompletionItem,
   CompletionParams,
   DocumentHighlightParams,
@@ -189,7 +190,8 @@ const CHANNELS = [range('channel ='), range('channel.send_raw'), range('channel.
 
 // A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, completions after a dot
 // from `MEMBERS`, else from `STATEMENTS`, signatures in a method call from `SEND_TIMEOUT`, else from `ATTACH`, and
-// renames, usages and highlights of `channel` from `CHANNELS`, with one more usage in a file that isn't open.
+// renames, usages and highlights of `channel` from `CHANNELS`, with one more usage in a file that isn't open, and code
+// actions, with fixes for `undefined_name`.
 const RUST: LanguageServer = {
   id: 'rust',
   name: 'Rust',
@@ -203,8 +205,9 @@ const RUST: LanguageServer = {
         completionProvider: { triggerCharacters: ['.'], resolveProvider: true },
         signatureHelpProvider: { triggerCharacters: ['(', ','] },
         renameProvider: { prepareProvider: true },
-        documentHighlightProvider: true,
         referencesProvider: true,
+        documentHighlightProvider: true,
+        codeActionProvider: true,
         definitionProvider: true,
         documentFormattingProvider: true,
       },
@@ -215,9 +218,20 @@ const RUST: LanguageServer = {
         },
         'textDocument/diagnostic': () => ({ kind: 'full', items: DIAGNOSTICS }),
         'textDocument/completion': ({ position }: CompletionParams) => (position.character > 8 ? MEMBERS : STATEMENTS),
+        'completionItem/resolve': (item: CompletionItem) => {
+          const value = RESOLVED[item.label];
+          return value === undefined ? item : { ...item, documentation: { kind: 'markdown', value } };
+        },
         'textDocument/signatureHelp': ({ position }: SignatureHelpParams) =>
           position.character > 20 ? SEND_TIMEOUT : ATTACH,
         'textDocument/prepareRename': () => CHANNELS[0],
+        'textDocument/references': ({ textDocument }: ReferenceParams) => [
+          ...CHANNELS.map((range) => ({ uri: textDocument.uri, range })),
+          {
+            uri: 'file:///worktree/src/session.rs',
+            range: { start: { line: 41, character: 8 }, end: { line: 41, character: 15 } },
+          },
+        ],
         // The ranges are the sample's, so it stops answering once the sample is edited.
         'textDocument/documentHighlight': ({ position }: DocumentHighlightParams) =>
           !stub.methods.includes('textDocument/didChange') &&
@@ -229,17 +243,16 @@ const RUST: LanguageServer = {
           )
             ? CHANNELS.map((range, i) => ({ range, kind: i === 0 ? 3 : 2 }))
             : [],
-        'textDocument/references': ({ textDocument }: ReferenceParams) => [
-          ...CHANNELS.map((range) => ({ uri: textDocument.uri, range })),
-          {
-            uri: 'file:///worktree/src/session.rs',
-            range: { start: { line: 41, character: 8 }, end: { line: 41, character: 15 } },
-          },
+        'textDocument/codeAction': ({ context }: CodeActionParams) => [
+          ...(context.diagnostics.some((diagnostic) => diagnostic.code === 'E0425')
+            ? [
+                { title: 'Import `undefined_name` from `crate::names`', kind: 'quickfix', isPreferred: true },
+                { title: 'Create a local `undefined_name`', kind: 'quickfix' },
+              ]
+            : []),
+          { title: 'Inline `channel`', kind: 'refactor.inline' },
+          { title: 'Organize imports', kind: 'source.organizeImports' },
         ],
-        'completionItem/resolve': (item: CompletionItem) => {
-          const value = RESOLVED[item.label];
-          return value === undefined ? item : { ...item, documentation: { kind: 'markdown', value } };
-        },
       },
     );
     return stub;
@@ -521,5 +534,16 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-highlights-${theme}`);
+  });
+
+  test('context actions', async () => {
+    const view = await mount(theme, true);
+    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+    view.focus();
+    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('undefined_name') + 2 } });
+    await userEvent.keyboard('{Alt>}{Enter}{/Alt}');
+    await vi.waitFor(() => expect(document.querySelector('.cm-lsp-actions')).not.toBeNull());
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-context-actions-${theme}`);
   });
 });

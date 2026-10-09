@@ -99,7 +99,7 @@ describe('serverFormatting', () => {
     await vi.waitFor(() => {
       expect(add).toHaveBeenCalledWith({
         type: 'error',
-        title: 'Formatting request failed',
+        title: 'Formatting failed',
         description: 'No formatter',
       });
     });

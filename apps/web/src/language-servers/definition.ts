@@ -55,7 +55,7 @@ export function jumpToDefinition(view: EditorView): boolean {
         userEvent: 'select.definition',
       });
     } catch (error) {
-      toast.add({ type: 'error', title: 'Find definition failed', description: (error as Error).message });
+      toast.add({ type: 'error', title: 'Go to definition failed', description: (error as Error).message });
     }
   });
   return true;

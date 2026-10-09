@@ -6,6 +6,7 @@ import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useRef } from 'react';
 import { expect, onTestFinished, test, vi } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
 import { visualGuides } from '@/components/code-editor/visual-guides';
@@ -23,6 +24,7 @@ const { EDITOR } = vi.hoisted(() => ({
     searchMatch: '#B0C0D0',
     searchMatchSelected: '#C0D0E0',
     searchMatchSelectedBorder: '#D0E0F0',
+    completionHovered: '#F0A0E0',
     completionSelected: '#E0F0A0',
     tokens: {
       keyword: { color: '#A0B0C0', bold: true, strikethrough: true },
@@ -112,6 +114,23 @@ test("deprecated code is struck through at the font's strikeout position", async
   expect(mark.textDecorationLine).toBe('none');
 });
 
+test('unnecessary code is faded without an underline, unless a plain problem shares it', async () => {
+  const view = await mount('let a = 1', []);
+  const unused = {
+    from: 4,
+    to: 5,
+    severity: 'warning',
+    markClass: 'cm-lintRange-unnecessary',
+    message: 'unused',
+  } as const;
+  view.dispatch(setDiagnostics(view.state, [unused]));
+  expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toBe('none');
+
+  const wrong = { from: 4, to: 5, severity: 'error', markClass: 'cm-lintRange-plain', message: 'wrong type' } as const;
+  view.dispatch(setDiagnostics(view.state, [unused, wrong]));
+  expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toContain('data:image/svg+xml');
+});
+
 test('deprecated code is struck through by Chrome in a font whose strikeout is unknown', async () => {
   document.documentElement.style.setProperty('--font-mono', 'Menlo, monospace');
   onTestFinished(() => {
@@ -144,6 +163,36 @@ test('a selected completion keeps the text color, and the list shows whole rows'
   const list = style(tooltip?.querySelector('ul') ?? null);
   expect(Number.parseFloat(list.maxHeight)).toBe(10 * 22 + 8);
   expect(style(selected).cursor).toBe('default');
+});
+
+test('the hovered row of completions, usages and actions takes the hover color, unless selected', async () => {
+  const options = Array.from({ length: 3 }, (_, i) => ({ label: `option${i}` }));
+  const popup = document.createElement('div');
+  popup.innerHTML =
+    '<ul><li class="cm-lsp-reference" aria-selected="true">a</li><li class="cm-lsp-reference">b</li></ul>' +
+    '<ul><li class="cm-lsp-action" aria-selected="true">a</li><li class="cm-lsp-action">b</li></ul>';
+  const view = await mount('', [
+    autocompletion({ override: [() => ({ from: 0, options })] }),
+    showTooltip.of({ pos: 0, create: () => ({ dom: popup }) }),
+  ]);
+  startCompletion(view);
+  const completions = await vi.waitFor(() => {
+    const rows = [...view.dom.querySelectorAll('.cm-tooltip-autocomplete li')];
+    expect(rows).toHaveLength(3);
+    return rows;
+  });
+
+  for (const [selected, other] of [
+    completions,
+    [...popup.querySelectorAll('.cm-lsp-reference')],
+    [...popup.querySelectorAll('.cm-lsp-action')],
+  ]) {
+    await userEvent.hover(other);
+    await vi.waitFor(() => expect(style(other).backgroundColor).toBe(rgb(EDITOR.completionHovered)));
+    await userEvent.hover(selected);
+    await vi.waitFor(() => expect(style(other).backgroundColor).toBe('rgba(0, 0, 0, 0)'));
+    expect(style(selected).backgroundColor).toBe(rgb(EDITOR.completionSelected));
+  }
 });
 
 test('signatures are parted by dividers, and wrap with a hanging indent', async () => {
@@ -225,4 +274,25 @@ test('usages are listed like completions, with each usage taking the search matc
   expect(style(popup.querySelector('.cm-lsp-reference')).cursor).toBe('default');
   expect(list.clientHeight).toBe(10 * 22 + 8);
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+});
+
+test("a problem's fixes are links, underlined only while hovered", async () => {
+  const tooltip = document.createElement('div');
+  tooltip.className = 'cm-tooltip-hover';
+  tooltip.innerHTML =
+    '<div class="cm-lsp-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
+  await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: tooltip }) })]);
+  const button = tooltip.querySelector('button') as HTMLElement;
+  const color = (name: string) => rgb(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+
+  expect(style(button).color).toBe(color('--link'));
+  expect(style(button).textDecorationLine).toBe('none');
+  expect(style(button).cursor).toBe('pointer');
+
+  await userEvent.hover(button);
+
+  await vi.waitFor(() => expect(style(button).textDecorationLine).toBe('underline'));
+  expect(style(button).color).toBe(color('--link-hover'));
+  expect(style(button).textDecorationColor).toBe(color('--link-hover'));
+  expect(style(button).textUnderlineOffset).toBe('4px');
 });

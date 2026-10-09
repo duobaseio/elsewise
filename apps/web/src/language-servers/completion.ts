@@ -38,7 +38,7 @@ import {
   LSPErrorCodes,
   type TextEdit,
 } from 'vscode-languageserver-protocol';
-import { hint } from '@/components/code-editor/hint';
+import { hint } from '@/components/code-editor/tooltip';
 import { documentation } from '@/language-servers/documentation';
 
 /**

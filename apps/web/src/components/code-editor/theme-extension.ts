@@ -32,8 +32,12 @@ const CHROME = {
   searchMatchSelectedBorder: ['.cm-searchMatch-selected, .cm-lsp-rename-field', 'outlineColor'],
   panelBackground: ['.cm-panels', 'backgroundColor'],
   tooltipBackground: ['.cm-tooltip', 'backgroundColor'],
+  completionHovered: [
+    '.cm-tooltip-autocomplete ul li:hover:not([aria-selected]), .cm-lsp-reference:hover:not([aria-selected]), .cm-lsp-action:hover:not([aria-selected])',
+    'backgroundColor',
+  ],
   completionSelected: [
-    '.cm-tooltip-autocomplete ul li[aria-selected], .cm-lsp-reference[aria-selected]',
+    '.cm-tooltip-autocomplete ul li[aria-selected], .cm-lsp-reference[aria-selected], .cm-lsp-action[aria-selected]',
     'backgroundColor',
   ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
@@ -149,9 +153,10 @@ const METRICS = EditorView.theme({
   '.cm-fold-marker:not([data-open])': { transform: 'rotate(-90deg)' },
 
   '.cm-lintRange.cm-lintRange-deprecated': { backgroundImage: 'none', textDecoration: 'line-through' },
-  '.cm-lintRange.cm-lintRange-unnecessary': { backgroundImage: 'none' },
+  // Problems on the same code share one underline, with every one's classes, so a plain problem there keeps it.
+  '.cm-lintRange.cm-lintRange-unnecessary:not(.cm-lintRange-plain)': { backgroundImage: 'none' },
 
-  '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo, .cm-tooltip.cm-lsp-signatures, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-tooltip.cm-lsp-references, .cm-tooltip.cm-lsp-references-message':
+  '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo, .cm-tooltip.cm-lsp-signatures, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-tooltip.cm-lsp-references, .cm-tooltip.cm-lsp-references-message, .cm-tooltip.cm-lsp-actions-message, .cm-tooltip.cm-lsp-actions':
     {
       border: 'none',
       borderRadius: 'var(--radius)',
@@ -198,7 +203,11 @@ const METRICS = EditorView.theme({
     overflowWrap: 'anywhere',
   },
   '.cm-tooltip-hover pre code, .cm-completionInfo pre code': { padding: '0', backgroundColor: 'transparent' },
-  '.cm-tooltip-hover a, .cm-completionInfo a': { color: 'var(--link)', textDecoration: 'underline' },
+  '.cm-tooltip-hover a, .cm-completionInfo a': {
+    color: 'var(--link)',
+    textDecoration: 'underline',
+    textDecorationSkipInk: 'none',
+  },
   '.cm-tooltip-hover a:hover, .cm-completionInfo a:hover': { color: 'var(--link-hover)' },
   '.cm-tooltip-hover a[href^="http"]::after, .cm-completionInfo a[href^="http"]::after': {
     content: '""',
@@ -284,17 +293,18 @@ const METRICS = EditorView.theme({
     cursor: 'default',
   },
   '.cm-completion-hint': { order: '1', borderTop: '1px solid var(--border)' },
-  '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-header, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message, .cm-link-hint':
+  '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-header, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message, .cm-tooltip.cm-lsp-actions-message, .cm-link-hint, .cm-lsp-actions-hint':
     {
       padding: '4px 10px',
       fontFamily: 'var(--font-sans)',
       fontSize: 'var(--text-sm)',
       lineHeight: 'var(--text-sm--line-height)',
     },
-  '.cm-completion-hint kbd, .cm-lsp-rename-hint kbd, .cm-lsp-references-hint kbd, .cm-link-hint kbd': {
-    fontFamily: 'inherit',
-    color: 'var(--text-3)',
-  },
+  '.cm-completion-hint kbd, .cm-lsp-rename-hint kbd, .cm-lsp-references-hint kbd, .cm-link-hint kbd, .cm-lsp-actions-hint kbd, .cm-lsp-actions-hover kbd':
+    {
+      fontFamily: 'inherit',
+      color: 'var(--text-3)',
+    },
 
   '.cm-tooltip.cm-lsp-references': {
     display: 'flex',
@@ -338,6 +348,58 @@ const METRICS = EditorView.theme({
   '.cm-lsp-reference-line': { display: 'inline-block', minWidth: '2ch', marginLeft: '6px', textAlign: 'right' },
   '.cm-lsp-reference-elsewhere': { color: 'var(--text-3)' },
   '.cm-lsp-references-hint': { borderTop: '1px solid var(--border)' },
+
+  '.cm-tooltip.cm-lsp-actions': { display: 'flex', flexDirection: 'column', minWidth: '240px', maxWidth: '500px' },
+  '.cm-lsp-actions-list': {
+    margin: '0',
+    padding: '4px',
+    maxHeight: 'calc(10 * 24px + 8px)',
+    overflowY: 'auto',
+    listStyle: 'none',
+    fontFamily: 'var(--font-sans)',
+    fontVariantLigatures: 'var(--font-sans-ligatures)',
+    fontSize: 'var(--text-base)',
+    lineHeight: 'var(--text-base--line-height)',
+  },
+  '.cm-lsp-action': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '24px',
+    padding: '0 10px 0 6px',
+    borderRadius: 'calc(var(--radius) - 2px)',
+    whiteSpace: 'pre',
+    cursor: 'default',
+  },
+  '.cm-lsp-action-bulb': { flex: 'none', width: '16px', height: '16px', color: 'var(--warning-fill)' },
+  '.cm-lsp-action-fix .cm-lsp-action-bulb': { color: 'var(--destructive)' },
+  '.cm-lsp-actions code': {
+    padding: '1px 4px',
+    borderRadius: '4px',
+    backgroundColor: 'var(--layer-selected)',
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+  },
+  '.cm-lsp-actions-divider': { height: '1px', margin: '4px 2px', backgroundColor: 'var(--border)' },
+  '.cm-lsp-actions-hint': { borderTop: '1px solid var(--border)' },
+  // The line for a problem's fixes, empty until the server answers, and if it has none.
+  '.cm-lsp-actions-hover': {
+    marginTop: '6px',
+    fontSize: 'var(--text-sm)',
+    lineHeight: 'var(--text-sm--line-height)',
+  },
+  '.cm-lsp-actions-hover:empty': { display: 'none' },
+  '.cm-lsp-actions-hover button': {
+    padding: '0',
+    border: 'none',
+    background: 'none',
+    font: 'inherit',
+    color: 'var(--link)',
+    textUnderlineOffset: '4px',
+    cursor: 'pointer',
+  },
+  '.cm-lsp-actions-hover button:hover': { color: 'var(--link-hover)', textDecoration: 'underline' },
 
   '.cm-tooltip.cm-completionInfo': { width: '360px', padding: '0', whiteSpace: 'normal' },
   '.cm-completionInfo.cm-completionInfo-right': { marginLeft: '4px' },

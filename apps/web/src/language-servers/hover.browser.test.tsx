@@ -18,15 +18,58 @@ const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.rs';
 const DOC = 'let channel = attach(1);';
 
-// Returns a transport to a server that answers every hover with `hover`, and offers no hovers if it is undefined.
-function transport(hover: Hover | null | undefined, diagnostics: Diagnostic[] = []): StubTransport {
+// Returns a transport to a server that answers every hover with `hover`, and offers no hovers if it is undefined. It
+// finds `diagnostics`, and answers code actions with `actions`.
+function transport(
+  hover: Hover | null | undefined,
+  diagnostics: Diagnostic[] = [],
+  actions: () => unknown = () => [],
+): StubTransport {
   return stubTransport(
-    { textDocumentSync: 2, diagnosticProvider: {}, ...(hover !== undefined && { hoverProvider: true }) },
+    {
+      textDocumentSync: 2,
+      diagnosticProvider: {},
+      codeActionProvider: true,
+      ...(hover !== undefined && { hoverProvider: true }),
+    },
     {
       'textDocument/hover': () => hover,
       'textDocument/diagnostic': () => ({ kind: 'full', items: diagnostics }),
+      'textDocument/codeAction': actions,
     },
   );
+}
+
+// The problem with `attach`, and a fix for it.
+const PROBLEM: Diagnostic = {
+  range: { start: { line: 0, character: 14 }, end: { line: 0, character: 20 } },
+  severity: 1,
+  message: 'cannot find `attach`',
+};
+const FIX = {
+  title: 'Rename to `connect`',
+  kind: 'quickfix',
+  edit: { changes: { [URI]: [{ range: PROBLEM.range, newText: 'connect' }] } },
+};
+
+// Points at `attach` and returns the hover once it shows a problem, with what it showed when it first appeared.
+async function hoverProblem(view: EditorView): Promise<{ tooltip: HTMLElement; first: Element | null }> {
+  await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
+  let first: Element | null = null;
+  const observer = new MutationObserver(() => {
+    first ??= view.dom.querySelector('.cm-tooltip-hover')?.cloneNode(true) as Element | null;
+  });
+  observer.observe(view.dom, { childList: true, subtree: true });
+  point(view, DOC.indexOf('attach') + 1);
+  const tooltip = await vi.waitFor(
+    () => {
+      expect(view.dom.querySelector('.cm-tooltip-hover .cm-diagnostic')).not.toBeNull();
+      return view.dom.querySelector('.cm-tooltip-hover') as HTMLElement;
+    },
+    { timeout: 2000 },
+  );
+  observer.disconnect();
+  return { tooltip, first };
 }
 
 let rust: LanguageSupport;
@@ -222,6 +265,110 @@ describe('serverHover', () => {
     const [first, second] = tooltip.querySelectorAll('.cm-tooltip-section');
     expect(first.querySelector('.cm-diagnostic-error')).not.toBeNull();
     expect(second.querySelector('.cm-lsp-definition')).not.toBeNull();
+  });
+
+  test('shows the problems with their fixes and the documentation at once', async () => {
+    const view = await open(
+      transport(
+        markdown('Attaches.'),
+        [PROBLEM],
+        () => new Promise((resolve) => setTimeout(() => resolve([FIX]), 100)),
+      ),
+    );
+
+    const { first } = await hoverProblem(view);
+
+    expect(first?.querySelectorAll('.cm-tooltip-section')).toHaveLength(2);
+    expect(first?.querySelector('.cm-lsp-actions-hover')?.textContent).toContain('Rename to connect');
+  });
+
+  test("names a problem's top fix and the rest, and applies the fix when clicked", async () => {
+    const view = await open(
+      transport(null, [PROBLEM], () => [{ title: 'Organize imports', kind: 'source.organizeImports' }, FIX]),
+    );
+
+    const { tooltip } = await hoverProblem(view);
+
+    const line = tooltip.querySelector('.cm-lsp-actions-hover') as HTMLElement;
+    expect([...line.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Rename to connect',
+      'More actions',
+    ]);
+    expect(line.querySelector('button code')?.textContent).toBe('connect');
+    expect(line.querySelectorAll('kbd')).toHaveLength(2);
+    line.querySelector('button')?.click();
+    await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let channel = connect(1);'));
+  });
+
+  test('shows a problem without a line for fixes when the server has none', async () => {
+    const view = await open(transport(null, [PROBLEM]));
+
+    const { tooltip } = await hoverProblem(view);
+
+    expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
+    expect(tooltip.querySelector('.cm-lsp-actions-hover')).toBeNull();
+  });
+
+  test("shows a problem without its fixes rather than waiting long for a server that doesn't answer", async () => {
+    const view = await open(transport(null, [PROBLEM], () => new Promise(() => {})));
+
+    const { tooltip } = await hoverProblem(view);
+
+    expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
+    expect(tooltip.querySelector('.cm-lsp-actions-hover')).toBeNull();
+  });
+
+  test("renders a problem's markdown message", async () => {
+    const view = await open(
+      transport(null, [
+        { ...PROBLEM, message: { kind: 'markdown', value: 'use `send`, see [docs](https://example.com)' } },
+      ]),
+    );
+
+    const { tooltip } = await hoverProblem(view);
+
+    expect(tooltip.querySelector('.cm-diagnosticMessage code')?.textContent).toBe('send');
+    expect(tooltip.querySelector('.cm-diagnosticMessage a')?.getAttribute('href')).toBe('https://example.com');
+  });
+
+  test('renders the code a plain message quotes in backticks, and the rest as it is', async () => {
+    const view = await open(
+      transport(null, [{ ...PROBLEM, message: 'expected `*const T`, found <b>_x_</b> and an odd `' }]),
+    );
+
+    const { tooltip } = await hoverProblem(view);
+
+    const message = tooltip.querySelector('.cm-diagnosticMessage');
+    expect([...(message?.querySelectorAll('code') ?? [])].map((code) => code.textContent)).toEqual(['*const T']);
+    expect(message?.querySelector('b')).toBeNull();
+    expect(message?.textContent).toBe('expected *const T, found <b>_x_</b> and an odd `');
+  });
+
+  test("shows a problem's source and code, linking the code to its description", async () => {
+    const view = await open(
+      transport(null, [
+        {
+          ...PROBLEM,
+          message: 'linked',
+          source: 'rustc',
+          code: 'E0425',
+          codeDescription: { href: 'https://example.com/E0425' },
+        },
+        { ...PROBLEM, message: 'code', code: 2322 },
+        { ...PROBLEM, message: 'unsafe', code: 'x', codeDescription: { href: 'javascript:alert(1)' } },
+        { ...PROBLEM, message: 'bare' },
+      ]),
+    );
+
+    const { tooltip } = await hoverProblem(view);
+
+    const metas = [...tooltip.querySelectorAll('.cm-diagnostic')].map((problem) =>
+      problem.querySelector('.cm-diagnosticMeta'),
+    );
+    expect(metas.map((meta) => meta?.textContent)).toEqual(['rustc · E0425', '2322', 'x', undefined]);
+    expect(metas[0]?.querySelector('a')?.getAttribute('href')).toBe('https://example.com/E0425');
+    expect(metas[1]?.querySelector('a')).toBeNull();
+    expect(metas[2]?.querySelector('a')).toBeNull();
   });
 
   describe('on a click', () => {

@@ -119,6 +119,7 @@ export const ThemeVariant = z.lazy(() =>
         searchMatchSelectedBorder: Color,
         panelBackground: Color,
         tooltipBackground: Color,
+        completionHovered: Color,
         completionSelected: Color,
 
         // Diagnostics

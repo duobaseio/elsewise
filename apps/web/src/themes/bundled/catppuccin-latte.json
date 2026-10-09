@@ -64,6 +64,7 @@
       "searchMatchSelectedBorder": "#D20F3933",
       "panelBackground": "#E6E9EF",
       "tooltipBackground": "#E6E9EF",
+      "completionHovered": "#CCD0DA80",
       "completionSelected": "#CCD0DA",
       "error": "#E64553",
       "warning": "#FE640B",

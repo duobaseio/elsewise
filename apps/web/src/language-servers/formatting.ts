@@ -87,7 +87,7 @@ export function format(view: EditorView): boolean {
       }
       view.dispatch({ changes: kept, userEvent: 'format' });
     } catch (error) {
-      toast.add({ type: 'error', title: 'Formatting request failed', description: (error as Error).message });
+      toast.add({ type: 'error', title: 'Formatting failed', description: (error as Error).message });
     }
   });
   return true;

@@ -138,6 +138,22 @@ describe('DEFAULT_CONTEXT_MENU', () => {
     expect(labels()).toEqual(['Paste', '-', 'Find usages', 'Go to definition', '-', 'Rename…']);
   });
 
+  test('leads with the context actions, which open their popup', async () => {
+    const view = await mount(
+      new EditorAdditions(),
+      await server(
+        { ...CAPABILITIES, codeActionProvider: true },
+        { 'textDocument/codeAction': () => [{ title: 'Organize imports', kind: 'source.organizeImports' }] },
+      ),
+    );
+
+    await open(view, DOC.indexOf('main'));
+    expect(labels()[0]).toBe('Show context actions');
+    await userEvent.click(item('Show context actions'));
+
+    await expect.poll(() => view.dom.querySelector('.cm-lsp-action')?.textContent).toBe('Organize imports');
+  });
+
   test("hides what the language server can't do", async () => {
     const view = await mount(new EditorAdditions(), await server({ ...CAPABILITIES, renameProvider: false }));
 

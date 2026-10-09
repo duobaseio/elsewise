@@ -173,7 +173,7 @@ const requests = ViewPlugin.fromClass(
         },
         context.triggerKind === SignatureHelpTriggerKind.Invoked
           ? (error) =>
-              toast.add({ type: 'error', title: 'Signature request failed', description: (error as Error).message })
+              toast.add({ type: 'error', title: 'Signature help failed', description: (error as Error).message })
           : undefined,
       );
     }

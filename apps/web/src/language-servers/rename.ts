@@ -12,7 +12,7 @@ import type {
   RenameParams,
   WorkspaceEdit,
 } from 'vscode-languageserver-protocol';
-import { hint } from '@/components/code-editor/hint';
+import { hint } from '@/components/code-editor/tooltip';
 
 /**
  * A symbol being renamed.
@@ -319,7 +319,7 @@ function commit(view: EditorView, refocus: boolean): void {
       }
     } catch (error) {
       stop(view, refocus);
-      toast.add({ type: 'error', title: 'Rename request failed', description: (error as Error).message });
+      toast.add({ type: 'error', title: 'Rename failed', description: (error as Error).message });
     }
   });
 }

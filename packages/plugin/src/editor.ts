@@ -7,6 +7,10 @@ import type { Disposable } from './plugin.ts';
  * The ids of the built-in groups and items in the editor's context menu.
  */
 export const DEFAULT_EDITOR_CONTEXT_MENU = {
+  actions: {
+    id: '05-actions',
+    items: { show: '10-show' },
+  },
   clipboard: {
     id: '10-clipboard',
     items: { cut: '10-cut', copy: '20-copy', paste: '30-paste' },

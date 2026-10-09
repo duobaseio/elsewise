@@ -7,8 +7,8 @@ import { highlightTree } from '@lezer/highlight';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Location, ReferenceParams } from 'vscode-languageserver-protocol';
-import { hint } from '@/components/code-editor/hint';
 import { scroll } from '@/components/code-editor/scroll';
+import { hint } from '@/components/code-editor/tooltip';
 
 /**
  * A usage of the symbol.

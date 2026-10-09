@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, DocumentDiagnosticParams, InitializeParams } from 'vscode-languageserver-protocol';
-import { pullAllDiagnostics } from '@/language-servers/diagnostics';
+import { problems, pullAllDiagnostics } from '@/language-servers/diagnostics';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
 import { type StubTransport, stubTransport } from '../../test/stub-transport';
 
@@ -76,17 +76,6 @@ function shown(view: EditorView): [from: number, to: number, severity: string][]
   return result;
 }
 
-// Returns the diagnostic messages shown in `view`, rendered.
-function rendered(view: EditorView): HTMLElement[] {
-  const result: HTMLElement[] = [];
-  forEachDiagnostic(view.state, (diagnostic) => {
-    const element = document.createElement('div');
-    element.append(diagnostic.renderMessage?.(view) ?? diagnostic.message);
-    result.push(element);
-  });
-  return result;
-}
-
 // Waits for the messages that are in flight to arrive.
 function settled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve));
@@ -98,7 +87,7 @@ afterEach(() => {
   }
 });
 
-describe('pullDiagnostics', () => {
+describe('serverDiagnostics', () => {
   test('requests diagnostics for a file that opens on a running server, and shows them by severity', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
@@ -191,7 +180,7 @@ describe('pullDiagnostics', () => {
     });
   });
 
-  test('renders a markdown message', async () => {
+  test('underlines the word at a problem reported at a point, or else a character beside it', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -200,69 +189,21 @@ describe('pullDiagnostics', () => {
     const view = open(instance);
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } };
+    const point = (character: number) => ({ start: { line: 0, character }, end: { line: 0, character } });
+
     fake.requests[0].reply([
-      { range, message: { kind: 'markdown', value: 'use `send`, see [docs](https://example.com)' } },
+      { range: point(7), severity: 1, message: 'after bad' },
+      { range: point(8), severity: 1, message: 'before =' },
+      { range: point(11), severity: 1, message: 'at the end' },
     ]);
 
-    await vi.waitFor(() => expect(rendered(view)).toHaveLength(1));
-
-    const [message] = rendered(view);
-    expect(message.querySelector('.cm-diagnosticMessage code')?.textContent).toBe('send');
-    expect(message.querySelector('.cm-diagnosticMessage a')?.getAttribute('href')).toBe('https://example.com');
-    expect(shown(view)).toEqual([[0, 3, 'error']]);
-  });
-
-  test('renders the code a plain message quotes in backticks, and the rest as it is', async () => {
-    const fake = transport();
-    const instance = new LanguageServerInstance(
-      server(() => fake),
-      ROOT,
-    );
-    const view = open(instance);
-    await instance.start();
-    await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } };
-    fake.requests[0].reply([{ range, message: 'expected `*const T`, found <b>_x_</b> and an odd `' }]);
-
-    await vi.waitFor(() => expect(rendered(view)).toHaveLength(1));
-
-    const message = rendered(view)[0].querySelector('.cm-diagnosticMessage');
-    expect([...(message?.querySelectorAll('code') ?? [])].map((code) => code.textContent)).toEqual(['*const T']);
-    expect(message?.querySelector('b')).toBeNull();
-    expect(message?.textContent).toBe('expected *const T, found <b>_x_</b> and an odd `');
-  });
-
-  test("shows the message's source and code, linking the code to its description", async () => {
-    const fake = transport();
-    const instance = new LanguageServerInstance(
-      server(() => fake),
-      ROOT,
-    );
-    const view = open(instance);
-    await instance.start();
-    await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    const range = { start: { line: 0, character: 0 }, end: { line: 0, character: 3 } };
-    fake.requests[0].reply([
-      {
-        range,
-        message: 'linked',
-        source: 'rustc',
-        code: 'E0425',
-        codeDescription: { href: 'https://example.com/E0425' },
-      },
-      { range, message: 'code', code: 2322 },
-      { range, message: 'unsafe', code: 'x', codeDescription: { href: 'javascript:alert(1)' } },
-      { range, message: 'bare' },
-    ]);
-
-    await vi.waitFor(() => expect(rendered(view)).toHaveLength(4));
-
-    const metas = rendered(view).map((message) => message.querySelector('.cm-diagnosticMeta'));
-    expect(metas.map((meta) => meta?.textContent)).toEqual(['rustc · E0425', '2322', 'x', undefined]);
-    expect(metas[0]?.querySelector('a')?.getAttribute('href')).toBe('https://example.com/E0425');
-    expect(metas[1]?.querySelector('a')).toBeNull();
-    expect(metas[2]?.querySelector('a')).toBeNull();
+    await vi.waitFor(() => {
+      expect(shown(view)).toEqual([
+        [4, 7, 'error'],
+        [8, 9, 'error'],
+        [10, 11, 'error'],
+      ]);
+    });
   });
 
   test('requests them again after an edit, once the edit is synced', async () => {
@@ -348,6 +289,64 @@ describe('pullDiagnostics', () => {
 
     expect(fake.methods).toContain('textDocument/didOpen');
     expect(fake.requests).toEqual([]);
+  });
+
+  test('shows the diagnostics a server pushes, keeping the originals', async () => {
+    const fake = transport(false);
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    const view = open(instance);
+    await instance.start();
+    await instance.client.initializing;
+    const item = {
+      range: { start: { line: 0, character: 4 }, end: { line: 0, character: 7 } },
+      severity: 2,
+      message: 'unused `bad`',
+      source: 'toy',
+      code: 7,
+    };
+
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item] });
+
+    await vi.waitFor(() => expect(shown(view)).toEqual([[4, 7, 'warning']]));
+    expect(view.state.field(problems)).toEqual([{ item, from: 4, to: 7 }]);
+  });
+
+  test('syncs an edit for a server that pushes, without asking it', async () => {
+    const fake = transport(false);
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    const view = open(instance);
+    await instance.start();
+    await instance.client.initializing;
+
+    view.dispatch({ changes: { from: 0, insert: ' ' } });
+
+    await vi.waitFor(() => expect(fake.methods).toContain('textDocument/didChange'), { timeout: 2000 });
+    expect(fake.requests).toEqual([]);
+  });
+
+  test("maps the server's diagnostics through edits, keeping them as the server sent them", async () => {
+    const fake = transport();
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    const view = open(instance);
+    await instance.start();
+    await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
+    fake.requests[0].answer([[4, 7, 1]]);
+    await vi.waitFor(() => expect(shown(view)).toHaveLength(1));
+
+    view.dispatch({ changes: { from: 0, insert: '  ' } });
+
+    const [problem] = view.state.field(problems);
+    expect([problem.from, problem.to]).toEqual([6, 9]);
+    expect(problem.item.range).toEqual({ start: { line: 0, character: 4 }, end: { line: 0, character: 7 } });
   });
 });
 

@@ -4,16 +4,27 @@ import { DEFAULT_EDITOR_CONTEXT_MENU, type EditorContextMenu } from '@elsewise/p
 import { tags } from '@lezer/highlight';
 import type { ServerCapabilities } from 'vscode-languageserver-protocol';
 import { symbol } from '@/components/code-editor/symbol';
+import { SHOW_ACTIONS, showActions } from '@/language-servers/actions';
 import { JUMP_TO_DEFINITION, jumpToDefinition } from '@/language-servers/definition';
 import { findUsages, SHOW_USAGES } from '@/language-servers/references';
 import { RENAME, rename } from '@/language-servers/rename';
 
-const { clipboard, navigate, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
+const { actions, clipboard, navigate, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
 
 /**
  * The built-in groups and items in the editor's context menu.
  */
 export const DEFAULT_CONTEXT_MENU: EditorContextMenu = {
+  [actions.id]: [
+    {
+      type: 'item',
+      id: actions.items.show,
+      label: 'Show context actions',
+      shortcut: SHOW_ACTIONS,
+      command: showActions,
+      shown: (view) => supports(view, 'codeActionProvider'),
+    },
+  ],
   [clipboard.id]: [
     { type: 'item', id: clipboard.items.cut, label: 'Cut', shortcut: 'Mod-x', command: cut, shown: selected },
     { type: 'item', id: clipboard.items.copy, label: 'Copy', shortcut: 'Mod-c', command: copy, shown: selected },

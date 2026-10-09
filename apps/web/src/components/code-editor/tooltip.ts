@@ -13,3 +13,16 @@ export function hint(className: string, actions: [binding: string, label: string
   }
   return dom;
 }
+
+/**
+ * Appends text to an element, with the parts quoted in backticks as code.
+ */
+export function appendCode(parent: HTMLElement, text: string) {
+  for (const [i, part] of text.split(/`([^`]+)`/).entries()) {
+    if (i % 2 === 0) {
+      parent.append(part);
+    } else {
+      parent.appendChild(document.createElement('code')).textContent = part;
+    }
+  }
+}

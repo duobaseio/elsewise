@@ -1,13 +1,14 @@
-import { LSPClient, serverDiagnostics } from '@codemirror/lsp-client';
+import { LSPClient } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
+import { serverActions } from '@/language-servers/actions';
 import { serverCompletion } from '@/language-servers/completion';
 import { serverDefinition } from '@/language-servers/definition';
-import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
+import { pullAllDiagnostics, serverDiagnostics } from '@/language-servers/diagnostics';
 import { serverFormatting } from '@/language-servers/formatting';
 import { serverHighlights } from '@/language-servers/highlights';
 import { serverHover } from '@/language-servers/hover';
@@ -136,8 +137,8 @@ export class LanguageServerInstance {
         serverHighlights(),
         serverDefinition(),
         serverFormatting(),
+        serverActions(),
         serverDiagnostics(),
-        pullDiagnostics(),
       ],
       sanitizeHTML: (html) => DOMPurify.sanitize(html),
       notificationHandlers: {
