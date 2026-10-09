@@ -1,28 +1,22 @@
 import { forEachDiagnostic } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import type { Diagnostic } from 'vscode-languageserver-protocol';
+import type { Diagnostic, DocumentDiagnosticParams, InitializeParams } from 'vscode-languageserver-protocol';
 import { pullAllDiagnostics } from '@/language-servers/diagnostics';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
+import { type StubTransport, stubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.toy';
 
-interface FakeTransport extends LanguageServerTransport {
-  /** The methods of the messages sent to the server, in order. */
-  readonly sent: string[];
-  /** The client's capabilities, once it initializes. */
-  capabilities?: unknown;
+interface DiagnosticsTransport extends StubTransport {
   /** The diagnostic requests sent to the server, in order. */
   readonly requests: DiagnosticRequest[];
-  /** Closes the connection as a server that crashed would. */
-  crash(): void;
 }
 
 interface DiagnosticRequest {
-  readonly id: number;
   readonly uri: string;
   /** Answers with diagnostics on the first line, each from `[from, to)` with a severity and tags. */
   answer(items: [from: number, to: number, severity: number, tags?: number[]][]): void;
@@ -31,59 +25,31 @@ interface DiagnosticRequest {
 }
 
 // Returns a transport to a server that offers diagnostics, unless `diagnostics` is false.
-function transport(diagnostics = true): FakeTransport {
-  const messageListeners = new Set<(message: string) => void>();
-  const closeListeners = new Set<() => void>();
-  const reply = (id: number, result: unknown) => {
-    for (const listener of messageListeners) {
-      listener(JSON.stringify({ jsonrpc: '2.0', id, result }));
-    }
-  };
-  const fake: FakeTransport = {
-    sent: [],
-    requests: [],
-    send(message) {
-      const { id, method, params } = JSON.parse(message);
-      fake.sent.push(method);
-      if (method === 'initialize') {
-        fake.capabilities = params.capabilities;
-        reply(id, { capabilities: { textDocumentSync: 2, ...(diagnostics && { diagnosticProvider: {} }) } });
-      } else if (method === 'textDocument/diagnostic') {
-        fake.requests.push({
-          id,
-          uri: params.textDocument.uri,
-          answer: (items) =>
-            reply(id, {
-              kind: 'full',
-              items: items.map(([from, to, severity, tags]) => ({
-                range: { start: { line: 0, character: from }, end: { line: 0, character: to } },
-                severity,
-                tags,
-                message: `${from}-${to}`,
-              })),
-            }),
-          reply: (items) => reply(id, { kind: 'full', items }),
-        });
-      }
+function transport(diagnostics = true): DiagnosticsTransport {
+  const requests: DiagnosticRequest[] = [];
+  const stub = stubTransport(
+    { textDocumentSync: 2, ...(diagnostics && { diagnosticProvider: {} }) },
+    {
+      'textDocument/diagnostic': ({ textDocument }: DocumentDiagnosticParams) =>
+        new Promise((resolve) =>
+          requests.push({
+            uri: textDocument.uri,
+            answer: (items) =>
+              resolve({
+                kind: 'full',
+                items: items.map(([from, to, severity, tags]) => ({
+                  range: { start: { line: 0, character: from }, end: { line: 0, character: to } },
+                  severity,
+                  tags,
+                  message: `${from}-${to}`,
+                })),
+              }),
+            reply: (items) => resolve({ kind: 'full', items }),
+          }),
+        ),
     },
-    onMessage(listener) {
-      messageListeners.add(listener);
-      return () => messageListeners.delete(listener);
-    },
-    onClose(listener) {
-      closeListeners.add(listener);
-      return () => closeListeners.delete(listener);
-    },
-    close() {
-      fake.crash();
-    },
-    crash() {
-      for (const listener of closeListeners) {
-        listener();
-      }
-    },
-  };
-  return fake;
+  );
+  return Object.assign(stub, { requests });
 }
 
 // Returns a language server for the `Toy` language that `start` starts.
@@ -220,7 +186,7 @@ describe('pullDiagnostics', () => {
     await instance.start();
     await instance.client.initializing;
 
-    expect(fake.capabilities).toMatchObject({
+    expect((fake.sent[0].params as InitializeParams).capabilities).toMatchObject({
       textDocument: { diagnostic: { markupMessageSupport: true, codeDescriptionSupport: true } },
     });
   });
@@ -313,7 +279,7 @@ describe('pullDiagnostics', () => {
 
     await vi.waitFor(() => expect(fake.requests).toHaveLength(2));
 
-    expect(fake.sent.slice(-2)).toEqual(['textDocument/didChange', 'textDocument/diagnostic']);
+    expect(fake.methods.slice(-2)).toEqual(['textDocument/didChange', 'textDocument/diagnostic']);
   });
 
   test('maps the diagnostics across edits made while the request was in flight', async () => {
@@ -360,7 +326,7 @@ describe('pullDiagnostics', () => {
     view.dispatch({ changes: { from: 0, insert: 'x' } });
     await vi.waitFor(() => expect(fake.requests).toHaveLength(2));
 
-    expect(fake.sent).toContain('$/cancelRequest');
+    expect(fake.methods).toContain('$/cancelRequest');
 
     fake.requests[0].answer([[0, 1, 1]]);
     fake.requests[1].answer([[0, 2, 2]]);
@@ -380,7 +346,7 @@ describe('pullDiagnostics', () => {
     view.dispatch({ changes: { from: 0, insert: 'x' } });
     await new Promise((resolve) => setTimeout(resolve, 600));
 
-    expect(fake.sent).toContain('textDocument/didOpen');
+    expect(fake.methods).toContain('textDocument/didOpen');
     expect(fake.requests).toEqual([]);
   });
 });
@@ -410,7 +376,7 @@ describe('pullAllDiagnostics', () => {
 
 describe('LanguageServerInstance.start', () => {
   test('requests diagnostics for the open files once the server initializes, and again after it restarts', async () => {
-    const fakes: FakeTransport[] = [];
+    const fakes: DiagnosticsTransport[] = [];
     const instance = new LanguageServerInstance(
       server(() => fakes[fakes.push(transport()) - 1]),
       ROOT,

@@ -64,11 +64,11 @@ class Swatch extends WidgetType {
     super();
   }
 
-  eq(other: Swatch): boolean {
+  override eq(other: Swatch): boolean {
     return other.color === this.color;
   }
 
-  toDOM(view: EditorView): HTMLElement {
+  override toDOM(view: EditorView): HTMLElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'cm-color-swatch';
@@ -81,7 +81,7 @@ class Swatch extends WidgetType {
   }
 
   // Reuses the button to keep it from flickering while the user drags in the color picker.
-  updateDOM(dom: HTMLElement): boolean {
+  override updateDOM(dom: HTMLElement): boolean {
     dom.style.backgroundColor = this.color;
     return true;
   }

@@ -32,7 +32,7 @@ export class PluginLoader {
   /**
    * Creates a loader that provides `appearance` and `editor` to the plugins it enables.
    */
-  public constructor(
+  constructor(
     private readonly appearance: Appearance,
     private readonly editor: Editor,
   ) {}
@@ -40,7 +40,7 @@ export class PluginLoader {
   /**
    * Loads and enables the plugin with `id`.
    */
-  public load(id: string, url: string): Promise<void> {
+  load(id: string, url: string): Promise<void> {
     return this.enqueue(id, async (loaded) => {
       if (loaded) {
         return loaded;
@@ -64,6 +64,7 @@ export class PluginLoader {
       } catch (error) {
         console.error(`Plugin ${id} failed to load`, error);
         this.dispose(context);
+        return;
       }
     });
   }
@@ -73,7 +74,7 @@ export class PluginLoader {
    *
    * Waits for the plugin's pending load or unload first, and does nothing if it's then unloaded.
    */
-  public unload(id: string): Promise<void> {
+  unload(id: string): Promise<void> {
     return this.enqueue(id, async (loaded) => {
       if (loaded) {
         this.dispose(loaded);

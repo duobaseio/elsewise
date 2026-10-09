@@ -1,7 +1,7 @@
 import { autocompletion, startCompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView, showTooltip } from '@codemirror/view';
+import { Decoration, EditorView, showTooltip } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ReactNode, useEffect, useRef } from 'react';
@@ -19,6 +19,10 @@ const { EDITOR } = vi.hoisted(() => ({
     gutterBackground: '#203040',
     activeLine: '#708090',
     visualGuide: '#A0B0C0',
+    searchMatch: '#B0C0D0',
+    searchMatchSelected: '#C0D0E0',
+    searchMatchSelectedBorder: '#D0E0F0',
+    completionSelected: '#E0F0A0',
     tokens: {
       keyword: { color: '#A0B0C0', bold: true, strikethrough: true },
       comment: { color: '#D0E0F0', italic: true, underline: true },
@@ -151,4 +155,56 @@ test('signatures are parted by dividers, and wrap with a hanging indent', async 
   expect(style(second).borderTopWidth).toBe('1px');
   expect(Number.parseFloat(style(first).textIndent)).toBeLessThan(0);
   expect(style(dom).borderStyle).toBe('none');
+});
+
+test('a symbol being renamed, and its occurrences, take the search match colors', async () => {
+  const view = await mount('total + total', [
+    EditorView.decorations.of(
+      Decoration.set([
+        Decoration.mark({ class: 'cm-lsp-rename-field' }).range(0, 5),
+        Decoration.mark({ class: 'cm-lsp-rename-occurrence' }).range(8, 13),
+      ]),
+    ),
+  ]);
+  const field = style(view.dom.querySelector('.cm-lsp-rename-field'));
+
+  expect(field.backgroundColor).toBe(rgb(EDITOR.searchMatchSelected));
+  expect(field.outlineColor).toBe(rgb(EDITOR.searchMatchSelectedBorder));
+  expect(field.outlineWidth).toBe('1px');
+  expect(style(view.dom.querySelector('.cm-lsp-rename-occurrence')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
+});
+
+test("only the keys of the rename hint are muted, like completion's", async () => {
+  const hint = document.createElement('div');
+  hint.className = 'cm-lsp-rename-hint';
+  hint.innerHTML = '<kbd>↩</kbd> rename';
+  await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: hint }) })]);
+  const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
+
+  expect(style(hint.querySelector('kbd')).color).toBe(text3);
+  expect(style(hint).color).not.toBe(text3);
+  expect(style(hint).borderTopWidth).toBe('0px');
+});
+
+test('usages are listed like completions, with each usage taking the search match color', async () => {
+  const popup = document.createElement('div');
+  popup.className = 'cm-lsp-references';
+  const rows = Array.from(
+    { length: 12 },
+    (_, i) =>
+      `<li class="cm-lsp-reference"><span class="cm-lsp-reference-preview">let <mark class="cm-lsp-reference-match">total</mark> = ${i};</span><span class="cm-lsp-reference-location">main.rs<span class="cm-lsp-reference-line">${i + 1}</span></span></li>`,
+  );
+  popup.innerHTML = `<div class="cm-lsp-references-header">Usages of <code>total</code></div><ul class="cm-lsp-references-list">${rows.join('')}</ul><div class="cm-lsp-references-hint"><kbd>↩</kbd> open</div>`;
+  popup.querySelector('li')?.setAttribute('aria-selected', 'true');
+  await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: popup }) })]);
+  const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
+  const list = popup.querySelector('ul') as HTMLElement;
+
+  expect(style(popup.querySelector('[aria-selected]')).backgroundColor).toBe(rgb(EDITOR.completionSelected));
+  expect(style(popup.querySelector('mark')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
+  expect(style(popup.querySelector('.cm-lsp-reference-location')).color).toBe(text3);
+  expect(style(popup.querySelector('.cm-lsp-references-hint kbd')).color).toBe(text3);
+  expect(style(popup.querySelector('.cm-lsp-references-hint')).color).not.toBe(text3);
+  expect(list.clientHeight).toBe(10 * 22 + 8);
+  expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
 });

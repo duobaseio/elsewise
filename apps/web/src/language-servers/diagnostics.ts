@@ -75,11 +75,11 @@ class DiagnosticsPuller implements PluginValue {
   private timeout: ReturnType<typeof setTimeout> | undefined;
   private pending: DocumentDiagnosticParams | undefined;
 
-  public constructor(private readonly view: EditorView) {
+  constructor(private readonly view: EditorView) {
     void this.pull();
   }
 
-  public update(update: ViewUpdate): void {
+  update(update: ViewUpdate): void {
     if (update.docChanged) {
       clearTimeout(this.timeout);
       this.timeout = setTimeout(() => void this.pull(), DELAY);
@@ -89,7 +89,7 @@ class DiagnosticsPuller implements PluginValue {
   /**
    * Asks the server for the diagnostics, cancelling the previous request.
    */
-  public async pull(): Promise<void> {
+  async pull(): Promise<void> {
     const plugin = LSPPlugin.get(this.view);
     const file = plugin?.client.workspace.getFile(plugin.uri);
     if (!plugin?.client.serverCapabilities?.diagnosticProvider || file == null) {
@@ -185,7 +185,7 @@ class DiagnosticsPuller implements PluginValue {
     }
   }
 
-  public destroy(): void {
+  destroy(): void {
     clearTimeout(this.timeout);
     this.pending = undefined;
   }

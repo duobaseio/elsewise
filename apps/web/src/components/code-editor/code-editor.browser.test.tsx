@@ -12,6 +12,7 @@ import { CodeEditor } from '@/components/code-editor/code-editor';
 import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
 import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { settingsQuery } from '@/settings/settings';
+import { type StubTransport, stubTransport } from '../../../test/stub-transport';
 
 const { EDITOR } = vi.hoisted(() => ({
   EDITOR: {
@@ -106,33 +107,11 @@ function commentLanguage(extensions: string[]): LanguageDescription {
 }
 
 // Returns a language server for Rust files that only answers `initialize`, and the messages it was sent.
-function rustServer(): { server: LanguageServer; sent: { method?: string; params?: unknown }[] } {
-  const sent: { method?: string; params?: unknown }[] = [];
-  const listeners = new Set<(message: string) => void>();
+function rustServer(): { server: LanguageServer; sent: StubTransport['sent'] } {
+  const transport = stubTransport();
   return {
-    sent,
-    server: {
-      id: 'rust',
-      name: 'Rust',
-      languages: { Rust: 'rust' },
-      start: () => ({
-        send(message) {
-          const parsed = JSON.parse(message);
-          sent.push(parsed);
-          if (parsed.method === 'initialize') {
-            for (const listener of listeners) {
-              listener(JSON.stringify({ jsonrpc: '2.0', id: parsed.id, result: { capabilities: {} } }));
-            }
-          }
-        },
-        onMessage(listener) {
-          listeners.add(listener);
-          return () => listeners.delete(listener);
-        },
-        onClose: () => () => {},
-        close() {},
-      }),
-    },
+    sent: transport.sent,
+    server: { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => transport },
   };
 }
 

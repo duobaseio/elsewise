@@ -30,11 +30,11 @@ export class EditorAdditions implements Editor {
   /**
    * The added extensions.
    */
-  public get extensions(): readonly (Extension | ((document: EditorDocument) => Extension))[] {
+  get extensions(): readonly (Extension | ((document: EditorDocument) => Extension))[] {
     return this.currentExtensions;
   }
 
-  public addExtensions(extensions: readonly (Extension | ((document: EditorDocument) => Extension))[]): Disposable {
+  addExtensions(extensions: readonly (Extension | ((document: EditorDocument) => Extension))[]): Disposable {
     const added = [...extensions];
     this.addedExtensions = [...this.addedExtensions, added];
     this.currentExtensions = this.addedExtensions.flat();
@@ -49,11 +49,11 @@ export class EditorAdditions implements Editor {
   /**
    * The added languages, sorted by most recently added, then the built-in ones.
    */
-  public get languages(): readonly LanguageDescription[] {
+  get languages(): readonly LanguageDescription[] {
     return this.currentLanguages;
   }
 
-  public addLanguages(languages: readonly LanguageDescription[]): Disposable {
+  addLanguages(languages: readonly LanguageDescription[]): Disposable {
     const added = [...languages];
     this.addedLanguages = [added, ...this.addedLanguages];
     this.currentLanguages = this.addedLanguages.flat();
@@ -68,11 +68,11 @@ export class EditorAdditions implements Editor {
   /**
    * The added language servers, sorted by most recently added.
    */
-  public get languageServers(): readonly LanguageServer[] {
+  get languageServers(): readonly LanguageServer[] {
     return this.currentLanguageServers;
   }
 
-  public addLanguageServers(servers: readonly LanguageServer[]): Disposable {
+  addLanguageServers(servers: readonly LanguageServer[]): Disposable {
     const added = [...servers];
     this.addedLanguageServers = [added, ...this.addedLanguageServers];
     this.currentLanguageServers = this.addedLanguageServers.flat();
@@ -87,11 +87,11 @@ export class EditorAdditions implements Editor {
   /**
    * The built-in and the added context menu items, keyed by the id of the group that they are shown in.
    */
-  public get contextMenuItems(): EditorContextMenu {
+  get contextMenuItems(): EditorContextMenu {
     return this.currentContextMenuItems;
   }
 
-  public addContextMenuItems(items: EditorContextMenu): Disposable {
+  addContextMenuItems(items: EditorContextMenu): Disposable {
     const added = { ...items };
     const merged = this.merge([...this.addedContextMenuItems, added]);
     this.addedContextMenuItems = [...this.addedContextMenuItems, added];
@@ -147,7 +147,7 @@ export class EditorAdditions implements Editor {
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  public subscribe(listener: () => void): Disposable {
+  subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }

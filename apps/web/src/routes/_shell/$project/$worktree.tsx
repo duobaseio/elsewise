@@ -70,6 +70,7 @@ export function WorkTreeDock({
           capture: true,
         });
     }
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -83,6 +84,7 @@ export function WorkTreeDock({
         }
       };
     }
+    return undefined;
   }, [dockview]);
 
   const onReady = (event: DockviewReadyEvent) => {
@@ -138,23 +140,6 @@ export function WorkTreeDock({
     </div>
   );
 }
-
-// TODO: Remove once the squiggles are restyled. Each sample makes TypeScript's language server report a diagnostic.
-
-// Error: a type that doesn't match.
-export const errorSample: number = 'one';
-
-/**
- * @deprecated Hint: a use of a deprecated declaration, which TypeScript reports as a hint.
- */
-function deprecatedSample(): void {}
-export const hintSample = deprecatedSample();
-
-// Hint: a suggestion, which TypeScript also reports as a hint.
-export function suggestionSample(): Promise<Response> {
-  return fetch('/').then((response) => response);
-}
-
 
 /**
  * The + after the last tab of every content group.

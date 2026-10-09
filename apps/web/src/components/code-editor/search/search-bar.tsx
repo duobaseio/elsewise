@@ -9,8 +9,8 @@ import {
   search,
   setSearchQuery,
 } from '@codemirror/search';
-import { EditorSelection, type Extension, type SelectionRange, type StateEffect } from '@codemirror/state';
-import { EditorView, keymap, type Panel, runScopeHandlers } from '@codemirror/view';
+import { EditorSelection, type Extension } from '@codemirror/state';
+import { type EditorView, keymap, type Panel, runScopeHandlers } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
@@ -29,6 +29,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { scroll } from '@/components/code-editor/scroll';
 import {
   describe,
   replaceRow,
@@ -78,7 +79,7 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
     }
 
     return [
-      search({ top: true, createPanel, scrollToMatch }),
+      search({ top: true, createPanel, scrollToMatch: scroll }),
       replaceRow,
       keymap.of([
         {
@@ -145,7 +146,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
       const selection = EditorSelection.range(match.from, match.to);
       view.dispatch({
         selection,
-        effects: [setSearchQuery.of(next), scrollToMatch(selection, view)],
+        effects: [setSearchQuery.of(next), scroll(selection, view)],
         userEvent: 'select.search',
       });
     } else {
@@ -253,14 +254,6 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
       )}
     </search>
   );
-}
-
-function scrollToMatch(range: SelectionRange, view: EditorView): StateEffect<unknown> {
-  const bounds = view.scrollDOM.getBoundingClientRect();
-  const start = view.coordsAtPos(range.from);
-  const end = view.coordsAtPos(range.to);
-  const visible = start && end && start.top >= bounds.top && end.bottom <= bounds.bottom;
-  return EditorView.scrollIntoView(range, { y: visible ? 'nearest' : 'center' });
 }
 
 function Option({

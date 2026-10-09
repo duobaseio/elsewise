@@ -3,11 +3,19 @@ import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS } from '@elsewise/bridge';
+import { OS } from '@elsewise/components/lib/os';
 import type { LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import type {
+  CompletionItem,
+  CompletionParams,
+  HoverParams,
+  ReferenceParams,
+  SignatureHelpParams,
+} from 'vscode-languageserver-protocol';
 
 import { CodeEditor } from '@/components/code-editor/code-editor';
 import { toggleReplaceRow } from '@/components/code-editor/search/search-bar-query';
@@ -16,6 +24,7 @@ import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../sheet';
+import { stubTransport } from '../../stub-transport';
 
 const CODE = `/// Attaches to the session with \`id\`.
 pub async fn attach(&self, id: SessionId) -> Result<Channel> {
@@ -163,54 +172,55 @@ const ATTACH = {
   activeParameter: 1,
 };
 
+// The variable `channel` in `HOVERED`.
+const CHANNELS = [range('channel ='), range('channel.send_raw'), range('channel.send(')].map(({ start }) => ({
+  start,
+  end: { ...start, character: start.character + 'channel'.length },
+}));
+
 // A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, completions after a dot
-// from `MEMBERS`, else from `STATEMENTS`, and signatures in a method call from `SEND_TIMEOUT`, else from `ATTACH`.
+// from `MEMBERS`, else from `STATEMENTS`, signatures in a method call from `SEND_TIMEOUT`, else from `ATTACH`, and
+// renames and usages of `channel` from `CHANNELS`, with one more usage in a file that isn't open.
 const RUST: LanguageServer = {
   id: 'rust',
   name: 'Rust',
   languages: { Rust: 'rust' },
-  start: () => {
-    const listeners = new Set<(message: string) => void>();
-    const reply = (id: number, result: unknown) => {
-      for (const listener of listeners) {
-        listener(JSON.stringify({ jsonrpc: '2.0', id, result }));
-      }
-    };
-    return {
-      send(message) {
-        const { id, method, params } = JSON.parse(message);
-        if (method === 'initialize') {
-          reply(id, {
-            capabilities: {
-              textDocumentSync: 2,
-              hoverProvider: true,
-              diagnosticProvider: {},
-              completionProvider: { triggerCharacters: ['.'], resolveProvider: true },
-              signatureHelpProvider: { triggerCharacters: ['(', ','] },
-            },
-          });
-        } else if (method === 'textDocument/hover') {
-          const value = HOVERS[params.position.line];
-          reply(id, value === undefined ? null : { contents: { kind: 'markdown', value } });
-        } else if (method === 'textDocument/diagnostic') {
-          reply(id, { kind: 'full', items: DIAGNOSTICS });
-        } else if (method === 'textDocument/completion') {
-          reply(id, params.position.character > 8 ? MEMBERS : STATEMENTS);
-        } else if (method === 'textDocument/signatureHelp') {
-          reply(id, params.position.character > 20 ? SEND_TIMEOUT : ATTACH);
-        } else if (method === 'completionItem/resolve') {
-          const value = RESOLVED[params.label];
-          reply(id, value === undefined ? params : { ...params, documentation: { kind: 'markdown', value } });
-        }
+  start: () =>
+    stubTransport(
+      {
+        textDocumentSync: 2,
+        hoverProvider: true,
+        diagnosticProvider: {},
+        completionProvider: { triggerCharacters: ['.'], resolveProvider: true },
+        signatureHelpProvider: { triggerCharacters: ['(', ','] },
+        renameProvider: { prepareProvider: true },
+        documentHighlightProvider: true,
+        referencesProvider: true,
       },
-      onMessage(listener) {
-        listeners.add(listener);
-        return () => listeners.delete(listener);
+      {
+        'textDocument/hover': ({ position }: HoverParams) => {
+          const value = HOVERS[position.line];
+          return value === undefined ? null : { contents: { kind: 'markdown', value } };
+        },
+        'textDocument/diagnostic': () => ({ kind: 'full', items: DIAGNOSTICS }),
+        'textDocument/completion': ({ position }: CompletionParams) => (position.character > 8 ? MEMBERS : STATEMENTS),
+        'textDocument/signatureHelp': ({ position }: SignatureHelpParams) =>
+          position.character > 20 ? SEND_TIMEOUT : ATTACH,
+        'textDocument/prepareRename': () => CHANNELS[0],
+        'textDocument/documentHighlight': () => CHANNELS.map((range) => ({ range })),
+        'textDocument/references': ({ textDocument }: ReferenceParams) => [
+          ...CHANNELS.map((range) => ({ uri: textDocument.uri, range })),
+          {
+            uri: 'file:///worktree/src/session.rs',
+            range: { start: { line: 41, character: 8 }, end: { line: 41, character: 15 } },
+          },
+        ],
+        'completionItem/resolve': (item: CompletionItem) => {
+          const value = RESOLVED[item.label];
+          return value === undefined ? item : { ...item, documentation: { kind: 'markdown', value } };
+        },
       },
-      onClose: () => () => {},
-      close() {},
-    };
-  },
+    ),
 };
 
 // Mounts the editor, on `HOVERED` with a Rust language server if `hovered`.
@@ -403,5 +413,34 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
 
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-signature-help-overloads-${theme}`);
     });
+  });
+
+  test('rename', async () => {
+    const view = await mount(theme, true);
+    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+    view.focus();
+    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel =') + 2 } });
+    await userEvent.keyboard('{Shift>}{F6}{/Shift}');
+    const input = await vi.waitFor(() => {
+      const input = document.querySelector<HTMLInputElement>('.cm-lsp-rename-field input');
+      expect(document.activeElement).toBe(input);
+      return input as HTMLInputElement;
+    });
+    await userEvent.keyboard('stream');
+    // Hides the caret, which blinks.
+    input.style.caretColor = 'transparent';
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-rename-${theme}`);
+  });
+
+  test('references', async () => {
+    const view = await mount(theme, true);
+    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+    view.focus();
+    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
+    await userEvent.keyboard(OS === 'mac' ? '{Meta>}{Alt>}{F7}{/Alt}{/Meta}' : '{Control>}{Alt>}{F7}{/Alt}{/Control}');
+    await vi.waitFor(() => expect(document.querySelector('.cm-lsp-references')).not.toBeNull());
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-references-${theme}`);
   });
 });

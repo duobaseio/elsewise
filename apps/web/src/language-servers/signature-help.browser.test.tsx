@@ -3,11 +3,12 @@ import { HighlightStyle, LanguageDescription, type LanguageSupport, syntaxHighli
 import { languages } from '@codemirror/language-data';
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/plugin';
 import { tags as t } from '@lezer/highlight';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { SignatureHelp } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
+import { type StubTransport, stubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -22,31 +23,11 @@ const SEND = {
 };
 
 // Returns a transport to a server that answers every signature help request with `help`.
-function transport(help: SignatureHelp): LanguageServerTransport {
-  const listeners = new Set<(message: string) => void>();
-  const reply = (id: number, result: unknown) => {
-    for (const listener of listeners) {
-      listener(JSON.stringify({ jsonrpc: '2.0', id, result }));
-    }
-  };
-  return {
-    send(message) {
-      const { id, method } = JSON.parse(message);
-      if (method === 'initialize') {
-        reply(id, { capabilities: { textDocumentSync: 2, signatureHelpProvider: { triggerCharacters: ['(', ','] } } });
-      } else if (method === 'textDocument/signatureHelp') {
-        reply(id, help);
-      }
-    },
-    onMessage(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    onClose() {
-      return () => {};
-    },
-    close() {},
-  };
+function transport(help: SignatureHelp): StubTransport {
+  return stubTransport(
+    { textDocumentSync: 2, signatureHelpProvider: { triggerCharacters: ['(', ','] } },
+    { 'textDocument/signatureHelp': () => help },
+  );
 }
 
 let rust: LanguageSupport;

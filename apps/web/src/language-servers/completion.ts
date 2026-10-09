@@ -23,7 +23,7 @@ import {
   StateField,
   type Text,
 } from '@codemirror/state';
-import { type EditorView, keymap } from '@codemirror/view';
+import { type EditorView, keymap, ViewPlugin } from '@codemirror/view';
 import { letterformClass } from '@elsewise/components/components/letter-icon';
 import { cn } from '@elsewise/components/lib/utils';
 import { type Tag, tags as t } from '@lezer/highlight';
@@ -39,6 +39,7 @@ import {
   type TextEdit,
 } from 'vscode-languageserver-protocol';
 import { documentation } from '@/language-servers/documentation';
+import { hint } from '@/language-servers/hint';
 
 /**
  * The completion type of each kind of item.
@@ -158,7 +159,7 @@ export function serverCompletion(): LSPClientExtension {
       },
     },
     editorExtension: [
-      EditorState.languageData.of(() => [{ autocomplete: source }]),
+      EditorState.languageData.of(() => [{ autocomplete: serverCompletionSource }]),
       autocompletion({
         icons: false,
         addToOptions: [
@@ -168,6 +169,27 @@ export function serverCompletion(): LSPClientExtension {
         optionClass: (completion: ServerCompletion) => (completion.deprecated ? 'cm-completion-deprecated' : ''),
       }),
       replacing,
+      // Adds the hint below the list, once the tooltip is drawn.
+      ViewPlugin.define((view) => ({
+        update(update) {
+          if (completionStatus(update.state) !== 'active') {
+            return;
+          }
+          view.requestMeasure({
+            read: () => view.dom.querySelector('.cm-tooltip-autocomplete'),
+            write: (tooltip) => {
+              if (tooltip && !tooltip.querySelector(':scope > .cm-completion-hint')) {
+                tooltip.append(
+                  hint('cm-completion-hint', [
+                    ['Enter', 'insert'],
+                    ['Tab', 'replace'],
+                  ]),
+                );
+              }
+            },
+          });
+        },
+      })),
       Prec.highest(keymap.of([{ key: 'Tab', run: replace }])),
       EditorState.transactionFilter.of((tr) => {
         if (!tr.startState.field(replacing) || !tr.annotation(pickedCompletion)) {
@@ -193,7 +215,7 @@ export function serverCompletion(): LSPClientExtension {
 //
 // Keeps an item's kind, label details and deprecation, resolves its documentation when shown and its additional edits
 // when picked, and shows its detail above the documentation. Has no `validFor` option.
-async function source(context: CompletionContext): Promise<CompletionResult | null> {
+async function serverCompletionSource(context: CompletionContext): Promise<CompletionResult | null> {
   const plugin = context.view && LSPPlugin.get(context.view);
   const provider = plugin?.client.serverCapabilities?.completionProvider;
   if (!plugin || !provider) {
@@ -284,13 +306,13 @@ async function source(context: CompletionContext): Promise<CompletionResult | nu
     return option;
   });
 
-  const { from, to } = range(context, list);
+  const { from, to } = completionResultRange(context, list);
   return {
     from,
     to,
     options,
     commitCharacters: defaults?.commitCharacters,
-    validFor: list.isIncomplete ? undefined : prefix(list.items),
+    validFor: list.isIncomplete ? undefined : prefixRegexp(list.items),
   };
 }
 
@@ -339,7 +361,7 @@ function replace(view: EditorView): boolean {
 // Returns the offset of `position` in `doc`, or null if it is outside it.
 //
 // Copied from `@codemirror/lsp-client`'s `fromPositionChecked`.
-function offset(doc: Text, position: { line: number; character: number }): number | null {
+function fromPositionChecked(doc: Text, position: { line: number; character: number }): number | null {
   if (position.line < 0 || position.line >= doc.lines) {
     return null;
   }
@@ -352,7 +374,7 @@ function offset(doc: Text, position: { line: number; character: number }): numbe
 // Copied from `@codemirror/lsp-client`'s `completionResultRange`.
 //
 // Falls back to the word before the cursor instead of the whole word, since Tab replaces the rest.
-function range(context: CompletionContext, list: CompletionList): { from: number; to: number } {
+function completionResultRange(context: CompletionContext, list: CompletionList): { from: number; to: number } {
   if (list.items.length === 0) {
     return { from: context.pos, to: context.pos };
   }
@@ -380,7 +402,7 @@ function range(context: CompletionContext, list: CompletionList): { from: number
 // Returns the pattern of the text that keeps the items valid while typing: a word, after the items' symbol prefixes.
 //
 // Copied from `@codemirror/lsp-client`'s `prefixRegexp`.
-function prefix(items: CompletionItem[]): RegExp {
+function prefixRegexp(items: CompletionItem[]): RegExp {
   const step = Math.ceil(items.length / 50);
   const prefixes = new Set<string>();
   for (let i = 0; i < items.length; i += step) {
@@ -400,7 +422,7 @@ function prefix(items: CompletionItem[]): RegExp {
 
 // Returns an apply that inserts `text`, or a snippet of `template`, and makes the item's additional edits.
 //
-// Based on `@codemirror/lsp-client`'s `applyEdits`. The edits are in the document the server has. They are made with
+// Copied from `@codemirror/lsp-client`'s `applyEdits`. The edits are in the document the server has. They are made with
 // the text when known by then, so that they are undone together, else after it once the item is resolved.
 function apply(resolvable: Resolvable, text: string, template: string | null): Completion['apply'] {
   return (view, completion, from, to) => {
@@ -441,13 +463,13 @@ function apply(resolvable: Resolvable, text: string, template: string | null): C
 
 // Returns the changes that make `lsp` in `doc`, mapped through `changes` since, without those whose range changed.
 //
-// Based on `@codemirror/lsp-client`'s `applyEdits`, which also drops an edit that a change only borders, such as one
+// Copied from `@codemirror/lsp-client`'s `applyEdits`, which also drops an edit that a change only borders, such as one
 // at the start of the text the completion replaces.
 function edits(doc: Text, changes: ChangeDesc, lsp: TextEdit[]): ChangeSpec[] {
   const specs: ChangeSpec[] = [];
   for (const edit of lsp) {
-    const from = offset(doc, edit.range.start);
-    const to = offset(doc, edit.range.end);
+    const from = fromPositionChecked(doc, edit.range.start);
+    const to = fromPositionChecked(doc, edit.range.end);
     if (from === null || to === null) {
       continue;
     }

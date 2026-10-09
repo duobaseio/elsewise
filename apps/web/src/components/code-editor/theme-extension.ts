@@ -2,7 +2,6 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import type { Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { shortcut } from '@elsewise/components/lib/os';
 import type { ResolvedTheme, TextStyle } from '@elsewise/plugin';
 import { type Tag, tags as t } from '@lezer/highlight';
 import { useMemo } from 'react';
@@ -28,12 +27,15 @@ const CHROME = {
   visualGuide: ['.cm-visual-guide', 'borderLeftColor'],
   bracketMatch: ['&.cm-focused .cm-matchingBracket', 'backgroundColor'],
   bracketMismatch: ['&.cm-focused .cm-nonmatchingBracket', 'color'],
-  searchMatch: ['.cm-searchMatch', 'backgroundColor'],
-  searchMatchSelected: ['.cm-searchMatch-selected', 'backgroundColor'],
-  searchMatchSelectedBorder: ['.cm-searchMatch-selected', 'outlineColor'],
+  searchMatch: ['.cm-searchMatch, .cm-lsp-rename-occurrence, .cm-lsp-reference-match', 'backgroundColor'],
+  searchMatchSelected: ['.cm-searchMatch-selected, .cm-lsp-rename-field', 'backgroundColor'],
+  searchMatchSelectedBorder: ['.cm-searchMatch-selected, .cm-lsp-rename-field', 'outlineColor'],
   panelBackground: ['.cm-panels', 'backgroundColor'],
   tooltipBackground: ['.cm-tooltip', 'backgroundColor'],
-  completionSelected: ['.cm-tooltip-autocomplete ul li[aria-selected]', 'backgroundColor'],
+  completionSelected: [
+    '.cm-tooltip-autocomplete ul li[aria-selected], .cm-lsp-reference[aria-selected]',
+    'backgroundColor',
+  ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
   Exclude<keyof ResolvedTheme['editor'], 'tokens' | Diagnostic['severity']>,
@@ -106,7 +108,7 @@ const METRICS = EditorView.theme({
 
   '.cm-panels': { backgroundColor: 'transparent', color: 'inherit', zIndex: 'auto' },
   '.cm-panels-top': { borderBottom: 'none' },
-  '.cm-searchMatch-selected': { outline: '1px solid transparent', outlineOffset: '0' },
+  '.cm-searchMatch-selected, .cm-lsp-rename-field': { outline: '1px solid transparent', outlineOffset: '0' },
 
   '.cm-content': { paddingBottom: '8rem' },
 
@@ -149,7 +151,7 @@ const METRICS = EditorView.theme({
   '.cm-lintRange.cm-lintRange-deprecated': { backgroundImage: 'none', textDecoration: 'line-through' },
   '.cm-lintRange.cm-lintRange-unnecessary': { backgroundImage: 'none' },
 
-  '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo, .cm-tooltip.cm-lsp-signatures':
+  '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo, .cm-tooltip.cm-lsp-signatures, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-tooltip.cm-lsp-references, .cm-tooltip.cm-lsp-references-message':
     {
       border: 'none',
       borderRadius: 'var(--radius)',
@@ -166,7 +168,6 @@ const METRICS = EditorView.theme({
     overflowY: 'auto',
   },
   '.cm-tooltip.cm-tooltip-hover': { maxWidth: '500px' },
-
   '.cm-tooltip-hover .cm-tooltip-section:not(:first-child)': { borderTop: '1px solid var(--border)' },
   '.cm-tooltip-hover .cm-diagnostic': { margin: '0', padding: '8px 12px', borderLeft: 'none' },
   '.cm-tooltip-hover .cm-diagnostic + .cm-diagnostic': { borderTop: '1px solid var(--border)' },
@@ -179,9 +180,14 @@ const METRICS = EditorView.theme({
     whiteSpace: 'normal',
   },
   '.cm-tooltip-hover .cm-diagnosticMeta a': { color: 'inherit' },
-
-  // CodeMirror splits a selector at every comma, so these can't use `:is()`.
-  '.cm-lsp-definition': { padding: '8px 12px' },
+  '.cm-tooltip-hover code, .cm-completionInfo code': {
+    padding: '1px 4px',
+    borderRadius: '4px',
+    backgroundColor: 'var(--layer-selected)',
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+  },
   '.cm-tooltip-hover pre, .cm-completionInfo pre': {
     margin: '0',
     fontFamily: 'var(--font-mono)',
@@ -191,8 +197,20 @@ const METRICS = EditorView.theme({
     whiteSpace: 'pre-wrap',
     overflowWrap: 'anywhere',
   },
+  '.cm-tooltip-hover pre code, .cm-completionInfo pre code': { padding: '0', backgroundColor: 'transparent' },
+  '.cm-tooltip-hover a, .cm-completionInfo a': { color: 'var(--link)', textDecoration: 'underline' },
+  '.cm-tooltip-hover a:hover, .cm-completionInfo a:hover': { color: 'var(--link-hover)' },
+  '.cm-tooltip-hover a[href^="http"]::after, .cm-completionInfo a[href^="http"]::after': {
+    content: '""',
+    display: 'inline-block',
+    width: '0.85em',
+    height: '0.85em',
+    marginLeft: '2px',
+    backgroundColor: 'currentColor',
+    mask: 'var(--external-link) center / contain no-repeat',
+  },
+
   '.cm-lsp-content': { padding: '8px 12px', overflowWrap: 'anywhere' },
-  '.cm-lsp-definition + .cm-lsp-content': { borderTop: '1px solid var(--border)' },
   '.cm-lsp-content > *, .cm-lsp-content li > ul, .cm-lsp-content li > ol': { margin: '0' },
   '.cm-lsp-content > * + *': { marginTop: '8px' },
   '.cm-lsp-content h1, .cm-lsp-content h2, .cm-lsp-content h3, .cm-lsp-content h4, .cm-lsp-content h5, .cm-lsp-content h6':
@@ -212,26 +230,10 @@ const METRICS = EditorView.theme({
     borderRadius: 'calc(var(--radius) * 0.8)',
     backgroundColor: 'var(--layer-selected)',
   },
-  '.cm-tooltip-hover code, .cm-completionInfo code': {
-    padding: '1px 4px',
-    borderRadius: '4px',
-    backgroundColor: 'var(--layer-selected)',
-    fontFamily: 'var(--font-mono)',
-    fontVariantLigatures: 'var(--font-mono-ligatures)',
-    fontSize: 'var(--text-code)',
-  },
-  '.cm-tooltip-hover pre code, .cm-completionInfo pre code': { padding: '0', backgroundColor: 'transparent' },
-  '.cm-tooltip-hover a, .cm-completionInfo a': { color: 'var(--link)', textDecoration: 'underline' },
-  '.cm-tooltip-hover a:hover, .cm-completionInfo a:hover': { color: 'var(--link-hover)' },
-  '.cm-tooltip-hover a[href^="http"]::after, .cm-completionInfo a[href^="http"]::after': {
-    content: '""',
-    display: 'inline-block',
-    width: '0.85em',
-    height: '0.85em',
-    marginLeft: '2px',
-    backgroundColor: 'currentColor',
-    mask: 'var(--external-link) center / contain no-repeat',
-  },
+
+  // CodeMirror splits a selector at every comma, so these can't use `:is()`.
+  '.cm-lsp-definition': { padding: '8px 12px' },
+  '.cm-lsp-definition + .cm-lsp-content': { borderTop: '1px solid var(--border)' },
 
   '.cm-tooltip.cm-tooltip-autocomplete > ul': {
     padding: '4px',
@@ -250,7 +252,9 @@ const METRICS = EditorView.theme({
     padding: '0 8px 0 6px',
     borderRadius: 'calc(var(--radius) - 2px)',
   },
+  // The list is replaced whenever the options change, so the hint is put after it by `order`.
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': { color: 'inherit' },
+  '.cm-tooltip.cm-tooltip-autocomplete': { display: 'flex', flexDirection: 'column' },
   '.cm-completionKind': { flex: 'none', width: '16px', marginRight: '6px' },
   // A row that doesn't fit cuts the text after its label first, then the label. The detail is cut at 40% of the row.
   '.cm-completionLabel, .cm-completionTail, .cm-completionDetail': {
@@ -259,7 +263,6 @@ const METRICS = EditorView.theme({
     textOverflow: 'ellipsis',
   },
   '.cm-completionLabel': { flex: '0 1 auto' },
-  // `pre` keeps the space servers put before an import's path.
   '.cm-completionTail': { flex: '0 10000 auto', whiteSpace: 'pre', color: 'var(--text-3)' },
   '.cm-completionDetail': {
     flex: 'none',
@@ -269,7 +272,6 @@ const METRICS = EditorView.theme({
     color: 'var(--text-3)',
     fontStyle: 'normal',
   },
-
   '.cm-completionMatchedText': { textDecoration: 'none', color: 'var(--link)', fontWeight: '600' },
   '.cm-completion-deprecated .cm-completionLabel': { color: 'var(--text-3)' },
   '.cm-completion-deprecated .cm-completionLabel, .cm-completion-deprecated .cm-completionTail': {
@@ -277,16 +279,62 @@ const METRICS = EditorView.theme({
   },
   '.cm-completion-deprecated .cm-completionMatchedText': { color: 'inherit', fontWeight: 'inherit' },
   '.cm-completionListIncompleteTop:before, .cm-completionListIncompleteBottom:after': { color: 'var(--text-3)' },
-  '.cm-tooltip-autocomplete::after': {
-    content: JSON.stringify(`${shortcut('Enter')} insert · ${shortcut('Tab')} replace`),
-    display: 'block',
-    padding: '4px 10px',
-    borderTop: '1px solid var(--border)',
+  '.cm-completion-hint': { order: '1', borderTop: '1px solid var(--border)' },
+  '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-header, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message':
+    {
+      padding: '4px 10px',
+      fontFamily: 'var(--font-sans)',
+      fontSize: 'var(--text-sm)',
+      lineHeight: 'var(--text-sm--line-height)',
+    },
+  '.cm-completion-hint kbd, .cm-lsp-rename-hint kbd, .cm-lsp-references-hint kbd': {
+    fontFamily: 'inherit',
     color: 'var(--text-3)',
-    fontFamily: 'var(--font-sans)',
-    fontSize: 'var(--text-sm)',
-    lineHeight: 'var(--text-sm--line-height)',
   },
+
+  '.cm-tooltip.cm-lsp-references': {
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: '360px',
+    maxWidth: '600px',
+  },
+  '.cm-lsp-references-header': { display: 'flex', gap: '8px', borderBottom: '1px solid var(--border)' },
+  '.cm-lsp-references-header code': {
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+  },
+  '.cm-lsp-references-count': { marginLeft: 'auto', color: 'var(--text-3)' },
+  // Positioned, so a row's `offsetTop` is relative to the list.
+  '.cm-lsp-references-list': {
+    position: 'relative',
+    margin: '0',
+    padding: '4px',
+    maxHeight: 'calc(10 * 22px + 8px)',
+    overflowY: 'auto',
+    listStyle: 'none',
+    fontFamily: 'var(--font-mono)',
+    fontVariantLigatures: 'var(--font-mono-ligatures)',
+    fontSize: 'var(--text-code)',
+    lineHeight: 'var(--text-code--line-height)',
+  },
+  '.cm-lsp-reference': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    height: '22px',
+    padding: '0 8px 0 6px',
+    borderRadius: 'calc(var(--radius) - 2px)',
+    whiteSpace: 'pre',
+    cursor: 'pointer',
+  },
+  '.cm-lsp-reference-preview': { flex: '0 1 auto', minWidth: '0', overflow: 'hidden', textOverflow: 'ellipsis' },
+  '.cm-lsp-reference-match': { color: 'inherit', borderRadius: '2px' },
+  '.cm-lsp-reference-location': { flex: 'none', marginLeft: 'auto', paddingLeft: '24px', color: 'var(--text-3)' },
+  '.cm-lsp-reference-line': { display: 'inline-block', minWidth: '2ch', marginLeft: '6px', textAlign: 'right' },
+  '.cm-lsp-reference-elsewhere': { color: 'var(--text-3)', cursor: 'default' },
+  '.cm-lsp-references-hint': { borderTop: '1px solid var(--border)' },
+
   '.cm-tooltip.cm-completionInfo': { width: '360px', padding: '0', whiteSpace: 'normal' },
   '.cm-completionInfo.cm-completionInfo-right': { marginLeft: '4px' },
   '.cm-completionInfo.cm-completionInfo-left': { marginRight: '4px' },
@@ -315,6 +363,20 @@ const METRICS = EditorView.theme({
   // 600, against DESIGN.md, since JetBrains Mono at 500 barely differs from 400.
   '.cm-lsp-active-parameter': { fontWeight: '600' },
   '.cm-lsp-signature-inapplicable, .cm-lsp-signature-inapplicable *': { color: 'var(--text-3)' },
+
+  '.cm-lsp-rename-field': { display: 'inline-block', verticalAlign: 'top' },
+  '.cm-lsp-rename-field input': {
+    display: 'block',
+    minWidth: '1ch',
+    margin: '0',
+    padding: '0',
+    border: 'none',
+    outline: 'none',
+    background: 'transparent',
+    font: 'inherit',
+    fontVariantLigatures: 'inherit',
+    fieldSizing: 'content',
+  },
 });
 
 /**

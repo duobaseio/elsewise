@@ -7,57 +7,25 @@ import {
 import { languages } from '@codemirror/language-data';
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
+import { type StubTransport, stubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.rs';
 const DOC = 'let channel = attach(1);';
 
-interface FakeTransport extends LanguageServerTransport {
-  /** The methods of the messages sent to the server, in order. */
-  readonly sent: string[];
-}
-
 // Returns a transport to a server that answers every hover with `hover`, and offers no hovers if it is undefined.
-function transport(hover: Hover | null | undefined, diagnostics: Diagnostic[] = []): FakeTransport {
-  const listeners = new Set<(message: string) => void>();
-  const reply = (id: number, result: unknown) => {
-    for (const listener of listeners) {
-      listener(JSON.stringify({ jsonrpc: '2.0', id, result }));
-    }
-  };
-  const fake: FakeTransport = {
-    sent: [],
-    send(message) {
-      const { id, method } = JSON.parse(message);
-      fake.sent.push(method);
-      if (method === 'initialize') {
-        reply(id, {
-          capabilities: {
-            textDocumentSync: 2,
-            diagnosticProvider: {},
-            ...(hover !== undefined && { hoverProvider: true }),
-          },
-        });
-      } else if (method === 'textDocument/hover') {
-        reply(id, hover);
-      } else if (method === 'textDocument/diagnostic') {
-        reply(id, { kind: 'full', items: diagnostics });
-      }
+function transport(hover: Hover | null | undefined, diagnostics: Diagnostic[] = []): StubTransport {
+  return stubTransport(
+    { textDocumentSync: 2, diagnosticProvider: {}, ...(hover !== undefined && { hoverProvider: true }) },
+    {
+      'textDocument/hover': () => hover,
+      'textDocument/diagnostic': () => ({ kind: 'full', items: diagnostics }),
     },
-    onMessage(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    onClose() {
-      return () => {};
-    },
-    close() {},
-  };
-  return fake;
+  );
 }
 
 let rust: LanguageSupport;
@@ -75,7 +43,7 @@ afterEach(() => {
 });
 
 // Opens a Rust file on a running server behind `fake`.
-async function open(fake: FakeTransport): Promise<EditorView> {
+async function open(fake: StubTransport): Promise<EditorView> {
   const server: LanguageServer = { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => fake };
   const instance = new LanguageServerInstance(server, ROOT);
   await instance.start();
@@ -209,7 +177,7 @@ describe('serverHover', () => {
     const view = await open(fake);
 
     point(view, DOC.indexOf('attach') + 1);
-    await vi.waitFor(() => expect(fake.sent).toContain('textDocument/hover'), { timeout: 2000 });
+    await vi.waitFor(() => expect(fake.methods).toContain('textDocument/hover'), { timeout: 2000 });
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
@@ -222,7 +190,7 @@ describe('serverHover', () => {
     point(view, DOC.indexOf('attach') + 1);
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    expect(fake.sent).not.toContain('textDocument/hover');
+    expect(fake.methods).not.toContain('textDocument/hover');
   });
 
   test('shows the problems at the pointer above the documentation', async () => {

@@ -1,19 +1,15 @@
-import {
-  findReferencesKeymap,
-  formatKeymap,
-  jumpToDefinitionKeymap,
-  LSPClient,
-  renameKeymap,
-  serverDiagnostics,
-} from '@codemirror/lsp-client';
+import { formatKeymap, LSPClient, serverDiagnostics } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { serverCompletion } from '@/language-servers/completion';
+import { serverDefinition } from '@/language-servers/definition';
 import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
 import { serverHover } from '@/language-servers/hover';
+import { serverReferences } from '@/language-servers/references';
+import { serverRename } from '@/language-servers/rename';
 import { serverSignatureHelp } from '@/language-servers/signature-help';
 import { EditorAdditions } from '@/plugins/editor';
 
@@ -24,7 +20,7 @@ export class LanguageServers {
   private readonly instances = new Map<LanguageServer, Map<string, LanguageServerInstance>>();
   private readonly unsubscribe: Disposable;
 
-  public constructor(private readonly additions: EditorAdditions) {
+  constructor(private readonly additions: EditorAdditions) {
     this.unsubscribe = additions.subscribe(() => {
       for (const [server, roots] of this.instances) {
         if (!additions.languageServers.includes(server)) {
@@ -42,7 +38,7 @@ export class LanguageServers {
    *
    * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
    */
-  public find(language: string): LanguageServer | undefined {
+  find(language: string): LanguageServer | undefined {
     return this.additions.languageServers.find((server) => Object.hasOwn(server.languages, language));
   }
 
@@ -51,7 +47,7 @@ export class LanguageServers {
    *
    * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
    */
-  public connect(root: URL, language: string, uri: URL): Extension | undefined {
+  connect(root: URL, language: string, uri: URL): Extension | undefined {
     const server = this.find(language);
     if (server === undefined) {
       return undefined;
@@ -71,7 +67,7 @@ export class LanguageServers {
 
     void instance.start();
 
-    return instance.client.plugin(uri.href, server.languages[language]);
+    return instance.client.plugin(serverUri(uri), server.languages[language]);
   }
 
   /**
@@ -79,14 +75,14 @@ export class LanguageServers {
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  public subscribe(listener: () => void): Disposable {
+  subscribe(listener: () => void): Disposable {
     return this.additions.subscribe(listener);
   }
 
   /**
    * Stops every server.
    */
-  public dispose(): void {
+  dispose(): void {
     this.unsubscribe();
     for (const roots of this.instances.values()) {
       for (const instance of roots.values()) {
@@ -104,7 +100,7 @@ export class LanguageServerInstance {
   /**
    * The server's client, which stays the same when the server is restarted.
    */
-  public readonly client: LSPClient;
+  readonly client: LSPClient;
   private transport: LanguageServerTransport | undefined;
   private starting = false;
   private stopped = false;
@@ -112,19 +108,22 @@ export class LanguageServerInstance {
   /**
    * Creates `server` at `root`, without starting it.
    */
-  public constructor(
+  constructor(
     private readonly server: LanguageServer,
     private readonly root: URL,
   ) {
     this.client = new LSPClient({
-      rootUri: root.href,
+      rootUri: serverUri(root),
       initializationOptions: server.initializationOptions,
       // TODO: We might need to rip out more of these.
       extensions: [
         serverCompletion(),
         serverHover(),
-        keymap.of([...formatKeymap, ...renameKeymap, ...jumpToDefinitionKeymap, ...findReferencesKeymap]),
+        keymap.of(formatKeymap),
         serverSignatureHelp(),
+        serverRename(),
+        serverReferences(),
+        serverDefinition(),
         serverDiagnostics(),
         pullDiagnostics(),
       ],
@@ -135,7 +134,7 @@ export class LanguageServerInstance {
   /**
    * Starts the server, unless it is running, already starting or was stopped.
    */
-  public async start(): Promise<void> {
+  async start(): Promise<void> {
     if (this.transport !== undefined || this.starting || this.stopped) {
       return;
     }
@@ -181,12 +180,27 @@ export class LanguageServerInstance {
   /**
    * Stops the server.
    */
-  public stop(): void {
+  stop(): void {
     this.stopped = true;
     this.transport?.close();
     this.transport = undefined;
     this.client.disconnect();
   }
+}
+
+/**
+ * Returns the `file:` URL `url` as language servers write it, so the URIs they send back match the ones they were sent.
+ *
+ * Follows `vscode-uri`, which most servers write URIs with: every character but letters, digits, `-._~` and `/` is
+ * percent-encoded, and a Windows drive letter is lowercased. TypeScript's server, for one, writes `$` as `%24`.
+ */
+export function serverUri(url: URL): string {
+  const path = decodeURIComponent(url.pathname)
+    .replace(/^\/([A-Za-z]):/, (_, drive: string) => `/${drive.toLowerCase()}:`)
+    .replace(/[^A-Za-z0-9\-._~/]/gu, (character) =>
+      encodeURIComponent(character).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`),
+    );
+  return `${url.protocol}//${url.host}${path}`;
 }
 
 /**

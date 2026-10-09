@@ -4,12 +4,18 @@ import { HighlightStyle, LanguageDescription, type LanguageSupport, syntaxHighli
 import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap, runScopeHandlers } from '@codemirror/view';
-import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/plugin';
 import { tags as t } from '@lezer/highlight';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
-import { type CompletionItem, CompletionItemKind, CompletionItemTag } from 'vscode-languageserver-protocol';
+import {
+  type CompletionItem,
+  CompletionItemKind,
+  CompletionItemTag,
+  type InitializeParams,
+} from 'vscode-languageserver-protocol';
 import { completionDocumentation } from '@/language-servers/completion';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
+import { type StubTransport, stubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -20,50 +26,15 @@ const HIGHLIGHT = HighlightStyle.define([
 ]);
 const URI = 'file:///worktree/main.rs';
 
-interface FakeTransport extends LanguageServerTransport {
-  /** The methods of the messages sent to the server, in order. */
-  readonly sent: string[];
-  /** The capabilities the client initialized with. */
-  capabilities?: { textDocument?: { completion?: unknown } };
-}
-
 // Returns a transport to a server that completes with `items`, and resolves an item to its `resolved` counterpart.
-function transport(items: CompletionItem[], resolved: Record<string, Partial<CompletionItem>> = {}): FakeTransport {
-  const listeners = new Set<(message: string) => void>();
-  const reply = (id: number, result: unknown) => {
-    for (const listener of listeners) {
-      listener(JSON.stringify({ jsonrpc: '2.0', id, result }));
-    }
-  };
-  const fake: FakeTransport = {
-    sent: [],
-    send(message) {
-      const { id, method, params } = JSON.parse(message);
-      fake.sent.push(method);
-      if (method === 'initialize') {
-        fake.capabilities = params.capabilities;
-        reply(id, {
-          capabilities: {
-            textDocumentSync: 2,
-            completionProvider: { triggerCharacters: ['.'], resolveProvider: true },
-          },
-        });
-      } else if (method === 'textDocument/completion') {
-        reply(id, items);
-      } else if (method === 'completionItem/resolve') {
-        reply(id, { ...params, ...resolved[params.label] });
-      }
+function transport(items: CompletionItem[], resolved: Record<string, Partial<CompletionItem>> = {}): StubTransport {
+  return stubTransport(
+    { textDocumentSync: 2, completionProvider: { triggerCharacters: ['.'], resolveProvider: true } },
+    {
+      'textDocument/completion': () => items,
+      'completionItem/resolve': (item: CompletionItem) => ({ ...item, ...resolved[item.label] }),
     },
-    onMessage(listener) {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-    onClose() {
-      return () => {};
-    },
-    close() {},
-  };
-  return fake;
+  );
 }
 
 let rust: LanguageSupport;
@@ -81,7 +52,7 @@ afterEach(() => {
 });
 
 // Opens `doc` on a running server behind `fake`, with the cursor at its `|`, and `extensions` after the rest.
-async function open(fake: FakeTransport, doc: string, extensions: Extension[] = []): Promise<EditorView> {
+async function open(fake: StubTransport, doc: string, extensions: Extension[] = []): Promise<EditorView> {
   const server: LanguageServer = { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => fake };
   const instance = new LanguageServerInstance(server, ROOT);
   await instance.start();
@@ -133,7 +104,7 @@ describe('serverCompletion', () => {
     const fake = transport([]);
     await open(fake, '|');
 
-    expect(fake.capabilities?.textDocument?.completion).toMatchObject({
+    expect((fake.sent[0].params as InitializeParams).capabilities.textDocument?.completion).toMatchObject({
       completionItem: {
         snippetSupport: true,
         deprecatedSupport: true,
@@ -320,7 +291,7 @@ describe('serverCompletion', () => {
     press(view, 'Enter');
 
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('sequence\nuse seq::sequence;\n'));
-    expect(fake.sent).toContain('completionItem/resolve');
+    expect(fake.methods).toContain('completionItem/resolve');
   });
 
   test('inserts with Enter and replaces the rest of the word with Tab', async () => {
@@ -362,7 +333,7 @@ describe('serverCompletion', () => {
     );
     expect(info.querySelector('.cm-lsp-definition pre')?.textContent).toBe('pub fn send(&self)');
     expect(info.querySelector('.cm-lsp-content code')?.textContent).toBe('bytes');
-    expect(fake.sent.filter((method) => method === 'completionItem/resolve')).toHaveLength(1);
+    expect(fake.methods.filter((method) => method === 'completionItem/resolve')).toHaveLength(1);
   });
 
   test('shows no documentation for an item without any', async () => {
@@ -370,7 +341,7 @@ describe('serverCompletion', () => {
     const view = await open(fake, 'channel.se|');
 
     await complete(view);
-    await vi.waitFor(() => expect(fake.sent).toContain('completionItem/resolve'));
+    await vi.waitFor(() => expect(fake.methods).toContain('completionItem/resolve'));
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(view.dom.querySelector('.cm-completionInfo')).toBeNull();
@@ -386,6 +357,6 @@ describe('serverCompletion', () => {
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     expect(view.dom.querySelector('.cm-completionInfo')).toBeNull();
-    expect(fake.sent).not.toContain('completionItem/resolve');
+    expect(fake.methods).not.toContain('completionItem/resolve');
   });
 });

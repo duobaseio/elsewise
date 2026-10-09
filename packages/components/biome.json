@@ -30,6 +30,7 @@
       "preset": "recommended",
       "style": {
         "useBlockStatements": "error",
+        "useConsistentMemberAccessibility": { "level": "error", "options": { "accessibility": "noPublic" } },
         "noRestrictedImports": {
           "level": "error",
           "options": {

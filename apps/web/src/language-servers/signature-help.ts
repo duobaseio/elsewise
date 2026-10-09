@@ -18,8 +18,6 @@ interface Signatures {
   tooltip: Tooltip;
 }
 
-const setSignatures = StateEffect.define<{ data: SignatureHelp; pos: number } | null>();
-
 // Copied from `@codemirror/lsp-client`'s `signatureState`.
 //
 // Has no active signature, since every signature is shown.
@@ -45,6 +43,8 @@ const signatures = StateField.define<Signatures | null>({
   provide: (field) => showTooltip.from(field, (value) => value?.tooltip ?? null),
 });
 
+const setSignatures = StateEffect.define<{ data: SignatureHelp; pos: number } | null>();
+
 /**
  * Returns the extension that shows the signatures of the call at the cursor, with the parameter the cursor is in.
  *
@@ -55,10 +55,20 @@ export function serverSignatureHelp(): Extension {
     signatures,
     requests,
     Prec.high(
-        keymap.of([
-          { key: 'Mod-Shift-Space', run: show },
-          { key: 'Escape', run: close },
-        ]),
+      keymap.of([
+        { key: 'Mod-Shift-Space', run: showSignatureHelp },
+        {
+          key: 'Escape',
+          run: (view) => {
+            if (!view.state.field(signatures)) {
+              return false;
+            }
+
+            view.dispatch({ effects: setSignatures.of(null) });
+            return true;
+          },
+        },
+      ]),
     ),
   ];
 }
@@ -153,7 +163,9 @@ const requests = ViewPlugin.fromClass(
             if (same && sameActive(shown.data, result)) {
               return;
             }
-            view.dispatch({ effects: setSignatures.of({ data: result, pos: same ? shown.tooltip.pos : request.pos }) });
+            view.dispatch({
+              effects: setSignatures.of({ data: result, pos: same ? shown.tooltip.pos : request.pos }),
+            });
           } else if (shown) {
             view.dispatch({ effects: setSignatures.of(null) });
           }
@@ -176,7 +188,7 @@ const requests = ViewPlugin.fromClass(
 // Copied from `@codemirror/lsp-client`'s `showSignatureHelp`.
 //
 // Doesn't add the extension when missing.
-function show(view: EditorView): boolean {
+function showSignatureHelp(view: EditorView): boolean {
   const requester = view.plugin(requests);
   const plugin = LSPPlugin.get(view);
   if (!requester || !plugin) {
@@ -189,15 +201,6 @@ function show(view: EditorView): boolean {
     activeSignatureHelp: shown?.data,
     isRetrigger: !!shown,
   });
-  return true;
-}
-
-function close(view: EditorView): boolean {
-  if (!view.state.field(signatures)) {
-    return false;
-  }
-
-  view.dispatch({ effects: setSignatures.of(null) });
   return true;
 }
 

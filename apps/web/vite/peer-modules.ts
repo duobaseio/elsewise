@@ -46,9 +46,7 @@ function build(specifiers: readonly string[]): Plugin {
 
     // Claims the facades emitted in `buildStart`, which would otherwise be resolved as files.
     resolveId(id) {
-      if (id.startsWith(prefix)) {
-        return id;
-      }
+      return id.startsWith(prefix) ? id : null;
     },
 
     async load(id) {
@@ -137,9 +135,7 @@ function serve(specifiers: readonly string[]): Plugin {
 
     // Dev server replaces `base` from the import map's URLs with `/`.
     resolveId(id) {
-      if (id.startsWith(`/${devPath}`)) {
-        return id;
-      }
+      return id.startsWith(`/${devPath}`) ? id : null;
     },
 
     async load(id) {
