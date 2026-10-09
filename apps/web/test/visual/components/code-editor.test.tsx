@@ -6,12 +6,13 @@ import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { OS } from '@elsewise/components/lib/os';
 import type { LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import type {
   CompletionItem,
   CompletionParams,
+  DocumentHighlightParams,
   HoverParams,
   ReferenceParams,
   SignatureHelpParams,
@@ -188,13 +189,13 @@ const CHANNELS = [range('channel ='), range('channel.send_raw'), range('channel.
 
 // A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, completions after a dot
 // from `MEMBERS`, else from `STATEMENTS`, signatures in a method call from `SEND_TIMEOUT`, else from `ATTACH`, and
-// renames and usages of `channel` from `CHANNELS`, with one more usage in a file that isn't open.
+// renames, usages and highlights of `channel` from `CHANNELS`, with one more usage in a file that isn't open.
 const RUST: LanguageServer = {
   id: 'rust',
   name: 'Rust',
   languages: { Rust: 'rust' },
-  start: () =>
-    stubTransport(
+  start: () => {
+    const stub = stubTransport(
       {
         textDocumentSync: 2,
         hoverProvider: true,
@@ -204,6 +205,8 @@ const RUST: LanguageServer = {
         renameProvider: { prepareProvider: true },
         documentHighlightProvider: true,
         referencesProvider: true,
+        definitionProvider: true,
+        documentFormattingProvider: true,
       },
       {
         'textDocument/hover': ({ position }: HoverParams) => {
@@ -215,7 +218,17 @@ const RUST: LanguageServer = {
         'textDocument/signatureHelp': ({ position }: SignatureHelpParams) =>
           position.character > 20 ? SEND_TIMEOUT : ATTACH,
         'textDocument/prepareRename': () => CHANNELS[0],
-        'textDocument/documentHighlight': () => CHANNELS.map((range) => ({ range })),
+        // The ranges are the sample's, so it stops answering once the sample is edited.
+        'textDocument/documentHighlight': ({ position }: DocumentHighlightParams) =>
+          !stub.methods.includes('textDocument/didChange') &&
+          CHANNELS.some(
+            ({ start, end }) =>
+              start.line === position.line &&
+              start.character <= position.character &&
+              position.character <= end.character,
+          )
+            ? CHANNELS.map((range, i) => ({ range, kind: i === 0 ? 3 : 2 }))
+            : [],
         'textDocument/references': ({ textDocument }: ReferenceParams) => [
           ...CHANNELS.map((range) => ({ uri: textDocument.uri, range })),
           {
@@ -228,7 +241,9 @@ const RUST: LanguageServer = {
           return value === undefined ? item : { ...item, documentation: { kind: 'markdown', value } };
         },
       },
-    ),
+    );
+    return stub;
+  },
 };
 
 // Mounts the editor, on `HOVERED` with a Rust language server if `hovered`, else on `code`.
@@ -469,9 +484,42 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
     view.focus();
     view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
+    await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
     await userEvent.keyboard(OS === 'mac' ? '{Meta>}{Alt>}{F7}{/Alt}{/Meta}' : '{Control>}{Alt>}{F7}{/Alt}{/Control}');
     await vi.waitFor(() => expect(document.querySelector('.cm-lsp-references')).not.toBeNull());
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-references-${theme}`);
+  });
+
+  test('context menu', async () => {
+    // The menu is portalled to the body, outside the editor's brightness, so the page takes it as the app does.
+    document.documentElement.dataset.brightness = theme;
+    onTestFinished(() => {
+      delete document.documentElement.dataset.brightness;
+    });
+    const view = await mount(theme, true);
+    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+    const rect = view.coordsAtPos(view.state.doc.toString().indexOf('channel.send_raw') + 2);
+    if (rect === null) {
+      throw new Error('offscreen');
+    }
+    const content = view.contentDOM.getBoundingClientRect();
+    await userEvent.click(view.contentDOM, {
+      button: 'right',
+      position: { x: rect.left - content.left, y: rect.top - content.top + 1 },
+    });
+    await expect.element(page.getByRole('menuitem', { name: /^Find usages/ })).toBeVisible();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-context-menu-${theme}`);
+  });
+
+  test('symbol highlights', async () => {
+    const view = await mount(theme, true);
+    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+    view.focus();
+    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
+    await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-highlights-${theme}`);
   });
 });

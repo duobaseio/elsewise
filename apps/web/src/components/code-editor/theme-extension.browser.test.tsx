@@ -19,6 +19,7 @@ const { EDITOR } = vi.hoisted(() => ({
     gutterBackground: '#203040',
     activeLine: '#708090',
     visualGuide: '#A0B0C0',
+    selectionMatch: '#E0B0C0',
     searchMatch: '#B0C0D0',
     searchMatchSelected: '#C0D0E0',
     searchMatchSelectedBorder: '#D0E0F0',
@@ -142,6 +143,7 @@ test('a selected completion keeps the text color, and the list shows whole rows'
   expect(style(tooltip).borderStyle).toBe('none');
   const list = style(tooltip?.querySelector('ul') ?? null);
   expect(Number.parseFloat(list.maxHeight)).toBe(10 * 22 + 8);
+  expect(style(selected).cursor).toBe('default');
 });
 
 test('signatures are parted by dividers, and wrap with a hanging indent', async () => {
@@ -155,6 +157,21 @@ test('signatures are parted by dividers, and wrap with a hanging indent', async 
   expect(style(second).borderTopWidth).toBe('1px');
   expect(Number.parseFloat(style(first).textIndent)).toBeLessThan(0);
   expect(style(dom).borderStyle).toBe('none');
+});
+
+test('the usages of the symbol at the caret, writes included, take the selection match color', async () => {
+  const view = await mount('total + total', [
+    EditorView.decorations.of(
+      Decoration.set([
+        Decoration.mark({ class: 'cm-lsp-highlight cm-lsp-highlight-write' }).range(0, 5),
+        Decoration.mark({ class: 'cm-lsp-highlight' }).range(8, 13),
+      ]),
+    ),
+  ]);
+  const [write, read] = [...view.dom.querySelectorAll('.cm-lsp-highlight')].map((mark) => style(mark));
+
+  expect(read.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
+  expect(write.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
 });
 
 test('a symbol being renamed, and its occurrences, take the search match colors', async () => {
@@ -205,6 +222,7 @@ test('usages are listed like completions, with each usage taking the search matc
   expect(style(popup.querySelector('.cm-lsp-reference-location')).color).toBe(text3);
   expect(style(popup.querySelector('.cm-lsp-references-hint kbd')).color).toBe(text3);
   expect(style(popup.querySelector('.cm-lsp-references-hint')).color).not.toBe(text3);
+  expect(style(popup.querySelector('.cm-lsp-reference')).cursor).toBe('default');
   expect(list.clientHeight).toBe(10 * 22 + 8);
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
 });

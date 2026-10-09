@@ -10,6 +10,7 @@ import {
   LSPErrorCodes,
   type ResponseError,
 } from 'vscode-languageserver-protocol';
+import { highlightClick } from '@/language-servers/highlights';
 
 /**
  * The milliseconds to wait after an edit before asking, matching how long `@codemirror/lsp-client` waits to sync it.
@@ -52,7 +53,17 @@ export function pullDiagnostics(): LSPClientExtension {
       },
     },
     // Adds the linter at a higher precedence since a problem would otherwise be shown below the documentation.
-    editorExtension: [puller, Prec.high(linter(null))],
+    editorExtension: [
+      puller,
+      Prec.high(
+        linter(null, {
+          // Hides the problems while a click highlights usages, as the hover does. Returns `null`, since the linter shows
+          // `[]` as an empty tooltip.
+          tooltipFilter: (diagnostics, state) =>
+            state.field(highlightClick, false) ? (null as unknown as Diagnostic[]) : [...diagnostics],
+        }),
+      ),
+    ],
   };
 }
 

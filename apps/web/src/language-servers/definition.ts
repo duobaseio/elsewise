@@ -6,19 +6,24 @@ import type { DefinitionParams, Location } from 'vscode-languageserver-protocol'
 import { scroll } from '@/components/code-editor/scroll';
 
 /**
+ * The key that jumps to the definition of the symbol at the cursor.
+ */
+export const JUMP_TO_DEFINITION = 'F12';
+
+/**
  * Returns the extension that jumps to the definition of the symbol at the cursor.
  *
  * It replaces `@codemirror/lsp-client`'s `jumpToDefinitionKeymap`, which scrolls the definition just into view.
  */
 export function serverDefinition(): LSPClientExtension {
-  return { editorExtension: keymap.of([{ key: 'F12', run: jumpToDefinition, preventDefault: true }]) };
+  return { editorExtension: keymap.of([{ key: JUMP_TO_DEFINITION, run: jumpToDefinition, preventDefault: true }]) };
 }
 
 // Copied from `@codemirror/lsp-client`'s `jumpToOrigin`.
 //
 // Scrolls the definition to the middle of the editor unless it is visible already, as search does, and reports errors in a
 // toast.
-function jumpToDefinition(view: EditorView): boolean {
+export function jumpToDefinition(view: EditorView): boolean {
   const plugin = LSPPlugin.get(view);
   if (!plugin?.client.serverCapabilities?.definitionProvider) {
     return false;

@@ -7,8 +7,8 @@ import { highlightTree } from '@lezer/highlight';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Location, ReferenceParams } from 'vscode-languageserver-protocol';
+import { hint } from '@/components/code-editor/hint';
 import { scroll } from '@/components/code-editor/scroll';
-import { hint } from '@/language-servers/hint';
 
 /**
  * A usage of the symbol.
@@ -97,6 +97,11 @@ const message = StateField.define<Tooltip | null>({
 });
 
 /**
+ * The key that shows the usages of the symbol at the cursor.
+ */
+export const SHOW_USAGES = 'Mod-Alt-F7';
+
+/**
  * Returns the extension that shows the usages of the symbol at the cursor in a popup.
  *
  * It replaces `@codemirror/lsp-client`'s `findReferencesKeymap`, which lists them in a panel.
@@ -109,7 +114,7 @@ export function serverReferences(): LSPClientExtension {
       message,
       Prec.high(
         keymap.of([
-          { key: 'Mod-Alt-F7', run: findUsages, preventDefault: true },
+          { key: SHOW_USAGES, run: findUsages, preventDefault: true },
           { key: 'ArrowDown', run: (view) => move(view, (selected) => selected + 1, true) },
           { key: 'ArrowUp', run: (view) => move(view, (selected) => selected - 1, true) },
           { key: 'PageDown', run: (view) => move(view, (selected) => selected + 10, false) },
@@ -150,7 +155,7 @@ export function serverReferences(): LSPClientExtension {
 // Based on `@codemirror/lsp-client`'s `findReferences`, which lists the references in a panel.
 //
 // Previews the usages in open files when they arrive, and lists the rest by file and line rather than dropping them.
-function findUsages(view: EditorView): boolean {
+export function findUsages(view: EditorView): boolean {
   const plugin = LSPPlugin.get(view);
   if (!plugin?.client.serverCapabilities?.referencesProvider) {
     return false;

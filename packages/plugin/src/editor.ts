@@ -1,5 +1,5 @@
 import type { LanguageDescription } from '@codemirror/language';
-import type { EditorState, Extension } from '@codemirror/state';
+import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from './plugin.ts';
 
@@ -9,11 +9,15 @@ import type { Disposable } from './plugin.ts';
 export const DEFAULT_EDITOR_CONTEXT_MENU = {
   clipboard: {
     id: '10-clipboard',
-    items: { cut: '10-cut', copy: '20-copy', paste: '30-paste', selectAll: '40-select-all' },
+    items: { cut: '10-cut', copy: '20-copy', paste: '30-paste' },
   },
-  code: {
-    id: '20-code',
-    items: { toggleComment: '10-toggle-comment', fold: '20-fold', unfold: '30-unfold' },
+  navigate: {
+    id: '13-navigate',
+    items: { usages: '10-usages', definition: '20-definition' },
+  },
+  refactor: {
+    id: '16-refactor',
+    items: { rename: '10-rename' },
   },
 } as const;
 
@@ -48,14 +52,14 @@ export interface Editor {
    * Groups, and the items in each group, are sorted by id. See {@link DEFAULT_EDITOR_CONTEXT_MENU} for the built-in
    * groups and items. Submenus with the same id in a group are merged.
    *
-   * To add a group between the built-in `10-clipboard` and `20-code` groups:
+   * To add a group after the built-in groups:
    * ```ts
    * editor.addContextMenuItems({
-   *   '15-format': [{ type: 'item', id: '10-format', label: 'Format', command: format }],
+   *   '20-generate': [{ type: 'item', id: '10-generate', label: 'Generate…', command: generate }],
    * });
    * ```
    *
-   * To add an item to the built-in clipboard group, between its `30-paste` and `40-select-all` items:
+   * To add an item to the built-in clipboard group, after its `30-paste` item:
    * ```ts
    * editor.addContextMenuItems({
    *   [DEFAULT_EDITOR_CONTEXT_MENU.clipboard.id]: [
@@ -185,7 +189,7 @@ export interface EditorContextMenuItem {
    *
    * The items in a group are sorted by id. See {@link DEFAULT_EDITOR_CONTEXT_MENU} for the built-in items.
    *
-   * To add an item between the built-in `30-paste` and `40-select-all` items:
+   * To add an item after the built-in `30-paste` item:
    * ```ts
    * { type: 'item', id: '35-paste-plain', label: 'Paste plain', command: pastePlain }
    * ```
@@ -214,7 +218,7 @@ export interface EditorContextMenuItem {
    *
    * Without it, the item is always shown.
    */
-  shown?(state: EditorState): boolean;
+  shown?(view: EditorView): boolean;
 }
 
 /**

@@ -11,7 +11,7 @@ import {
 } from '@codemirror/view';
 import { OS } from '@elsewise/components/lib/os';
 import { tags } from '@lezer/highlight';
-import { hint } from '@/language-servers/hint';
+import { hint } from '@/components/code-editor/hint';
 
 interface Link {
   from: number;
@@ -25,7 +25,6 @@ const MATCHER = new MatchDecorator({
   regexp: /https?:\/\/[^\s"'`<>()[\]{}]*[^\s"'`<>()[\]{}.,;:!?]/g,
   decoration: Decoration.mark({ class: 'cm-link' }),
 });
-
 
 /**
  * Returns the extension that underlines URLs and opens the one under the pointer on ⌘-click, or Ctrl-click off a Mac.

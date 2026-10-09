@@ -5,11 +5,12 @@ import {
   syntaxHighlighting,
 } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
-import { EditorState } from '@codemirror/state';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
+import { highlightUsages } from '@/language-servers/highlights';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
 import { type StubTransport, stubTransport } from '../../test/stub-transport';
 
@@ -42,8 +43,8 @@ afterEach(() => {
   }
 });
 
-// Opens a Rust file on a running server behind `fake`.
-async function open(fake: StubTransport): Promise<EditorView> {
+// Opens a Rust file with `extensions` on a running server behind `fake`.
+async function open(fake: StubTransport, extensions: Extension = []): Promise<EditorView> {
   const server: LanguageServer = { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => fake };
   const instance = new LanguageServerInstance(server, ROOT);
   await instance.start();
@@ -51,7 +52,7 @@ async function open(fake: StubTransport): Promise<EditorView> {
   const view = new EditorView({
     state: EditorState.create({
       doc: DOC,
-      extensions: [instance.client.plugin(URI, 'rust'), rust, syntaxHighlighting(defaultHighlightStyle)],
+      extensions: [instance.client.plugin(URI, 'rust'), rust, syntaxHighlighting(defaultHighlightStyle), extensions],
     }),
     parent: document.body,
   });
@@ -59,13 +60,27 @@ async function open(fake: StubTransport): Promise<EditorView> {
   return view;
 }
 
-// Moves the pointer over `pos` in `view`.
-function point(view: EditorView, pos: number): void {
+// Moves the pointer over `pos` in `view`, with `init`'s buttons held.
+function point(view: EditorView, pos: number, init: MouseEventInit = {}): void {
   const { left, top, bottom } = view.coordsAtPos(pos) as DOMRect;
   const [x, y] = [left + 1, (top + bottom) / 2];
   document
     .elementFromPoint(x, y)
-    ?.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+    ?.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true, ...init }));
+}
+
+// Clicks `pos` in `view` without moving the pointer.
+function press(view: EditorView, pos: number): void {
+  const { left, top, bottom } = view.coordsAtPos(pos) as DOMRect;
+  const [x, y] = [left + 1, (top + bottom) / 2];
+  const target = document.elementFromPoint(x, y);
+  target?.dispatchEvent(new MouseEvent('mousedown', { clientX: x, clientY: y, bubbles: true, buttons: 1 }));
+  target?.dispatchEvent(new MouseEvent('mouseup', { clientX: x, clientY: y, bubbles: true }));
+}
+
+// Waits past the delay before a hover opens.
+function rest(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 600));
 }
 
 // Points at `attach` and returns the hover that opens.
@@ -207,5 +222,120 @@ describe('serverHover', () => {
     const [first, second] = tooltip.querySelectorAll('.cm-tooltip-section');
     expect(first.querySelector('.cm-diagnostic-error')).not.toBeNull();
     expect(second.querySelector('.cm-lsp-definition')).not.toBeNull();
+  });
+
+  describe('on a click', () => {
+    test('closes', async () => {
+      const view = await open(transport(markdown('Attaches.')));
+      await hover(view);
+
+      press(view, DOC.indexOf('channel'));
+
+      await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull());
+    });
+
+    test("doesn't open, nor ask the server", async () => {
+      const fake = transport(markdown('Attaches.'));
+      const view = await open(fake);
+
+      point(view, DOC.indexOf('attach') + 1);
+      press(view, DOC.indexOf('attach') + 1);
+      await rest();
+
+      expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+      expect(fake.methods).not.toContain('textDocument/hover');
+    });
+
+    test('opens again once the pointer moves', async () => {
+      const view = await open(transport(markdown('Attaches.')));
+      point(view, DOC.indexOf('attach') + 1);
+      press(view, DOC.indexOf('attach') + 1);
+      await rest();
+
+      point(view, DOC.indexOf('attach') + 3);
+
+      await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull(), { timeout: 2000 });
+    });
+
+    test("doesn't open again for a move where the click was", async () => {
+      const view = await open(transport(markdown('Attaches.')));
+      point(view, DOC.indexOf('attach') + 1);
+      press(view, DOC.indexOf('attach') + 1);
+
+      point(view, DOC.indexOf('attach') + 1);
+      await rest();
+
+      expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+    });
+
+    test("doesn't open again while dragging", async () => {
+      const view = await open(transport(markdown('Attaches.')));
+      point(view, DOC.indexOf('attach') + 1);
+      press(view, DOC.indexOf('attach') + 1);
+
+      point(view, DOC.indexOf('attach') + 3, { buttons: 1 });
+      await rest();
+
+      expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+    });
+
+    test('stays open for a click inside it', async () => {
+      const view = await open(transport(markdown('Attaches.')));
+      const tooltip = await hover(view);
+
+      tooltip.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, buttons: 1 }));
+      await rest();
+
+      expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
+    });
+
+    test("doesn't show the problems either", async () => {
+      const from = DOC.indexOf('attach');
+      const range = { start: { line: 0, character: from }, end: { line: 0, character: from + 6 } };
+      const view = await open(transport(null, [{ range, severity: 1, message: 'cannot find `attach`' }]));
+      await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
+
+      point(view, from + 1);
+      press(view, from + 1);
+      await rest();
+
+      expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+    });
+  });
+
+  describe('on a click, with usages not highlighted', () => {
+    test('stays open', async () => {
+      const view = await open(transport(markdown('Attaches.')), highlightUsages.of(false));
+      await hover(view);
+
+      press(view, DOC.indexOf('channel'));
+      await rest();
+
+      expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
+    });
+
+    test('opens', async () => {
+      const view = await open(transport(markdown('Attaches.')), highlightUsages.of(false));
+
+      point(view, DOC.indexOf('attach') + 1);
+      press(view, DOC.indexOf('attach') + 1);
+
+      await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull(), { timeout: 2000 });
+    });
+
+    test('shows the problems', async () => {
+      const from = DOC.indexOf('attach');
+      const range = { start: { line: 0, character: from }, end: { line: 0, character: from + 6 } };
+      const view = await open(
+        transport(null, [{ range, severity: 1, message: 'cannot find `attach`' }]),
+        highlightUsages.of(false),
+      );
+      await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
+
+      point(view, from + 1);
+      press(view, from + 1);
+
+      await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-lint')).not.toBeNull(), { timeout: 2000 });
+    });
   });
 });

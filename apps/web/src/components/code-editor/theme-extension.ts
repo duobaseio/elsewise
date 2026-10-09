@@ -19,7 +19,7 @@ const CHROME = {
     '.cm-selectionBackground, .cm-content ::selection, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground',
     'backgroundColor',
   ],
-  selectionMatch: ['.cm-selectionMatch', 'backgroundColor'],
+  selectionMatch: ['.cm-selectionMatch, .cm-lsp-highlight', 'backgroundColor'],
   activeLine: ['.cm-activeLine, .cm-activeLineGutter', 'backgroundColor'],
   gutterBackground: ['.cm-gutters', 'backgroundColor'],
   gutterForeground: ['.cm-gutters', 'color'],
@@ -251,6 +251,7 @@ const METRICS = EditorView.theme({
     height: '22px',
     padding: '0 8px 0 6px',
     borderRadius: 'calc(var(--radius) - 2px)',
+    cursor: 'default',
   },
   // The list is replaced whenever the options change, so the hint is put after it by `order`.
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': { color: 'inherit' },
@@ -278,7 +279,10 @@ const METRICS = EditorView.theme({
     textDecoration: 'line-through',
   },
   '.cm-completion-deprecated .cm-completionMatchedText': { color: 'inherit', fontWeight: 'inherit' },
-  '.cm-completionListIncompleteTop:before, .cm-completionListIncompleteBottom:after': { color: 'var(--text-3)' },
+  '.cm-completionListIncompleteTop:before, .cm-completionListIncompleteBottom:after': {
+    color: 'var(--text-3)',
+    cursor: 'default',
+  },
   '.cm-completion-hint': { order: '1', borderTop: '1px solid var(--border)' },
   '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-header, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message, .cm-link-hint':
     {
@@ -326,13 +330,13 @@ const METRICS = EditorView.theme({
     padding: '0 8px 0 6px',
     borderRadius: 'calc(var(--radius) - 2px)',
     whiteSpace: 'pre',
-    cursor: 'pointer',
+    cursor: 'default',
   },
   '.cm-lsp-reference-preview': { flex: '0 1 auto', minWidth: '0', overflow: 'hidden', textOverflow: 'ellipsis' },
   '.cm-lsp-reference-match': { color: 'inherit', borderRadius: '2px' },
   '.cm-lsp-reference-location': { flex: 'none', marginLeft: 'auto', paddingLeft: '24px', color: 'var(--text-3)' },
   '.cm-lsp-reference-line': { display: 'inline-block', minWidth: '2ch', marginLeft: '6px', textAlign: 'right' },
-  '.cm-lsp-reference-elsewhere': { color: 'var(--text-3)', cursor: 'default' },
+  '.cm-lsp-reference-elsewhere': { color: 'var(--text-3)' },
   '.cm-lsp-references-hint': { borderTop: '1px solid var(--border)' },
 
   '.cm-tooltip.cm-completionInfo': { width: '360px', padding: '0', whiteSpace: 'normal' },

@@ -43,14 +43,14 @@ export function enable({ editor, subscriptions }: PluginContext): void {
       }),
     ]),
     editor.addContextMenuItems({
-      // An item in the built-in code group, between the "toggle comment" and "fold" items.
-      [DEFAULT_EDITOR_CONTEXT_MENU.code.id]: [
+      // An item in the built-in refactor group, after the "rename" item.
+      [DEFAULT_EDITOR_CONTEXT_MENU.refactor.id]: [
         {
           type: 'item',
-          id: '15-leave-an-excuse',
+          id: '20-leave-an-excuse',
           label: 'Leave an excuse',
           command: excuse,
-          shown: (state) => lineComment(state) !== undefined,
+          shown: (view) => lineComment(view.state) !== undefined,
         },
       ],
       // A new group after the built-in groups.
@@ -117,8 +117,8 @@ export function enable({ editor, subscriptions }: PluginContext): void {
   );
 }
 
-function selected(state: EditorState): boolean {
-  return state.selection.ranges.some((range) => !range.empty);
+function selected(view: EditorView): boolean {
+  return view.state.selection.ranges.some((range) => !range.empty);
 }
 
 // Replaces each selection with what `transform` returns for its text.

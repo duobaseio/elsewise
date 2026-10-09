@@ -1,4 +1,3 @@
-import type { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import {
   ContextMenu,
@@ -13,7 +12,7 @@ import {
 } from '@elsewise/components/components/context-menu';
 import { shortcut } from '@elsewise/components/lib/os';
 import type { EditorContextMenu, EditorContextMenuItem, EditorContextSubmenu } from '@elsewise/plugin';
-import { Fragment, type ReactNode, type RefObject, useState } from 'react';
+import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useEditorAdditions } from '@/plugins/editor';
 
 /**
@@ -23,30 +22,48 @@ export function CodeEditorContextMenu({ view, children }: { view: RefObject<Edit
   // Snapshotted once per opening rather than on every transaction: the menu is closed almost all the time.
   const [menu, setMenu] = useState<EditorContextMenu>({});
   const additions = useEditorAdditions();
+  const clicked = useRef<EditorContextMenuItem | null>(null);
 
   function onOpenChange(open: boolean): void {
     if (open && view.current !== null) {
-      setMenu(shown(additions.contextMenuItems, view.current.state));
+      setMenu(shown(additions.contextMenuItems, view.current));
+    }
+  }
+
+  // Runs the clicked item once the menu has closed and given the editor its focus back. The returning focus would
+  // otherwise undo a selection that the item changes later, e.g. on a language server's answer.
+  function onOpenChangeComplete(open: boolean): void {
+    const entry = clicked.current;
+    clicked.current = null;
+    if (open || entry === null || view.current === null) {
+      return;
+    }
+
+    view.current.focus();
+    try {
+      entry.command(view.current);
+    } catch (error) {
+      console.error(`Context menu item ${entry.label} failed`, error);
     }
   }
 
   return (
-    <ContextMenu onOpenChange={onOpenChange}>
+    <ContextMenu onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
       <ContextMenuTrigger className="h-full select-auto">{children}</ContextMenuTrigger>
       <ContextMenuContent>
-        <Entries menu={menu} view={view} />
+        <Entries menu={menu} onClick={(entry) => (clicked.current = entry)} />
       </ContextMenuContent>
     </ContextMenu>
   );
 }
 
-function shown(menu: EditorContextMenu, state: EditorState): EditorContextMenu {
+function shown(menu: EditorContextMenu, view: EditorView): EditorContextMenu {
   const groups = new Map<string, (EditorContextMenuItem | EditorContextSubmenu)[]>();
   for (const [group, entries] of Object.entries(menu)) {
     const kept = [];
     for (const entry of entries) {
       if (entry.type === 'submenu') {
-        const items = shown(entry.items, state);
+        const items = shown(entry.items, view);
         if (Object.keys(items).length > 0) {
           kept.push({ ...entry, items });
         }
@@ -54,7 +71,7 @@ function shown(menu: EditorContextMenu, state: EditorState): EditorContextMenu {
       }
 
       try {
-        if (entry.shown?.(state) ?? true) {
+        if (entry.shown?.(view) ?? true) {
           kept.push(entry);
         }
       } catch (error) {
@@ -70,7 +87,7 @@ function shown(menu: EditorContextMenu, state: EditorState): EditorContextMenu {
   return Object.fromEntries(groups);
 }
 
-function Entries({ menu, view }: { menu: EditorContextMenu; view: RefObject<EditorView | null> }) {
+function Entries({ menu, onClick }: { menu: EditorContextMenu; onClick: (entry: EditorContextMenuItem) => void }) {
   return Object.entries(menu)
     .toSorted(([a], [b]) => compare(a, b))
     .map(([group, entries], i) => (
@@ -84,23 +101,14 @@ function Entries({ menu, view }: { menu: EditorContextMenu; view: RefObject<Edit
               <ContextMenuSub key={j}>
                 <ContextMenuSubTrigger>{entry.label}</ContextMenuSubTrigger>
                 <ContextMenuSubContent>
-                  <Entries menu={entry.items} view={view} />
+                  <Entries menu={entry.items} onClick={onClick} />
                 </ContextMenuSubContent>
               </ContextMenuSub>
             ) : (
               <ContextMenuItem
                 // biome-ignore lint/suspicious/noArrayIndexKey: keyed by position since plugin ids may repeat.
                 key={j}
-                onClick={() => {
-                  if (view.current !== null) {
-                    view.current.focus();
-                    try {
-                      entry.command(view.current);
-                    } catch (error) {
-                      console.error(`Context menu item ${entry.label} failed`, error);
-                    }
-                  }
-                }}
+                onClick={() => onClick(entry)}
               >
                 {entry.label}
                 {entry.shortcut !== undefined && <ContextMenuShortcut>{shortcut(entry.shortcut)}</ContextMenuShortcut>}

@@ -2,47 +2,67 @@ import { getIndentUnit, indentUnit } from '@codemirror/language';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { type EditorView, keymap } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import type { DocumentFormattingParams, TextEdit } from 'vscode-languageserver-protocol';
+import type { DocumentFormattingParams, DocumentRangeFormattingParams, TextEdit } from 'vscode-languageserver-protocol';
 
 /**
- * Returns the extension that formats the document on Mod-Alt-L.
+ * The key that formats the selection, or the document without one.
+ */
+export const FORMAT = 'Mod-Alt-l';
+
+/**
+ * Returns the extension that formats the selection, or the document without one, on Mod-Alt-L.
  *
  * It replaces `@codemirror/lsp-client`'s `formatKeymap`, which reports errors in a bar, and binds Shift-Alt-F, which
  * macOS types as `Ï`.
  */
 export function serverFormatting(): LSPClientExtension {
-  return { editorExtension: keymap.of([{ key: 'Mod-Alt-l', run: format, preventDefault: true }]) };
+  return { editorExtension: keymap.of([{ key: FORMAT, run: format, preventDefault: true }]) };
 }
 
 // Copied from `@codemirror/lsp-client`'s `formatDocument`.
 //
-// Leaves the key to the editor when the server can't format, and reports errors in a toast.
-function format(view: EditorView): boolean {
+// Formats only the selection, with `textDocument/rangeFormatting`, when there is one. Leaves the key to the editor
+// when it is read-only or the server can't format what would be formatted, and reports errors in a toast.
+export function format(view: EditorView): boolean {
   const plugin = LSPPlugin.get(view);
-  if (!plugin?.client.serverCapabilities?.documentFormattingProvider) {
+  const capabilities = plugin?.client.serverCapabilities;
+  const ranges = view.state.selection.ranges.filter((range) => !range.empty);
+  const selection = ranges.length > 0;
+  const supported = selection
+    ? capabilities?.documentRangeFormattingProvider
+    : capabilities?.documentFormattingProvider;
+  if (!plugin || view.state.readOnly || !supported) {
     return false;
   }
 
+  const options = {
+    tabSize: getIndentUnit(view.state),
+    insertSpaces: !view.state.facet(indentUnit).includes('\t'),
+  };
+  const textDocument = { uri: plugin.uri };
   plugin.client.sync();
   plugin.client.withMapping(async (mapping) => {
     try {
-      const response = await plugin.client.request<DocumentFormattingParams, TextEdit[] | null>(
-        'textDocument/formatting',
-        {
-          options: {
-            tabSize: getIndentUnit(view.state),
-            insertSpaces: !view.state.facet(indentUnit).includes('\t'),
-          },
-          textDocument: { uri: plugin.uri },
-        },
+      const responses = await Promise.all(
+        selection
+          ? ranges.map((range) =>
+              plugin.client.request<DocumentRangeFormattingParams, TextEdit[] | null>('textDocument/rangeFormatting', {
+                options,
+                range: { start: plugin.toPosition(range.from), end: plugin.toPosition(range.to) },
+                textDocument,
+              }),
+            )
+          : [
+              plugin.client.request<DocumentFormattingParams, TextEdit[] | null>('textDocument/formatting', {
+                options,
+                textDocument,
+              }),
+            ],
       );
-      if (!response) {
-        return;
-      }
 
       const changed = mapping.getMapping(plugin.uri);
       const changes: { from: number; to: number; insert: string }[] = [];
-      for (const change of response) {
+      for (const change of responses.flatMap((response) => response ?? [])) {
         let from = mapping.mapPosition(plugin.uri, change.range.start);
         let to = mapping.mapPosition(plugin.uri, change.range.end);
         if (changed) {
@@ -55,7 +75,17 @@ function format(view: EditorView): boolean {
         }
         changes.push({ from, to, insert: change.newText });
       }
-      view.dispatch({ changes, userEvent: 'format' });
+
+      // Drops a change that overlaps or repeats an earlier one, since two selections' answers can both change the lines
+      // between them.
+      const kept: typeof changes = [];
+      for (const change of changes.sort((a, b) => a.from - b.from || a.to - b.to)) {
+        const last = kept.at(-1);
+        if (!last || change.from > last.to || (change.from === last.to && change.from !== last.from)) {
+          kept.push(change);
+        }
+      }
+      view.dispatch({ changes: kept, userEvent: 'format' });
     } catch (error) {
       toast.add({ type: 'error', title: 'Formatting request failed', description: (error as Error).message });
     }

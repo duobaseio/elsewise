@@ -99,6 +99,10 @@ export const Settings = z.lazy(() =>
              */
             completionDocumentation: z.boolean().catch(true),
             /**
+             * Whether resting the caret on a symbol highlights its usages in the file.
+             */
+            highlightUsages: z.boolean().catch(true),
+            /**
              * Overrides by language, keyed by CodeMirror's name for it, e.g. `TypeScript`.
              *
              * An override keeps the leaves it got right and drops the rest, rather than falling back to a default.

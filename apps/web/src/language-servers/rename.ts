@@ -12,7 +12,7 @@ import type {
   RenameParams,
   WorkspaceEdit,
 } from 'vscode-languageserver-protocol';
-import { hint } from '@/language-servers/hint';
+import { hint } from '@/components/code-editor/hint';
 
 /**
  * A symbol being renamed.
@@ -123,6 +123,11 @@ const message = StateField.define<Tooltip | null>({
 const showMessage = StateEffect.define<{ pos: number; text: string } | null>();
 
 /**
+ * The key that renames the symbol at the cursor.
+ */
+export const RENAME = 'Shift-F6';
+
+/**
  * Returns the extension that renames the symbol at the cursor in place.
  *
  * It replaces `@codemirror/lsp-client`'s `renameKeymap`, which asks for the new name in a panel.
@@ -135,7 +140,7 @@ export function serverRename(): LSPClientExtension {
       message,
       Prec.high(
         keymap.of([
-          { key: 'Shift-F6', run: rename, preventDefault: true },
+          { key: RENAME, run: rename, preventDefault: true },
           {
             key: 'Escape',
             run: (view) => {
@@ -153,7 +158,7 @@ export function serverRename(): LSPClientExtension {
 }
 
 // Based on `@codemirror/lsp-client`'s `renameSymbol`, which renames the word at the cursor to a name typed in a panel.
-function rename(view: EditorView): boolean {
+export function rename(view: EditorView): boolean {
   const plugin = LSPPlugin.get(view);
   const provider = plugin?.client.serverCapabilities?.renameProvider;
   if (!plugin || !provider) {

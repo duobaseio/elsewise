@@ -9,6 +9,7 @@ import { serverCompletion } from '@/language-servers/completion';
 import { serverDefinition } from '@/language-servers/definition';
 import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
 import { serverFormatting } from '@/language-servers/formatting';
+import { serverHighlights } from '@/language-servers/highlights';
 import { serverHover } from '@/language-servers/hover';
 import { serverReferences } from '@/language-servers/references';
 import { serverRename } from '@/language-servers/rename';
@@ -132,6 +133,7 @@ export class LanguageServerInstance {
         serverSignatureHelp(),
         serverRename(),
         serverReferences(),
+        serverHighlights(),
         serverDefinition(),
         serverFormatting(),
         serverDiagnostics(),

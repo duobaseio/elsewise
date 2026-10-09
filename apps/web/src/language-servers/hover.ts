@@ -3,6 +3,7 @@ import type { Extension } from '@codemirror/state';
 import { closeHoverTooltips, hasHoverTooltips, hoverTooltip, keymap, type Tooltip } from '@codemirror/view';
 import type { Hover, HoverParams } from 'vscode-languageserver-protocol';
 import { documentation } from '@/language-servers/documentation';
+import { highlightClick } from '@/language-servers/highlights';
 
 /**
  * Returns the extension that shows the server's documentation for the code under the pointer.
@@ -15,7 +16,7 @@ export function serverHover(): Extension {
     hoverTooltip(
       async (view, pos): Promise<Tooltip | null> => {
         const plugin = LSPPlugin.get(view);
-        if (!plugin?.client.serverCapabilities?.hoverProvider) {
+        if (!plugin?.client.serverCapabilities?.hoverProvider || view.state.field(highlightClick, false)) {
           return null;
         }
 

@@ -70,7 +70,7 @@ function press(view: EditorView, key: string, modifiers: KeyboardEventInit = {})
   return runScopeHandlers(view, new KeyboardEvent('keydown', { key, ...modifiers }), 'editor');
 }
 
-// Mod-Alt-F7, as IntelliJ shows usages.
+// Mod-Alt-F7, which shows usages.
 const SHOW_USAGES: KeyboardEventInit = { altKey: true, metaKey: OS === 'mac', ctrlKey: OS !== 'mac' };
 
 // Presses Mod-Alt-F7, and returns the popup once it shows.

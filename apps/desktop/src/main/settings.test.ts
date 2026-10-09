@@ -232,6 +232,22 @@ describe('settings:load', () => {
     }
   });
 
+  test('keeps a valid usage highlighting toggle and turns a bad or missing one on', () => {
+    write({ appearance: { editor: { highlightUsages: false } } });
+    expect(load()).toEqual({
+      appearance: {
+        ...DEFAULT_SETTINGS.appearance,
+        editor: { ...DEFAULT_SETTINGS.appearance.editor, highlightUsages: false },
+      },
+    });
+
+    for (const editor of [{ highlightUsages: 'yes' }, {}]) {
+      write({ appearance: { editor } });
+      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect((load() as Settings).appearance.editor.highlightUsages).toBe(true);
+    }
+  });
+
   test('keeps valid terminal leaves and replaces bad ones', () => {
     const terminal = {
       theme: { source: 'elsewise', name: 'dracula' },
