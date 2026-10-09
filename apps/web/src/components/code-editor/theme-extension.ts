@@ -280,14 +280,14 @@ const METRICS = EditorView.theme({
   '.cm-completion-deprecated .cm-completionMatchedText': { color: 'inherit', fontWeight: 'inherit' },
   '.cm-completionListIncompleteTop:before, .cm-completionListIncompleteBottom:after': { color: 'var(--text-3)' },
   '.cm-completion-hint': { order: '1', borderTop: '1px solid var(--border)' },
-  '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-header, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message':
+  '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-header, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message, .cm-link-hint':
     {
       padding: '4px 10px',
       fontFamily: 'var(--font-sans)',
       fontSize: 'var(--text-sm)',
       lineHeight: 'var(--text-sm--line-height)',
     },
-  '.cm-completion-hint kbd, .cm-lsp-rename-hint kbd, .cm-lsp-references-hint kbd': {
+  '.cm-completion-hint kbd, .cm-lsp-rename-hint kbd, .cm-lsp-references-hint kbd, .cm-link-hint kbd': {
     fontFamily: 'inherit',
     color: 'var(--text-3)',
   },

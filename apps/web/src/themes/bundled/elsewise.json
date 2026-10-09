@@ -86,8 +86,14 @@
         "string": "#0D8124",
         "regexp": "#0D8124",
         "number": "#7139C9",
-        "comment": "#888170",
-        "docComment": "#888170",
+        "comment": {
+          "color": "#888170",
+          "italic": true
+        },
+        "docComment": {
+          "color": "#888170",
+          "italic": true
+        },
         "annotation": "#B68000",
         "meta": "#B68000",
         "attribute": "#004393",

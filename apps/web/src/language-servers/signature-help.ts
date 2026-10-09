@@ -2,6 +2,7 @@ import { highlightingFor, language } from '@codemirror/language';
 import { LSPPlugin } from '@codemirror/lsp-client';
 import { type Extension, Prec, StateEffect, StateField } from '@codemirror/state';
 import { type EditorView, keymap, showTooltip, type Tooltip, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import { toast } from '@elsewise/components/components/toast';
 import { highlightCode } from '@lezer/highlight';
 import {
   type SignatureHelp,
@@ -76,7 +77,7 @@ export function serverSignatureHelp(): Extension {
 // Copied from `@codemirror/lsp-client`'s `signaturePlugin`.
 //
 // Also updates when the active parameter of a signature other than the active one changes, since every signature is
-// shown.
+// shown, and reports errors in a toast.
 const requests = ViewPlugin.fromClass(
   class {
     request: { pos: number; drop: boolean } | null = null;
@@ -171,7 +172,8 @@ const requests = ViewPlugin.fromClass(
           }
         },
         context.triggerKind === SignatureHelpTriggerKind.Invoked
-          ? (error) => plugin.reportError('Signature request failed', error)
+          ? (error) =>
+              toast.add({ type: 'error', title: 'Signature request failed', description: (error as Error).message })
           : undefined,
       );
     }

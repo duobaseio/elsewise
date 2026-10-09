@@ -35,6 +35,14 @@ pub async fn attach(&self, id: SessionId) -> Result<Channel> {
 }
 `;
 
+const LINKED = `/// Connects to the relay. See https://example.com/relay for the protocol.
+pub fn connect() -> Result<Channel> {
+    // Retries back off as https://example.com/retries describes.
+    let url = "https://relay.example.com/v1";
+    Channel::open(url)
+}
+`;
+
 const HOVERED = `use crate::session::{attach, Options};
 
 /// Opens the channel for a session.
@@ -223,8 +231,8 @@ const RUST: LanguageServer = {
     ),
 };
 
-// Mounts the editor, on `HOVERED` with a Rust language server if `hovered`.
-async function mount(theme: 'light' | 'dark', hovered = false): Promise<EditorView> {
+// Mounts the editor, on `HOVERED` with a Rust language server if `hovered`, else on `code`.
+async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
     appearance: {
@@ -249,7 +257,7 @@ async function mount(theme: 'light' | 'dark', hovered = false): Promise<EditorVi
             {hovered ? (
               <CodeEditor code={HOVERED} path="src/main.rs" root={new URL('file:///worktree/')} />
             ) : (
-              <CodeEditor code={CODE} path="transport.rs" />
+              <CodeEditor code={code} path="transport.rs" />
             )}
           </div>
         </LanguageServersContext>
@@ -270,13 +278,13 @@ async function mount(theme: 'light' | 'dark', hovered = false): Promise<EditorVi
   return view;
 }
 
-// Points at the first `text` in `view`, and waits for the hover to open with `sections`.
-async function hover(view: EditorView, text: string, sections: number): Promise<void> {
+// Points at the first `text` in `view` with the keys in `init` held, and waits for the hover to open with `sections`.
+async function hover(view: EditorView, text: string, sections: number, init: MouseEventInit = {}): Promise<void> {
   const { left, top, bottom } = view.coordsAtPos(view.state.doc.toString().indexOf(text) + 1) as DOMRect;
   const [x, y] = [left + 1, (top + bottom) / 2];
   document
     .elementFromPoint(x, y)
-    ?.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+    ?.dispatchEvent(new MouseEvent('mousemove', { ...init, clientX: x, clientY: y, bubbles: true }));
   await vi.waitFor(
     () => expect(document.querySelectorAll('.cm-tooltip-hover .cm-tooltip-section')).toHaveLength(sections),
     {
@@ -376,6 +384,29 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await hover(view, 'send_raw', 2);
 
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-problem-documentation-${theme}`);
+    });
+  });
+
+  describe('links', () => {
+    test('at rest', async () => {
+      await mount(theme, false, LINKED);
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-links-${theme}`);
+    });
+
+    test('hovered', async () => {
+      const view = await mount(theme, false, LINKED);
+      await hover(view, 'https://example.com/retries', 1);
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-links-hover-${theme}`);
+    });
+
+    test('hovered with the key held', async () => {
+      const view = await mount(theme, false, LINKED);
+      await hover(view, 'https://example.com/retries', 1, OS === 'mac' ? { metaKey: true } : { ctrlKey: true });
+      await vi.waitFor(() => expect(document.querySelector('.cm-link-active')).not.toBeNull());
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-links-active-${theme}`);
     });
   });
 

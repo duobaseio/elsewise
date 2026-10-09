@@ -36,5 +36,15 @@ pnpm --filter @elsewise/plugin-example-language-server build      # also: serve,
 3. Run Elsewise, e.g. `pnpm --filter @elsewise/web dev` and `pnpm --filter @elsewise/desktop dev`. Its editor shows
    `apps/web/src/routes/_shell/$project/$worktree.tsx` until it can open files.
 
+To see how Elsewise shows what a server reports, type these into the terminal running `serve`. They apply to every
+connection:
+
+- `message <error|warning|info> <text>` sends the message, e.g. `message warning Indexing is slow`.
+- `fail [method]` answers the next request, or the next one for `method`, with an error, e.g. `fail
+  textDocument/definition` and then F12.
+
+Stopping `serve` while Elsewise runs shows that the server stopped; running Elsewise without it shows that it failed to
+start.
+
 `serve` logs each server it starts and stops. To remove the plugin, run `plugin.mjs remove
 io.duobase.elsewise.examples.language-server` from the same folder.

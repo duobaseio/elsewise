@@ -1,6 +1,7 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorSelection } from '@codemirror/state';
 import { type EditorView, keymap } from '@codemirror/view';
+import { toast } from '@elsewise/components/components/toast';
 import type { DefinitionParams, Location } from 'vscode-languageserver-protocol';
 import { scroll } from '@/components/code-editor/scroll';
 
@@ -15,7 +16,8 @@ export function serverDefinition(): LSPClientExtension {
 
 // Copied from `@codemirror/lsp-client`'s `jumpToOrigin`.
 //
-// Scrolls the definition to the middle of the editor unless it is visible already, as search does.
+// Scrolls the definition to the middle of the editor unless it is visible already, as search does, and reports errors in a
+// toast.
 function jumpToDefinition(view: EditorView): boolean {
   const plugin = LSPPlugin.get(view);
   if (!plugin?.client.serverCapabilities?.definitionProvider) {
@@ -48,7 +50,7 @@ function jumpToDefinition(view: EditorView): boolean {
         userEvent: 'select.definition',
       });
     } catch (error) {
-      plugin.reportError('Find definition failed', error);
+      toast.add({ type: 'error', title: 'Find definition failed', description: (error as Error).message });
     }
   });
   return true;

@@ -19,6 +19,7 @@ import { OS } from '@elsewise/components/lib/os';
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
 import { useLanguageServerExtension } from '@/components/code-editor/language-server-extension';
+import { links } from '@/components/code-editor/links';
 import { useSearchExtension } from '@/components/code-editor/search/search-bar';
 import { useSettingsExtension } from '@/components/code-editor/settings-extension';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
@@ -112,6 +113,7 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
         highlightSelectionMatches(),
         highlightSpecialChars(),
         rightClickContextMenu,
+        links(),
 
         keymap.of([
           ...defaultKeymap,

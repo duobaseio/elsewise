@@ -1,4 +1,5 @@
 import type {} from '@elsewise/bridge';
+import { Toaster } from '@elsewise/components/components/toast';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
@@ -61,7 +62,9 @@ function RootComponent() {
   return (
     <EditorAdditionsContext value={additions}>
       <LanguageServersContext value={languageServers}>
-        <Outlet />
+        <Toaster>
+          <Outlet />
+        </Toaster>
       </LanguageServersContext>
     </EditorAdditionsContext>
   );

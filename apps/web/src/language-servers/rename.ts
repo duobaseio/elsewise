@@ -2,6 +2,7 @@ import { highlightingFor, syntaxTree } from '@codemirror/language';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showTooltip, type Tooltip, WidgetType } from '@codemirror/view';
+import { toast } from '@elsewise/components/components/toast';
 import { highlightTree } from '@lezer/highlight';
 import type {
   DocumentHighlight,
@@ -278,7 +279,8 @@ function commit(view: EditorView, refocus: boolean): void {
   plugin.client.sync();
   // Copied from `@codemirror/lsp-client`'s `doRename`.
   //
-  // Applies the edits to this file along with stopping, so the widgets give way to them at once.
+  // Applies the edits to this file along with stopping, so the widgets give way to them at once, and reports errors in a
+  // toast.
   plugin.client.withMapping(async (mapping) => {
     try {
       const response = await plugin.client.request<RenameParams, WorkspaceEdit | null>('textDocument/rename', {
@@ -312,7 +314,7 @@ function commit(view: EditorView, refocus: boolean): void {
       }
     } catch (error) {
       stop(view, refocus);
-      plugin.reportError('Rename request failed', error);
+      toast.add({ type: 'error', title: 'Rename request failed', description: (error as Error).message });
     }
   });
 }

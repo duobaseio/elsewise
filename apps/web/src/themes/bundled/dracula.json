@@ -71,8 +71,14 @@
       "hint": "#6C664B",
       "unnecessary": "#6C664B",
       "tokens": {
-        "comment": "#6C664B",
-        "docComment": "#6C664B",
+        "comment": {
+          "color": "#6C664B",
+          "italic": true
+        },
+        "docComment": {
+          "color": "#6C664B",
+          "italic": true
+        },
         "punctuation": "#1F1F1F",
         "bracket": "#1F1F1F",
         "operator": "#A3144D",

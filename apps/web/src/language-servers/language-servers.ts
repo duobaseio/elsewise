@@ -1,12 +1,14 @@
-import { formatKeymap, LSPClient, serverDiagnostics } from '@codemirror/lsp-client';
+import { LSPClient, serverDiagnostics } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
-import { keymap } from '@codemirror/view';
+import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
 import { serverCompletion } from '@/language-servers/completion';
 import { serverDefinition } from '@/language-servers/definition';
 import { pullAllDiagnostics, pullDiagnostics } from '@/language-servers/diagnostics';
+import { serverFormatting } from '@/language-servers/formatting';
 import { serverHover } from '@/language-servers/hover';
 import { serverReferences } from '@/language-servers/references';
 import { serverRename } from '@/language-servers/rename';
@@ -94,6 +96,15 @@ export class LanguageServers {
 }
 
 /**
+ * The toast type for each type of message a server shows.
+ */
+const MESSAGE_TYPES = new Map([
+  [MessageType.Error, 'error'],
+  [MessageType.Warning, 'warning'],
+  [MessageType.Info, 'info'],
+]);
+
+/**
  * A language server instance.
  */
 export class LanguageServerInstance {
@@ -115,19 +126,28 @@ export class LanguageServerInstance {
     this.client = new LSPClient({
       rootUri: serverUri(root),
       initializationOptions: server.initializationOptions,
-      // TODO: We might need to rip out more of these.
       extensions: [
         serverCompletion(),
         serverHover(),
-        keymap.of(formatKeymap),
         serverSignatureHelp(),
         serverRename(),
         serverReferences(),
         serverDefinition(),
+        serverFormatting(),
         serverDiagnostics(),
         pullDiagnostics(),
       ],
       sanitizeHTML: (html) => DOMPurify.sanitize(html),
+      notificationHandlers: {
+        // Shows the server's messages in toasts rather than lsp-client's bar, and drops its logs as lsp-client does.
+        'window/showMessage': (_, { type, message }: ShowMessageParams) => {
+          const kind = MESSAGE_TYPES.get(type);
+          if (kind !== undefined) {
+            toast.add({ type: kind, title: server.name, description: message });
+          }
+          return true;
+        },
+      },
     });
   }
 
@@ -151,6 +171,9 @@ export class LanguageServerInstance {
       this.transport.onClose(() => {
         this.transport = undefined;
         this.client.disconnect();
+        if (!this.stopped) {
+          toast.add({ type: 'warning', title: `${this.server.name} stopped` });
+        }
       });
 
       const handlers = new Map<(message: string) => void, Disposable>();
@@ -168,10 +191,16 @@ export class LanguageServerInstance {
         () => pullAllDiagnostics(this.client),
         (error) => {
           console.error(`Language server ${this.server.name} failed to initialize`, error);
+          toast.add({
+            type: 'error',
+            title: `${this.server.name} failed to initialize`,
+            description: (error as Error).message,
+          });
         },
       );
     } catch (error) {
       console.error(`Language server ${this.server.name} failed to start`, error);
+      toast.add({ type: 'error', title: `${this.server.name} failed to start`, description: (error as Error).message });
     } finally {
       this.starting = false;
     }

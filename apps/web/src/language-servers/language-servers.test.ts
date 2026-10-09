@@ -1,3 +1,4 @@
+import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { EditorAdditions } from '@/plugins/editor';
@@ -179,7 +180,8 @@ describe('connect', () => {
     ]);
   });
 
-  test('restarts a server whose connection closed', async () => {
+  test('restarts a server whose connection closed, and says it stopped', async () => {
+    const add = vi.spyOn(toast, 'add');
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
     const fakes: StubTransport[] = [];
@@ -190,12 +192,14 @@ describe('connect', () => {
     servers.connect(ROOT, 'Toy', URI);
     await started();
 
+    expect(add).toHaveBeenCalledWith({ type: 'warning', title: 'Toy stopped' });
     expect(fakes).toHaveLength(2);
     expect(fakes[1].sent[0]).toMatchObject({ method: 'initialize' });
   });
 
-  test('restarts a server that failed to start', async () => {
+  test('restarts a server that failed to start, and says it failed', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const add = vi.spyOn(toast, 'add');
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
     const fake = stubTransport();
@@ -205,6 +209,7 @@ describe('connect', () => {
     await started();
 
     expect(error).toHaveBeenCalledWith('Language server Toy failed to start', failure);
+    expect(add).toHaveBeenCalledWith({ type: 'error', title: 'Toy failed to start', description: 'No such server' });
     expect(fake.sent).toEqual([]);
 
     servers.connect(ROOT, 'Toy', URI);
@@ -253,5 +258,43 @@ describe('LanguageServerInstance.start', () => {
     await instance.start();
 
     expect(start).not.toHaveBeenCalled();
+  });
+
+  test("shows the server's messages, but not its logs", async () => {
+    const add = vi.spyOn(toast, 'add');
+    const fake = stubTransport();
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    await instance.start();
+    for (const [type, message] of [
+      [1, 'Crashed'],
+      [2, 'Slow'],
+      [3, 'Ready'],
+      [4, 'Logged'],
+    ]) {
+      fake.notify('window/showMessage', { type, message });
+    }
+
+    expect(add.mock.calls).toEqual([
+      [{ type: 'error', title: 'Toy', description: 'Crashed' }],
+      [{ type: 'warning', title: 'Toy', description: 'Slow' }],
+      [{ type: 'info', title: 'Toy', description: 'Ready' }],
+    ]);
+  });
+
+  test("doesn't say a server that was stopped stopped", async () => {
+    const add = vi.spyOn(toast, 'add');
+    const fake = stubTransport();
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    await instance.start();
+    instance.stop();
+
+    expect(fake.closed).toBe(true);
+    expect(add).not.toHaveBeenCalled();
   });
 });

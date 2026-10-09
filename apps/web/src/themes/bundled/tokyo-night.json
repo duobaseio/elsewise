@@ -71,8 +71,14 @@
       "hint": "#707280",
       "unnecessary": "#707280",
       "tokens": {
-        "comment": "#888B94",
-        "docComment": "#888B94",
+        "comment": {
+          "color": "#888B94",
+          "italic": true
+        },
+        "docComment": {
+          "color": "#888B94",
+          "italic": true
+        },
         "punctuation": "#006C86",
         "bracket": "#484C61",
         "operator": "#006C86",
@@ -235,8 +241,14 @@
       "hint": "#787C99",
       "unnecessary": "#787C99",
       "tokens": {
-        "comment": "#51597D",
-        "docComment": "#51597D",
+        "comment": {
+          "color": "#51597D",
+          "italic": true
+        },
+        "docComment": {
+          "color": "#51597D",
+          "italic": true
+        },
         "punctuation": "#89DDFF",
         "bracket": "#9ABDF5",
         "operator": "#89DDFF",
