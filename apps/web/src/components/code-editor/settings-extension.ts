@@ -3,6 +3,8 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { useMemo } from 'react';
 import { visualGuides } from '@/components/code-editor/visual-guides';
+import { completionDocumentation } from '@/language-servers/completion';
+import { highlightUsages } from '@/language-servers/highlights';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 /**
@@ -16,6 +18,8 @@ export function useSettingsExtension(language: string | undefined): Extension {
   const showLineNumbers = useSettings((settings) => settings.appearance.editor.lineNumbers);
   const lineWrapping = useSettings((settings) => settings.appearance.editor.lineWrapping);
   const guides = useEditorSettings(language, 'visualGuides');
+  const documentation = useSettings((settings) => settings.appearance.editor.completionDocumentation);
+  const usages = useSettings((settings) => settings.appearance.editor.highlightUsages);
 
   return useMemo(
     () => [
@@ -24,7 +28,9 @@ export function useSettingsExtension(language: string | undefined): Extension {
       showLineNumbers ? lineNumbers() : [],
       lineWrapping ? EditorView.lineWrapping : [],
       visualGuides(guides),
+      completionDocumentation.of(documentation),
+      highlightUsages.of(usages),
     ],
-    [tabSize, indent, showLineNumbers, lineWrapping, guides],
+    [tabSize, indent, showLineNumbers, lineWrapping, guides, documentation, usages],
   );
 }

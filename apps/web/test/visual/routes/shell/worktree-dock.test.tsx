@@ -64,7 +64,7 @@ test.each(THEMES)('worktree dock, default layout (%s)', async (theme) => {
 });
 
 async function addEditorGroupTerminals(api: () => DockviewApi) {
-  const editorGroup = api().getPanel('editor:transport.rs')?.group;
+  const editorGroup = api().getPanel('editor:$worktree.tsx')?.group;
   if (!editorGroup) {
     throw new Error('no editor group');
   }
@@ -77,7 +77,7 @@ async function addEditorGroupTerminals(api: () => DockviewApi) {
       position: { referenceGroup: editorGroup },
     });
   }
-  api().getPanel('editor:transport.rs')?.api.setActive();
+  api().getPanel('editor:$worktree.tsx')?.api.setActive();
   await vi.waitFor(() => {
     if (editorGroup.element.querySelectorAll('.dv-tab').length !== 3) {
       throw new Error('terminal tabs not added');

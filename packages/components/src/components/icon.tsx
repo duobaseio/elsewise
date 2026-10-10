@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  ArrowSquareOutIcon,
   CaretDownIcon,
   CaretRightIcon,
   CaretUpIcon,
@@ -47,6 +48,7 @@ const DEFAULT_ICONS = {
   info: InfoIcon,
   warning: WarningIcon,
   error: XCircleIcon,
+  external: ArrowSquareOutIcon,
   loading: SpinnerIcon,
   'sidebar-toggle': SidebarIcon,
   folder: FolderIcon,

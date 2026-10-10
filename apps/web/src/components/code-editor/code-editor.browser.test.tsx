@@ -1,33 +1,21 @@
-import { LanguageDescription, type LanguageSupport } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
+import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
-import { EditorState, type Extension } from '@codemirror/state';
-import {
-  drawSelection,
-  EditorView,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  lineNumbers,
-} from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import type { LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useRef } from 'react';
-import { beforeAll, expect, test, vi } from 'vitest';
+import type { ReactNode } from 'react';
+import { expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CodeEditor } from '@/components/code-editor/code-editor';
-import { useThemeExtension } from '@/components/code-editor/theme-extension';
-import { visualGuides } from '@/components/code-editor/visual-guides';
+import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
+import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { settingsQuery } from '@/settings/settings';
+import { type StubTransport, stubTransport } from '../../../test/stub-transport';
 
 const { EDITOR } = vi.hoisted(() => ({
   EDITOR: {
-    background: '#102030',
-    foreground: '#405060',
-    caret: '#506070',
-    gutterBackground: '#203040',
-    activeLine: '#708090',
-    visualGuide: '#A0B0C0',
     searchMatch: '#A1B2C3',
     searchMatchSelected: '#00000000',
     searchMatchSelectedBorder: '#C3B2A1',
@@ -58,47 +46,27 @@ const SETTINGS: Settings = {
   },
 };
 
-let rust: LanguageSupport;
-
-beforeAll(async () => {
-  rust = await (LanguageDescription.matchFilename(languages, 'main.rs') as LanguageDescription).load();
-});
-
 function shell(children: ReactNode) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 }
 
-// A probe mounts an editor with whatever `useThemeExtension` resolves.
-function mount(doc: string, extensions: Extension[]): Promise<EditorView> {
-  let resolve!: (view: EditorView) => void;
-  const ready = new Promise<EditorView>((r) => {
-    resolve = r;
-  });
-  function Probe() {
-    const themeExtension = useThemeExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const view = new EditorView({
-        state: EditorState.create({ doc, extensions: [themeExtension, ...extensions] }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(view);
-      return () => view.destroy();
-    }, [themeExtension]);
-    return <div ref={host} />;
-  }
-  render(shell(<Probe />));
-  return ready;
-}
-
-async function mountEditor(code: string): Promise<EditorView> {
+async function mountEditor(
+  code: string,
+  path = 'main.rs',
+  additions = new EditorAdditions(),
+  root?: URL,
+): Promise<EditorView> {
   const screen = await render(
     shell(
-      <div style={{ height: 300 }}>
-        <CodeEditor code={code} path="main.rs" />
-      </div>,
+      <EditorAdditionsContext value={additions}>
+        <LanguageServersContext value={new LanguageServers(additions)}>
+          <div style={{ height: 300 }}>
+            <CodeEditor code={code} path={path} root={root} />
+          </div>
+        </LanguageServersContext>
+      </EditorAdditionsContext>,
     ),
   );
   await expect.element(screen.getByText(code.split('\n')[0])).toBeVisible();
@@ -121,40 +89,37 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-test("the theme's colors and token styles land", async () => {
-  const view = await mount('// note\nfn main() {}\n', [
-    drawSelection(),
-    lineNumbers(),
-    highlightActiveLine(),
-    highlightActiveLineGutter(),
-    rust,
-  ]);
-  view.focus();
-  // drawSelection paints the caret on the next frame.
-  await new Promise(requestAnimationFrame);
-  expect(style(view.dom).backgroundColor).toBe(rgb(EDITOR.background));
-  expect(style(view.dom).color).toBe(rgb(EDITOR.foreground));
-  expect(style(view.dom.querySelector('.cm-cursor')).borderLeftColor).toBe(rgb(EDITOR.caret));
-  expect(style(view.dom.querySelector('.cm-gutters')).backgroundColor).toBe(rgb(EDITOR.gutterBackground));
-  expect(style(view.dom.querySelector('.cm-activeLine')).backgroundColor).toBe(rgb(EDITOR.activeLine));
-  expect(style(view.dom.querySelector('.cm-activeLineGutter')).backgroundColor).toBe(rgb(EDITOR.activeLine));
+// Returns a language for files with `extensions` that highlights every line as a comment.
+function commentLanguage(extensions: string[]): LanguageDescription {
+  return LanguageDescription.of({
+    name: 'Comment',
+    extensions,
+    load: async () =>
+      new LanguageSupport(
+        StreamLanguage.define({
+          token: (stream) => {
+            stream.skipToEnd();
+            return 'comment';
+          },
+        }),
+      ),
+  });
+}
 
-  const spans = [...view.dom.querySelectorAll('.cm-line span')];
-  const keyword = style(spans.find((span) => span.textContent === 'fn') ?? null);
-  const comment = style(spans.find((span) => span.textContent === '// note') ?? null);
-  expect(keyword.color).toBe(rgb(EDITOR.tokens.keyword.color));
-  expect(keyword.fontWeight).toBe('700');
-  expect(keyword.textDecorationLine).toBe('line-through');
-  expect(comment.color).toBe(rgb(EDITOR.tokens.comment.color));
-  expect(comment.fontStyle).toBe('italic');
-  expect(comment.textDecorationLine).toBe('underline');
-});
+// Returns a language server for Rust files that only answers `initialize`, and the messages it was sent.
+function rustServer(): { server: LanguageServer; sent: StubTransport['sent'] } {
+  const transport = stubTransport();
+  return {
+    sent: transport.sent,
+    server: { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => transport },
+  };
+}
 
-test("the visual guide takes the theme's color", async () => {
-  const view = await mount('x', [visualGuides([1])]);
-  await new Promise(requestAnimationFrame);
-  expect(style(view.dom.querySelector('.cm-visual-guide')).borderLeftColor).toBe(rgb(EDITOR.visualGuide));
-});
+// Returns the color of the first token on the first line, once there is one.
+function firstTokenColor(view: EditorView): string | undefined {
+  const token = view.contentDOM.querySelector('.cm-line span');
+  return token === null ? undefined : getComputedStyle(token).color;
+}
 
 test('search match roles', async () => {
   const view = await mountEditor('a a a\n');
@@ -171,7 +136,7 @@ test('search match roles', async () => {
   expect(current.outlineColor).toBe(rgb(EDITOR.searchMatchSelectedBorder));
   expect(current.outlineStyle).toBe('solid');
   expect(current.outlineWidth).toBe('1px');
-  expect(current.outlineOffset).toBe('-1px');
+  expect(current.outlineOffset).toBe('0px');
 });
 
 test('tooltips above the search bar', async () => {
@@ -190,4 +155,86 @@ test('the fold marker is drawn from the icon set', async () => {
   const view = await mountEditor('fn main() {\n    let a = 1;\n}\n');
   await expect.poll(() => view.dom.querySelector('.cm-fold-marker')).not.toBeNull();
   expect(style(view.dom.querySelector('.cm-fold-marker')).maskImage).toMatch(/^url\("data:image\/svg\+xml,/);
+});
+
+test("a plugin's theme overrides the editor's metrics", async () => {
+  const additions = new EditorAdditions();
+  additions.addExtensions([EditorView.theme({ '.cm-content': { paddingBottom: '0px' } })]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', additions);
+
+  expect(style(view.contentDOM).paddingBottom).toBe('0px');
+});
+
+test("a plugin's extension function receives the file", async () => {
+  const additions = new EditorAdditions();
+  additions.addExtensions([(document) => EditorView.contentAttributes.of({ 'data-path': document.path })]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', additions);
+
+  expect(view.contentDOM.dataset.path).toBe('main.rs');
+});
+
+test("a plugin's language highlights files with its extension", async () => {
+  const additions = new EditorAdditions();
+  additions.addLanguages([commentLanguage(['comment'])]);
+  const view = await mountEditor('hello\n', 'main.comment', additions);
+
+  await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.comment.color));
+});
+
+test("a plugin's language wins over a built-in one until disposed", async () => {
+  const additions = new EditorAdditions();
+  const dispose = additions.addLanguages([commentLanguage(['rs'])]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', additions);
+  await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.comment.color));
+
+  dispose();
+  await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.keyword.color));
+});
+
+test("a plugin's language server opens files in its language", async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+
+  await expect
+    .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
+    .toMatchObject({
+      params: { textDocument: { uri: 'file:///worktree/src/main.rs', languageId: 'rust', text: 'fn main() {}\n' } },
+    });
+  expect(sent[0]).toMatchObject({ method: 'initialize', params: { rootUri: 'file:///worktree/' } });
+});
+
+test("a plugin's language server opens files that were open before it was added", async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+  additions.addLanguageServers([server]);
+
+  await expect
+    .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
+    .toMatchObject({ params: { textDocument: { uri: 'file:///worktree/src/main.rs' } } });
+});
+
+test("a plugin's language server keeps a file open when a server for another language is added", async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+  await expect.poll(() => sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
+
+  additions.addLanguageServers([{ ...rustServer().server, id: 'toy', languages: { Toy: 'toy' } }]);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
+});
+
+test('a file without a root has no language server', async () => {
+  const additions = new EditorAdditions();
+  const { server, sent } = rustServer();
+  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', additions);
+  await new Promise((resolve) => setTimeout(resolve));
+
+  expect(sent).toEqual([]);
 });

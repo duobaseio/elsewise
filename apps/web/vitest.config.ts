@@ -44,14 +44,18 @@ function browserProject(
         '@tanstack/react-query',
         '@tanstack/react-router',
         'dockview-react',
+        'dompurify',
         '@codemirror/autocomplete',
         '@codemirror/commands',
         '@codemirror/language',
         '@codemirror/language-data',
+        '@codemirror/lint',
+        '@codemirror/lsp-client',
         '@codemirror/search',
         '@codemirror/state',
         '@codemirror/view',
         '@lezer/highlight',
+        'vscode-languageserver-protocol',
         // The language the tests load, which `language-data` imports on demand.
         '@codemirror/language-data > @codemirror/lang-rust',
         // The components' own dependencies, which the app cannot resolve by name.

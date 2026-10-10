@@ -64,7 +64,13 @@
       "searchMatchSelectedBorder": "#00000000",
       "panelBackground": "#CECCC0",
       "tooltipBackground": "#FFFBEB",
+      "completionHovered": "#CFCFDE80",
       "completionSelected": "#CFCFDE",
+      "error": "#CB3A2A",
+      "warning": "#846E15",
+      "info": "#036A96",
+      "hint": "#6C664B",
+      "unnecessary": "#6C664B",
       "tokens": {
         "comment": {
           "color": "#6C664B",
@@ -237,16 +243,16 @@
       "searchMatchSelectedBorder": "#00000000",
       "panelBackground": "#21222C",
       "tooltipBackground": "#282A36",
+      "completionHovered": "#44475A80",
       "completionSelected": "#44475A",
+      "error": "#FF5555",
+      "warning": "#F1FA8C",
+      "info": "#8BE9FD",
+      "hint": "#8F9ABB",
+      "unnecessary": "#8F9ABB",
       "tokens": {
-        "comment": {
-          "color": "#6272A4",
-          "italic": true
-        },
-        "docComment": {
-          "color": "#6272A4",
-          "italic": true
-        },
+        "comment": "#6272A4",
+        "docComment": "#6272A4",
         "punctuation": "#F8F8F2",
         "bracket": "#F8F8F2",
         "operator": "#FF79C6",

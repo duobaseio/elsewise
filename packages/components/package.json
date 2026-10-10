@@ -23,6 +23,7 @@
     "./components/input": "./src/components/input.tsx",
     "./components/kbd": "./src/components/kbd.tsx",
     "./components/label": "./src/components/label.tsx",
+    "./components/letter-icon": "./src/components/letter-icon.tsx",
     "./components/select": "./src/components/select.tsx",
     "./components/separator": "./src/components/separator.tsx",
     "./components/sidebar": "./src/components/sidebar.tsx",

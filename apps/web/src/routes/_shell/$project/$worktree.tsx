@@ -15,6 +15,17 @@ import {
 } from 'dockview-react';
 import { useEffect, useRef, useState } from 'react';
 import { CodeEditor } from '@/components/code-editor/code-editor';
+// TODO: Back this with the daemon.
+import FAKE_CODE from './$worktree.tsx?raw';
+
+declare global {
+  interface ImportMetaEnv {
+    /**
+     * The repository that the dev server runs in, as a `file:` URL ending in `/`.
+     */
+    readonly ELSEWISE_REPOSITORY: string;
+  }
+}
 
 export const Route = createFileRoute('/_shell/$project/$worktree')({
   component: WorkTreeDock,
@@ -30,7 +41,6 @@ const PANELS = {
   fileTree: FileTreePanel,
 };
 
-// TODO: Make it injectable.
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 
 export function WorkTreeDock({
@@ -60,6 +70,7 @@ export function WorkTreeDock({
           capture: true,
         });
     }
+    return undefined;
   }, []);
 
   useEffect(() => {
@@ -73,14 +84,15 @@ export function WorkTreeDock({
         }
       };
     }
+    return undefined;
   }, [dockview]);
 
   const onReady = (event: DockviewReadyEvent) => {
     event.api.addPanel({
-      id: 'editor:transport.rs',
+      id: 'editor:$worktree.tsx',
       component: 'editor' satisfies PanelKind,
-      title: 'transport.rs',
-      params: { path: 'transport.rs' },
+      title: '$worktree.tsx',
+      params: { path: 'apps/web/src/routes/_shell/$project/$worktree.tsx' },
       minimumWidth: 10,
       minimumHeight: 10,
     });
@@ -90,7 +102,7 @@ export function WorkTreeDock({
       tabComponent: 'fileTree' satisfies PanelKind,
       title: 'Files',
       params: { path: '/' },
-      position: { referencePanel: 'editor:transport.rs', direction: 'right' },
+      position: { referencePanel: 'editor:$worktree.tsx', direction: 'right' },
       minimumWidth: 10,
       minimumHeight: 10,
       initialWidth: 350,
@@ -100,7 +112,7 @@ export function WorkTreeDock({
       component: 'terminal' satisfies PanelKind,
       title: 'zsh 1',
       params: { index: 1 },
-      position: { referencePanel: 'editor:transport.rs', direction: 'below' },
+      position: { referencePanel: 'editor:$worktree.tsx', direction: 'below' },
       minimumWidth: 10,
       minimumHeight: 10,
       initialHeight: 200,
@@ -108,7 +120,7 @@ export function WorkTreeDock({
     setDockview(event.api);
 
     // TODO: Replace with actual active panel logic
-    event.api.getPanel('editor:transport.rs')?.api.setActive();
+    event.api.getPanel('editor:$worktree.tsx')?.api.setActive();
     onDockviewReady?.(event.api);
   };
 
@@ -275,16 +287,11 @@ function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
   }
 }
 
-// TODO: Back this with the daemon.
-const FAKE_CODE = `pub async fn attach(&self, id: SessionId) -> Result<Channel> {
-    let session = self.sessions.get(&id).ok_or(Error::NotFound)?;
-    let (tx, rx) = channel::bounded(64);
-    session.subscribe(tx).await?;
-    Ok(Channel::new(rx))
-}`;
-
 function EditorPanel(props: IDockviewPanelProps<{ path: string }>) {
-  return <CodeEditor code={FAKE_CODE} path={props.params.path} />;
+  // TODO: Back this with the daemon.
+  const root = new URL(import.meta.env.ELSEWISE_REPOSITORY);
+
+  return <CodeEditor code={FAKE_CODE} path={props.params.path} root={root} />;
 }
 
 // TODO: Replace with the terminal once it is migrated.

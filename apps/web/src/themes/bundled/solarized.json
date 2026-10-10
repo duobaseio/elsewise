@@ -64,7 +64,13 @@
       "searchMatchSelectedBorder": "#00000000",
       "panelBackground": "#EEE8D5",
       "tooltipBackground": "#CCC4B0",
+      "completionHovered": "#EEE8D580",
       "completionSelected": "#EEE8D5",
+      "error": "#DC322F",
+      "warning": "#B58900",
+      "info": "#268BD2",
+      "hint": "#93A1A1",
+      "unnecessary": "#93A1A1",
       "tokens": {
         "comment": {
           "color": "#93A1A1",
@@ -221,7 +227,13 @@
       "searchMatchSelectedBorder": "#00000000",
       "panelBackground": "#00212B",
       "tooltipBackground": "#004052",
+      "completionHovered": "#27464280",
       "completionSelected": "#274642",
+      "error": "#DC322F",
+      "warning": "#B58900",
+      "info": "#268BD2",
+      "hint": "#586E75",
+      "unnecessary": "#586E75",
       "tokens": {
         "comment": {
           "color": "#586E75",

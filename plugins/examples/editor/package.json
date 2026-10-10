@@ -1,0 +1,30 @@
+{
+  "name": "@elsewise/plugin-example-editor",
+  "private": true,
+  "type": "module",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "description": "An example plugin that adds to the code editor.",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check"
+  },
+  "peerDependencies": {
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@elsewise/plugin": "workspace:*",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

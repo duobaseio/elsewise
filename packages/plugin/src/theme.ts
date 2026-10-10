@@ -119,7 +119,15 @@ export const ThemeVariant = z.lazy(() =>
         searchMatchSelectedBorder: Color,
         panelBackground: Color,
         tooltipBackground: Color,
+        completionHovered: Color,
         completionSelected: Color,
+
+        // Diagnostics
+        error: Color,
+        warning: Color,
+        info: Color,
+        hint: Color,
+        unnecessary: Color,
 
         /**
          * The syntax highlighting tokens.

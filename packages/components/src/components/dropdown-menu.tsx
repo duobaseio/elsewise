@@ -237,7 +237,7 @@ export function DropdownMenuShortcut({ className, ...props }: ComponentProps<'sp
     <span
       data-slot="dropdown-menu-shortcut"
       className={cn(
-        'ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-foreground',
+        'ml-auto text-xs tracking-widest text-text-3 group-focus/dropdown-menu-item:text-text-2',
         className,
       )}
       {...props}

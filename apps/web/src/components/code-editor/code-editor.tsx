@@ -1,9 +1,8 @@
 import { closeBrackets } from '@codemirror/autocomplete';
 import { defaultKeymap, history, historyKeymap, indentLess, insertTab } from '@codemirror/commands';
 import { bracketMatching, foldGutter, foldKeymap, LanguageDescription } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
 import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
-import { Compartment, EditorState } from '@codemirror/state';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import {
   crosshairCursor,
   drawSelection,
@@ -17,62 +16,27 @@ import {
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { OS } from '@elsewise/components/lib/os';
-import { useQuery } from '@tanstack/react-query';
-import { type CSSProperties, useEffect, useRef } from 'react';
-import { EditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu';
-import { useSearchExtension } from '@/components/code-editor/search-bar';
+import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
+import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
+import { useLanguageServerExtension } from '@/components/code-editor/language-server-extension';
+import { link } from '@/components/code-editor/link.ts';
+import { useSearchExtension } from '@/components/code-editor/search/search-bar';
 import { useSettingsExtension } from '@/components/code-editor/settings-extension';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
+import { useEditorAdditions } from '@/plugins/editor';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
+const PLUGINS = new Compartment();
 const THEME = new Compartment();
 const LANGUAGE = new Compartment();
+const LANGUAGE_SERVER = new Compartment();
 const SETTINGS = new Compartment();
 
-const METRICS = EditorView.theme({
-  '&': { height: '100%' },
-  '&.cm-focused': { outline: 'none' },
-  '.cm-panels': { backgroundColor: 'transparent', color: 'inherit', zIndex: 'auto' },
-  '.cm-panels-top': { borderBottom: 'none' },
-  '.cm-searchMatch-selected': { outline: '1px solid transparent', outlineOffset: '-1px' },
-  '.cm-content': { paddingBottom: '8rem' },
-  '.cm-scroller': {
-    fontFamily: 'var(--font-mono)',
-    fontVariantLigatures: 'var(--font-mono-ligatures)',
-    fontSize: 'var(--text-code)',
-    lineHeight: 'var(--text-code--line-height)',
-  },
-  '.cm-scroller::-webkit-scrollbar': { width: '6px', height: '6px' },
-  '.cm-scroller::-webkit-scrollbar-track, .cm-scroller::-webkit-scrollbar-corner': { background: 'none' },
-  '.cm-scroller::-webkit-scrollbar-thumb': {
-    backgroundColor: 'var(--border)',
-    borderRadius: '3px',
-    backgroundClip: 'content-box',
-    border: '1px solid transparent',
-  },
-  '.cm-scroller::-webkit-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
-  '.cm-scroller::-webkit-scrollbar-thumb:active': { backgroundColor: 'var(--disabled)' },
-  '.cm-gutters': {
-    fontSize: 'var(--text-code-gutter)',
-    lineHeight: 'var(--text-code-gutter--line-height)',
-  },
-  '.cm-lineNumbers .cm-gutterElement': { padding: '0 4px' },
-  '.cm-foldGutter .cm-gutterElement': {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '0 8px 0 8px',
-  },
-  '.cm-fold-marker': {
-    width: '1em',
-    height: '1em',
-    backgroundColor: 'currentColor',
-    mask: 'var(--fold-marker) center / contain no-repeat',
-  },
-  '.cm-fold-marker:not([data-open])': { transform: 'rotate(-90deg)' },
-});
-
 export interface CodeEditorProps {
+  /**
+   * The root of the worktree that the file is in, ending in `/`.
+   */
+  root?: URL;
   /**
    * The file's path. Used to detect its language.
    */
@@ -83,21 +47,17 @@ export interface CodeEditorProps {
 /**
  * A code editor.
  */
-export function CodeEditor({ path, code }: CodeEditorProps) {
+export function CodeEditor({ path, code, root }: CodeEditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView>(null);
 
-  const description = LanguageDescription.matchFilename(languages, path);
-  const { data: language } = useQuery({
-    queryKey: ['language', description?.name ?? null],
-    queryFn: () => description?.load() ?? null,
-    enabled: description != null,
-    staleTime: Number.POSITIVE_INFINITY,
-  });
-
+  const plugins = usePluginsExtension(path);
   const theme = useThemeExtension();
+  const languages = useEditorAdditions((additions) => additions.languages);
+  const description = LanguageDescription.matchFilename(languages, path);
   const { search, portal } = useSearchExtension();
   const settings = useSettingsExtension(description?.name);
+  const languageServer = useLanguageServerExtension(root, description?.name, path);
   const icons = useIcons();
 
   const font = useSettings((settings) => settings.appearance.editor.font);
@@ -114,56 +74,64 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
       return;
     }
 
-    view.current = new EditorView({
-      state: EditorState.create({
-        doc: code,
-        extensions: [
-          THEME.of(theme),
-          METRICS,
-          history(),
-          search,
+    let state = EditorState.create({
+      doc: code,
+      extensions: [
+        // Has to be first to let a plugin's theme and keymap take precedence over Elsewise's.
+        PLUGINS.of([]),
+        THEME.of(theme),
+        history(),
+        search,
 
-          SETTINGS.of(settings),
-          // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
-          EditorState.lineSeparator.of(lineSeparator),
+        SETTINGS.of(settings),
+        // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
+        EditorState.lineSeparator.of(lineSeparator),
 
-          LANGUAGE.of(language ?? []),
-          closeBrackets(),
-          bracketMatching(),
-          // Has to be after lineNumbers to ensure the fold icon is to the right of it.
-          foldGutter({
-            markerDOM: (open) => {
-              const marker = document.createElement('span');
-              marker.className = 'cm-fold-marker';
-              if (open) {
-                marker.dataset.open = '';
-              }
-              return marker;
-            },
-          }),
+        LANGUAGE.of(description?.support ?? []),
+        LANGUAGE_SERVER.of(languageServer),
+        closeBrackets(),
+        bracketMatching(),
+        // Has to be after lineNumbers to ensure the fold icon is to the right of it.
+        foldGutter({
+          markerDOM: (open) => {
+            const marker = document.createElement('span');
+            marker.className = 'cm-fold-marker';
+            if (open) {
+              marker.dataset.open = '';
+            }
+            return marker;
+          },
+        }),
 
-          EditorState.allowMultipleSelections.of(true),
-          drawSelection(),
-          crosshairCursor(),
-          rectangularSelection(),
+        EditorState.allowMultipleSelections.of(true),
+        drawSelection(),
+        crosshairCursor(),
+        rectangularSelection(),
 
-          highlightActiveLine(),
-          highlightActiveLineGutter(),
-          highlightSelectionMatches(),
-          highlightSpecialChars(),
-          rightClickContextMenu,
+        highlightActiveLine(),
+        highlightActiveLineGutter(),
+        highlightSelectionMatches(),
+        highlightSpecialChars(),
+        rightClickContextMenu,
+        link(),
 
-          keymap.of([
-            ...defaultKeymap,
-            ...historyKeymap,
-            ...searchKeymap,
-            ...foldKeymap,
-            { key: 'Tab', run: insertTab, shift: indentLess },
-          ]),
-        ],
-      }),
-      parent: host.current,
+        keymap.of([
+          ...defaultKeymap,
+          ...historyKeymap,
+          ...searchKeymap,
+          ...foldKeymap,
+          { key: 'Tab', run: insertTab, shift: indentLess },
+        ]),
+      ],
     });
+    // Applies the plugins' extensions separately to keep a broken plugin from leaving the file without an editor.
+    try {
+      state = state.update({ effects: PLUGINS.reconfigure(plugins) }).state;
+    } catch (error) {
+      console.error('Plugin extension failed', error);
+    }
+
+    view.current = new EditorView({ state, parent: host.current });
 
     return () => {
       view.current?.destroy();
@@ -172,8 +140,37 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
   }, [code, lineSeparator]);
 
   useEffect(() => {
-    view.current?.dispatch({ effects: LANGUAGE.reconfigure(language ?? []) });
-  }, [language]);
+    view.current?.dispatch({ effects: LANGUAGE.reconfigure(description?.support ?? []) });
+    if (description === null || description.support !== undefined) {
+      return;
+    }
+
+    // Keeps a grammar that loads late from being applied to another file's language.
+    let live = true;
+    description.load().then(
+      (support) => {
+        if (live) {
+          view.current?.dispatch({ effects: LANGUAGE.reconfigure(support) });
+        }
+      },
+      (error) => {
+        console.error(`Language ${description.name} failed to load`, error);
+      },
+    );
+
+    return () => {
+      live = false;
+    };
+  }, [description]);
+
+  useEffect(() => {
+    try {
+      view.current?.dispatch({ effects: PLUGINS.reconfigure(plugins) });
+    } catch (error) {
+      console.error('Plugin extension failed', error);
+      view.current?.dispatch({ effects: PLUGINS.reconfigure([]) });
+    }
+  }, [plugins]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: THEME.reconfigure(theme) });
@@ -182,6 +179,10 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
   useEffect(() => {
     view.current?.dispatch({ effects: SETTINGS.reconfigure(settings) });
   }, [settings]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: LANGUAGE_SERVER.reconfigure(languageServer) });
+  }, [languageServer]);
 
   // Rebuilds the editor when its font changes. CodeMirror caches measurements such as the character width, and does
   // not notice a font that changes through a CSS variable.
@@ -200,15 +201,33 @@ export function CodeEditor({ path, code }: CodeEditorProps) {
 
   return (
     <>
-      <EditorContextMenu view={view}>
+      <CodeEditorContextMenu view={view}>
         <div
           className="h-full"
           ref={host}
-          // The icon is passed as a CSS variable since CodeMirror creates the fold markers outside React.
-          style={{ '--fold-marker': `url("${iconUrl(icons.expand)}")` } as CSSProperties}
+          // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
+          style={
+            {
+              '--fold-marker': `url("${iconUrl(icons.expand)}")`,
+              '--external-link': `url("${iconUrl(icons.external)}")`,
+            } as CSSProperties
+          }
         />
-      </EditorContextMenu>
+      </CodeEditorContextMenu>
       {portal}
     </>
   );
+}
+
+function usePluginsExtension(path: string): Extension {
+  const extensions = useEditorAdditions((additions) => additions.extensions);
+
+  return useMemo(() => {
+    try {
+      return extensions.map((extension) => (typeof extension === 'function' ? extension({ path }) : extension));
+    } catch (error) {
+      console.error('Plugin extension failed', error);
+      return [];
+    }
+  }, [extensions, path]);
 }

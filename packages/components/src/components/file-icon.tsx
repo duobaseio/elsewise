@@ -12,20 +12,11 @@ import {
 } from '../lib/file-icons.gen';
 import { cn } from '../lib/utils';
 import type { IconProvider } from './icon';
+import { LetterIcon } from './letter-icon';
 
 const ICON_CLASS = 'size-4 shrink-0';
 
 const TINT_CLASS = 'text-(--icon-tint-light) dark:text-(--icon-tint-dark)';
-
-const TINT_LINE_CLASS =
-  'border-[color-mix(in_srgb,var(--icon-tint-light)_45%,transparent)] dark:border-[color-mix(in_srgb,var(--icon-tint-dark)_45%,transparent)]';
-
-const LETTER_SIZE: Record<number, string> = {
-  0: 'text-[8.5px]/none',
-  1: 'text-[8.5px]/none',
-  2: 'text-[8.5px]/none',
-  3: 'text-[5.75px]/none',
-};
 
 function lowercase(icons: Record<string, FileIconData>): Record<string, FileIconData> {
   const entries = Object.entries(icons).filter(([, icon]) => icon !== undefined);
@@ -158,31 +149,5 @@ function PhosphorIcon({
       }
       className={cn(ICON_CLASS, tint === null ? 'text-foreground' : TINT_CLASS, className)}
     />
-  );
-}
-
-function LetterIcon({ letters, tint, className }: { letters: string; tint: IconTint | null; className?: string }) {
-  return (
-    <span
-      aria-hidden
-      data-slot="file-icon"
-      style={
-        tint === null
-          ? undefined
-          : ({
-              '--icon-tint-light': tint.light,
-              '--icon-tint-dark': tint.dark,
-            } as CSSProperties)
-      }
-      className={cn(
-        ICON_CLASS,
-        'flex items-center justify-center rounded-[3px] border font-medium tracking-tight',
-        LETTER_SIZE[Math.min(letters.length, 3)],
-        tint === null ? 'border-border text-foreground' : cn(TINT_CLASS, TINT_LINE_CLASS),
-        className,
-      )}
-    >
-      {letters}
-    </span>
   );
 }

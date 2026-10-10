@@ -13,9 +13,11 @@ export const settingsQuery = queryOptions({
 });
 
 /**
- * Returns what `select` picks from the settings.
+ * Returns the settings.
  */
-export function useSettings<T>(select: (settings: Settings) => T): T {
+export function useSettings(): Settings;
+export function useSettings<T>(select: (settings: Settings) => T): T;
+export function useSettings<T>(select?: (settings: Settings) => T): Settings | T {
   return useSuspenseQuery({ ...settingsQuery, select }).data;
 }
 

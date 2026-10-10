@@ -211,10 +211,7 @@ export function ContextMenuShortcut({ className, ...props }: ComponentProps<'spa
   return (
     <span
       data-slot="context-menu-shortcut"
-      className={cn(
-        'ml-auto text-xs tracking-widest text-muted-foreground group-focus/context-menu-item:text-foreground',
-        className,
-      )}
+      className={cn('ml-auto text-xs tracking-widest text-text-3 group-focus/context-menu-item:text-text-2', className)}
       {...props}
     />
   );

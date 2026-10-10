@@ -64,7 +64,13 @@
       "searchMatchSelectedBorder": "#D20F3933",
       "panelBackground": "#E6E9EF",
       "tooltipBackground": "#E6E9EF",
+      "completionHovered": "#CCD0DA80",
       "completionSelected": "#CCD0DA",
+      "error": "#E64553",
+      "warning": "#FE640B",
+      "info": "#179299",
+      "hint": "#6C6F85",
+      "unnecessary": "#6C6F85",
       "tokens": {
         "comment": {
           "color": "#7C7F93",

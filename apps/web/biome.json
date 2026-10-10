@@ -30,7 +30,8 @@
     "rules": {
       "preset": "recommended",
       "style": {
-        "useBlockStatements": "error"
+        "useBlockStatements": "error",
+        "useConsistentMemberAccessibility": { "level": "error", "options": { "accessibility": "noPublic" } }
       }
     }
   },

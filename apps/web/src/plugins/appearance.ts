@@ -10,19 +10,19 @@ export class PluginAppearance implements Appearance {
   /**
    * Creates an appearance with the given `brightness` and `theme`.
    */
-  public constructor(
+  constructor(
     private currentBrightness: 'light' | 'dark',
     private currentTheme: ResolvedTheme,
   ) {}
 
-  public get brightness(): 'light' | 'dark' {
+  get brightness(): 'light' | 'dark' {
     return this.currentBrightness;
   }
 
   /**
    * Sets the brightness, and calls the listeners if it changed.
    */
-  public set brightness(brightness: 'light' | 'dark') {
+  set brightness(brightness: 'light' | 'dark') {
     if (brightness === this.currentBrightness) {
       return;
     }
@@ -37,19 +37,19 @@ export class PluginAppearance implements Appearance {
     }
   }
 
-  public onBrightnessChange(listener: (brightness: 'light' | 'dark') => void): Disposable {
+  onBrightnessChange(listener: (brightness: 'light' | 'dark') => void): Disposable {
     this.brightnessListeners.add(listener);
     return () => this.brightnessListeners.delete(listener);
   }
 
-  public get theme(): ResolvedTheme {
+  get theme(): ResolvedTheme {
     return this.currentTheme;
   }
 
   /**
    * Sets the theme, and calls the listeners if it is another object.
    */
-  public set theme(theme: ResolvedTheme) {
+  set theme(theme: ResolvedTheme) {
     if (theme === this.currentTheme) {
       return;
     }
@@ -64,7 +64,7 @@ export class PluginAppearance implements Appearance {
     }
   }
 
-  public onThemeChange(listener: (theme: ResolvedTheme) => void): Disposable {
+  onThemeChange(listener: (theme: ResolvedTheme) => void): Disposable {
     this.themeListeners.add(listener);
     return () => this.themeListeners.delete(listener);
   }
