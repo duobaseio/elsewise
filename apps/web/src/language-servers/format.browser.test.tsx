@@ -76,7 +76,7 @@ function press(view: EditorView): boolean {
 
 const CAPABILITIES = { documentFormattingProvider: true, documentRangeFormattingProvider: true };
 
-describe('serverFormatting', () => {
+describe('serverFormat', () => {
   test("applies the server's edits in one undo step", async () => {
     const view = await open({ documentFormattingProvider: true }, () => [
       { range: { start: { line: 0, character: 3 }, end: { line: 0, character: 5 } }, newText: ' ' },

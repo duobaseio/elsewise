@@ -8,7 +8,7 @@
       "onFail": "error"
     }
   },
-  "description": "An example plugin that adds TypeScript's language server to the code editor.",
+  "description": "An example plugin that adds TypeScript's language server, typescript-language-server, to the code editor.",
   "scripts": {
     "build": "vite build",
     "serve": "node scripts/serve.mjs",
@@ -20,7 +20,9 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@elsewise/plugin": "workspace:*",
+    "tsserver": "npm:typescript@^6.0.3",
     "typescript": "^7.0.2",
+    "typescript-language-server": "6.0.1",
     "vite": "^8.3.0",
     "ws": "^8.22.0"
   }

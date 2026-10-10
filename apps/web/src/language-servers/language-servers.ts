@@ -9,7 +9,7 @@ import { serverActions } from '@/language-servers/actions';
 import { serverCompletion } from '@/language-servers/completion';
 import { serverDefinition } from '@/language-servers/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/language-servers/diagnostics';
-import { serverFormatting } from '@/language-servers/formatting';
+import { serverFormat } from '@/language-servers/format';
 import { serverHighlights } from '@/language-servers/highlights';
 import { serverHover } from '@/language-servers/hover';
 import { serverReferences } from '@/language-servers/references';
@@ -136,7 +136,7 @@ export class LanguageServerInstance {
         serverReferences(),
         serverHighlights(),
         serverDefinition(),
-        serverFormatting(),
+        serverFormat(),
         serverActions(),
         serverDiagnostics(),
       ],

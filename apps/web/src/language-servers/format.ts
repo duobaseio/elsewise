@@ -15,7 +15,7 @@ export const FORMAT = 'Mod-Alt-l';
  * It replaces `@codemirror/lsp-client`'s `formatKeymap`, which reports errors in a bar, and binds Shift-Alt-F, which
  * macOS types as `Ï`.
  */
-export function serverFormatting(): LSPClientExtension {
+export function serverFormat(): LSPClientExtension {
   return { editorExtension: keymap.of([{ key: FORMAT, run: format, preventDefault: true }]) };
 }
 
