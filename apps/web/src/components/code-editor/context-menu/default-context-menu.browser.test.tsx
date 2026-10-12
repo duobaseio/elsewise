@@ -10,7 +10,7 @@ import { render } from 'vitest-browser-react';
 import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
 import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
-import { stubTransport } from '../../../../test/stub-transport';
+import { StubTransport } from '../../../../test/stub-transport';
 
 const DOC = 'fn main() {\n    let a = 1;\n}\n';
 
@@ -52,9 +52,12 @@ function mount(additions = new EditorAdditions(), extensions: Extension = []): P
 }
 
 // Returns the extension that connects the editor to a server with `capabilities` that answers with `answers`.
-async function server(capabilities: object, answers: Parameters<typeof stubTransport>[1] = {}): Promise<Extension> {
+async function server(
+  capabilities: object,
+  answers: ConstructorParameters<typeof StubTransport>[1] = {},
+): Promise<Extension> {
   const instance = new LanguageServerInstance(
-    { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => stubTransport(capabilities, answers) },
+    { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => new StubTransport(capabilities, answers) },
     new URL('file:///worktree/'),
   );
   await instance.start();

@@ -12,7 +12,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
 import { highlightUsages } from '@/language-servers/highlights';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.rs';
@@ -25,7 +25,7 @@ function transport(
   diagnostics: Diagnostic[] = [],
   actions: () => unknown = () => [],
 ): StubTransport {
-  return stubTransport(
+  return new StubTransport(
     {
       textDocumentSync: 2,
       diagnosticProvider: {},

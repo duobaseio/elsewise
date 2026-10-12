@@ -7,7 +7,7 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { DocumentRangeFormattingParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
 
@@ -48,7 +48,7 @@ async function open(
       name: 'Rust',
       languages: { Rust: 'rust' },
       start: () =>
-        stubTransport(capabilities, {
+        new StubTransport(capabilities, {
           'textDocument/formatting': format,
           'textDocument/rangeFormatting': formatRange,
         }),

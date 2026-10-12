@@ -8,7 +8,7 @@ import { tags as t } from '@lezer/highlight';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { SignatureHelp } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -24,7 +24,7 @@ const SEND = {
 
 // Returns a transport to a server that answers every signature help request with `help`.
 function transport(help: SignatureHelp): StubTransport {
-  return stubTransport(
+  return new StubTransport(
     { textDocumentSync: 2, signatureHelpProvider: { triggerCharacters: ['(', ','] } },
     { 'textDocument/signatureHelp': () => help },
   );

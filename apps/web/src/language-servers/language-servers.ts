@@ -4,11 +4,12 @@ import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
+import { type ApplyWorkspaceEditParams, MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
 import { serverActions } from '@/language-servers/actions';
 import { serverCompletion } from '@/language-servers/completion';
 import { serverDefinition } from '@/language-servers/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/language-servers/diagnostics';
+import { applyWorkspaceEdit, serverEdits } from '@/language-servers/edits';
 import { serverFormat } from '@/language-servers/format';
 import { serverHighlights } from '@/language-servers/highlights';
 import { serverHover } from '@/language-servers/hover';
@@ -107,6 +108,13 @@ const MESSAGE_TYPES = new Map([
 ]);
 
 /**
+ * The responses to the server's requests that lsp-client would refuse, by method.
+ */
+const REQUESTS = new Map([
+  ['workspace/applyEdit', (client: LSPClient, { edit }: ApplyWorkspaceEditParams) => applyWorkspaceEdit(client, edit)],
+]);
+
+/**
  * A language server instance.
  */
 export class LanguageServerInstance {
@@ -139,6 +147,7 @@ export class LanguageServerInstance {
         serverFormat(),
         serverActions(),
         serverDiagnostics(),
+        serverEdits(),
       ],
       sanitizeHTML: (html) => DOMPurify.sanitize(html),
       notificationHandlers: {
@@ -183,7 +192,18 @@ export class LanguageServerInstance {
       this.client.connect({
         send: (message) => transport.send(message),
         subscribe: (handler) => {
-          handlers.set(handler, transport.onMessage(handler));
+          handlers.set(
+            handler,
+            transport.onMessage((message) => {
+              const { id, method, params } = JSON.parse(message);
+              const response = id !== undefined && REQUESTS.get(method);
+              if (response) {
+                transport.send(JSON.stringify({ jsonrpc: '2.0', id, result: response(this.client, params) }));
+              } else {
+                handler(message);
+              }
+            }),
+          );
         },
         unsubscribe: (handler) => {
           handlers.get(handler)?.();

@@ -3,7 +3,7 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -14,7 +14,7 @@ const DOC = `total + 1${'\n'.repeat(100)}let total = 1;${'\n'.repeat(100)}`;
 
 // Returns a transport to a server that finds `total` defined on line 101 of `DOC`.
 function transport(): StubTransport {
-  return stubTransport(
+  return new StubTransport(
     { textDocumentSync: 2, definitionProvider: true },
     {
       'textDocument/definition': () => ({

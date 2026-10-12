@@ -12,7 +12,7 @@ import { CodeEditor } from '@/components/code-editor/code-editor';
 import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
 import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { settingsQuery } from '@/settings/settings';
-import { type StubTransport, stubTransport } from '../../../test/stub-transport';
+import { StubTransport } from '../../../test/stub-transport';
 
 const { EDITOR } = vi.hoisted(() => ({
   EDITOR: {
@@ -108,7 +108,7 @@ function commentLanguage(extensions: string[]): LanguageDescription {
 
 // Returns a language server for Rust files that only answers `initialize`, and the messages it was sent.
 function rustServer(): { server: LanguageServer; sent: StubTransport['sent'] } {
-  const transport = stubTransport();
+  const transport = new StubTransport();
   return {
     sent: transport.sent,
     server: { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => transport },

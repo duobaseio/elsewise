@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, DocumentDiagnosticParams, InitializeParams } from 'vscode-languageserver-protocol';
 import { problems, pullAllDiagnostics } from '@/language-servers/diagnostics';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.toy';
@@ -27,7 +27,7 @@ interface DiagnosticRequest {
 // Returns a transport to a server that offers diagnostics, unless `diagnostics` is false.
 function transport(diagnostics = true): DiagnosticsTransport {
   const requests: DiagnosticRequest[] = [];
-  const stub = stubTransport(
+  const stub = new StubTransport(
     { textDocumentSync: 2, ...(diagnostics && { diagnosticProvider: {} }) },
     {
       'textDocument/diagnostic': ({ textDocument }: DocumentDiagnosticParams) =>

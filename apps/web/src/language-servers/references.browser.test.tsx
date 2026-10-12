@@ -4,7 +4,7 @@ import { OS } from '@elsewise/components/lib/os';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -26,7 +26,7 @@ const location = ([line, character]: number[], uri = URI) => ({
 
 // Returns a transport to a server that finds `locations` as the usages of `total` in `DOC`.
 function transport(locations: unknown[]): StubTransport {
-  return stubTransport(
+  return new StubTransport(
     { textDocumentSync: 2, referencesProvider: true },
     { 'textDocument/references': () => locations },
   );

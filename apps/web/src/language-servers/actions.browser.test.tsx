@@ -6,7 +6,7 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { CodeActionParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const URI = 'file:///worktree/main.ts';
 
@@ -51,9 +51,9 @@ afterEach(() => {
 async function open(
   actions: (params: CodeActionParams) => unknown,
   capabilities: object = {},
-  answers: Parameters<typeof stubTransport>[1] = {},
+  answers: ConstructorParameters<typeof StubTransport>[1] = {},
 ): Promise<{ view: EditorView; stub: StubTransport }> {
-  const stub = stubTransport(
+  const stub = new StubTransport(
     { textDocumentSync: 2, diagnosticProvider: {}, codeActionProvider: true, ...capabilities },
     {
       'textDocument/diagnostic': () => ({ kind: 'full', items: [PROBLEM] }),
@@ -227,6 +227,53 @@ describe('serverActions', () => {
         arguments: [1],
       });
     });
+  });
+
+  test('applies the edit that a command sends back, in one undo step', async () => {
+    let server: StubTransport | undefined;
+    let response: Promise<unknown> | undefined;
+    const { view, stub } = await open(
+      () => [{ title: 'Add import from "./util"', command: 'fix.import' }],
+      {},
+      {
+        'workspace/executeCommand': async () => {
+          response = server?.request('workspace/applyEdit', { edit: ADD_IMPORT.edit });
+          await response;
+          return null;
+        },
+      },
+    );
+    server = stub;
+    await show(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() => expect(view.state.doc.toString()).toBe(IMPORT + DOC));
+    expect(await response).toEqual({ result: { applied: true } });
+    undo(view);
+    expect(view.state.doc.toString()).toBe(DOC);
+  });
+
+  test("says why an edit to a file that isn't open didn't apply, and applies none of it", async () => {
+    const execute = vi.fn(() => null);
+    const edit = {
+      changes: {
+        ...ADD_IMPORT.edit.changes,
+        'file:///worktree/util.ts': [{ range: PROBLEM.range, newText: 'export ' }],
+      },
+    };
+    const { view } = await open(
+      () => [{ ...ADD_IMPORT, edit, command: { title: 'Then', command: 'fix.then' } }],
+      {},
+      { 'workspace/executeCommand': execute },
+    );
+    await show(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-lsp-actions-message')).not.toBeNull());
+    expect(view.state.doc.toString()).toBe(DOC);
+    expect(execute).not.toHaveBeenCalled();
   });
 
   test("asks about the line's problems when the cursor isn't on one", async () => {

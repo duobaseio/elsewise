@@ -15,7 +15,7 @@ import {
 } from 'vscode-languageserver-protocol';
 import { completionDocumentation } from '@/language-servers/completion';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -28,7 +28,7 @@ const URI = 'file:///worktree/main.rs';
 
 // Returns a transport to a server that completes with `items`, and resolves an item to its `resolved` counterpart.
 function transport(items: CompletionItem[], resolved: Record<string, Partial<CompletionItem>> = {}): StubTransport {
-  return stubTransport(
+  return new StubTransport(
     { textDocumentSync: 2, completionProvider: { triggerCharacters: ['.'], resolveProvider: true } },
     {
       'textDocument/completion': () => items,

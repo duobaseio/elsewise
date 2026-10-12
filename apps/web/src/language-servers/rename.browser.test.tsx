@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { RenameParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -40,7 +40,7 @@ interface Server {
 
 // Returns a transport to a server that renames `total` in `DOC`.
 function transport({ prepare = true, renamable = true, renames = [] }: Server): StubTransport {
-  return stubTransport(
+  return new StubTransport(
     {
       textDocumentSync: 2,
       renameProvider: prepare ? { prepareProvider: true } : true,

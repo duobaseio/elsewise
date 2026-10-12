@@ -2,7 +2,7 @@ import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { EditorAdditions } from '@/plugins/editor';
-import { type StubTransport, stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 import { LanguageServerInstance, LanguageServers, serverUri } from './language-servers';
 
 const ROOT = new URL('file:///worktree');
@@ -26,7 +26,7 @@ describe('constructor', () => {
   test('closes the connections of servers that are removed', async () => {
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
-    const fake = stubTransport();
+    const fake = new StubTransport();
     const remove = additions.addLanguageServers([server(() => fake)]);
     servers.connect(ROOT, 'Toy', URI);
     await started();
@@ -38,7 +38,7 @@ describe('constructor', () => {
   test('closes a connection that opens after its server was removed', async () => {
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
-    const fake = stubTransport();
+    const fake = new StubTransport();
     let open: (transport: LanguageServerTransport) => void = () => {};
     const remove = additions.addLanguageServers([server(() => new Promise((resolve) => (open = resolve)))]);
     servers.connect(ROOT, 'Toy', URI);
@@ -54,17 +54,17 @@ describe('constructor', () => {
 describe('find', () => {
   test('returns the most recently added server that serves the language', () => {
     const additions = new EditorAdditions();
-    const earlier = server(() => stubTransport());
-    const later = server(() => stubTransport());
+    const earlier = server(() => new StubTransport());
+    const later = server(() => new StubTransport());
     additions.addLanguageServers([earlier]);
-    additions.addLanguageServers([later, server(() => stubTransport(), { languages: { Other: 'other' } })]);
+    additions.addLanguageServers([later, server(() => new StubTransport(), { languages: { Other: 'other' } })]);
 
     expect(new LanguageServers(additions).find('Toy')).toBe(later);
   });
 
   test('returns nothing when no server serves the language', () => {
     const additions = new EditorAdditions();
-    additions.addLanguageServers([server(() => stubTransport())]);
+    additions.addLanguageServers([server(() => new StubTransport())]);
 
     expect(new LanguageServers(additions).find('Other')).toBeUndefined();
   });
@@ -75,13 +75,13 @@ describe('subscribe', () => {
     const additions = new EditorAdditions();
     const listener = vi.fn();
     const unsubscribe = new LanguageServers(additions).subscribe(listener);
-    const remove = additions.addLanguageServers([server(() => stubTransport())]);
+    const remove = additions.addLanguageServers([server(() => new StubTransport())]);
     remove();
 
     expect(listener).toHaveBeenCalledTimes(2);
 
     unsubscribe();
-    additions.addLanguageServers([server(() => stubTransport())]);
+    additions.addLanguageServers([server(() => new StubTransport())]);
 
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -90,7 +90,7 @@ describe('subscribe', () => {
 describe('connect', () => {
   test('returns nothing when no server serves the language', async () => {
     const additions = new EditorAdditions();
-    const start = vi.fn(() => stubTransport());
+    const start = vi.fn(() => new StubTransport());
     additions.addLanguageServers([server(start)]);
 
     expect(new LanguageServers(additions).connect(ROOT, 'Other', URI)).toBeUndefined();
@@ -102,8 +102,8 @@ describe('connect', () => {
 
   test('starts the most recently added server that serves the language', async () => {
     const additions = new EditorAdditions();
-    const earlier = vi.fn(() => stubTransport());
-    const later = vi.fn(() => stubTransport());
+    const earlier = vi.fn(() => new StubTransport());
+    const later = vi.fn(() => new StubTransport());
     additions.addLanguageServers([server(earlier)]);
     additions.addLanguageServers([server(later)]);
 
@@ -117,7 +117,7 @@ describe('connect', () => {
 
   test('starts the server with the root', async () => {
     const additions = new EditorAdditions();
-    const start = vi.fn(() => stubTransport());
+    const start = vi.fn(() => new StubTransport());
     additions.addLanguageServers([server(start)]);
     new LanguageServers(additions).connect(ROOT, 'Toy', URI);
     await started();
@@ -127,7 +127,7 @@ describe('connect', () => {
 
   test('initializes the server with the root as servers write it', async () => {
     const additions = new EditorAdditions();
-    const fake = stubTransport();
+    const fake = new StubTransport();
     additions.addLanguageServers([server(() => fake)]);
     new LanguageServers(additions).connect(new URL('file:///$worktree/'), 'Toy', URI);
     await started();
@@ -140,7 +140,7 @@ describe('connect', () => {
 
   test('initializes the server with the root and its options', async () => {
     const additions = new EditorAdditions();
-    const fake = stubTransport();
+    const fake = new StubTransport();
     additions.addLanguageServers([server(() => fake, { initializationOptions: { strict: true } })]);
     new LanguageServers(additions).connect(ROOT, 'Toy', URI);
     await started();
@@ -151,10 +151,23 @@ describe('connect', () => {
     ]);
   });
 
+  test('tells the server it can apply edits', async () => {
+    const additions = new EditorAdditions();
+    const fake = new StubTransport();
+    additions.addLanguageServers([server(() => fake)]);
+    new LanguageServers(additions).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({
+      method: 'initialize',
+      params: { capabilities: { workspace: { applyEdit: true, workspaceEdit: { documentChanges: true } } } },
+    });
+  });
+
   test('starts a server once for the same root', async () => {
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
-    const start = vi.fn(() => stubTransport());
+    const start = vi.fn(() => new StubTransport());
     additions.addLanguageServers([server(start)]);
     servers.connect(ROOT, 'Toy', URI);
     servers.connect(ROOT, 'Toy', new URL('file:///worktree/other.toy'));
@@ -169,7 +182,7 @@ describe('connect', () => {
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
     const fakes: StubTransport[] = [];
-    additions.addLanguageServers([server(() => fakes[fakes.push(stubTransport()) - 1])]);
+    additions.addLanguageServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
     servers.connect(new URL('file:///first'), 'Toy', new URL('file:///first/main.toy'));
     servers.connect(new URL('file:///second'), 'Toy', new URL('file:///second/main.toy'));
     await started();
@@ -185,7 +198,7 @@ describe('connect', () => {
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
     const fakes: StubTransport[] = [];
-    additions.addLanguageServers([server(() => fakes[fakes.push(stubTransport()) - 1])]);
+    additions.addLanguageServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
     servers.connect(ROOT, 'Toy', URI);
     await started();
     fakes[0].crash();
@@ -202,7 +215,7 @@ describe('connect', () => {
     const add = vi.spyOn(toast, 'add');
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
-    const fake = stubTransport();
+    const fake = new StubTransport();
     const failure = new Error('No such server');
     additions.addLanguageServers([server(vi.fn(() => fake).mockRejectedValueOnce(failure))]);
     servers.connect(ROOT, 'Toy', URI);
@@ -240,7 +253,7 @@ describe('dispose', () => {
     const additions = new EditorAdditions();
     const servers = new LanguageServers(additions);
     const fakes: StubTransport[] = [];
-    additions.addLanguageServers([server(() => fakes[fakes.push(stubTransport()) - 1])]);
+    additions.addLanguageServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
     servers.connect(new URL('file:///first'), 'Toy', new URL('file:///first/main.toy'));
     servers.connect(new URL('file:///second'), 'Toy', new URL('file:///second/main.toy'));
     await started();
@@ -252,7 +265,7 @@ describe('dispose', () => {
 
 describe('LanguageServerInstance.start', () => {
   test('does nothing when the server was stopped', async () => {
-    const start = vi.fn(() => stubTransport());
+    const start = vi.fn(() => new StubTransport());
     const instance = new LanguageServerInstance(server(start), ROOT);
     instance.stop();
     await instance.start();
@@ -262,7 +275,7 @@ describe('LanguageServerInstance.start', () => {
 
   test("shows the server's messages, but not its logs", async () => {
     const add = vi.spyOn(toast, 'add');
-    const fake = stubTransport();
+    const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake),
       ROOT,
@@ -286,7 +299,7 @@ describe('LanguageServerInstance.start', () => {
 
   test("doesn't say a server that was stopped stopped", async () => {
     const add = vi.spyOn(toast, 'add');
-    const fake = stubTransport();
+    const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake),
       ROOT,

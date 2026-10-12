@@ -7,7 +7,7 @@ import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { DocumentHighlightParams } from 'vscode-languageserver-protocol';
 import { highlightUsages } from '@/language-servers/highlights';
 import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { stubTransport } from '../../test/stub-transport';
+import { StubTransport } from '../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
 
@@ -48,7 +48,7 @@ async function open(
       name: 'Rust',
       languages: { Rust: 'rust' },
       start: () =>
-        stubTransport(capabilities, {
+        new StubTransport(capabilities, {
           'textDocument/documentHighlight': ({ position }: DocumentHighlightParams) => {
             asked.push(position.character + position.line * 100);
             const highlights = TOTALS.map(([line, character], i) => ({

@@ -9,10 +9,10 @@ import {
   type Diagnostic,
   type ExecuteCommandParams,
   type Range,
-  type TextEdit,
 } from 'vscode-languageserver-protocol';
 import { appendCode, hint } from '@/components/code-editor/tooltip';
 import { problems } from '@/language-servers/diagnostics';
+import { applyWorkspaceEdit } from '@/language-servers/edits';
 
 // A bulb, and the exclamation mark cut out of it for a quick fix.
 const BULB =
@@ -288,6 +288,8 @@ export async function apply(view: EditorView, action: CodeAction | undefined, do
   if (view.state.field(actions, false)) {
     view.dispatch({ effects: closeActions.of(null) });
   }
+
+  // DO NOT REORDER.
   try {
     let resolved = action;
     const provider = plugin.client.serverCapabilities?.codeActionProvider;
@@ -298,34 +300,17 @@ export async function apply(view: EditorView, action: CodeAction | undefined, do
       }
     }
 
-    // Collects the text edits from both `changes` and `documentChanges`, skipping file operations.
-    const edits = new Map<string, TextEdit[]>(Object.entries(resolved.edit?.changes ?? {}));
-    for (const change of resolved.edit?.documentChanges ?? []) {
-      if ('textDocument' in change) {
-        const { uri } = change.textDocument;
-        edits.set(uri, [
-          ...(edits.get(uri) ?? []),
-          ...change.edits.filter((edit): edit is TextEdit => 'newText' in edit),
-        ]);
-      }
-    }
-    for (const [uri, list] of edits) {
-      // TODO: Apply edits to files that aren't open once the daemon can read them.
-      const file = uri === plugin.uri ? null : plugin.client.workspace.getFile(uri);
-      const target = uri === plugin.uri ? doc : file?.doc;
-      if (target === undefined) {
-        continue;
-      }
 
-      const changes = list.map((edit) => ({
-        from: plugin.fromPosition(edit.range.start, target),
-        to: plugin.fromPosition(edit.range.end, target),
-        insert: edit.newText,
-      }));
-      if (uri === plugin.uri) {
-        view.dispatch({ changes, userEvent: 'input.action' });
-      } else {
-        plugin.client.workspace.updateFile(uri, { changes, userEvent: 'input.action' });
+    if (resolved.edit) {
+      const { applied, failureReason } = applyWorkspaceEdit(plugin.client, resolved.edit);
+      if (!applied) {
+        view.dispatch({
+          effects: showMessage.of({
+            pos: view.state.selection.main.head,
+            text: failureReason ?? "The edit didn't apply.",
+          }),
+        });
+        return;
       }
     }
 
@@ -344,6 +329,7 @@ export async function apply(view: EditorView, action: CodeAction | undefined, do
       }),
     });
   }
+  // DO NOT REORDER.
 }
 
 /**

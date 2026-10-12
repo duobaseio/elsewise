@@ -26,7 +26,7 @@ import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
 import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../sheet';
-import { stubTransport } from '../../stub-transport';
+import { StubTransport } from '../../stub-transport';
 
 const CODE = `/// Attaches to the session with \`id\`.
 pub async fn attach(&self, id: SessionId) -> Result<Channel> {
@@ -197,7 +197,7 @@ const RUST: LanguageServer = {
   name: 'Rust',
   languages: { Rust: 'rust' },
   start: () => {
-    const stub = stubTransport(
+    const stub = new StubTransport(
       {
         textDocumentSync: 2,
         hoverProvider: true,
@@ -383,6 +383,8 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
         { ...at('let (tx, rx)'), severity: 'warning', markClass: 'cm-lintRange-unnecessary', message: 'unnecessary' },
         { ...at('subscribe'), severity: 'warning', message: 'warning' },
         { ...at('Channel::new'), severity: 'hint', message: 'hint' },
+        // A problem with nothing to underline.
+        { from: at('Ok(Channel::new(rx))').to, to: at('Ok(Channel::new(rx))').to, severity: 'info', message: 'point' },
       ]),
     );
 

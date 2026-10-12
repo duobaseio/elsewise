@@ -153,8 +153,18 @@ const METRICS = EditorView.theme({
   '.cm-fold-marker:not([data-open])': { transform: 'rotate(-90deg)' },
 
   '.cm-lintRange.cm-lintRange-deprecated': { backgroundImage: 'none', textDecoration: 'line-through' },
-  // Problems on the same code share one underline, with every one's classes, so a plain problem there keeps it.
+  // Draws an underline under unnecessary code only if there are additional problems.
   '.cm-lintRange.cm-lintRange-unnecessary:not(.cm-lintRange-plain)': { backgroundImage: 'none' },
+  // Draws a squiggle under one character for blank problems.
+  '.cm-lintPoint::after': {
+    border: 'none',
+    bottom: '-0.7px',
+    left: '0',
+    width: '1ch',
+    height: '3px',
+    backgroundRepeat: 'repeat-x',
+    backgroundPosition: 'left bottom',
+  },
 
   '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-tooltip-autocomplete, .cm-tooltip.cm-completionInfo, .cm-tooltip.cm-lsp-signatures, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-tooltip.cm-lsp-references, .cm-tooltip.cm-lsp-references-message, .cm-tooltip.cm-lsp-actions-message, .cm-tooltip.cm-lsp-actions':
     {
@@ -465,11 +475,15 @@ export function useThemeExtension(): Extension {
     // Draws the squiggles like CodeMirror does, in the editor's colors.
     for (const severity of ['error', 'warning', 'info'] as const) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="6" height="3"><path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="${editor[severity]}" fill="none" stroke-width=".7"/></svg>`;
-      spec[`.cm-lintRange-${severity}`] = { backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")` };
+      spec[`.cm-lintRange-${severity}, .cm-lintPoint-${severity}::after`] = {
+        backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
+      };
     }
 
     const dots = `<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><circle cx="1.5" cy="1.5" r=".8" fill="${editor.hint}"/></svg>`;
-    spec['.cm-lintRange-hint'] = { backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(dots)}")` };
+    spec['.cm-lintRange-hint, .cm-lintPoint-hint::after'] = {
+      backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(dots)}")`,
+    };
 
     // Chromium ignores a font's `yStrikeoutPosition` and `yStrikeoutSize`, making strikeouts for JetBrains Mono look
     // terrible. See https://issues.chromium.org/issues/40066668.
