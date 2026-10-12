@@ -4,8 +4,8 @@ import { EditorView } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test } from 'vitest';
 import type { WorkspaceEdit } from 'vscode-languageserver-protocol';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.ts';
 
@@ -53,7 +53,7 @@ function applyEdit(stub: StubTransport, edit: WorkspaceEdit) {
 }
 
 describe('workspace/applyEdit', () => {
-  test('applies `changes` to an open file, in one undo step', async () => {
+  test('applies `changes` to open file, in one undo step', async () => {
     const { view, stub } = await open();
 
     const response = await applyEdit(stub, { changes: { [URI]: [edit(0, 6, 11, 'sum'), edit(1, 6, 11, 'rest')] } });
@@ -64,7 +64,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test('applies the text edits in `documentChanges`', async () => {
+  test('applies text edits in `documentChanges`', async () => {
     const { instance, view, stub } = await open();
     const version = instance.client.workspace.getFile(URI)?.version ?? null;
 
@@ -76,7 +76,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe('const sum = 1;\nconst other = 2;');
   });
 
-  test("refuses edits to a version that isn't the open file's", async () => {
+  test("refuses edits to version that isn't open file's", async () => {
     const { instance, view, stub } = await open();
     const version = (instance.client.workspace.getFile(URI)?.version ?? 0) + 1;
 
@@ -88,7 +88,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test('refuses to create, rename or delete files, and applies none of the edits', async () => {
+  test('refuses to create, rename or delete files, applying none', async () => {
     const { view, stub } = await open();
 
     for (const operation of [
@@ -105,7 +105,7 @@ describe('workspace/applyEdit', () => {
     }
   });
 
-  test("refuses edits to a file that isn't open, and applies none of them", async () => {
+  test('refuses edits to unopened file, applying none', async () => {
     const { view, stub } = await open();
 
     const response = await applyEdit(stub, {
@@ -116,7 +116,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test("clamps positions past a line's end to it", async () => {
+  test('clamps positions past line end', async () => {
     const { view, stub } = await open();
 
     const response = await applyEdit(stub, { changes: { [URI]: [edit(0, 99, 99, ' // total')] } });
@@ -125,7 +125,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe('const total = 1; // total\nconst other = 2;');
   });
 
-  test('maps the edits through what was typed since the server last saw the file', async () => {
+  test("maps edits through typing since server's last version", async () => {
     const { view, stub } = await open();
     view.dispatch({ changes: { from: 0, insert: 'export ' } });
 

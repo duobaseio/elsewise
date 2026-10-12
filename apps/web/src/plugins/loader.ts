@@ -1,5 +1,5 @@
 import type { InstalledPlugin } from '@elsewise/bridge';
-import type { Appearance, Editor, Plugin, PluginContext } from '@elsewise/plugin';
+import type { Application, Plugin, PluginContext } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 
 /**
@@ -29,13 +29,7 @@ export class PluginLoader {
 
   private readonly plugins = new Map<string, Promise<PluginContext | undefined>>();
 
-  /**
-   * Creates a loader that provides `appearance` and `editor` to the plugins it enables.
-   */
-  constructor(
-    private readonly appearance: Appearance,
-    private readonly editor: Editor,
-  ) {}
+  constructor(private readonly application: Application) {}
 
   /**
    * Loads and enables the plugin with `id`.
@@ -46,7 +40,7 @@ export class PluginLoader {
         return loaded;
       }
 
-      const context: PluginContext = { id, appearance: this.appearance, editor: this.editor, subscriptions: [] };
+      const context: PluginContext = { id, subscriptions: [] };
       try {
         // As modules are cached by URLs, using a counter makes a reload import the plugin's current code.
         // Unlike a query, a fragment never reaches the server.
@@ -59,7 +53,7 @@ export class PluginLoader {
           return;
         }
 
-        await plugin.enable(context);
+        await plugin.enable(this.application, context);
         return context;
       } catch (error) {
         console.error(`Plugin ${id} failed to load`, error);
@@ -72,7 +66,7 @@ export class PluginLoader {
   /**
    * Unloads the plugin with `id` and disposes its subscriptions.
    *
-   * Waits for the plugin's pending load or unload first, and does nothing if it's then unloaded.
+   * Waits for the plugin's pending load or unload first, and does nothing if it is then unloaded.
    */
   unload(id: string): Promise<void> {
     return this.enqueue(id, async (loaded) => {

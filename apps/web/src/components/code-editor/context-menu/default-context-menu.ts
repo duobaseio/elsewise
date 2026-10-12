@@ -4,10 +4,10 @@ import { DEFAULT_EDITOR_CONTEXT_MENU, type EditorContextMenu } from '@elsewise/p
 import { tags } from '@lezer/highlight';
 import type { ServerCapabilities } from 'vscode-languageserver-protocol';
 import { symbol } from '@/components/code-editor/symbol';
-import { SHOW_ACTIONS, showActions } from '@/language-servers/actions';
-import { JUMP_TO_DEFINITION, jumpToDefinition } from '@/language-servers/definition';
-import { findUsages, SHOW_USAGES } from '@/language-servers/references';
-import { RENAME, rename } from '@/language-servers/rename';
+import { SHOW_ACTIONS, showActions } from '@/editor/lsp/actions';
+import { JUMP_TO_DEFINITION, jumpToDefinition } from '@/editor/lsp/definition';
+import { findUsages, SHOW_USAGES } from '@/editor/lsp/references';
+import { RENAME, rename } from '@/editor/lsp/rename';
 
 const { actions, clipboard, navigate, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
 

@@ -30,6 +30,17 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
  */
 export interface Editor {
   /**
+   * The open editor that is or was last focused.
+   *
+   * `null` when:
+   * * no editor has focused yet.
+   * * the active editor is closed and focus has not shifted to another open editor.
+   *
+   * The active editor remains the same when focus is elsewhere (except on another editor), e.g. in a menu.
+   */
+  readonly active: EditorView | null;
+
+  /**
    * Adds `extensions` to the editor, each an extension or a function that returns one for each document.
    *
    * Returns a disposable that removes the `extensions`.

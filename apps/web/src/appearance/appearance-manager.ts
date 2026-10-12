@@ -1,15 +1,9 @@
 import type { Appearance, Disposable, ResolvedTheme } from '@elsewise/plugin';
 
-/**
- * The appearance that plugins see.
- */
-export class PluginAppearance implements Appearance {
+export class AppearanceManager implements Appearance {
   private readonly brightnessListeners = new Set<(brightness: 'light' | 'dark') => void>();
   private readonly themeListeners = new Set<(theme: ResolvedTheme) => void>();
 
-  /**
-   * Creates an appearance with the given `brightness` and `theme`.
-   */
   constructor(
     private currentBrightness: 'light' | 'dark',
     private currentTheme: ResolvedTheme,
@@ -20,7 +14,7 @@ export class PluginAppearance implements Appearance {
   }
 
   /**
-   * Sets the brightness, and calls the listeners if it changed.
+   * Sets the brightness, and calls the listeners only if it changed.
    */
   set brightness(brightness: 'light' | 'dark') {
     if (brightness === this.currentBrightness) {
@@ -47,7 +41,7 @@ export class PluginAppearance implements Appearance {
   }
 
   /**
-   * Sets the theme, and calls the listeners if it is another object.
+   * Sets the theme, and calls the listeners only if it changed.
    */
   set theme(theme: ResolvedTheme) {
     if (theme === this.currentTheme) {

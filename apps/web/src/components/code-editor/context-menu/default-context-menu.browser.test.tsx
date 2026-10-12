@@ -8,8 +8,8 @@ import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
+import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { StubTransport } from '../../../../test/stub-transport';
 
 const DOC = 'fn main() {\n    let a = 1;\n}\n';
@@ -20,7 +20,7 @@ beforeAll(async () => {
   rust = await (LanguageDescription.matchFilename(languages, 'main.rs') as LanguageDescription).load();
 });
 
-function mount(additions = new EditorAdditions(), extensions: Extension = []): Promise<EditorView> {
+function mount(editor = new EditorManager(), extensions: Extension = []): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
@@ -40,11 +40,11 @@ function mount(additions = new EditorAdditions(), extensions: Extension = []): P
       return () => view.current?.destroy();
     }, []);
     return (
-      <EditorAdditionsContext value={additions}>
+      <EditorManagerContext value={editor}>
         <CodeEditorContextMenu view={view}>
           <div ref={host} />
         </CodeEditorContextMenu>
-      </EditorAdditionsContext>
+      </EditorManagerContext>
     );
   }
   render(<Probe />);
@@ -104,7 +104,7 @@ async function open(view: EditorView, pos: number): Promise<void> {
 }
 
 describe('DEFAULT_CONTEXT_MENU', () => {
-  test('cuts and copies only with a selection', async () => {
+  test('cuts and copies only with selection', async () => {
     const view = await mount();
     await open(view, 0);
     expect(item('Cut').query()).toBeNull();
@@ -133,17 +133,17 @@ describe('DEFAULT_CONTEXT_MENU', () => {
     expect(view.hasFocus).toBe(true);
   });
 
-  test("shows the language server's items after the clipboard group", async () => {
-    const view = await mount(new EditorAdditions(), await server(CAPABILITIES));
+  test("shows language server's items after clipboard group", async () => {
+    const view = await mount(new EditorManager(), await server(CAPABILITIES));
 
     await open(view, DOC.indexOf('main'));
 
     expect(labels()).toEqual(['Paste', '-', 'Find usages', 'Go to definition', '-', 'Rename…']);
   });
 
-  test('leads with the context actions, which open their popup', async () => {
+  test('leads with context actions, which open popup', async () => {
     const view = await mount(
-      new EditorAdditions(),
+      new EditorManager(),
       await server(
         { ...CAPABILITIES, codeActionProvider: true },
         { 'textDocument/codeAction': () => [{ title: 'Organize imports', kind: 'source.organizeImports' }] },
@@ -157,8 +157,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
     await expect.poll(() => view.dom.querySelector('.cm-lsp-action')?.textContent).toBe('Organize imports');
   });
 
-  test("hides what the language server can't do", async () => {
-    const view = await mount(new EditorAdditions(), await server({ ...CAPABILITIES, renameProvider: false }));
+  test("hides what language server can't do", async () => {
+    const view = await mount(new EditorManager(), await server({ ...CAPABILITIES, renameProvider: false }));
 
     await open(view, DOC.indexOf('main'));
 
@@ -167,10 +167,10 @@ describe('DEFAULT_CONTEXT_MENU', () => {
   });
 
   describe('Find usages', () => {
-    test('finds the usages, and keeps them open', async () => {
+    test('finds usages, and keeps them open', async () => {
       const uri = 'file:///worktree/main.rs';
       const view = await mount(
-        new EditorAdditions(),
+        new EditorManager(),
         await server(CAPABILITIES, {
           'textDocument/references': () => [range('a ='), range('main'), range('fn')].map((r) => ({ uri, range: r })),
         }),
@@ -184,8 +184,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       expect(view.dom.querySelector('.cm-lsp-references')).not.toBeNull();
     });
 
-    test('hides off a symbol, on a keyword and in a comment', async () => {
-      const view = await mount(new EditorAdditions(), await server(CAPABILITIES));
+    test('hides off symbol, on keyword and in comment', async () => {
+      const view = await mount(new EditorManager(), await server(CAPABILITIES));
       view.dispatch({ changes: { from: DOC.length, insert: '// note\n' } });
       const doc = view.state.doc.toString();
 
@@ -196,8 +196,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       }
     });
 
-    test('shows on self, in a string and in a read-only document', async () => {
-      const view = await mount(new EditorAdditions(), [await server(CAPABILITIES), EditorState.readOnly.of(true)]);
+    test('shows on self, in string and in read-only document', async () => {
+      const view = await mount(new EditorManager(), [await server(CAPABILITIES), EditorState.readOnly.of(true)]);
       view.dispatch({
         changes: { from: DOC.length, insert: 'impl S {\n    fn f(&self) -> &str {\n        "path"\n    }\n}\n' },
       });
@@ -212,10 +212,10 @@ describe('DEFAULT_CONTEXT_MENU', () => {
   });
 
   describe('Go to definition', () => {
-    test('goes to the definition', async () => {
+    test('goes to definition', async () => {
       const uri = 'file:///worktree/main.rs';
       const view = await mount(
-        new EditorAdditions(),
+        new EditorManager(),
         await server(CAPABILITIES, { 'textDocument/definition': () => ({ uri, range: range('main') }) }),
       );
 
@@ -225,8 +225,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       await expect.poll(() => view.state.selection.main.head).toBe(DOC.indexOf('main'));
     });
 
-    test('hides off a symbol, on a keyword and in a comment', async () => {
-      const view = await mount(new EditorAdditions(), await server(CAPABILITIES));
+    test('hides off symbol, on keyword and in comment', async () => {
+      const view = await mount(new EditorManager(), await server(CAPABILITIES));
       view.dispatch({ changes: { from: DOC.length, insert: '// note\n' } });
       const doc = view.state.doc.toString();
 
@@ -237,8 +237,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       }
     });
 
-    test('shows on self, in a string and in a read-only document', async () => {
-      const view = await mount(new EditorAdditions(), [await server(CAPABILITIES), EditorState.readOnly.of(true)]);
+    test('shows on self, in string and in read-only document', async () => {
+      const view = await mount(new EditorManager(), [await server(CAPABILITIES), EditorState.readOnly.of(true)]);
       view.dispatch({
         changes: { from: DOC.length, insert: 'impl S {\n    fn f(&self) -> &str {\n        "path"\n    }\n}\n' },
       });
@@ -253,8 +253,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
   });
 
   describe('Rename…', () => {
-    test('renames in place, with the field focused', async () => {
-      const view = await mount(new EditorAdditions(), await server(CAPABILITIES));
+    test('renames in place, with field focused', async () => {
+      const view = await mount(new EditorManager(), await server(CAPABILITIES));
 
       await open(view, DOC.indexOf('main'));
       await userEvent.click(item('Rename'));
@@ -264,8 +264,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       expect(document.activeElement?.closest('.cm-lsp-rename-field')).not.toBeNull();
     });
 
-    test('hides off a symbol', async () => {
-      const view = await mount(new EditorAdditions(), await server(CAPABILITIES));
+    test('hides off symbol', async () => {
+      const view = await mount(new EditorManager(), await server(CAPABILITIES));
 
       for (const pos of [DOC.indexOf('fn'), DOC.indexOf('let'), DOC.indexOf('    let') + 1]) {
         await open(view, pos);
@@ -274,8 +274,8 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       }
     });
 
-    test('hides in a comment or a string', async () => {
-      const view = await mount(new EditorAdditions(), await server(CAPABILITIES));
+    test('hides in comment or string', async () => {
+      const view = await mount(new EditorManager(), await server(CAPABILITIES));
       view.dispatch({ changes: { from: DOC.length, insert: '// note\nconst S: &str = "text";\n' } });
       const doc = view.state.doc.toString();
 
@@ -286,16 +286,16 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       }
     });
 
-    test('hides in a read-only document', async () => {
-      const view = await mount(new EditorAdditions(), [await server(CAPABILITIES), EditorState.readOnly.of(true)]);
+    test('hides in read-only document', async () => {
+      const view = await mount(new EditorManager(), [await server(CAPABILITIES), EditorState.readOnly.of(true)]);
 
       await open(view, DOC.indexOf('main'));
 
       expect(item('Rename').query()).toBeNull();
     });
 
-    test('hides with a selection beyond the symbol, or several', async () => {
-      const view = await mount(new EditorAdditions(), [
+    test('hides with selection beyond symbol, or several', async () => {
+      const view = await mount(new EditorManager(), [
         await server(CAPABILITIES),
         EditorState.allowMultipleSelections.of(true),
       ]);

@@ -21,8 +21,8 @@ import type {
 
 import { CodeEditor } from '@/components/code-editor/code-editor';
 import { toggleReplaceRow } from '@/components/code-editor/search/search-bar-query';
-import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
-import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
+import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../sheet';
@@ -268,14 +268,14 @@ async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Pro
       general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
     },
   });
-  const additions = new EditorAdditions();
+  const editor = new EditorManager();
   if (hovered) {
-    additions.addLanguageServers([RUST]);
+    editor.addLanguageServers([RUST]);
   }
   render(
     <QueryClientProvider client={client}>
-      <EditorAdditionsContext value={additions}>
-        <LanguageServersContext value={new LanguageServers(additions)}>
+      <EditorManagerContext value={editor}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
           <div
             className="bg-background font-sans text-foreground"
             data-brightness={theme}
@@ -289,7 +289,7 @@ async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Pro
             )}
           </div>
         </LanguageServersContext>
-      </EditorAdditionsContext>
+      </EditorManagerContext>
     </QueryClientProvider>,
   );
 
@@ -392,7 +392,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
   });
 
   describe('hover', () => {
-    test('over a symbol', async () => {
+    test('over symbol', async () => {
       const view = await mount(theme, true);
       await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
       await hover(view, 'attach(id', 1);
@@ -400,7 +400,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-${theme}`);
     });
 
-    test('over a problem', async () => {
+    test('over problem', async () => {
       const view = await mount(theme, true);
       await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
       await hover(view, 'undefined_name', 1);
@@ -408,7 +408,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-hover-problem-${theme}`);
     });
 
-    test('over a problem with documentation', async () => {
+    test('over problem with documentation', async () => {
       const view = await mount(theme, true);
       await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
       await hover(view, 'send_raw', 2);
@@ -431,7 +431,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-links-hover-${theme}`);
     });
 
-    test('hovered with the key held', async () => {
+    test('hovered with key held', async () => {
       const view = await mount(theme, false, LINKED);
       await hover(view, 'https://example.com/retries', 1, OS === 'mac' ? { metaKey: true } : { ctrlKey: true });
       await vi.waitFor(() => expect(document.querySelector('.cm-link-active')).not.toBeNull());
@@ -449,7 +449,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-completion-documentation-${theme}`);
     });
 
-    test('of a statement', async () => {
+    test('of statement', async () => {
       const view = await mount(theme, true);
       await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
       await complete(view, '    ma', false);

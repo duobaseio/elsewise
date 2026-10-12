@@ -9,8 +9,8 @@ import { expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CodeEditor } from '@/components/code-editor/code-editor';
-import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
-import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
+import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 import { StubTransport } from '../../../test/stub-transport';
 
@@ -27,8 +27,8 @@ const { EDITOR } = vi.hoisted(() => ({
 }));
 
 // Replaces the editor's colors with test colors, since a test cannot add a theme to the bundled ones.
-vi.mock('@/themes/themes', async (original) => {
-  const actual = await original<typeof import('@/themes/themes')>();
+vi.mock('@/appearance/themes', async (original) => {
+  const actual = await original<typeof import('@/appearance/themes')>();
   return {
     ...actual,
     useTheme: () => {
@@ -55,18 +55,18 @@ function shell(children: ReactNode) {
 async function mountEditor(
   code: string,
   path = 'main.rs',
-  additions = new EditorAdditions(),
+  editor = new EditorManager(),
   root?: URL,
 ): Promise<EditorView> {
   const screen = await render(
     shell(
-      <EditorAdditionsContext value={additions}>
-        <LanguageServersContext value={new LanguageServers(additions)}>
+      <EditorManagerContext value={editor}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
           <div style={{ height: 300 }}>
             <CodeEditor code={code} path={path} root={root} />
           </div>
         </LanguageServersContext>
-      </EditorAdditionsContext>,
+      </EditorManagerContext>,
     ),
   );
   await expect.element(screen.getByText(code.split('\n')[0])).toBeVisible();
@@ -139,7 +139,7 @@ test('search match roles', async () => {
   expect(current.outlineOffset).toBe('0px');
 });
 
-test('tooltips above the search bar', async () => {
+test('tooltips above search bar', async () => {
   const view = await mountEditor('fn main() {}\n');
   openSearchPanel(view);
   await userEvent.hover(page.getByRole('button', { name: 'Next match' }));
@@ -151,51 +151,51 @@ test('tooltips above the search bar', async () => {
   expect(tooltip()?.contains(hit)).toBe(true);
 });
 
-test('the fold marker is drawn from the icon set', async () => {
+test('fold marker is drawn from icon set', async () => {
   const view = await mountEditor('fn main() {\n    let a = 1;\n}\n');
   await expect.poll(() => view.dom.querySelector('.cm-fold-marker')).not.toBeNull();
   expect(style(view.dom.querySelector('.cm-fold-marker')).maskImage).toMatch(/^url\("data:image\/svg\+xml,/);
 });
 
-test("a plugin's theme overrides the editor's metrics", async () => {
-  const additions = new EditorAdditions();
-  additions.addExtensions([EditorView.theme({ '.cm-content': { paddingBottom: '0px' } })]);
-  const view = await mountEditor('fn main() {}\n', 'main.rs', additions);
+test("plugin's theme overrides editor's metrics", async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([EditorView.theme({ '.cm-content': { paddingBottom: '0px' } })]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
   expect(style(view.contentDOM).paddingBottom).toBe('0px');
 });
 
-test("a plugin's extension function receives the file", async () => {
-  const additions = new EditorAdditions();
-  additions.addExtensions([(document) => EditorView.contentAttributes.of({ 'data-path': document.path })]);
-  const view = await mountEditor('fn main() {}\n', 'main.rs', additions);
+test("plugin's extension function receives file", async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([(document) => EditorView.contentAttributes.of({ 'data-path': document.path })]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
   expect(view.contentDOM.dataset.path).toBe('main.rs');
 });
 
-test("a plugin's language highlights files with its extension", async () => {
-  const additions = new EditorAdditions();
-  additions.addLanguages([commentLanguage(['comment'])]);
-  const view = await mountEditor('hello\n', 'main.comment', additions);
+test("plugin's language highlights files with extension", async () => {
+  const editor = new EditorManager();
+  editor.addLanguages([commentLanguage(['comment'])]);
+  const view = await mountEditor('hello\n', 'main.comment', editor);
 
   await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.comment.color));
 });
 
-test("a plugin's language wins over a built-in one until disposed", async () => {
-  const additions = new EditorAdditions();
-  const dispose = additions.addLanguages([commentLanguage(['rs'])]);
-  const view = await mountEditor('fn main() {}\n', 'main.rs', additions);
+test("plugin's language beats built-in until disposed", async () => {
+  const editor = new EditorManager();
+  const dispose = editor.addLanguages([commentLanguage(['rs'])]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
   await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.comment.color));
 
   dispose();
   await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.keyword.color));
 });
 
-test("a plugin's language server opens files in its language", async () => {
-  const additions = new EditorAdditions();
+test("plugin's language server opens files in language", async () => {
+  const editor = new EditorManager();
   const { server, sent } = rustServer();
-  additions.addLanguageServers([server]);
-  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+  editor.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', editor, new URL('file:///worktree/'));
 
   await expect
     .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
@@ -205,35 +205,35 @@ test("a plugin's language server opens files in its language", async () => {
   expect(sent[0]).toMatchObject({ method: 'initialize', params: { rootUri: 'file:///worktree/' } });
 });
 
-test("a plugin's language server opens files that were open before it was added", async () => {
-  const additions = new EditorAdditions();
+test("plugin's language server opens files opened before it", async () => {
+  const editor = new EditorManager();
   const { server, sent } = rustServer();
-  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
-  additions.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', editor, new URL('file:///worktree/'));
+  editor.addLanguageServers([server]);
 
   await expect
     .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
     .toMatchObject({ params: { textDocument: { uri: 'file:///worktree/src/main.rs' } } });
 });
 
-test("a plugin's language server keeps a file open when a server for another language is added", async () => {
-  const additions = new EditorAdditions();
+test("plugin's language server keeps file open when another language's server is added", async () => {
+  const editor = new EditorManager();
   const { server, sent } = rustServer();
-  additions.addLanguageServers([server]);
-  await mountEditor('fn main() {}\n', 'src/main.rs', additions, new URL('file:///worktree/'));
+  editor.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', editor, new URL('file:///worktree/'));
   await expect.poll(() => sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
 
-  additions.addLanguageServers([{ ...rustServer().server, id: 'toy', languages: { Toy: 'toy' } }]);
+  editor.addLanguageServers([{ ...rustServer().server, id: 'toy', languages: { Toy: 'toy' } }]);
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   expect(sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
 });
 
-test('a file without a root has no language server', async () => {
-  const additions = new EditorAdditions();
+test('file without root has no language server', async () => {
+  const editor = new EditorManager();
   const { server, sent } = rustServer();
-  additions.addLanguageServers([server]);
-  await mountEditor('fn main() {}\n', 'src/main.rs', additions);
+  editor.addLanguageServers([server]);
+  await mountEditor('fn main() {}\n', 'src/main.rs', editor);
   await new Promise((resolve) => setTimeout(resolve));
 
   expect(sent).toEqual([]);

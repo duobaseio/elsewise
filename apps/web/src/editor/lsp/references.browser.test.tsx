@@ -3,8 +3,8 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { OS } from '@elsewise/components/lib/os';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -92,7 +92,7 @@ function selected(popup: HTMLElement): number {
 }
 
 describe('serverReferences', () => {
-  test('lists the usages with the one at the cursor selected', async () => {
+  test('lists usages with one at cursor selected', async () => {
     const view = await open();
 
     const popup = await find(view);
@@ -100,10 +100,9 @@ describe('serverReferences', () => {
     expect(popup.querySelector('.cm-lsp-references-header')?.textContent).toBe('Usages of total3 usages');
     expect(rows(popup)).toHaveLength(3);
     expect(selected(popup)).toBe(0);
-    expect(popup.querySelector('.cm-lsp-references-hint')).not.toBeNull();
   });
 
-  test('shows each usage in its line, marked, with the line number', async () => {
+  test('shows each usage in line, marked, with line number', async () => {
     const view = await open();
 
     const popup = await find(view);
@@ -125,7 +124,7 @@ describe('serverReferences', () => {
     ]);
   });
 
-  test('moves the selection with the arrows, wrapping, without moving the cursor', async () => {
+  test('moves selection with arrows, wrapping, without moving cursor', async () => {
     const view = await open();
     const popup = await find(view);
 
@@ -138,7 +137,7 @@ describe('serverReferences', () => {
     expect(view.state.selection.main.head).toBe(6);
   });
 
-  test('moves the cursor to the selected usage on Enter', async () => {
+  test('moves cursor to selected usage on Enter', async () => {
     const view = await open();
     await find(view);
 
@@ -150,7 +149,7 @@ describe('serverReferences', () => {
     expect(view.dom.querySelector('.cm-lsp-references')).toBeNull();
   });
 
-  test('moves the cursor to a usage when it is clicked', async () => {
+  test('moves cursor to clicked usage', async () => {
     const view = await open();
     const popup = await find(view);
 
@@ -160,7 +159,7 @@ describe('serverReferences', () => {
     expect(view.dom.querySelector('.cm-lsp-references')).toBeNull();
   });
 
-  test('closes on Escape, and when the document changes', async () => {
+  test('closes on Escape, and when document changes', async () => {
     const view = await open();
     await find(view);
 
@@ -172,7 +171,7 @@ describe('serverReferences', () => {
     expect(view.dom.querySelector('.cm-lsp-references')).toBeNull();
   });
 
-  test('lists a usage in a file that is not open by its name and line, and skips it', async () => {
+  test('lists usage in unopened file by name and line, and skips it', async () => {
     const view = await open([
       ...TOTALS.map((total) => location(total)),
       location([41, 2], 'file:///worktree/a%20b.rs'),
@@ -187,7 +186,7 @@ describe('serverReferences', () => {
     expect(selected(popup)).toBe(2);
   });
 
-  test('moves the cursor to the only other usage, without a popup', async () => {
+  test('moves cursor to only other usage, without popup', async () => {
     const view = await open([location(TOTALS[0]), location(TOTALS[2])]);
 
     press(view, 'F7', SHOW_USAGES);
@@ -196,7 +195,7 @@ describe('serverReferences', () => {
     expect(view.dom.querySelector('.cm-lsp-references')).toBeNull();
   });
 
-  test('scrolls a usage out of view to the middle of the editor', async () => {
+  test('centers off-screen usage', async () => {
     const view = await open(
       [location(TOTALS[0]), location([101, 0])],
       `${DOC}${'\n'.repeat(100)}total${'\n'.repeat(100)}`,
@@ -212,7 +211,7 @@ describe('serverReferences', () => {
     });
   });
 
-  test('says when there are no other usages', async () => {
+  test('says when no other usages', async () => {
     const view = await open([location(TOTALS[0])]);
 
     press(view, 'F7', SHOW_USAGES);

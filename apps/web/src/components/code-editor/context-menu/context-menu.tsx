@@ -13,7 +13,7 @@ import {
 import { shortcut } from '@elsewise/components/lib/os';
 import type { EditorContextMenu, EditorContextMenuItem, EditorContextSubmenu } from '@elsewise/plugin';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
-import { useEditorAdditions } from '@/plugins/editor';
+import { useEditorManager } from '@/editor/editor-manager';
 
 /**
  * The editor's context menu.
@@ -21,12 +21,12 @@ import { useEditorAdditions } from '@/plugins/editor';
 export function CodeEditorContextMenu({ view, children }: { view: RefObject<EditorView | null>; children: ReactNode }) {
   // Snapshotted once per opening rather than on every transaction: the menu is closed almost all the time.
   const [menu, setMenu] = useState<EditorContextMenu>({});
-  const additions = useEditorAdditions();
+  const editor = useEditorManager();
   const clicked = useRef<EditorContextMenuItem | null>(null);
 
   function onOpenChange(open: boolean): void {
     if (open && view.current !== null) {
-      setMenu(shown(additions.contextMenuItems, view.current));
+      setMenu(shown(editor.contextMenuItems, view.current));
     }
   }
 
@@ -126,7 +126,7 @@ function compare(a: string, b: string): number {
 /**
  * Moves the caret to where the user right-clicked, unless the click is inside the selection.
  *
- * This is necessary to show correct items in context menu.
+ * Necessary to show correct items in context menu.
  */
 export const rightClickContextMenu = EditorView.domEventHandlers({
   contextmenu(event, view) {

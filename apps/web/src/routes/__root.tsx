@@ -2,12 +2,13 @@ import type {} from '@elsewise/bridge';
 import { Toaster } from '@elsewise/components/components/toast';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { LanguageServers, LanguageServersContext } from '@/language-servers/language-servers';
-import { PluginAppearance } from '@/plugins/appearance';
-import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
+import { AppearanceManager } from '@/appearance/appearance-manager';
+import { useTheme } from '@/appearance/themes';
+import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
 import { useBrightness, useSettings } from '@/settings/settings';
-import { useTheme } from '@/themes/themes';
 
 import '../styles.css';
 
@@ -36,14 +37,16 @@ function RootComponent() {
   const brightness = useBrightness();
   const theme = useTheme();
 
-  const [{ appearance, additions, languageServers, loader }] = useState(() => {
-    const appearance = new PluginAppearance(brightness, theme);
-    const additions = new EditorAdditions();
+  const [{ appearance, editor, commands, languageServers, loader }] = useState(() => {
+    const appearance = new AppearanceManager(brightness, theme);
+    const editor = new EditorManager();
+    const commands = new CommandManager(appearance, editor);
     return {
       appearance,
-      additions,
-      languageServers: new LanguageServers(additions),
-      loader: new PluginLoader(appearance, additions),
+      editor,
+      commands,
+      languageServers: new LanguageServers(editor),
+      loader: new PluginLoader(commands.application),
     };
   });
 
@@ -60,20 +63,22 @@ function RootComponent() {
   }, [loader, installed]);
 
   return (
-    <EditorAdditionsContext value={additions}>
-      <LanguageServersContext value={languageServers}>
-        <Toaster>
-          <Outlet />
-        </Toaster>
-      </LanguageServersContext>
-    </EditorAdditionsContext>
+    <EditorManagerContext value={editor}>
+      <CommandManagerContext value={commands}>
+        <LanguageServersContext value={languageServers}>
+          <Toaster>
+            <Outlet />
+          </Toaster>
+        </LanguageServersContext>
+      </CommandManagerContext>
+    </EditorManagerContext>
   );
 }
 
 /**
  * Applies the brightness and the interface's theme.
  */
-function useCurrentTheme(appearance: PluginAppearance) {
+function useCurrentTheme(appearance: AppearanceManager) {
   const brightnessSetting = useSettings((settings) => settings.appearance.general.brightness);
   const brightness = useBrightness();
   const theme = useTheme();

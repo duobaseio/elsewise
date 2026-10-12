@@ -5,9 +5,9 @@ import { EditorView } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { DocumentHighlightParams } from 'vscode-languageserver-protocol';
-import { highlightUsages } from '@/language-servers/highlights';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { highlightUsages } from '@/editor/lsp/highlights';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
 
@@ -87,7 +87,7 @@ function rest(): Promise<void> {
 }
 
 describe('serverHighlights', () => {
-  test('highlights the usages of the symbol at the caret, marking writes', async () => {
+  test('highlights usages of symbol at caret, marking writes', async () => {
     const { view } = await open();
 
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
@@ -95,7 +95,7 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(highlighted(view)).toEqual(['total (write)', 'total', 'total']));
   });
 
-  test('keeps the highlights while the caret moves within them', async () => {
+  test('keeps highlights while caret moves within them', async () => {
     const { view, asked } = await open();
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -108,7 +108,7 @@ describe('serverHighlights', () => {
     expect(asked).toHaveLength(1);
   });
 
-  test('clears the highlights at once when the caret leaves them, and asks again', async () => {
+  test('clears highlights at once when caret leaves them, and asks again', async () => {
     const { view, asked } = await open();
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -119,7 +119,7 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(asked).toHaveLength(2));
   });
 
-  test('highlights nothing with a selection or several carets', async () => {
+  test('highlights nothing with selection or several carets', async () => {
     const { view, asked } = await open();
 
     view.dispatch({ selection: { anchor: 4, head: 9 } });
@@ -131,7 +131,7 @@ describe('serverHighlights', () => {
     expect(asked).toEqual([]);
   });
 
-  test('clears the highlights when the document changes', async () => {
+  test('clears highlights when document changes', async () => {
     const { view } = await open();
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -141,7 +141,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test('drops an answer that arrives after the caret moved', async () => {
+  test('drops answer arriving after caret moved', async () => {
     const { view, asked } = await open(undefined, 300);
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(asked).toHaveLength(1));
@@ -152,7 +152,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test("doesn't ask a server that can't highlight", async () => {
+  test("doesn't ask server that can't highlight", async () => {
     const { view, asked } = await open({});
 
     view.dispatch({ selection: { anchor: 6 } });
@@ -172,7 +172,7 @@ describe('serverHighlights', () => {
     expect(asked).toEqual([]);
   });
 
-  test('clears the highlights when turned off, and highlights again when turned back on', async () => {
+  test('clears when turned off, highlights again when turned on', async () => {
     const setting = new Compartment();
     const { view } = await open(undefined, 0, setting.of(highlightUsages.of(true)));
     view.dispatch({ selection: { anchor: 6 } });
@@ -186,7 +186,7 @@ describe('serverHighlights', () => {
   });
 
   describe('with a grammar', () => {
-    test('highlights a name', async () => {
+    test('highlights name', async () => {
       const { view, asked } = await open(undefined, 0, rust);
 
       view.dispatch({ selection: { anchor: 6 } });
@@ -195,7 +195,7 @@ describe('serverHighlights', () => {
       expect(asked).toHaveLength(1);
     });
 
-    test('highlights nothing in a keyword, a comment or a string', async () => {
+    test('highlights nothing in keyword, comment or string', async () => {
       const { view, asked } = await open(undefined, 0, rust);
 
       for (const pos of [1, DOC.indexOf('// total') + 4, DOC.indexOf('"total"') + 2]) {
@@ -207,7 +207,7 @@ describe('serverHighlights', () => {
       expect(asked).toEqual([]);
     });
 
-    test('clears the highlights at once when the caret moves from a name onto a keyword', async () => {
+    test('clears highlights at once when caret moves from name onto keyword', async () => {
       const { view, asked } = await open(undefined, 0, rust);
       view.dispatch({ selection: { anchor: 6 } });
       await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));

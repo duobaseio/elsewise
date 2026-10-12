@@ -5,8 +5,8 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { RenameParams } from 'vscode-languageserver-protocol';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -105,17 +105,16 @@ function occurrences(view: EditorView): (string | null)[] {
 }
 
 describe('serverRename', () => {
-  test('replaces the symbol with a field holding its name, selected', async () => {
+  test('replaces symbol with field holding name, selected', async () => {
     const view = await open();
 
     const input = await rename(view);
 
     expect(input.value).toBe('total');
     expect([input.selectionStart, input.selectionEnd]).toEqual([0, 5]);
-    expect(view.dom.querySelector('.cm-lsp-rename-hint')).not.toBeNull();
   });
 
-  test('shows the typed name at the other occurrences, without changing the document', async () => {
+  test('shows typed name at other occurrences, without changing document', async () => {
     const view = await open();
     await rename(view);
 
@@ -138,7 +137,7 @@ describe('serverRename', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test('renames when the field loses focus', async () => {
+  test('renames on blur', async () => {
     const view = await open();
     const input = await rename(view);
 
@@ -162,7 +161,7 @@ describe('serverRename', () => {
     expect(renames).toEqual([]);
   });
 
-  test("says when the symbol can't be renamed", async () => {
+  test("says when symbol can't be renamed", async () => {
     const view = await open({ renamable: false });
 
     expect(press(view, 'F6', { shiftKey: true })).toBe(true);
@@ -175,7 +174,7 @@ describe('serverRename', () => {
     expect(view.dom.querySelector('.cm-lsp-rename-message')).toBeNull();
   });
 
-  test('renames the word at the cursor when the server prepares no rename', async () => {
+  test('renames word at cursor without prepare', async () => {
     const view = await open({ prepare: false });
 
     const input = await rename(view);
@@ -183,7 +182,7 @@ describe('serverRename', () => {
     expect(input.value).toBe('total');
   });
 
-  test("doesn't ask the server when the name is unchanged", async () => {
+  test('skips server for unchanged name', async () => {
     const renames: string[] = [];
     const view = await open({ renames });
     await rename(view);

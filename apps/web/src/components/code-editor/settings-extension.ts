@@ -3,8 +3,8 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { useMemo } from 'react';
 import { visualGuides } from '@/components/code-editor/visual-guides';
-import { completionDocumentation } from '@/language-servers/completion';
-import { highlightUsages } from '@/language-servers/highlights';
+import { completionDocumentation } from '@/editor/lsp/completion';
+import { highlightUsages } from '@/editor/lsp/highlights';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 /**

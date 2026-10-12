@@ -1,3 +1,4 @@
+import type { Commands } from './command.ts';
 import type { Editor } from './editor.ts';
 import type { ThemeVariant } from './theme.ts';
 
@@ -8,28 +9,38 @@ export interface Plugin {
   /**
    * Called when Elsewise enables the plugin.
    */
-  enable(context: PluginContext): void | Promise<void>;
+  enable(application: Application, context: PluginContext): void | Promise<void>;
 }
 
 /**
- * A plugin's access to Elsewise, passed to {@link Plugin.enable}.
+ * The application.
  */
-export interface PluginContext {
-  /** The plugin's id. */
-  readonly id: string;
-
+export interface Application {
   /**
    * The interface's appearance.
    */
   readonly appearance: Appearance;
 
   /**
+   * The commands.
+   */
+  readonly commands: Commands;
+
+  /**
    * The code editor.
    */
   readonly editor: Editor;
+}
+
+/**
+ * A plugin's unique state.
+ */
+export interface PluginContext {
+  /** The plugin's id. */
+  readonly id: string;
 
   /**
-   * The plugin's disposables, called in reverse order when Elsewise disables the plugin.
+   * A plugin's subscriptions that are automatically disposed when the plugin is disabled.
    */
   readonly subscriptions: Disposable[];
 }

@@ -106,27 +106,27 @@ describe('links', () => {
     expect(texts('cm-link')).toEqual([URL, URL, URL]);
   });
 
-  test('underlines each URL in the color of its token', () => {
+  test('underlines each URL in token color', () => {
     expect(underline(DOC.indexOf(URL))).toBe(COMMENT);
     expect(underline(DOC.indexOf(URL, DOC.indexOf("'")))).toBe(STRING);
   });
 
-  test('underlines the URL under the pointer in the link color while the key is held', () => {
+  test('underlines hovered URL in link color while key held', () => {
     move(at(DOC.indexOf(URL) + 5), KEY);
     expect(underline(DOC.indexOf(URL))).toBe(LINK);
   });
 
-  test('shows the whole URL under the pointer as a link while the key is held', () => {
+  test('shows whole hovered URL as link while key held', () => {
     move(at(DOC.indexOf(URL) + 5), KEY);
     expect(texts('cm-link-active')).toEqual([URL]);
   });
 
-  test('shows no link without the key', () => {
+  test('shows no link without key', () => {
     move(at(DOC.indexOf(URL) + 5));
     expect(texts('cm-link-active')).toEqual([]);
   });
 
-  test('shows no link once the key is released', () => {
+  test('shows no link once key released', () => {
     move(at(DOC.indexOf(URL) + 5), KEY);
     view.contentDOM.dispatchEvent(
       new KeyboardEvent('keyup', { key: OS === 'mac' ? 'Meta' : 'Control', bubbles: true }),
@@ -134,13 +134,13 @@ describe('links', () => {
     expect(texts('cm-link-active')).toEqual([]);
   });
 
-  test('shows no link once the pointer leaves', () => {
+  test('shows no link once pointer leaves', () => {
     move(at(DOC.indexOf(URL) + 5), KEY);
     view.contentDOM.dispatchEvent(new MouseEvent('mouseleave', KEY));
     expect(texts('cm-link-active')).toEqual([]);
   });
 
-  test('shows the key in a tooltip over a URL', async () => {
+  test('shows key in tooltip over URL', async () => {
     move(at(DOC.indexOf(URL) + 5));
     const tooltip = await vi.waitFor(
       () => {
@@ -153,7 +153,7 @@ describe('links', () => {
     expect(tooltip.textContent).toBe(`${shortcut('Mod-Click')} open in browser`);
   });
 
-  test('opens the URL on click while the key is held', () => {
+  test('opens URL on click while key held', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     const event = click(at(DOC.indexOf(URL) + 5), KEY);
     expect(open).toHaveBeenCalledWith(URL, '_blank', 'noopener');
@@ -161,7 +161,7 @@ describe('links', () => {
     expect(view.state.selection.ranges).toHaveLength(1);
   });
 
-  test('opens nothing past the end of a line that ends in a URL', () => {
+  test('opens nothing past line ending in URL', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     click(pastEnd(3), KEY);
     move(pastEnd(3), KEY);
@@ -169,14 +169,14 @@ describe('links', () => {
     expect(texts('cm-link-active')).toEqual([]);
   });
 
-  test('leaves a click on plain text to add a cursor', () => {
+  test('leaves click on plain text to add cursor', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     click(at(DOC.indexOf('no link')), KEY);
     expect(open).not.toHaveBeenCalled();
     expect(view.state.selection.ranges).toHaveLength(2);
   });
 
-  test('shows no link once the document changes, and underlines the URLs at their new positions', () => {
+  test('shows no link once document changes, and underlines URLs at new positions', () => {
     move(at(DOC.indexOf(URL) + 5), KEY);
     view.dispatch({ changes: { from: '// '.length, insert: `${URL} ` } });
     expect(texts('cm-link-active')).toEqual([]);

@@ -2,8 +2,8 @@ import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 describe('serverDefinition', () => {
-  test('scrolls a definition out of view to the middle of the editor', async () => {
+  test('centers off-screen definition', async () => {
     const instance = new LanguageServerInstance(
       { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: transport } satisfies LanguageServer,
       ROOT,

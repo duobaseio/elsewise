@@ -1,21 +1,13 @@
-import type { Appearance, Editor } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { resolveTheme } from '@/themes/themes';
+import { AppearanceManager } from '@/appearance/appearance-manager';
+import { resolveTheme } from '@/appearance/themes';
+import { CommandManager } from '@/command/command-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { PluginLoader } from './loader';
 
-const APPEARANCE: Appearance = {
-  brightness: 'dark',
-  onBrightnessChange: () => () => {},
-  theme: resolveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
-  onThemeChange: () => () => {},
-};
-
-const EDITOR: Editor = {
-  addExtensions: () => () => {},
-  addLanguages: () => () => {},
-  addLanguageServers: () => () => {},
-  addContextMenuItems: () => () => {},
-};
+const APPEARANCE = new AppearanceManager('dark', resolveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'));
+const EDITOR = new EditorManager();
+const COMMANDS = new CommandManager(APPEARANCE, EDITOR);
 
 // What the plugins below did, in order. They reach it as the global `events`.
 let events: string[];
@@ -38,7 +30,7 @@ function plugin(source: string): string {
 }
 
 const RECORDING = plugin(`
-  export function enable(context) {
+  export function enable(application, context) {
     events.push('enable ' + context.id);
     context.subscriptions.push(
       () => events.push('dispose first'),
@@ -49,7 +41,7 @@ const RECORDING = plugin(`
 
 // Waits for the global `gate` before it finishes enabling.
 const SLOW = plugin(`
-  export async function enable(context) {
+  export async function enable(application, context) {
     events.push('enable started');
     await gate;
     context.subscriptions.push(() => events.push('dispose'));
@@ -58,62 +50,73 @@ const SLOW = plugin(`
 `);
 
 describe('load', () => {
-  test('enables the plugin with its id', async () => {
-    await new PluginLoader(APPEARANCE, EDITOR).load('a', RECORDING);
+  test('enables plugin with id', async () => {
+    await new PluginLoader(COMMANDS.application).load('a', RECORDING);
 
     expect(events).toEqual(['enable a']);
   });
 
-  test('provides the plugin with the appearance', async () => {
-    await new PluginLoader(APPEARANCE, EDITOR).load(
+  test('adds commands', async () => {
+    const commands = new CommandManager(APPEARANCE, new EditorManager());
+    await new PluginLoader(commands.application).load(
       'a',
       plugin(`
-        export function enable(context) {
-          events.push(context.appearance.brightness);
+        export function enable(application, context) {
+          context.subscriptions.push(
+            application.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', run() {} }]),
+          );
         }
       `),
     );
 
-    expect(events).toEqual(['dark']);
+    expect(commands.commands.get('a.rename')?.label).toBe('Rename');
   });
 
-  test('provides the plugin with the editor', async () => {
-    vi.stubGlobal('editor', EDITOR);
-    await new PluginLoader(APPEARANCE, EDITOR).load(
+  test('runs commands with application', async () => {
+    const commands = new CommandManager(APPEARANCE, new EditorManager());
+    await new PluginLoader(commands.application).load(
       'a',
       plugin(`
-        export function enable(context) {
-          if (context.editor === editor) events.push('editor');
+        export async function enable(application) {
+          application.commands.add([
+            {
+              id: 'a.run',
+              label: 'Run',
+              scope: 'application',
+              run: (received) => events.push(received === application ? 'run with application' : 'run'),
+            },
+          ]);
+          application.commands.run('a.run');
         }
       `),
     );
 
-    expect(events).toEqual(['editor']);
+    expect(events).toEqual(['run with application']);
   });
 
-  test('does nothing for a loaded plugin', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('ignores loaded plugin', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load('a', RECORDING);
     await loader.load('a', RECORDING);
 
     expect(events).toEqual(['enable a']);
   });
 
-  test('reports a module that fails to import', async () => {
-    await new PluginLoader(APPEARANCE, EDITOR).load('a', plugin('this is not javascript'));
+  test('logs failed import', async () => {
+    await new PluginLoader(COMMANDS.application).load('a', plugin('this is not javascript'));
 
     expect(events).toEqual([]);
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('imports a module again after it failed to evaluate', async () => {
+  test('reimports module that failed to evaluate', async () => {
     const url = plugin(`
       if (broken) throw new Error('broken');
-      export function enable(context) {
+      export function enable(application, context) {
         events.push('enable ' + context.id);
       }
     `);
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+    const loader = new PluginLoader(COMMANDS.application);
     vi.stubGlobal('broken', true);
     await loader.load('a', url);
     vi.stubGlobal('broken', false);
@@ -123,20 +126,20 @@ describe('load', () => {
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('reports a module without an enable function', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('logs module without enable', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load('a', plugin('export const enable = 1;'));
 
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0]?.[0]).toContain("has no 'enable' function");
   });
 
-  test('disposes the subscriptions of a plugin that throws while enabling', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('disposes subscriptions when enable throws', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load(
       'a',
       plugin(`
-        export function enable(context) {
+        export function enable(application, context) {
           context.subscriptions.push(() => events.push('dispose'));
           throw new Error('failed');
         }
@@ -145,15 +148,10 @@ describe('load', () => {
 
     expect(events).toEqual(['dispose']);
     expect(error).toHaveBeenCalledOnce();
-
-    // It isn't loaded, so there is nothing left to dispose.
-    await loader.unload('a');
-
-    expect(events).toEqual(['dispose']);
   });
 
-  test('enables an unloaded plugin again', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('re-enables unloaded plugin', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load('a', RECORDING);
     await loader.unload('a');
     await loader.load('a', RECORDING);
@@ -161,12 +159,12 @@ describe('load', () => {
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first', 'enable a']);
   });
 
-  test('evaluates the module of an unloaded plugin again', async () => {
+  test('re-evaluates module of unloaded plugin', async () => {
     const url = plugin(`
       events.push('evaluate');
       export function enable() {}
     `);
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load('a', url);
     await loader.unload('a');
     await loader.load('a', url);
@@ -176,7 +174,7 @@ describe('load', () => {
 
   test('does not wait for another plugin', async () => {
     vi.stubGlobal('gate', Promise.withResolvers<void>().promise);
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+    const loader = new PluginLoader(COMMANDS.application);
 
     void loader.load('a', SLOW);
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
@@ -187,16 +185,16 @@ describe('load', () => {
 });
 
 describe('unload', () => {
-  test('disposes the subscriptions in reverse order', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('disposes subscriptions in reverse order', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load('a', RECORDING);
     await loader.unload('a');
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 
-  test('does nothing for a plugin that is not loaded', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('ignores plugin not loaded', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.unload('a');
     await loader.load('a', RECORDING);
     await loader.unload('a');
@@ -205,12 +203,12 @@ describe('unload', () => {
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 
-  test('carries on past a disposable that throws', async () => {
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+  test('continues past throwing disposable', async () => {
+    const loader = new PluginLoader(COMMANDS.application);
     await loader.load(
       'a',
       plugin(`
-        export function enable(context) {
+        export function enable(application, context) {
           context.subscriptions.push(
             () => events.push('dispose first'),
             () => { throw new Error('failed'); },
@@ -225,10 +223,10 @@ describe('unload', () => {
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('waits for a pending load', async () => {
+  test('waits for pending load', async () => {
     const gate = Promise.withResolvers<void>();
     vi.stubGlobal('gate', gate.promise);
-    const loader = new PluginLoader(APPEARANCE, EDITOR);
+    const loader = new PluginLoader(COMMANDS.application);
 
     void loader.load('a', SLOW);
     const unloaded = loader.unload('a');

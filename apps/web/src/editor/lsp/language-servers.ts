@@ -5,18 +5,18 @@ import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsew
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { type ApplyWorkspaceEditParams, MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
-import { serverActions } from '@/language-servers/actions';
-import { serverCompletion } from '@/language-servers/completion';
-import { serverDefinition } from '@/language-servers/definition';
-import { pullAllDiagnostics, serverDiagnostics } from '@/language-servers/diagnostics';
-import { applyWorkspaceEdit, serverEdits } from '@/language-servers/edits';
-import { serverFormat } from '@/language-servers/format';
-import { serverHighlights } from '@/language-servers/highlights';
-import { serverHover } from '@/language-servers/hover';
-import { serverReferences } from '@/language-servers/references';
-import { serverRename } from '@/language-servers/rename';
-import { serverSignatureHelp } from '@/language-servers/signature-help';
-import { EditorAdditions } from '@/plugins/editor';
+import { EditorManager } from '@/editor/editor-manager';
+import { serverActions } from '@/editor/lsp/actions';
+import { serverCompletion } from '@/editor/lsp/completion';
+import { serverDefinition } from '@/editor/lsp/definition';
+import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
+import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
+import { serverFormat } from '@/editor/lsp/format';
+import { serverHighlights } from '@/editor/lsp/highlights';
+import { serverHover } from '@/editor/lsp/hover';
+import { serverReferences } from '@/editor/lsp/references';
+import { serverRename } from '@/editor/lsp/rename';
+import { serverSignatureHelp } from '@/editor/lsp/signature-help';
 
 /**
  * The known and running language servers.
@@ -25,10 +25,10 @@ export class LanguageServers {
   private readonly instances = new Map<LanguageServer, Map<string, LanguageServerInstance>>();
   private readonly unsubscribe: Disposable;
 
-  constructor(private readonly additions: EditorAdditions) {
-    this.unsubscribe = additions.subscribe(() => {
+  constructor(private readonly editor: EditorManager) {
+    this.unsubscribe = editor.subscribe(() => {
       for (const [server, roots] of this.instances) {
-        if (!additions.languageServers.includes(server)) {
+        if (!editor.languageServers.includes(server)) {
           for (const running of roots.values()) {
             running.stop();
           }
@@ -44,7 +44,7 @@ export class LanguageServers {
    * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
    */
   find(language: string): LanguageServer | undefined {
-    return this.additions.languageServers.find((server) => Object.hasOwn(server.languages, language));
+    return this.editor.languageServers.find((server) => Object.hasOwn(server.languages, language));
   }
 
   /**
@@ -81,7 +81,7 @@ export class LanguageServers {
    * Returns a disposable that unregisters the `listener`.
    */
   subscribe(listener: () => void): Disposable {
-    return this.additions.subscribe(listener);
+    return this.editor.subscribe(listener);
   }
 
   /**
@@ -260,7 +260,7 @@ export function serverUri(url: URL): string {
  *
  * Defaults to none.
  */
-export const LanguageServersContext = createContext(new LanguageServers(new EditorAdditions()));
+export const LanguageServersContext = createContext(new LanguageServers(new EditorManager()));
 
 /**
  * Returns the language servers.

@@ -23,7 +23,7 @@ import { link } from '@/components/code-editor/link.ts';
 import { useSearchExtension } from '@/components/code-editor/search/search-bar';
 import { useSettingsExtension } from '@/components/code-editor/settings-extension';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
-import { useEditorAdditions } from '@/plugins/editor';
+import { useEditorManager } from '@/editor/editor-manager';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 const PLUGINS = new Compartment();
@@ -52,8 +52,9 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
   const view = useRef<EditorView>(null);
 
   const plugins = usePluginsExtension(path);
+  const editorManager = useEditorManager();
   const theme = useThemeExtension();
-  const languages = useEditorAdditions((additions) => additions.languages);
+  const languages = useEditorManager((editor) => editor.languages);
   const description = LanguageDescription.matchFilename(languages, path);
   const { search, portal } = useSearchExtension();
   const settings = useSettingsExtension(description?.name);
@@ -79,6 +80,12 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
       extensions: [
         // Has to be first to let a plugin's theme and keymap take precedence over Elsewise's.
         PLUGINS.of([]),
+        // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
+        EditorView.updateListener.of((update) => {
+          if (update.focusChanged && update.view.hasFocus) {
+            editorManager.activate(update.view);
+          }
+        }),
         THEME.of(theme),
         history(),
         search,
@@ -131,10 +138,12 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
       console.error('Plugin extension failed', error);
     }
 
-    view.current = new EditorView({ state, parent: host.current });
+    const editor = new EditorView({ state, parent: host.current });
+    view.current = editor;
 
     return () => {
-      view.current?.destroy();
+      editorManager.deactivate(editor);
+      editor.destroy();
       view.current = null;
     };
   }, [code, lineSeparator]);
@@ -220,7 +229,7 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
 }
 
 function usePluginsExtension(path: string): Extension {
-  const extensions = useEditorAdditions((additions) => additions.extensions);
+  const extensions = useEditorManager((editor) => editor.extensions);
 
   return useMemo(() => {
     try {

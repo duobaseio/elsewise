@@ -1,6 +1,7 @@
 import type { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import type { Extension } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import type {
   Disposable,
   Editor,
@@ -14,10 +15,11 @@ import { createContext, useCallback, useContext, useSyncExternalStore } from 're
 import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu/default-context-menu';
 
 /**
- * What plugins have added to the editor.
+ * The code editor as plugins see it.
  */
-export class EditorAdditions implements Editor {
+export class EditorManager implements Editor {
   private readonly listeners = new Set<() => void>();
+  private current: EditorView | null = null;
   private addedExtensions: readonly (readonly (Extension | ((document: EditorDocument) => Extension))[])[] = [];
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
   private addedLanguages: readonly (readonly LanguageDescription[])[] = [DEFAULT_LANGUAGES];
@@ -26,6 +28,30 @@ export class EditorAdditions implements Editor {
   private currentLanguageServers: readonly LanguageServer[] = [];
   private addedContextMenuItems: readonly EditorContextMenu[] = [DEFAULT_CONTEXT_MENU];
   private currentContextMenuItems: EditorContextMenu = DEFAULT_CONTEXT_MENU;
+
+  get active(): EditorView | null {
+    return this.current;
+  }
+
+  /**
+   * Makes `view` the active editor.
+   */
+  activate(view: EditorView): void {
+    if (this.current !== view) {
+      this.current = view;
+      this.notify();
+    }
+  }
+
+  /**
+   * Makes the active editor null if it is `view`.
+   */
+  deactivate(view: EditorView): void {
+    if (this.current === view) {
+      this.current = null;
+      this.notify();
+    }
+  }
 
   /**
    * The added extensions.
@@ -143,7 +169,7 @@ export class EditorAdditions implements Editor {
   }
 
   /**
-   * Registers a `listener` that is called when something is added or removed.
+   * Registers a `listener` that is called when something is added or removed, or the active editor changes.
    *
    * Returns a disposable that unregisters the `listener`.
    */
@@ -164,19 +190,19 @@ export class EditorAdditions implements Editor {
 }
 
 /**
- * What plugins have added to the editor.
+ * The code editor as plugins see it.
  *
- * Defaults to nothing.
+ * Defaults to nothing added.
  */
-export const EditorAdditionsContext = createContext(new EditorAdditions());
+export const EditorManagerContext = createContext(new EditorManager());
 
 /**
- * Returns what plugins have added to the editor.
+ * Returns the code editor as plugins see it.
  */
-export function useEditorAdditions(): EditorAdditions;
-export function useEditorAdditions<T>(select: (additions: EditorAdditions) => T): T;
-export function useEditorAdditions<T>(select?: (additions: EditorAdditions) => T): EditorAdditions | T {
-  const additions = useContext(EditorAdditionsContext);
-  const subscribe = useCallback((listener: () => void) => additions.subscribe(listener), [additions]);
-  return useSyncExternalStore(subscribe, () => (select === undefined ? additions : select(additions)));
+export function useEditorManager(): EditorManager;
+export function useEditorManager<T>(select: (editor: EditorManager) => T): T;
+export function useEditorManager<T>(select?: (editor: EditorManager) => T): EditorManager | T {
+  const editor = useContext(EditorManagerContext);
+  const subscribe = useCallback((listener: () => void) => editor.subscribe(listener), [editor]);
+  return useSyncExternalStore(subscribe, () => (select === undefined ? editor : select(editor)));
 }

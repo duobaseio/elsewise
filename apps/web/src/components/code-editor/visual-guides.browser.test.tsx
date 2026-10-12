@@ -39,7 +39,7 @@ function expectedLeft(column: number): number {
   return Number.parseFloat(getComputedStyle(line).paddingLeft) + column * view.defaultCharacterWidth;
 }
 
-test("draws one guide per column at the column's x", () => {
+test("draws one guide per column at column's x", () => {
   const content = view.contentDOM.getBoundingClientRect().left;
   const lefts = guides().map((guide) => guide.getBoundingClientRect().left - content);
   expect(lefts).toHaveLength(2);
@@ -47,7 +47,7 @@ test("draws one guide per column at the column's x", () => {
   expect(lefts[1]).toBeCloseTo(expectedLeft(80), 0);
 });
 
-test('reconfiguring replaces the set', async () => {
+test('reconfiguring replaces set', async () => {
   view.dispatch({ effects: GUIDES.reconfigure(visualGuides([])) });
   await new Promise(requestAnimationFrame);
   expect(guides()).toHaveLength(0);
@@ -57,6 +57,6 @@ test('reconfiguring replaces the set', async () => {
   expect(guides()).toHaveLength(1);
 });
 
-test('the guide spans the content height', () => {
+test('guide spans content height', () => {
   expect(guides()[0].getBoundingClientRect().height).toBeGreaterThanOrEqual(view.contentHeight);
 });

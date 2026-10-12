@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
-import { EditorAdditions, EditorAdditionsContext } from '@/plugins/editor';
+import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 
 const DOC = 'fn main() {\n    let a = 1;\n}\n';
 
@@ -19,7 +19,7 @@ beforeAll(async () => {
   rust = await (LanguageDescription.matchFilename(languages, 'main.rs') as LanguageDescription).load();
 });
 
-function mount(additions = new EditorAdditions()): Promise<EditorView> {
+function mount(editor = new EditorManager()): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
@@ -39,11 +39,11 @@ function mount(additions = new EditorAdditions()): Promise<EditorView> {
       return () => view.current?.destroy();
     }, []);
     return (
-      <EditorAdditionsContext value={additions}>
+      <EditorManagerContext value={editor}>
         <CodeEditorContextMenu view={view}>
           <div ref={host} />
         </CodeEditorContextMenu>
-      </EditorAdditionsContext>
+      </EditorManagerContext>
     );
   }
   render(<Probe />);
@@ -67,7 +67,7 @@ async function open(view: EditorView, pos: number): Promise<void> {
 }
 
 describe('rightClickContextMenu', () => {
-  test('moves the caret to a right-click outside the selection, and keeps it inside', async () => {
+  test('moves caret to right-click outside selection, and keeps it inside', async () => {
     const view = await mount();
     const second = view.state.doc.line(2);
 
@@ -84,22 +84,22 @@ describe('rightClickContextMenu', () => {
 
 describe('CodeEditorContextMenu', () => {
   test("groups and sorts plugins' items by id", async () => {
-    const additions = new EditorAdditions();
-    additions.addContextMenuItems({
+    const editor = new EditorManager();
+    editor.addContextMenuItems({
       [DEFAULT_EDITOR_CONTEXT_MENU.clipboard.id]: [
         { type: 'item', id: '35-plain', label: 'Plain paste', command: () => {} },
       ],
       '30-plugin': [{ type: 'item', id: '20-second', label: 'Second', command: () => {} }],
       '05-top': [{ type: 'item', id: '10-top', label: 'Top', command: () => {} }],
     });
-    additions.addContextMenuItems({
+    editor.addContextMenuItems({
       '30-plugin': [
         { type: 'item', id: '10-first', label: 'First', command: () => {} },
         { type: 'item', id: '30-same', label: 'Zebra', command: () => {} },
         { type: 'item', id: '30-same', label: 'Apple', command: () => {} },
       ],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     // An item's label is its first node, ahead of its shortcut.
@@ -111,14 +111,14 @@ describe('CodeEditorContextMenu', () => {
     expect(menu).toEqual(['Top', '-', 'Paste', 'Plain paste', '-', 'First', 'Second', 'Apple', 'Zebra']);
   });
 
-  test("runs a plugin's item, and hides it when not shown", async () => {
-    const additions = new EditorAdditions();
+  test("runs plugin's item, and hides it when not shown", async () => {
+    const editor = new EditorManager();
     const command = vi.fn();
     let shown = true;
-    additions.addContextMenuItems({
+    editor.addContextMenuItems({
       plugin: [{ type: 'item', id: 'item', label: 'Plugin item', command, shown: () => shown }],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     await userEvent.click(item('Plugin item'));
@@ -129,9 +129,9 @@ describe('CodeEditorContextMenu', () => {
     expect(item('Plugin item').query()).toBeNull();
   });
 
-  test("groups and sorts a submenu's items by id", async () => {
-    const additions = new EditorAdditions();
-    additions.addContextMenuItems({
+  test("groups and sorts submenu's items by id", async () => {
+    const editor = new EditorManager();
+    editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -147,7 +147,7 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     await userEvent.click(item('More'));
@@ -160,10 +160,10 @@ describe('CodeEditorContextMenu', () => {
     expect(submenu).toEqual(['A', 'B', '-', 'C']);
   });
 
-  test("runs a submenu's item", async () => {
-    const additions = new EditorAdditions();
+  test("runs submenu's item", async () => {
+    const editor = new EditorManager();
     const command = vi.fn();
-    additions.addContextMenuItems({
+    editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -182,7 +182,7 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     await userEvent.click(item('More'));
@@ -191,9 +191,9 @@ describe('CodeEditorContextMenu', () => {
     expect(command).toHaveBeenCalledWith(view);
   });
 
-  test("doesn't draw a submenu with nothing shown", async () => {
-    const additions = new EditorAdditions();
-    additions.addContextMenuItems({
+  test("doesn't draw submenu with nothing shown", async () => {
+    const editor = new EditorManager();
+    editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -203,15 +203,15 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     expect(item('More').query()).toBeNull();
   });
 
-  test("merges submenus with the same id in a group under the first one's label", async () => {
-    const additions = new EditorAdditions();
-    additions.addContextMenuItems({
+  test("merges same-id submenus in group under first's label", async () => {
+    const editor = new EditorManager();
+    editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -221,7 +221,7 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    additions.addContextMenuItems({
+    editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -231,7 +231,7 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     expect(item('More').elements()).toHaveLength(1);
@@ -241,13 +241,13 @@ describe('CodeEditorContextMenu', () => {
     await expect.element(item('B')).toBeVisible();
   });
 
-  test('merges submenus with the same id nested in merged submenus', async () => {
-    const additions = new EditorAdditions();
+  test('merges same-id submenus nested in merged ones', async () => {
+    const editor = new EditorManager();
     for (const [id, label] of [
       ['10-a', 'A'],
       ['20-b', 'B'],
     ]) {
-      additions.addContextMenuItems({
+      editor.addContextMenuItems({
         plugin: [
           {
             type: 'submenu',
@@ -267,7 +267,7 @@ describe('CodeEditorContextMenu', () => {
         ],
       });
     }
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     await userEvent.click(item('More'));
@@ -278,9 +278,9 @@ describe('CodeEditorContextMenu', () => {
     await expect.element(item('B')).toBeVisible();
   });
 
-  test('keeps submenus with the same id in different groups, and items with that id, apart', async () => {
-    const additions = new EditorAdditions();
-    additions.addContextMenuItems({
+  test('keeps same-id submenus in different groups, and same-id items, apart', async () => {
+    const editor = new EditorManager();
+    editor.addContextMenuItems({
       a: [
         {
           type: 'submenu',
@@ -299,7 +299,7 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     await expect.element(item('More')).toBeVisible();
@@ -307,9 +307,9 @@ describe('CodeEditorContextMenu', () => {
     await expect.element(item('Extra')).toBeVisible();
   });
 
-  test("removes a disposed plugin's items from a merged submenu", async () => {
-    const additions = new EditorAdditions();
-    const dispose = additions.addContextMenuItems({
+  test("removes disposed plugin's items from merged submenu", async () => {
+    const editor = new EditorManager();
+    const dispose = editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -319,7 +319,7 @@ describe('CodeEditorContextMenu', () => {
         },
       ],
     });
-    additions.addContextMenuItems({
+    editor.addContextMenuItems({
       plugin: [
         {
           type: 'submenu',
@@ -330,7 +330,7 @@ describe('CodeEditorContextMenu', () => {
       ],
     });
     dispose();
-    const view = await mount(additions);
+    const view = await mount(editor);
 
     await open(view, 0);
     expect(item('More').query()).toBeNull();

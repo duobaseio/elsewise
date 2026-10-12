@@ -6,8 +6,8 @@ import { OS } from '@elsewise/components/lib/os';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { DocumentRangeFormattingParams } from 'vscode-languageserver-protocol';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
 
@@ -77,7 +77,7 @@ function press(view: EditorView): boolean {
 const CAPABILITIES = { documentFormattingProvider: true, documentRangeFormattingProvider: true };
 
 describe('serverFormat', () => {
-  test("applies the server's edits in one undo step", async () => {
+  test("applies server's edits in one undo step", async () => {
     const view = await open({ documentFormattingProvider: true }, () => [
       { range: { start: { line: 0, character: 3 }, end: { line: 0, character: 5 } }, newText: ' ' },
       { range: { start: { line: 0, character: 10 }, end: { line: 0, character: 11 } }, newText: ' = ' },
@@ -106,7 +106,7 @@ describe('serverFormat', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test("doesn't ask a server that can't format", async () => {
+  test("doesn't ask server that can't format", async () => {
     const format = vi.fn(() => []);
     const view = await open({}, format);
 
@@ -116,7 +116,7 @@ describe('serverFormat', () => {
     expect(format).not.toHaveBeenCalled();
   });
 
-  test('formats only the selection', async () => {
+  test('formats only selection', async () => {
     const format = vi.fn(() => []);
     const formatRange = vi.fn(formatLines);
     const view = await open(CAPABILITIES, format, formatRange, LINES);
@@ -153,7 +153,7 @@ describe('serverFormat', () => {
     expect(view.state.doc.toString()).toBe(LINES);
   });
 
-  test('applies a change that two selections both get once', async () => {
+  test('applies change shared by two selections once', async () => {
     const view = await open(CAPABILITIES, () => [], formatLines, LINES);
     view.dispatch({
       selection: EditorSelection.create([EditorSelection.range(0, 3), EditorSelection.range(7, 8)]),
@@ -165,7 +165,7 @@ describe('serverFormat', () => {
     expect(view.state.doc.toString()).toBe('let a = 1;\nlet  b=2;\nlet  c=3;');
   });
 
-  test("doesn't format the document instead of a selection when the server can't format ranges", async () => {
+  test("doesn't format document when server can't format ranges", async () => {
     const format = vi.fn(() => []);
     const formatRange = vi.fn(formatLines);
     const view = await open({ documentFormattingProvider: true }, format, formatRange);
@@ -178,7 +178,7 @@ describe('serverFormat', () => {
     expect(formatRange).not.toHaveBeenCalled();
   });
 
-  test("doesn't format a read-only document", async () => {
+  test("doesn't format read-only document", async () => {
     const format = vi.fn(() => []);
     const view = await open({ documentFormattingProvider: true }, format);
     view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });

@@ -40,7 +40,7 @@ function offCenter(view: EditorView, pos: number): number {
 }
 
 describe('scroll', () => {
-  test('scrolls a range below the editor to its middle', () => {
+  test('centers range below editor', () => {
     const view = open();
 
     view.dispatch({ effects: scroll(range('line 100'), view) });
@@ -48,7 +48,7 @@ describe('scroll', () => {
     expect(offCenter(view, range('line 100').from)).toBeLessThan(10);
   });
 
-  test('scrolls a range above the editor to its middle', () => {
+  test('centers range above editor', () => {
     const view = open();
     view.dispatch({ effects: EditorView.scrollIntoView(DOC.length) });
 
@@ -57,7 +57,7 @@ describe('scroll', () => {
     expect(offCenter(view, range('line 100').from)).toBeLessThan(10);
   });
 
-  test('scrolls a range cut off by the bottom of the editor to its middle', () => {
+  test('centers range cut off at bottom', () => {
     const view = open();
     const bounds = view.scrollDOM.getBoundingClientRect();
     const cut = view.lineBlockAtHeight(bounds.height - 4);
@@ -67,7 +67,7 @@ describe('scroll', () => {
     expect(offCenter(view, cut.from)).toBeLessThan(10);
   });
 
-  test("doesn't scroll a visible range", () => {
+  test("doesn't scroll visible range", () => {
     const view = open();
 
     view.dispatch({ effects: scroll(range('line 3'), view) });

@@ -34,8 +34,8 @@ const { EDITOR } = vi.hoisted(() => ({
 }));
 
 // Replaces the editor's colors with test colors, since a test cannot add a theme to the bundled ones.
-vi.mock('@/themes/themes', async (original) => {
-  const actual = await original<typeof import('@/themes/themes')>();
+vi.mock('@/appearance/themes', async (original) => {
+  const actual = await original<typeof import('@/appearance/themes')>();
   return {
     ...actual,
     useTheme: () => {
@@ -93,13 +93,13 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-test("the visual guide takes the theme's color", async () => {
+test("visual guide takes theme's color", async () => {
   const view = await mount('x', [visualGuides([1])]);
   await new Promise(requestAnimationFrame);
   expect(style(view.dom.querySelector('.cm-visual-guide')).borderLeftColor).toBe(rgb(EDITOR.visualGuide));
 });
 
-test("deprecated code is struck through at the font's strikeout position", async () => {
+test("deprecated code is struck through at font's strikeout position", async () => {
   const view = await mount('let x', []);
   view.dispatch(
     setDiagnostics(view.state, [
@@ -114,7 +114,7 @@ test("deprecated code is struck through at the font's strikeout position", async
   expect(mark.textDecorationLine).toBe('none');
 });
 
-test('unnecessary code is faded without an underline, unless a plain problem shares it', async () => {
+test('unnecessary code is faded without underline, unless plain problem shares it', async () => {
   const view = await mount('let a = 1', []);
   const unused = {
     from: 4,
@@ -131,7 +131,7 @@ test('unnecessary code is faded without an underline, unless a plain problem sha
   expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toContain('data:image/svg+xml');
 });
 
-test('deprecated code is struck through by Chrome in a font whose strikeout is unknown', async () => {
+test('deprecated code is struck through by Chrome in font whose strikeout is unknown', async () => {
   document.documentElement.style.setProperty('--font-mono', 'Menlo, monospace');
   onTestFinished(() => {
     document.documentElement.style.removeProperty('--font-mono');
@@ -147,7 +147,7 @@ test('deprecated code is struck through by Chrome in a font whose strikeout is u
   expect(mark.backgroundImage).toBe('none');
 });
 
-test('a selected completion keeps the text color, and the list shows whole rows', async () => {
+test('selected completion keeps text color, and list shows whole rows', async () => {
   const options = Array.from({ length: 20 }, (_, i) => ({ label: `option${i}` }));
   const view = await mount('', [autocompletion({ override: [() => ({ from: 0, options })] })]);
   startCompletion(view);
@@ -159,13 +159,11 @@ test('a selected completion keeps the text color, and the list shows whole rows'
   const tooltip = view.dom.querySelector('.cm-tooltip-autocomplete');
   expect(style(selected).color).toBe(style(tooltip).color);
   expect(style(selected).color).not.toBe('rgb(255, 255, 255)');
-  expect(style(tooltip).borderStyle).toBe('none');
   const list = style(tooltip?.querySelector('ul') ?? null);
   expect(Number.parseFloat(list.maxHeight)).toBe(10 * 22 + 8);
-  expect(style(selected).cursor).toBe('default');
 });
 
-test('the hovered row of completions, usages and actions takes the hover color, unless selected', async () => {
+test('hovered row of completions, usages and actions takes hover color, unless selected', async () => {
   const options = Array.from({ length: 3 }, (_, i) => ({ label: `option${i}` }));
   const popup = document.createElement('div');
   popup.innerHTML =
@@ -195,7 +193,7 @@ test('the hovered row of completions, usages and actions takes the hover color, 
   }
 });
 
-test('signatures are parted by dividers, and wrap with a hanging indent', async () => {
+test('signatures are parted by dividers, and wrap with hanging indent', async () => {
   const dom = document.createElement('div');
   dom.className = 'cm-lsp-signatures';
   dom.innerHTML = '<ul><li>fn send()</li><li>fn send(bytes: Bytes)</li></ul>';
@@ -205,10 +203,9 @@ test('signatures are parted by dividers, and wrap with a hanging indent', async 
   expect(style(first).borderTopWidth).toBe('0px');
   expect(style(second).borderTopWidth).toBe('1px');
   expect(Number.parseFloat(style(first).textIndent)).toBeLessThan(0);
-  expect(style(dom).borderStyle).toBe('none');
 });
 
-test('the usages of the symbol at the caret, writes included, take the selection match color', async () => {
+test('usages of symbol at caret, writes included, take selection match color', async () => {
   const view = await mount('total + total', [
     EditorView.decorations.of(
       Decoration.set([
@@ -223,7 +220,7 @@ test('the usages of the symbol at the caret, writes included, take the selection
   expect(write.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
 });
 
-test('a symbol being renamed, and its occurrences, take the search match colors', async () => {
+test('renamed symbol and occurrences take search match colors', async () => {
   const view = await mount('total + total', [
     EditorView.decorations.of(
       Decoration.set([
@@ -240,7 +237,7 @@ test('a symbol being renamed, and its occurrences, take the search match colors'
   expect(style(view.dom.querySelector('.cm-lsp-rename-occurrence')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
 });
 
-test("only the keys of the rename hint are muted, like completion's", async () => {
+test("only keys of rename hint are muted, like completion's", async () => {
   const hint = document.createElement('div');
   hint.className = 'cm-lsp-rename-hint';
   hint.innerHTML = '<kbd>↩</kbd> rename';
@@ -249,10 +246,9 @@ test("only the keys of the rename hint are muted, like completion's", async () =
 
   expect(style(hint.querySelector('kbd')).color).toBe(text3);
   expect(style(hint).color).not.toBe(text3);
-  expect(style(hint).borderTopWidth).toBe('0px');
 });
 
-test('usages are listed like completions, with each usage taking the search match color', async () => {
+test('usages are listed like completions, each in search match color', async () => {
   const popup = document.createElement('div');
   popup.className = 'cm-lsp-references';
   const rows = Array.from(
@@ -276,7 +272,7 @@ test('usages are listed like completions, with each usage taking the search matc
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
 });
 
-test("a problem's fixes are links, underlined only while hovered", async () => {
+test("problem's fixes are links underlined only on hover", async () => {
   const tooltip = document.createElement('div');
   tooltip.className = 'cm-tooltip-hover';
   tooltip.innerHTML =

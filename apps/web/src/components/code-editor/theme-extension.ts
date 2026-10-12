@@ -5,8 +5,8 @@ import { EditorView } from '@codemirror/view';
 import type { ResolvedTheme, TextStyle } from '@elsewise/plugin';
 import { type Tag, tags as t } from '@lezer/highlight';
 import { useMemo } from 'react';
+import { useTheme } from '@/appearance/themes';
 import { useBrightness } from '@/settings/settings';
-import { useTheme } from '@/themes/themes';
 
 /**
  * The CSS selector and property that each of the editor's colors is applied to.

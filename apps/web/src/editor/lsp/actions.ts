@@ -11,8 +11,8 @@ import {
   type Range,
 } from 'vscode-languageserver-protocol';
 import { appendCode, hint } from '@/components/code-editor/tooltip';
-import { problems } from '@/language-servers/diagnostics';
-import { applyWorkspaceEdit } from '@/language-servers/edits';
+import { problems } from '@/editor/lsp/diagnostics';
+import { applyWorkspaceEdit } from '@/editor/lsp/edits';
 
 // A bulb, and the exclamation mark cut out of it for a quick fix.
 const BULB =
@@ -299,7 +299,6 @@ export async function apply(view: EditorView, action: CodeAction | undefined, do
         return;
       }
     }
-
 
     if (resolved.edit) {
       const { applied, failureReason } = applyWorkspaceEdit(plugin.client, resolved.edit);

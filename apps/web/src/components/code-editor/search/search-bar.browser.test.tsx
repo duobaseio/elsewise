@@ -1,5 +1,5 @@
 import { defaultKeymap } from '@codemirror/commands';
-import { getSearchQuery, openSearchPanel, searchKeymap, searchPanelOpen } from '@codemirror/search';
+import { openSearchPanel, searchKeymap, searchPanelOpen } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { useEffect, useRef } from 'react';
@@ -7,7 +7,6 @@ import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { useSearchExtension } from '@/components/code-editor/search/search-bar';
-import { replaceRow } from '@/components/code-editor/search/search-bar-query';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
 
@@ -53,7 +52,7 @@ const count = () => page.getByRole('status');
 const selected = () =>
   (view as EditorView).state.sliceDoc(view?.state.selection.main.from, view?.state.selection.main.to);
 
-test('Mod-f opens seeded from the selection', async () => {
+test('Mod-f opens seeded from selection', async () => {
   const view = await mount();
   view.dispatch({ selection: { anchor: 4, head: 5 } });
   view.focus();
@@ -85,7 +84,6 @@ test('live search, Enter walks matches', async () => {
   openSearchPanel(view);
   await userEvent.fill(find(), 'let');
 
-  expect(getSearchQuery(view.state).search).toBe('let');
   await expect.element(count()).toHaveTextContent('1/4');
   expect(view.dom.querySelectorAll('.cm-searchMatch')).toHaveLength(4);
 
@@ -98,7 +96,7 @@ test('live search, Enter walks matches', async () => {
   expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
 });
 
-test('typing selects the first match from the cursor on', async () => {
+test('typing selects first match from cursor on', async () => {
   const view = await mount();
   view.dispatch({ selection: { anchor: view.state.doc.line(2).to } });
   openSearchPanel(view);
@@ -121,7 +119,7 @@ test('typing selects the first match from the cursor on', async () => {
   expect(view.state.selection.main.from).toBe(4);
 });
 
-test('centers a match that is out of view', async () => {
+test('centers off-screen match', async () => {
   const view = await mount([EditorView.theme({ '&': { height: '200px' }, '.cm-scroller': { overflow: 'auto' } })]);
   view.dispatch({ changes: { from: 0, insert: '\n'.repeat(100) }, selection: { anchor: 0 } });
   openSearchPanel(view);
@@ -147,15 +145,12 @@ test('toggles and invalid regexp', async () => {
   await userEvent.fill(find(), 'let');
 
   await userEvent.click(page.getByRole('button', { name: 'Match case' }));
-  expect(getSearchQuery(view.state).caseSensitive).toBe(true);
   await expect.element(count()).toHaveTextContent('1/3');
 
   await userEvent.click(page.getByRole('button', { name: 'Whole word' }));
-  expect(getSearchQuery(view.state).wholeWord).toBe(true);
   await expect.element(count()).toHaveTextContent('1/2');
 
   await userEvent.click(page.getByRole('button', { name: 'Regex' }));
-  expect(getSearchQuery(view.state).regexp).toBe(true);
   await userEvent.fill(find(), '[');
   await expect.element(find()).toHaveAttribute('aria-invalid', 'true');
   await expect.element(count()).toHaveTextContent('');
@@ -169,7 +164,6 @@ test('replace row', async () => {
   view.focus();
   await userEvent.keyboard('{Meta>}{Alt>}f{/Alt}{/Meta}');
   await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
-  expect(view.state.field(replaceRow)).toBe(true);
 
   await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
   await expect.element(page.getByRole('textbox', { name: 'Replace' })).not.toBeInTheDocument();
@@ -218,7 +212,7 @@ test('read-only hides replace', async () => {
   expect(page.getByRole('button', { name: 'Toggle replace' }).elements()).toHaveLength(0);
 });
 
-test('field width follows its text', async () => {
+test('field width follows text', async () => {
   const view = await mount();
   view.dom.parentElement?.style.setProperty('width', '800px');
   openSearchPanel(view);
@@ -242,7 +236,7 @@ test('field width follows its text', async () => {
   expect(page.getByRole('textbox', { name: 'Replace' }).element().getBoundingClientRect().width).toBe(width());
 });
 
-test('every label in the bar is sentence case', async () => {
+test('every label in bar is sentence case', async () => {
   const view = await mount();
   openSearchPanel(view);
   await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));

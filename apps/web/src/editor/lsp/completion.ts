@@ -39,7 +39,7 @@ import {
   type TextEdit,
 } from 'vscode-languageserver-protocol';
 import { hint } from '@/components/code-editor/tooltip';
-import { documentation } from '@/language-servers/documentation';
+import { documentation } from '@/editor/lsp/documentation';
 
 /**
  * The completion type of each kind of item.

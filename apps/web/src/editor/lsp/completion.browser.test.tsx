@@ -13,9 +13,9 @@ import {
   CompletionItemTag,
   type InitializeParams,
 } from 'vscode-languageserver-protocol';
-import { completionDocumentation } from '@/language-servers/completion';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { completionDocumentation } from '@/editor/lsp/completion';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
@@ -116,7 +116,7 @@ describe('serverCompletion', () => {
     });
   });
 
-  test("shows each item's kind as a tile colored like its syntax", async () => {
+  test("shows each item's kind as tile colored like syntax", async () => {
     const view = await open(
       transport([
         { label: 'send', kind: CompletionItemKind.Method },
@@ -152,7 +152,7 @@ describe('serverCompletion', () => {
     expect(view.dom.querySelector('.cm-completionIcon')).toBeNull();
   });
 
-  test('shows the label details after the label and on the right, else the detail on the right', async () => {
+  test('shows label details after label and on right, else detail on right', async () => {
     const view = await open(
       transport([
         { label: 'send', labelDetails: { detail: '(bytes: Bytes)', description: 'Result<()>' }, detail: 'fn send' },
@@ -184,7 +184,7 @@ describe('serverCompletion', () => {
     expect(rows.map((row) => row.classList.contains('cm-completion-deprecated'))).toEqual([false, true, true]);
   });
 
-  test('shows the label of an item filtered by other text', async () => {
+  test('shows label of item filtered by other text', async () => {
     const view = await open(transport([{ label: 'set_retries(…)', filterText: 'set_retries' }]), 'channel.se|');
 
     const [row] = await complete(view);
@@ -192,7 +192,7 @@ describe('serverCompletion', () => {
     expect(text(row, '.cm-completionLabel')).toBe('set_retries(…)');
   });
 
-  test('inserts a snippet', async () => {
+  test('inserts snippet', async () => {
     const view = await open(
       transport([{ label: 'select', insertText: `select(\${1:x})$0`, insertTextFormat: 2 }]),
       'channel.se|',
@@ -204,7 +204,7 @@ describe('serverCompletion', () => {
     expect(view.state.doc.toString()).toBe('channel.select(x)');
   });
 
-  test("makes an item's additional edits", async () => {
+  test("makes item's additional edits", async () => {
     const view = await open(
       transport([
         {
@@ -226,7 +226,7 @@ describe('serverCompletion', () => {
     expect(view.state.doc.toString()).toBe('use seq::sequence;\nsequence');
   });
 
-  test("makes a snippet's additional edits", async () => {
+  test("makes snippet's additional edits", async () => {
     const view = await open(
       transport([
         {
@@ -250,7 +250,7 @@ describe('serverCompletion', () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('use seq::sequence;\nsequence(x)'));
   });
 
-  test('makes the additional edits of a resolved item with the insertion, undone together', async () => {
+  test("makes resolved item's additional edits with insertion, undone together", async () => {
     const fake = transport([{ label: 'sequence' }], {
       sequence: {
         detail: 'Update import from "seq"',
@@ -274,7 +274,7 @@ describe('serverCompletion', () => {
     expect(view.state.doc.toString()).toBe('se');
   });
 
-  test('resolves an item when picked, and makes its additional edits after the insertion', async () => {
+  test('resolves picked item and makes additional edits after insertion', async () => {
     const fake = transport([{ label: 'sequence' }], {
       sequence: {
         additionalTextEdits: [
@@ -294,7 +294,7 @@ describe('serverCompletion', () => {
     expect(fake.methods).toContain('completionItem/resolve');
   });
 
-  test('inserts with Enter and replaces the rest of the word with Tab', async () => {
+  test('inserts with Enter and replaces rest of word with Tab', async () => {
     const items = [{ label: 'send' }];
     const inserted = await open(transport(items), 'channel.se|lect()');
     await complete(inserted);
@@ -307,7 +307,7 @@ describe('serverCompletion', () => {
     expect(replaced.state.doc.toString()).toBe('channel.send()');
   });
 
-  test('leaves Tab to the editor while no completions are open', async () => {
+  test('leaves Tab to editor without completions', async () => {
     const view = await open(transport([]), 'se|');
 
     press(view, 'Tab');
@@ -315,7 +315,7 @@ describe('serverCompletion', () => {
     expect(view.state.doc.toString()).toBe('se\t');
   });
 
-  test("resolves the selected item's documentation, its detail as the definition", async () => {
+  test("resolves selected item's documentation, detail as definition", async () => {
     const fake = transport([{ label: 'send', detail: 'pub fn send(&self)' }], {
       send: { documentation: { kind: 'markdown', value: 'Sends `bytes`.' } },
     });
@@ -336,7 +336,7 @@ describe('serverCompletion', () => {
     expect(fake.methods.filter((method) => method === 'completionItem/resolve')).toHaveLength(1);
   });
 
-  test('shows no documentation for an item without any', async () => {
+  test('shows no documentation for item without any', async () => {
     const fake = transport([{ label: 'send' }]);
     const view = await open(fake, 'channel.se|');
 
@@ -347,7 +347,7 @@ describe('serverCompletion', () => {
     expect(view.dom.querySelector('.cm-completionInfo')).toBeNull();
   });
 
-  test('shows no documentation when it is turned off', async () => {
+  test('shows no documentation when turned off', async () => {
     const fake = transport([{ label: 'send', detail: 'pub fn send(&self)' }], {
       send: { documentation: { kind: 'markdown', value: 'Sends `bytes`.' } },
     });

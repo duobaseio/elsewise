@@ -9,10 +9,10 @@ import {
   type Diagnostic as LSPDiagnostic,
 } from 'vscode-languageserver-protocol';
 import { appendCode } from '@/components/code-editor/tooltip';
-import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_ACTIONS, showActions } from '@/language-servers/actions';
-import { problems, SEVERITIES } from '@/language-servers/diagnostics';
-import { documentation } from '@/language-servers/documentation';
-import { highlightClick } from '@/language-servers/highlights';
+import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_ACTIONS, showActions } from '@/editor/lsp/actions';
+import { problems, SEVERITIES } from '@/editor/lsp/diagnostics';
+import { documentation } from '@/editor/lsp/documentation';
+import { highlightClick } from '@/editor/lsp/highlights';
 
 /**
  * The milliseconds to wait for the server's fixes before showing a problem without them.

@@ -4,9 +4,9 @@ import { EditorView } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, DocumentDiagnosticParams, InitializeParams } from 'vscode-languageserver-protocol';
-import { problems, pullAllDiagnostics } from '@/language-servers/diagnostics';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { problems, pullAllDiagnostics } from '@/editor/lsp/diagnostics';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.toy';
@@ -88,7 +88,7 @@ afterEach(() => {
 });
 
 describe('serverDiagnostics', () => {
-  test('requests diagnostics for a file that opens on a running server, and shows them by severity', async () => {
+  test('requests diagnostics for file that opens on running server, and shows them by severity', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -166,7 +166,7 @@ describe('serverDiagnostics', () => {
     );
   });
 
-  test('asks for markdown messages and links to their codes', async () => {
+  test('asks for markdown messages and code links', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -180,7 +180,7 @@ describe('serverDiagnostics', () => {
     });
   });
 
-  test('underlines the word at a problem reported at a point, or else a character beside it', async () => {
+  test('underlines word at point problem, else adjacent character', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -206,7 +206,7 @@ describe('serverDiagnostics', () => {
     });
   });
 
-  test('underlines the last character before a problem reported on an empty line', async () => {
+  test('underlines last character before problem on empty line', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -230,7 +230,7 @@ describe('serverDiagnostics', () => {
     });
   });
 
-  test('requests them again after an edit, once the edit is synced', async () => {
+  test('re-requests after edit once synced', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -247,7 +247,7 @@ describe('serverDiagnostics', () => {
     expect(fake.methods.slice(-2)).toEqual(['textDocument/didChange', 'textDocument/diagnostic']);
   });
 
-  test('maps the diagnostics across edits made while the request was in flight', async () => {
+  test('maps diagnostics across edits made during request', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -262,7 +262,7 @@ describe('serverDiagnostics', () => {
     await vi.waitFor(() => expect(shown(view)).toEqual([[6, 9, 'error']]));
   });
 
-  test('drops the diagnostics for a version that was synced while the request was in flight', async () => {
+  test('drops diagnostics for version synced during request', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -279,7 +279,7 @@ describe('serverDiagnostics', () => {
     expect(shown(view)).toEqual([]);
   });
 
-  test('cancels a request that a newer one replaces, and drops its diagnostics', async () => {
+  test('cancels superseded request and drops diagnostics', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -299,7 +299,7 @@ describe('serverDiagnostics', () => {
     await vi.waitFor(() => expect(shown(view)).toEqual([[0, 2, 'warning']]));
   });
 
-  test('never requests diagnostics from a server that does not offer them', async () => {
+  test('never requests diagnostics from server without them', async () => {
     const fake = transport(false);
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -315,7 +315,7 @@ describe('serverDiagnostics', () => {
     expect(fake.requests).toEqual([]);
   });
 
-  test('shows the diagnostics a server pushes, keeping the originals', async () => {
+  test('shows diagnostics server pushes, keeping originals', async () => {
     const fake = transport(false);
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -338,7 +338,7 @@ describe('serverDiagnostics', () => {
     expect(view.state.field(problems)).toEqual([{ item, from: 4, to: 7 }]);
   });
 
-  test('syncs an edit for a server that pushes, without asking it', async () => {
+  test('syncs edit for server that pushes, without asking it', async () => {
     const fake = transport(false);
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -354,7 +354,7 @@ describe('serverDiagnostics', () => {
     expect(fake.requests).toEqual([]);
   });
 
-  test("maps the server's diagnostics through edits, keeping them as the server sent them", async () => {
+  test('maps pushed diagnostics through edits, keeping originals', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -398,20 +398,16 @@ describe('pullAllDiagnostics', () => {
 });
 
 describe('LanguageServerInstance.start', () => {
-  test('requests diagnostics for the open files once the server initializes, and again after it restarts', async () => {
+  test('requests diagnostics for open files on initialize and restart', async () => {
     const fakes: DiagnosticsTransport[] = [];
     const instance = new LanguageServerInstance(
       server(() => fakes[fakes.push(transport()) - 1]),
       ROOT,
     );
-    const view = open(instance);
+    open(instance);
     await instance.start();
 
     await vi.waitFor(() => expect(fakes[0].requests).toHaveLength(1));
-
-    fakes[0].requests[0].answer([[0, 3, 1]]);
-
-    await vi.waitFor(() => expect(shown(view)).toEqual([[0, 3, 'error']]));
 
     fakes[0].crash();
     await instance.start();

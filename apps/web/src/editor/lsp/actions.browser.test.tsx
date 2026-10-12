@@ -5,8 +5,8 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { CodeActionParams } from 'vscode-languageserver-protocol';
-import { LanguageServerInstance } from '@/language-servers/language-servers';
-import { StubTransport } from '../../test/stub-transport';
+import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.ts';
 
@@ -106,7 +106,7 @@ async function show(view: EditorView): Promise<string[]> {
 }
 
 describe('serverActions', () => {
-  test('lists the quick fixes for the problem at the cursor, then the other actions', async () => {
+  test('lists quick fixes for problem at cursor, then other actions', async () => {
     const actions = vi.fn((_: CodeActionParams) => [...SOURCE, ADD_IMPORT]);
     const { view } = await open(actions);
 
@@ -115,7 +115,7 @@ describe('serverActions', () => {
     expect(actions.mock.calls[0][0].context.diagnostics).toMatchObject([{ code: 2304, source: 'ts' }]);
   });
 
-  test('shows the code quoted in backticks in a title as code', async () => {
+  test('renders backticks in title as code', async () => {
     const { view } = await open(() => [{ ...ADD_IMPORT, title: 'Import `shout` from `./util`' }]);
 
     expect(await show(view)).toEqual(['Import shout from ./util']);
@@ -123,7 +123,7 @@ describe('serverActions', () => {
     expect([...row.querySelectorAll('code')].map((code) => code.textContent)).toEqual(['shout', './util']);
   });
 
-  test('applies the selected action on Enter, in one undo step', async () => {
+  test('applies selected action on Enter, in one undo step', async () => {
     const { view } = await open(() => [ADD_IMPORT, ...SOURCE]);
     await show(view);
 
@@ -135,7 +135,7 @@ describe('serverActions', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test('moves the selection with the arrows, and closes on Escape', async () => {
+  test('moves selection with arrows, and closes on Escape', async () => {
     const { view } = await open(() => [ADD_IMPORT, ...SOURCE]);
     await show(view);
 
@@ -147,7 +147,7 @@ describe('serverActions', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test('applies the preferred fix on Shift-Alt-Enter, without a popup', async () => {
+  test('applies preferred fix on Shift-Alt-Enter, without popup', async () => {
     const other = { ...ADD_IMPORT, title: 'Other fix', isPreferred: false, edit: { changes: {} } };
     const { view } = await open(() => [other, ADD_IMPORT, ...SOURCE]);
 
@@ -157,7 +157,7 @@ describe('serverActions', () => {
     expect(view.dom.querySelector('.cm-lsp-actions')).toBeNull();
   });
 
-  test('says when there are no actions', async () => {
+  test('says when no actions', async () => {
     const { view } = await open(() => []);
 
     press(view, 'Enter', { altKey: true });
@@ -170,7 +170,7 @@ describe('serverActions', () => {
     expect(view.dom.querySelector('.cm-lsp-actions-message')).toBeNull();
   });
 
-  test('shows nothing on Shift-Alt-Enter when there is no fix', async () => {
+  test('shows nothing on Shift-Alt-Enter without fix', async () => {
     const actions = vi.fn((_: CodeActionParams) => SOURCE);
     const { view } = await open(actions);
 
@@ -182,7 +182,7 @@ describe('serverActions', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test("says why the server's actions failed, until the cursor moves", async () => {
+  test("says why server's actions failed, until cursor moves", async () => {
     const { view } = await open(() => {
       throw new Error('Server crashed');
     });
@@ -196,7 +196,7 @@ describe('serverActions', () => {
     expect(view.dom.querySelector('.cm-lsp-actions-message')).toBeNull();
   });
 
-  test('resolves an action without edits before applying it', async () => {
+  test('resolves action without edits before applying', async () => {
     const { view } = await open(
       () => [{ title: 'Add import from "./util"', kind: 'quickfix', data: { id: 1 } }],
       { codeActionProvider: { resolveProvider: true } },
@@ -209,7 +209,7 @@ describe('serverActions', () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe(IMPORT + DOC));
   });
 
-  test("runs an action's command on the server", async () => {
+  test("runs action's command on server", async () => {
     const { view, stub } = await open(
       () => [{ title: 'Run it', command: 'fix.run', arguments: [1] }],
       {},
@@ -229,7 +229,7 @@ describe('serverActions', () => {
     });
   });
 
-  test('applies the edit that a command sends back, in one undo step', async () => {
+  test("applies command's edit in one undo step", async () => {
     let server: StubTransport | undefined;
     let response: Promise<unknown> | undefined;
     const { view, stub } = await open(
@@ -254,7 +254,7 @@ describe('serverActions', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test("says why an edit to a file that isn't open didn't apply, and applies none of it", async () => {
+  test('says why edit to unopened file failed, applying none', async () => {
     const execute = vi.fn(() => null);
     const edit = {
       changes: {
@@ -276,7 +276,7 @@ describe('serverActions', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  test("asks about the line's problems when the cursor isn't on one", async () => {
+  test("asks about line's problems when cursor isn't on one", async () => {
     const actions = vi.fn((_: CodeActionParams) => [ADD_IMPORT]);
     const { view } = await open(actions);
     view.dispatch({ selection: { anchor: 2 } });

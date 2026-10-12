@@ -1,6 +1,6 @@
 import type { Extension } from '@codemirror/state';
 import { useMemo } from 'react';
-import { useLanguageServer, useLanguageServers } from '@/language-servers/language-servers';
+import { useLanguageServer, useLanguageServers } from '@/editor/lsp/language-servers';
 
 /**
  * Returns the CodeMirror extension that connects the document at `path` to the language server for `language` in the

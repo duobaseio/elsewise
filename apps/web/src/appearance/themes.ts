@@ -3,19 +3,12 @@ import { type ResolvedTheme, Theme } from '@elsewise/plugin';
 import { useMemo } from 'react';
 import { useBrightness, useSettings } from '@/settings/settings';
 
-/**
- * A theme, and the id that selects it.
- */
 export interface LoadedTheme {
   readonly id: ThemeId;
   readonly theme: Theme;
 }
 
-/**
- * Every theme.
- *
- * TODO: add support for plugin themes.
- */
+// TODO: add support for plugin themes.
 export const THEMES: readonly LoadedTheme[] = Object.entries(
   import.meta.glob<unknown>('./bundled/*.json', { eager: true, import: 'default' }),
 ).map(([path, content]) => ({
@@ -24,9 +17,9 @@ export const THEMES: readonly LoadedTheme[] = Object.entries(
 }));
 
 /**
- * Returns the colors of the interface, editor and terminal, each under its selected theme and the brightness.
+ * Returns the interface, editor, and terminal's theme for the current brightness.
  *
- * The editor and the terminal follow the interface's theme unless they select their own.
+ * The editor and terminal fallback to the interface's theme if unspecified.
  */
 export function useTheme(): ResolvedTheme {
   const general = useSettings((settings) => settings.appearance.general.theme);
@@ -45,9 +38,7 @@ export function useTheme(): ResolvedTheme {
 }
 
 /**
- * Returns the colors of the theme with `id` under `brightness`.
- *
- * Each color the theme leaves unspecified is Elsewise's.
+ * Resolves the `id`'s theme for the given `brightness` with unspecified colors defaulting to Elsewise's.
  */
 export function resolveTheme(themes: readonly LoadedTheme[], id: ThemeId, brightness: 'light' | 'dark'): ResolvedTheme {
   const elsewise = THEMES.find((loaded) => loaded.id.name === 'elsewise')?.theme[brightness];
