@@ -24,6 +24,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",
     "@elsewise/transport": "workspace:*",
+    "@parcel/watcher": "^2.6.0",
     "ws": "^8.21.3"
   },
   "devDependencies": {

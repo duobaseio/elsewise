@@ -1,4 +1,8 @@
 import { type Channel, serve } from '@elsewise/transport';
+import { DirectoryWatcher } from './directory-watcher';
+import { TEMPORARY_FILE_PATTERN } from './fs/file';
+import { type FileSystemOptions, FileSystemServiceImpl } from './fs/service';
+import { FileSystemService } from './gen/elsewise/daemon/v1/file_system_service_pb';
 import { InfoService } from './gen/elsewise/daemon/v1/info_service_pb';
 import { InfoServiceImpl } from './info/service';
 
@@ -7,13 +11,30 @@ export interface Daemon {
   register(channel: Channel): void;
 }
 
+export interface DaemonOptions {
+  /** Overrides for the file system service's defaults. */
+  fileSystem?: Partial<FileSystemOptions>;
+}
+
 /** Bootstraps the daemon. */
-export function createDaemon(): Daemon {
+export function createDaemon(options: DaemonOptions = {}): Daemon {
+  const watcher = new DirectoryWatcher({
+    ignore: ['**/.git/objects/**', '**/node_modules/**', TEMPORARY_FILE_PATTERN],
+  });
+
   const info = new InfoServiceImpl();
+  const fileSystem = new FileSystemServiceImpl(watcher, {
+    readLimitBytes: 10 * 1024 * 1024,
+    listingLimit: 10_000,
+    pollIntervalMs: 5_000,
+    debounceMs: 50,
+    ...options.fileSystem,
+  });
 
   return {
     register(channel) {
       serve(channel, InfoService, info);
+      serve(channel, FileSystemService, fileSystem);
     },
   };
 }

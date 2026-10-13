@@ -8,15 +8,17 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/daemon <script>`.
 
 ## Layout
 
-| Path                | What it is                                                                                   |
-|---------------------|----------------------------------------------------------------------------------------------|
-| `src/main.ts`       | The entry point: reads the environment, builds the daemon, listens, and closes on a signal.  |
-| `src/daemon.ts`     | The composition root. `createDaemon` constructs what the services share and registers them.  |
-| `src/websocket.ts`  | The WebSocket server: one `Channel` per connection, token checked before the upgrade.        |
-| `src/<feature>/`    | One folder per service: its `ServiceImpl` class in `service.ts`, beside what it is built on. |
-| `src/gen/`          | protobuf-es bindings for `proto/elsewise/daemon/`. Gitignored, rebuilt by `pnpm generate`.   |
-| `test/`             | Vitest suites (plain Node), calling the daemon through a real client over loopback.          |
-| `scripts/build.mjs` | Bundles the daemon into the one file `dist/daemon.mjs`.                                      |
+| Path                       | What it is                                                                              |
+|----------------------------|-----------------------------------------------------------------------------------------|
+| `src/main.ts`              | The entry point: reads the environment, builds the daemon, listens, closes on a signal. |
+| `src/daemon.ts`            | The composition root: `createDaemon` builds what the services share and registers them. |
+| `src/websocket.ts`         | The WebSocket server: one `Channel` per connection, token checked before the upgrade.   |
+| `src/directory-watcher.ts` | The directory watcher the services share: one recursive subscription per watched root.  |
+| `src/<feature>/`           | One folder per service: its `ServiceImpl` in `service.ts`, beside what it is built on.  |
+| `src/gen/`                 | protobuf-es output for `proto/elsewise/daemon/`; gitignored, `pnpm generate` rebuilds.  |
+| `src/**/*.test.ts`         | A module's direct tests, beside it: plain Vitest, no daemon started.                    |
+| `test/**/*.e2e.test.ts`    | Suites that start a daemon and call it through a real client, grouped like `src/`.      |
+| `scripts/build.mjs`        | Bundles the daemon into `dist/`, for the platform the build runs on.                    |
 
 ## Wiring
 
@@ -42,12 +44,14 @@ stream ids, so a client's channel keeps the default odd parity.
 
 ## Bundling
 
-`pnpm build` bundles everything, dependencies included, into `dist/daemon.mjs`, so the daemon ships as one file that
-any Node runs. Keep dependencies pure JavaScript: a native addon cannot go into the bundle.
+`pnpm build` bundles everything, dependencies included, into `dist/daemon.mjs`. The one native addon, the
+`@parcel/watcher` binary, is copied beside it as `dist/watcher.node` for the platform the build runs on, so the
+daemon ships as one bundle per operating system and architecture. Keep every other dependency pure JavaScript: the
+build script has to name each native binary itself.
 
 ## Imports
 
-No aliases. Every import inside the package is relative, including tests reaching `../src`.
+No aliases. Every import inside the package is relative, including tests reaching back into `src/`.
 
 ## Generated code
 
