@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { osFrom, shortcut } from './os';
+import { formatKey, parseKey, platformFrom } from './platform';
 
 test.each([
   ['macOS', 'mac'],
@@ -11,8 +11,8 @@ test.each([
   ['Linux x86_64', 'linux'],
   ['Chrome OS', 'linux'],
   ['', 'linux'],
-])('%s → %s', (platform, os) => {
-  expect(osFrom(platform)).toBe(os);
+])('%s → %s', (name, platform) => {
+  expect(platformFrom(name)).toBe(platform);
 });
 
 test.each([
@@ -34,11 +34,27 @@ test.each([
   ['Mod-PageDown', 'windows', 'Ctrl PgDn'],
   ['Space', 'mac', 'Space'],
   ['Mod--', 'mac', '⌘-'],
+  ['Mod-K', 'mac', '⇧⌘K'],
+  ['K', 'windows', 'Shift K'],
   ['F5', 'windows', 'F5'],
-] as const)('%s on %s', (binding, os, label) => {
-  expect(shortcut(binding, os)).toBe(label);
+] as const)('%s on %s', (binding, platform, label) => {
+  expect(formatKey(binding, platform)).toBe(label);
 });
 
 test('throws on an unknown modifier, like CodeMirror', () => {
-  expect(() => shortcut('Hyper-f', 'mac')).toThrow('Unrecognized modifier name: Hyper');
+  expect(() => formatKey('Hyper-f', 'mac')).toThrow('Unrecognized key: Hyper-f');
+});
+
+test.each([
+  ['Mod-Shift-k', ['mod', 'shift'], 'k'],
+  ['c-s-ArrowUp', ['ctrl', 'shift'], 'ArrowUp'],
+  ['Cmd-Control-m-K', ['meta', 'ctrl'], 'K'],
+  ['Mod--', ['mod'], '-'],
+  ['Enter', [], 'Enter'],
+] as const)('%s parses', (key, modifiers, name) => {
+  expect(parseKey(key)).toEqual({ modifiers: new Set(modifiers), name });
+});
+
+test.each(['', 'Hyper-k', 'Ctrl-k Ctrl-s'])('%j does not parse', (key) => {
+  expect(parseKey(key)).toBeNull();
 });

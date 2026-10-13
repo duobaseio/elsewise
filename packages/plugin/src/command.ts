@@ -1,10 +1,23 @@
 import type { EditorView } from '@codemirror/view';
+import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
 
 /**
  * The commands.
  */
 export interface Commands {
+  /**
+   * The active keymap.
+   */
+  readonly keymap: ActiveKeymap;
+
+  /**
+   * Registers a `listener` that is called with the new keymap when it changes.
+   *
+   * Returns a disposable that unregisters the `listener`.
+   */
+  onKeymapChange(listener: (keymap: ActiveKeymap) => void): Disposable;
+
   /**
    * Adds `commands`.
    *
@@ -18,6 +31,24 @@ export interface Commands {
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
    */
   run(id: string, target?: EditorView): void;
+}
+
+/**
+ * The active keymap.
+ */
+export interface ActiveKeymap {
+  /**
+   * The keymap's display name.
+   */
+  readonly name: string;
+
+  /**
+   * The commands and their keys for the current platform.
+   *
+   * For example, `{ key: 'Mod-r', windows: 'Ctrl-Alt-r' }` is `Ctrl-Alt-r` on Windows, `Mod-r` elsewhere. `Mod` is
+   * never resolved to `Ctrl` or `Cmd`.
+   */
+  readonly commands: ReadonlyMap<string, readonly Key[]>;
 }
 
 /**
@@ -40,9 +71,9 @@ export interface Command {
   readonly label: string;
 
   /**
-   * The default keys in CodeMirror's notation, e.g. `Mod-Shift-k`, that can be overridden by a user's keymap.
+   * The default keys in CodeMirror's notation, e.g. `Mod-Shift-k`, that a keymap can override.
    */
-  readonly keys?: readonly string[];
+  readonly defaultKeys?: Keys;
 }
 
 /**
@@ -54,7 +85,7 @@ export interface ApplicationCommand extends Command {
   /**
    * Returns whether the command can run. Defaults to true.
    *
-   * A disabled command is greyed out in menus, and pressing its `keys` does not run it.
+   * A disabled command is greyed out in menus, and pressing its keys does not run it.
    */
   enabled?(application: Application): boolean;
 
@@ -80,7 +111,7 @@ export interface EditorCommand extends Command {
   /**
    * Returns whether the command can run. Defaults to true.
    *
-   * A disabled command is greyed out in menus, and pressing its `keys` does not run it.
+   * A disabled command is greyed out in menus, and pressing its keys does not run it.
    */
   enabled?(application: Application, view: EditorView): boolean;
 

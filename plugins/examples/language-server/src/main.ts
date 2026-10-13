@@ -1,4 +1,4 @@
-import type { LanguageServerTransport, PluginContext } from '@elsewise/plugin';
+import type { Application, LanguageServerTransport, PluginContext } from '@elsewise/plugin';
 
 // Matches `scripts/serve.mjs`.
 const SERVER = 'ws://127.0.0.1:7300';
@@ -6,7 +6,7 @@ const SERVER = 'ws://127.0.0.1:7300';
 /**
  * Called when Elsewise enables the plugin.
  */
-export function enable({ editor, subscriptions }: PluginContext): void {
+export function enable({ editor }: Application, { subscriptions }: PluginContext): void {
   subscriptions.push(
     editor.addLanguageServers([
       {

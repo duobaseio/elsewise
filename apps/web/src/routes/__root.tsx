@@ -1,10 +1,10 @@
-import type {} from '@elsewise/bridge';
 import { Toaster } from '@elsewise/components/components/toast';
 import { createRootRoute, Outlet } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
-import { useTheme } from '@/appearance/themes';
+import { useActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { installApplicationKeys, useKeymap } from '@/command/keymap';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
@@ -35,16 +35,17 @@ const GENERIC_FAMILIES = new Set([
 function RootComponent() {
   const installed = usePlugins();
   const brightness = useBrightness();
-  const theme = useTheme();
+  const theme = useActiveTheme();
+  const keymap = useKeymap();
 
-  const [{ appearance, editor, commands, languageServers, loader }] = useState(() => {
+  const [{ appearance, commands, editor, languageServers, loader }] = useState(() => {
     const appearance = new AppearanceManager(brightness, theme);
     const editor = new EditorManager();
-    const commands = new CommandManager(appearance, editor);
+    const commands = new CommandManager({ appearance, editor });
     return {
       appearance,
-      editor,
       commands,
+      editor,
       languageServers: new LanguageServers(editor),
       loader: new PluginLoader(commands.application),
     };
@@ -52,6 +53,12 @@ function RootComponent() {
 
   useCurrentTheme(appearance);
   useCurrentFonts();
+
+  useEffect(() => {
+    commands.selected = keymap;
+  }, [commands, keymap]);
+
+  useEffect(() => installApplicationKeys(window, commands), [commands]);
 
   // TODO: Replace with lazy loading.
   useEffect(() => {
@@ -81,7 +88,7 @@ function RootComponent() {
 function useCurrentTheme(appearance: AppearanceManager) {
   const brightnessSetting = useSettings((settings) => settings.appearance.general.brightness);
   const brightness = useBrightness();
-  const theme = useTheme();
+  const theme = useActiveTheme();
 
   // Uses brightnessSetting instead of brightness to avoid a circular dependency.
   useLayoutEffect(() => window.bridge?.window?.setBrightness(brightnessSetting), [brightnessSetting]);

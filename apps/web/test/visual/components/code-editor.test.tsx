@@ -3,7 +3,7 @@ import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import { OS } from '@elsewise/components/lib/os';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, onTestFinished, test, vi } from 'vitest';
@@ -19,6 +19,9 @@ import type {
   SignatureHelpParams,
 } from 'vscode-languageserver-protocol';
 
+import { AppearanceManager } from '@/appearance/appearance-manager';
+import { resolveActiveTheme } from '@/appearance/themes';
+import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { CodeEditor } from '@/components/code-editor/code-editor';
 import { toggleReplaceRow } from '@/components/code-editor/search/search-bar-query';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
@@ -263,6 +266,7 @@ const RUST: LanguageServer = {
 async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
+    ...DEFAULT_SETTINGS,
     appearance: {
       ...DEFAULT_SETTINGS.appearance,
       general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
@@ -272,23 +276,29 @@ async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Pro
   if (hovered) {
     editor.addLanguageServers([RUST]);
   }
+  const commands = new CommandManager({
+    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
+    editor,
+  });
   render(
     <QueryClientProvider client={client}>
       <EditorManagerContext value={editor}>
-        <LanguageServersContext value={new LanguageServers(editor)}>
-          <div
-            className="bg-background font-sans text-foreground"
-            data-brightness={theme}
-            data-testid="editor"
-            style={{ width: 1040, height: hovered ? 420 : 300 }}
-          >
-            {hovered ? (
-              <CodeEditor code={HOVERED} path="src/main.rs" root={new URL('file:///worktree/')} />
-            ) : (
-              <CodeEditor code={code} path="transport.rs" />
-            )}
-          </div>
-        </LanguageServersContext>
+        <CommandManagerContext value={commands}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <div
+              className="bg-background font-sans text-foreground"
+              data-brightness={theme}
+              data-testid="editor"
+              style={{ width: 1040, height: hovered ? 420 : 300 }}
+            >
+              {hovered ? (
+                <CodeEditor code={HOVERED} path="src/main.rs" root={new URL('file:///worktree/')} />
+              ) : (
+                <CodeEditor code={code} path="transport.rs" />
+              )}
+            </div>
+          </LanguageServersContext>
+        </CommandManagerContext>
       </EditorManagerContext>
     </QueryClientProvider>,
   );
@@ -433,7 +443,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
 
     test('hovered with key held', async () => {
       const view = await mount(theme, false, LINKED);
-      await hover(view, 'https://example.com/retries', 1, OS === 'mac' ? { metaKey: true } : { ctrlKey: true });
+      await hover(view, 'https://example.com/retries', 1, PLATFORM === 'mac' ? { metaKey: true } : { ctrlKey: true });
       await vi.waitFor(() => expect(document.querySelector('.cm-link-active')).not.toBeNull());
 
       await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-links-active-${theme}`);
@@ -500,7 +510,9 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     view.focus();
     view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
     await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
-    await userEvent.keyboard(OS === 'mac' ? '{Meta>}{Alt>}{F7}{/Alt}{/Meta}' : '{Control>}{Alt>}{F7}{/Alt}{/Control}');
+    await userEvent.keyboard(
+      PLATFORM === 'mac' ? '{Meta>}{Alt>}{F7}{/Alt}{/Meta}' : '{Control>}{Alt>}{F7}{/Alt}{/Control}',
+    );
     await vi.waitFor(() => expect(document.querySelector('.cm-lsp-references')).not.toBeNull());
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-references-${theme}`);

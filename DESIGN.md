@@ -230,7 +230,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
 - **Anchor:** `--text-base: 13px`, line 20. Chrome sizes and line-heights are offsets from it, so the font-size setting
   moves the anchor and rescales rhythm with it.
     - px, not rem: root font-size stays untouched so rem spacing and radii keep their proportions. Page zoom scales
-      uniformly; OS text scaling is mobile's.
+      uniformly; platform text scaling is mobile's.
 - **Fraunces floor: 20px.** Below that, headings are Work Sans 500.
 - **Below 13px, compensate:** letter-spacing `+0.01–0.02em`, consider weight 450–500 — Work Sans is designed for 14px+.
 - **Code sits on a fixed line grid:** ×1.54 of the size, rounded (18px at 12). Font swaps never reflow gutters or diffs.
@@ -275,7 +275,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
 
 ## Mobile remap
 
-Same tokens, a second value set — the deltas are non-uniform, so a remap, not a rescale. OS text scaling multiplies the
+Same tokens, a second value set — the deltas are non-uniform, so a remap, not a rescale. Platform text scaling multiplies the
 whole set natively. `text-2xs` is unmapped until a mobile surface needs an overline.
 
 | Token        | Desktop → Mobile                                                    |

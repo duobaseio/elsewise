@@ -5,7 +5,7 @@ import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsew
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { type ApplyWorkspaceEditParams, MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
-import { EditorManager } from '@/editor/editor-manager';
+import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
 import { serverDefinition } from '@/editor/lsp/definition';
@@ -255,18 +255,18 @@ export function serverUri(url: URL): string {
   return `${url.protocol}//${url.host}${path}`;
 }
 
-/**
- * The language servers.
- *
- * Defaults to none.
- */
-export const LanguageServersContext = createContext(new LanguageServers(new EditorManager()));
+export const LanguageServersContext = createContext<LanguageServers | null>(null);
 
 /**
  * Returns the language servers.
  */
 export function useLanguageServers(): LanguageServers {
-  return useContext(LanguageServersContext);
+  const servers = useContext(LanguageServersContext);
+  if (servers === null) {
+    throw new Error('Missing LanguageServersContext');
+  }
+
+  return servers;
 }
 
 /**

@@ -56,6 +56,7 @@ function browserProject(
         '@codemirror/view',
         '@lezer/highlight',
         'vscode-languageserver-protocol',
+        'w3c-keyname',
         // The language the tests load, which `language-data` imports on demand.
         '@codemirror/language-data > @codemirror/lang-rust',
         // The components' own dependencies, which the app cannot resolve by name.

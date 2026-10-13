@@ -158,6 +158,9 @@ importers:
       vscode-languageserver-protocol:
         specifier: ^3.18.4
         version: 3.18.4
+      w3c-keyname:
+        specifier: ^2.2.8
+        version: 2.2.8
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.14

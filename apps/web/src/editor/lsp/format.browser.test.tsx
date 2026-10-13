@@ -2,7 +2,7 @@ import { history, undo } from '@codemirror/commands';
 import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { OS } from '@elsewise/components/lib/os';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { DocumentRangeFormattingParams } from 'vscode-languageserver-protocol';
@@ -70,7 +70,12 @@ async function open(
 
 // Presses Mod-Alt-L.
 function press(view: EditorView): boolean {
-  const event = new KeyboardEvent('keydown', { key: 'l', altKey: true, metaKey: OS === 'mac', ctrlKey: OS !== 'mac' });
+  const event = new KeyboardEvent('keydown', {
+    key: 'l',
+    altKey: true,
+    metaKey: PLATFORM === 'mac',
+    ctrlKey: PLATFORM !== 'mac',
+  });
   return runScopeHandlers(view, event, 'editor');
 }
 

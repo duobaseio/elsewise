@@ -10,6 +10,8 @@ export type FontSize = z.infer<typeof FontSize>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
 export type LineSeparator = z.infer<typeof LineSeparator>;
 export type CursorStyle = z.infer<typeof CursorStyle>;
+export type KeymapId = z.infer<typeof KeymapId>;
+export type BundledKeymap = z.infer<typeof BundledKeymap>;
 
 /**
  * The allowed font sizes.
@@ -147,6 +149,10 @@ export const Settings = z.lazy(() =>
         ),
       }),
     ),
+    /**
+     * The current keymap.
+     */
+    keymap: KeymapId.catch({ source: 'elsewise', name: 'elsewise' }),
   }),
 );
 
@@ -216,6 +222,22 @@ export const EditorLanguageSettings = z.object({
 });
 
 export const CursorStyle = z.enum(['block', 'underline', 'bar']);
+
+/**
+ * A keymap and where it comes from:
+ *
+ * - `elsewise`: bundled with Elsewise.
+ * - `plugin`: provided by the plugin whose id is `plugin`.
+ */
+export const KeymapId = z.discriminatedUnion('source', [
+  z.strictObject({ source: z.literal('elsewise'), name: z.lazy(() => BundledKeymap) }),
+  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
+]);
+
+/**
+ * Elsewise's bundled keymaps.
+ */
+export const BundledKeymap = z.enum(['elsewise']);
 
 /**
  * The settings a missing or invalid value is replaced with.

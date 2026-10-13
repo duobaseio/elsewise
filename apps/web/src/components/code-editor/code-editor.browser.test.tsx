@@ -8,6 +8,9 @@ import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { AppearanceManager } from '@/appearance/appearance-manager';
+import { resolveActiveTheme } from '@/appearance/themes';
+import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { CodeEditor } from '@/components/code-editor/code-editor';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -31,14 +34,15 @@ vi.mock('@/appearance/themes', async (original) => {
   const actual = await original<typeof import('@/appearance/themes')>();
   return {
     ...actual,
-    useTheme: () => {
-      const elsewise = actual.resolveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
+    useActiveTheme: () => {
+      const elsewise = actual.resolveActiveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
       return { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
     },
   };
 });
 
 const SETTINGS: Settings = {
+  ...DEFAULT_SETTINGS,
   appearance: {
     ...DEFAULT_SETTINGS.appearance,
     general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
@@ -58,14 +62,23 @@ async function mountEditor(
   editor = new EditorManager(),
   root?: URL,
 ): Promise<EditorView> {
+  const commands = new CommandManager({
+    appearance: new AppearanceManager(
+      'light',
+      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
+    ),
+    editor,
+  });
   const screen = await render(
     shell(
       <EditorManagerContext value={editor}>
-        <LanguageServersContext value={new LanguageServers(editor)}>
-          <div style={{ height: 300 }}>
-            <CodeEditor code={code} path={path} root={root} />
-          </div>
-        </LanguageServersContext>
+        <CommandManagerContext value={commands}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <div style={{ height: 300 }}>
+              <CodeEditor code={code} path={path} root={root} />
+            </div>
+          </LanguageServersContext>
+        </CommandManagerContext>
       </EditorManagerContext>,
     ),
   );

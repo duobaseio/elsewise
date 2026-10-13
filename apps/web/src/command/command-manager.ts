@@ -1,28 +1,68 @@
 import type { EditorView } from '@codemirror/view';
-import type { Application, ApplicationCommand, Commands, Disposable, EditorCommand } from '@elsewise/plugin';
+import type { Platform } from '@elsewise/components/lib/platform';
+import type {
+  ActiveKeymap,
+  Application,
+  ApplicationCommand,
+  Commands,
+  Disposable,
+  EditorCommand,
+  Keymap,
+} from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveTheme } from '@/appearance/themes';
-import { EditorManager } from '@/editor/editor-manager';
+import { ApplicationKeymap } from '@/command/application-keymap';
+import { ELSEWISE } from '@/command/keymap';
 
+/**
+ * The commands and their keys.
+ */
 export class CommandManager implements Commands {
-  private readonly application: Application;
+  readonly application: Application;
+  readonly keymap: ApplicationKeymap;
   private readonly listeners = new Set<() => void>();
-  private added: ReadonlyArray<ReadonlyArray<EditorCommand | ApplicationCommand>> = [];
-  private current: ReadonlyMap<string, EditorCommand | ApplicationCommand> = new Map();
+  private addedCommands: ReadonlyArray<ReadonlyArray<EditorCommand | ApplicationCommand>> = [];
+  private currentCommands: ReadonlyMap<string, EditorCommand | ApplicationCommand> = new Map();
+  private currentSelected: Keymap = ELSEWISE.keymap;
 
-  constructor(
-    appearance: AppearanceManager,
-    private readonly editor: EditorManager,
-  ) {
-    this.application = { appearance, editor, commands: this };
+  constructor(parts: Omit<Application, 'commands'>, platform?: Platform) {
+    this.application = { ...parts, commands: this };
+    this.keymap = new ApplicationKeymap(platform);
+    this.keymap.update(this.currentSelected, []);
   }
 
   /**
    * The commands by id.
    */
   get commands(): ReadonlyMap<string, EditorCommand | ApplicationCommand> {
-    return this.current;
+    return this.currentCommands;
+  }
+
+  /**
+   * The selected keymap, whose entries replace the commands' default keys.
+   */
+  get selected(): Keymap {
+    return this.currentSelected;
+  }
+
+  set selected(keymap: Keymap) {
+    this.currentSelected = keymap;
+    this.update();
+  }
+
+  onKeymapChange(listener: (keymap: ActiveKeymap) => void): Disposable {
+    let last = this.keymap.commands;
+    return this.subscribe(() => {
+      if (this.keymap.commands === last) {
+        return;
+      }
+
+      last = this.keymap.commands;
+      try {
+        listener(this.keymap);
+      } catch (error) {
+        console.error('Keymap listener failed', error);
+      }
+    });
   }
 
   /**
@@ -31,30 +71,30 @@ export class CommandManager implements Commands {
    * Returns a disposable that removes the `commands`.
    */
   add(commands: readonly (EditorCommand | ApplicationCommand)[]): Disposable {
-    // Copy to guard against future mutations to `commands`.
     const added = [...commands];
-    this.added = [added, ...this.added];
+    this.addedCommands = [added, ...this.addedCommands];
     this.update();
     return () => {
-      this.added = this.added.filter((other) => other !== added);
+      this.addedCommands = this.addedCommands.filter((other) => other !== added);
       this.update();
     };
   }
 
   private update() {
     const commands = new Map<string, EditorCommand | ApplicationCommand>();
-    for (const command of this.added.flat()) {
+    for (const command of this.addedCommands.flat()) {
       if (!commands.has(command.id)) {
         commands.set(command.id, command);
       }
     }
 
-    this.current = commands;
+    this.keymap.update(this.currentSelected, commands.values());
+    this.currentCommands = commands;
     this.notify();
   }
 
   run(id: string, view?: EditorView): boolean {
-    const command = this.current.get(id);
+    const command = this.currentCommands.get(id);
     if (command === undefined) {
       console.warn(`Unknown command ${id}`);
       return false;
@@ -62,7 +102,7 @@ export class CommandManager implements Commands {
 
     try {
       if (command.scope === 'editor') {
-        const editor = view ?? this.editor.active;
+        const editor = view ?? this.application.editor.active;
         if (editor === null || command.enabled?.(this.application, editor) === false) {
           return false;
         }
@@ -99,17 +139,16 @@ export class CommandManager implements Commands {
   }
 }
 
-export const CommandManagerContext = createContext(
-  new CommandManager(
-    new AppearanceManager('dark', resolveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark')),
-    new EditorManager(),
-  ),
-);
+export const CommandManagerContext = createContext<CommandManager | null>(null);
 
 export function useCommandManager(): CommandManager;
 export function useCommandManager<T>(select: (commands: CommandManager) => T): T;
 export function useCommandManager<T>(select?: (commands: CommandManager) => T): CommandManager | T {
   const commands = useContext(CommandManagerContext);
+  if (commands === null) {
+    throw new Error('Missing CommandManagerContext');
+  }
+
   const subscribe = useCallback((listener: () => void) => commands.subscribe(listener), [commands]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? commands : select(commands)));
 }

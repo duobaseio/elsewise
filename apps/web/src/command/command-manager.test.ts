@@ -1,11 +1,36 @@
 import type { EditorView } from '@codemirror/view';
+import type { Platform } from '@elsewise/components/lib/platform';
+import type { Keymap, Keys } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveTheme } from '@/appearance/themes';
+import { resolveActiveTheme } from '@/appearance/themes';
 import { EditorManager } from '@/editor/editor-manager';
 import { CommandManager } from './command-manager';
 
-const APPEARANCE = new AppearanceManager('dark', resolveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'));
+const APPEARANCE = new AppearanceManager(
+  'dark',
+  resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+);
+
+// Returns the commands of an application whose editor is `editor`, on `platform`.
+function commands(editor = new EditorManager(), platform: Platform = 'linux'): CommandManager {
+  return new CommandManager({ appearance: APPEARANCE, editor }, platform);
+}
+
+// Returns commands on `platform` with an editor command for each id in `keys`, with those default keys, added in order.
+function bound(keys: Record<string, Keys>, platform: Platform = 'linux'): CommandManager {
+  const manager = commands(new EditorManager(), platform);
+  for (const [id, defaultKeys] of Object.entries(keys)) {
+    manager.add([{ id, label: id, scope: 'editor', defaultKeys, run: () => {} }]);
+  }
+
+  return manager;
+}
+
+// Returns Eclipse's keymap with `keys`.
+function eclipse(keys: Keymap['keys']): Keymap {
+  return { name: 'Eclipse', keys };
+}
 
 // Returns a view that stands in for an editor, named `name`.
 function view(name: string): EditorView {
@@ -26,7 +51,7 @@ afterEach(() => {
 
 describe('add', () => {
   test('keys each command by full id', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     const rename = { id: 'io.example.rename', label: 'Rename', scope: 'editor', run: () => {} } as const;
     manager.add([rename]);
 
@@ -35,7 +60,7 @@ describe('add', () => {
   });
 
   test('replaces earlier command with same id', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     manager.add([{ id: 'rename', label: 'First', scope: 'editor', run: () => {} }]);
     manager.add([{ id: 'rename', label: 'Second', scope: 'editor', run: () => {} }]);
 
@@ -43,7 +68,7 @@ describe('add', () => {
   });
 
   test('removes only disposed commands', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     manager.add([{ id: 'rename', label: 'First', scope: 'editor', run: () => {} }]);
     const dispose = manager.add([
       { id: 'rename', label: 'Second', scope: 'editor', run: () => {} },
@@ -56,7 +81,7 @@ describe('add', () => {
   });
 
   test('notifies listeners', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     const listener = vi.fn();
     manager.subscribe(listener);
     const dispose = manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', run: () => {} }]);
@@ -66,26 +91,26 @@ describe('add', () => {
   });
 
   test('removes only disposed addition when added twice', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
-    const commands = [{ id: 'rename', label: 'Rename', scope: 'editor', run: () => {} }] as const;
-    manager.add(commands);
-    const dispose = manager.add(commands);
+    const manager = commands();
+    const added = [{ id: 'rename', label: 'Rename', scope: 'editor', run: () => {} }] as const;
+    manager.add(added);
+    const dispose = manager.add(added);
     dispose();
 
-    expect(manager.commands.get('rename')).toBe(commands[0]);
+    expect(manager.commands.get('rename')).toBe(added[0]);
   });
 });
 
 describe('run', () => {
   test('returns false for unknown id', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
 
     expect(manager.run('unknown')).toBe(false);
     expect(warn).toHaveBeenCalledOnce();
   });
 
   test('returns false for disabled command', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     const run = vi.fn();
     manager.add([
       { id: 'application', label: 'Application', scope: 'application', enabled: () => false, run },
@@ -99,7 +124,7 @@ describe('run', () => {
 
   test('runs editor command against view, else active editor', () => {
     const editor = new EditorManager();
-    const manager = new CommandManager(APPEARANCE, editor);
+    const manager = commands(editor);
     const run = vi.fn();
     manager.add([{ id: 'c', label: 'C', scope: 'editor', run }]);
     const active = view('active');
@@ -117,7 +142,7 @@ describe('run', () => {
   });
 
   test('runs application command regardless of view', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     const run = vi.fn();
     manager.add([{ id: 'c', label: 'C', scope: 'application', run }]);
 
@@ -126,7 +151,7 @@ describe('run', () => {
   });
 
   test('logs throwing command and returns true', () => {
-    const manager = new CommandManager(APPEARANCE, new EditorManager());
+    const manager = commands();
     manager.add([
       {
         id: 'throws',
@@ -141,5 +166,70 @@ describe('run', () => {
     expect(manager.run('throws')).toBe(true);
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0]?.[0]).toContain('Throws');
+  });
+});
+
+describe('keymap', () => {
+  test('follows selected keymap', () => {
+    const manager = bound({ rename: ['Shift-F6'] });
+    manager.selected = eclipse({ rename: ['Alt-r'] });
+
+    expect(manager.keymap.name).toBe('Eclipse');
+    expect(manager.keymap.commands.get('rename')).toEqual(['Alt-r']);
+    expect([...manager.keymap.keys.editor]).toEqual([['Alt-r', ['rename']]]);
+  });
+
+  test('lists later-added command first', () => {
+    expect(bound({ first: ['Mod-r'], second: ['Ctrl-r'] }).keymap.keys.editor.get('Ctrl-r')).toEqual([
+      'second',
+      'first',
+    ]);
+  });
+
+  test('follows added commands', () => {
+    const manager = commands();
+    const dispose = manager.add([
+      { id: 'rename', label: 'Rename', scope: 'editor', defaultKeys: ['Mod-r'], run: () => {} },
+    ]);
+
+    expect(manager.keymap.keys.editor.get('Ctrl-r')).toEqual(['rename']);
+
+    dispose();
+    expect(manager.keymap.keys.editor.size).toBe(0);
+  });
+});
+
+describe('onKeymapChange', () => {
+  test('calls listener with keymap on change', () => {
+    const manager = commands();
+    const listener = vi.fn();
+    manager.onKeymapChange(listener);
+    manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', defaultKeys: ['Mod-r'], run: () => {} }]);
+
+    expect(listener).toHaveBeenCalledExactlyOnceWith(manager.keymap);
+    expect(manager.keymap.commands).toEqual(new Map([['rename', ['Mod-r']]]));
+  });
+
+  test('skips unchanged', () => {
+    const manager = bound({ format: ['Shift-F6'] });
+    const listener = vi.fn();
+    manager.onKeymapChange(listener);
+    manager.selected = { name: 'Elsewise', keys: { format: ['Shift-F6'] } };
+    manager.add([{ id: 'format', label: 'Format', scope: 'application', defaultKeys: ['Shift-F6'], run: () => {} }]);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('continues past throwing listener', () => {
+    const manager = commands();
+    const listener = vi.fn();
+    manager.onKeymapChange(() => {
+      throw new Error('failed');
+    });
+    manager.onKeymapChange(listener);
+    manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', defaultKeys: ['Mod-r'], run: () => {} }]);
+
+    expect(error).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledOnce();
   });
 });

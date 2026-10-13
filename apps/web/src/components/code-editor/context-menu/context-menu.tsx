@@ -10,7 +10,7 @@ import {
   ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
-import { shortcut } from '@elsewise/components/lib/os';
+import { formatKey } from '@elsewise/components/lib/platform';
 import type { EditorContextMenu, EditorContextMenuItem, EditorContextSubmenu } from '@elsewise/plugin';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useEditorManager } from '@/editor/editor-manager';
@@ -111,7 +111,7 @@ function Entries({ menu, onClick }: { menu: EditorContextMenu; onClick: (entry: 
                 onClick={() => onClick(entry)}
               >
                 {entry.label}
-                {entry.shortcut !== undefined && <ContextMenuShortcut>{shortcut(entry.shortcut)}</ContextMenuShortcut>}
+                {entry.shortcut !== undefined && <ContextMenuShortcut>{formatKey(entry.shortcut)}</ContextMenuShortcut>}
               </ContextMenuItem>
             ),
           )}

@@ -1,7 +1,7 @@
 import { LSPPlugin } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import { closeHoverTooltips, hasHoverTooltips, hoverTooltip, keymap, type Tooltip } from '@codemirror/view';
-import { shortcut } from '@elsewise/components/lib/os';
+import { formatKey } from '@elsewise/components/lib/platform';
 import {
   DiagnosticSeverity,
   type Hover,
@@ -87,7 +87,7 @@ export function serverHover(): Extension {
               return dom;
             };
             const key = (binding: string) =>
-              Object.assign(document.createElement('kbd'), { textContent: shortcut(binding) });
+              Object.assign(document.createElement('kbd'), { textContent: formatKey(binding) });
 
             const fix = actions.find(isFix);
             if (fix) {

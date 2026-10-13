@@ -5,6 +5,7 @@ import type { WindowBridge } from './window.js';
 export { InstalledPlugin, PluginId, type PluginsBridge } from './plugins.js';
 export {
   Brightness,
+  BundledKeymap,
   BundledTheme,
   CursorStyle,
   DEFAULT_SETTINGS,
@@ -13,6 +14,7 @@ export {
   Font,
   FontSize,
   type Json,
+  KeymapId,
   LineSeparator,
   Settings,
   type SettingsBridge,

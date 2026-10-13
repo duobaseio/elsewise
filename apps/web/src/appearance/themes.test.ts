@@ -2,7 +2,7 @@ import { BundledTheme } from '@elsewise/bridge';
 import { Theme } from '@elsewise/plugin';
 import { describe, expect, test } from 'vitest';
 import elsewise from './bundled/elsewise.json';
-import { type LoadedTheme, resolveTheme, THEMES } from './themes';
+import { type LoadedTheme, resolveActiveTheme, THEMES } from './themes';
 
 const NIGHT: LoadedTheme = {
   id: { source: 'plugin', plugin: 'com.acme.themes', name: 'night' },
@@ -24,23 +24,23 @@ describe('THEMES', () => {
   });
 });
 
-describe('resolveTheme', () => {
+describe('resolveActiveTheme', () => {
   test("returns Elsewise's colors for unknown theme", () => {
-    expect(resolveTheme([NIGHT], { source: 'elsewise', name: 'dracula' }, 'dark')).toEqual(ELSEWISE.dark);
+    expect(resolveActiveTheme([NIGHT], { source: 'elsewise', name: 'dracula' }, 'dark')).toEqual(ELSEWISE.dark);
   });
 
   test("returns Elsewise's colors for same-named theme from another plugin", () => {
     const id = { source: 'plugin', plugin: 'com.other.themes', name: 'night' } as const;
 
-    expect(resolveTheme([NIGHT], id, 'dark')).toEqual(ELSEWISE.dark);
+    expect(resolveActiveTheme([NIGHT], id, 'dark')).toEqual(ELSEWISE.dark);
   });
 
   test("returns Elsewise's variant for theme without one for brightness", () => {
-    expect(resolveTheme([NIGHT], NIGHT.id, 'light')).toEqual(ELSEWISE.light);
+    expect(resolveActiveTheme([NIGHT], NIGHT.id, 'light')).toEqual(ELSEWISE.light);
   });
 
   test("fills unspecified colors with Elsewise's", () => {
-    expect(resolveTheme([NIGHT], NIGHT.id, 'dark')).toEqual({
+    expect(resolveActiveTheme([NIGHT], NIGHT.id, 'dark')).toEqual({
       interface: { ...ELSEWISE.dark?.interface, background: '#000000', foreground: '#eeeeee' },
       editor: {
         ...ELSEWISE.dark?.editor,

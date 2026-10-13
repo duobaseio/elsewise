@@ -53,9 +53,6 @@ export class EditorManager implements Editor {
     }
   }
 
-  /**
-   * The added extensions.
-   */
   get extensions(): readonly (Extension | ((document: EditorDocument) => Extension))[] {
     return this.currentExtensions;
   }
@@ -73,7 +70,7 @@ export class EditorManager implements Editor {
   }
 
   /**
-   * The added languages, sorted by most recently added, then the built-in ones.
+   * The languages, sorted by most recently added, then the built-in ones.
    */
   get languages(): readonly LanguageDescription[] {
     return this.currentLanguages;
@@ -92,7 +89,7 @@ export class EditorManager implements Editor {
   }
 
   /**
-   * The added language servers, sorted by most recently added.
+   * The language servers, sorted by most recently added.
    */
   get languageServers(): readonly LanguageServer[] {
     return this.currentLanguageServers;
@@ -189,12 +186,7 @@ export class EditorManager implements Editor {
   }
 }
 
-/**
- * The code editor as plugins see it.
- *
- * Defaults to nothing added.
- */
-export const EditorManagerContext = createContext(new EditorManager());
+export const EditorManagerContext = createContext<EditorManager | null>(null);
 
 /**
  * Returns the code editor as plugins see it.
@@ -203,6 +195,10 @@ export function useEditorManager(): EditorManager;
 export function useEditorManager<T>(select: (editor: EditorManager) => T): T;
 export function useEditorManager<T>(select?: (editor: EditorManager) => T): EditorManager | T {
   const editor = useContext(EditorManagerContext);
+  if (editor === null) {
+    throw new Error('Missing EditorManagerContext');
+  }
+
   const subscribe = useCallback((listener: () => void) => editor.subscribe(listener), [editor]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? editor : select(editor)));
 }

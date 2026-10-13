@@ -21,9 +21,6 @@ export function usePlugins<T>(select?: (plugins: readonly InstalledPlugin[]) => 
   return useSuspenseQuery({ ...pluginsQuery, select }).data;
 }
 
-/**
- * Loads and unloads plugins, and holds the loaded ones.
- */
 export class PluginLoader {
   private static imports = 0;
 

@@ -1,12 +1,12 @@
-import type { Appearance, Disposable, ResolvedTheme } from '@elsewise/plugin';
+import type { ActiveTheme, Appearance, Disposable } from '@elsewise/plugin';
 
 export class AppearanceManager implements Appearance {
   private readonly brightnessListeners = new Set<(brightness: 'light' | 'dark') => void>();
-  private readonly themeListeners = new Set<(theme: ResolvedTheme) => void>();
+  private readonly themeListeners = new Set<(theme: ActiveTheme) => void>();
 
   constructor(
     private currentBrightness: 'light' | 'dark',
-    private currentTheme: ResolvedTheme,
+    private currentTheme: ActiveTheme,
   ) {}
 
   get brightness(): 'light' | 'dark' {
@@ -36,14 +36,14 @@ export class AppearanceManager implements Appearance {
     return () => this.brightnessListeners.delete(listener);
   }
 
-  get theme(): ResolvedTheme {
+  get theme(): ActiveTheme {
     return this.currentTheme;
   }
 
   /**
    * Sets the theme, and calls the listeners only if it changed.
    */
-  set theme(theme: ResolvedTheme) {
+  set theme(theme: ActiveTheme) {
     if (theme === this.currentTheme) {
       return;
     }
@@ -58,7 +58,7 @@ export class AppearanceManager implements Appearance {
     }
   }
 
-  onThemeChange(listener: (theme: ResolvedTheme) => void): Disposable {
+  onThemeChange(listener: (theme: ActiveTheme) => void): Disposable {
     this.themeListeners.add(listener);
     return () => this.themeListeners.delete(listener);
   }

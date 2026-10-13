@@ -2,7 +2,7 @@ import { HighlightStyle, LanguageDescription, type LanguageSupport, syntaxHighli
 import { languages } from '@codemirror/language-data';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { OS, shortcut } from '@elsewise/components/lib/os';
+import { formatKey, PLATFORM } from '@elsewise/components/lib/platform';
 import { tags } from '@lezer/highlight';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { link } from '@/components/code-editor/link.ts';
@@ -11,7 +11,7 @@ const URL = 'https://example.com/a?b=c#d';
 
 const DOC = `// See ${URL}.\nconst url = '${URL}';\n// [docs](${URL})\nno link here`;
 
-const KEY = OS === 'mac' ? { metaKey: true } : { ctrlKey: true };
+const KEY = PLATFORM === 'mac' ? { metaKey: true } : { ctrlKey: true };
 
 const COMMENT = 'rgb(0, 128, 0)';
 const STRING = 'rgb(128, 0, 0)';
@@ -129,7 +129,7 @@ describe('links', () => {
   test('shows no link once key released', () => {
     move(at(DOC.indexOf(URL) + 5), KEY);
     view.contentDOM.dispatchEvent(
-      new KeyboardEvent('keyup', { key: OS === 'mac' ? 'Meta' : 'Control', bubbles: true }),
+      new KeyboardEvent('keyup', { key: PLATFORM === 'mac' ? 'Meta' : 'Control', bubbles: true }),
     );
     expect(texts('cm-link-active')).toEqual([]);
   });
@@ -150,7 +150,7 @@ describe('links', () => {
       },
       { timeout: 2000 },
     );
-    expect(tooltip.textContent).toBe(`${shortcut('Mod-Click')} open in browser`);
+    expect(tooltip.textContent).toBe(`${formatKey('Mod-Click')} open in browser`);
   });
 
   test('opens URL on click while key held', () => {

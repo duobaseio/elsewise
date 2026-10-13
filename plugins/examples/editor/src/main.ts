@@ -1,7 +1,7 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { DEFAULT_EDITOR_CONTEXT_MENU, type PluginContext } from '@elsewise/plugin';
+import { type Application, DEFAULT_EDITOR_CONTEXT_MENU, type PluginContext } from '@elsewise/plugin';
 import { colorPicker } from './color-picker.ts';
 
 const EXCUSES = [
@@ -15,7 +15,7 @@ const EXCUSES = [
 /**
  * Called when Elsewise enables the plugin.
  */
-export function enable({ editor, subscriptions }: PluginContext): void {
+export function enable({ editor }: Application, { subscriptions }: PluginContext): void {
   subscriptions.push(
     editor.addExtensions([colorPicker]),
     editor.addLanguages([

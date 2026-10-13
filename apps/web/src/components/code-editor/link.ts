@@ -9,7 +9,7 @@ import {
   ViewPlugin,
   type ViewUpdate,
 } from '@codemirror/view';
-import { OS } from '@elsewise/components/lib/os';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import { tags } from '@lezer/highlight';
 import { hint } from '@/components/code-editor/tooltip';
 
@@ -123,7 +123,7 @@ const LINKS = ViewPlugin.fromClass(
     }
 
     private held(event: MouseEvent | KeyboardEvent): boolean {
-      return OS === 'mac' ? event.metaKey : event.ctrlKey;
+      return PLATFORM === 'mac' ? event.metaKey : event.ctrlKey;
     }
 
     private linkUnder(coords: { x: number; y: number }): Link | null {

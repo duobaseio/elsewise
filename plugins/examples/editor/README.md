@@ -35,8 +35,8 @@ are left out of the bundle.
 
 The data folder is:
 
-| OS      | Path                                                    |
-|---------|---------------------------------------------------------|
-| macOS   | `~/Library/Application Support/com.duobase.elsewise`    |
-| Windows | `%LOCALAPPDATA%\duobase\elsewise\data`                  |
-| Linux   | `$XDG_DATA_HOME/elsewise`, or `~/.local/share/elsewise` |
+| Platform | Path                                                    |
+|----------|---------------------------------------------------------|
+| macOS    | `~/Library/Application Support/com.duobase.elsewise`    |
+| Windows  | `%LOCALAPPDATA%\duobase\elsewise\data`                  |
+| Linux    | `$XDG_DATA_HOME/elsewise`, or `~/.local/share/elsewise` |

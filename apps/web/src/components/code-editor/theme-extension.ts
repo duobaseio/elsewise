@@ -2,10 +2,10 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import type { Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { ResolvedTheme, TextStyle } from '@elsewise/plugin';
+import type { ActiveTheme, TextStyle } from '@elsewise/plugin';
 import { type Tag, tags as t } from '@lezer/highlight';
 import { useMemo } from 'react';
-import { useTheme } from '@/appearance/themes';
+import { useActiveTheme } from '@/appearance/themes';
 import { useBrightness } from '@/settings/settings';
 
 /**
@@ -42,7 +42,7 @@ const CHROME = {
   ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
-  Exclude<keyof ResolvedTheme['editor'], 'tokens' | Diagnostic['severity']>,
+  Exclude<keyof ActiveTheme['editor'], 'tokens' | Diagnostic['severity']>,
   readonly [selector: string, property: string]
 >;
 
@@ -97,7 +97,7 @@ const TOKENS = {
   inserted: [t.inserted],
   deleted: [t.deleted],
   changed: [t.changed],
-} as const satisfies Record<keyof ResolvedTheme['editor']['tokens'], readonly Tag[]>;
+} as const satisfies Record<keyof ActiveTheme['editor']['tokens'], readonly Tag[]>;
 
 const STRIKEOUTS: Partial<Record<string, { ascent: number; position: number; size: number }>> = {
   'JetBrains Mono Variable': { ascent: 1.02, position: 0.32, size: 0.05 },
@@ -459,7 +459,7 @@ const METRICS = EditorView.theme({
  * Returns the CodeMirror extension that applies the editor's theme.
  */
 export function useThemeExtension(): Extension {
-  const { editor } = useTheme();
+  const { editor } = useActiveTheme();
   const brightness = useBrightness();
 
   return useMemo(() => {

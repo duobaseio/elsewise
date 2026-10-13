@@ -1,6 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { OS } from '@elsewise/components/lib/os';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
@@ -71,7 +71,7 @@ function press(view: EditorView, key: string, modifiers: KeyboardEventInit = {})
 }
 
 // Mod-Alt-F7, which shows usages.
-const SHOW_USAGES: KeyboardEventInit = { altKey: true, metaKey: OS === 'mac', ctrlKey: OS !== 'mac' };
+const SHOW_USAGES: KeyboardEventInit = { altKey: true, metaKey: PLATFORM === 'mac', ctrlKey: PLATFORM !== 'mac' };
 
 // Presses Mod-Alt-F7, and returns the popup once it shows.
 async function find(view: EditorView): Promise<HTMLElement> {

@@ -15,8 +15,10 @@ import {
 } from '@codemirror/view';
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
-import { OS } from '@elsewise/components/lib/os';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
+import { useCommandManager } from '@/command/command-manager';
+import { editorKeymap } from '@/command/keymap';
 import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
 import { useLanguageServerExtension } from '@/components/code-editor/language-server-extension';
 import { link } from '@/components/code-editor/link.ts';
@@ -27,6 +29,7 @@ import { useEditorManager } from '@/editor/editor-manager';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 const PLUGINS = new Compartment();
+const KEYS = new Compartment();
 const THEME = new Compartment();
 const LANGUAGE = new Compartment();
 const LANGUAGE_SERVER = new Compartment();
@@ -60,6 +63,9 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
   const settings = useSettingsExtension(description?.name);
   const languageServer = useLanguageServerExtension(root, description?.name, path);
   const icons = useIcons();
+  const commands = useCommandManager();
+  const bindings = useCommandManager((commands) => commands.keymap.keys.editor);
+  const keys = useMemo(() => editorKeymap(commands, bindings), [commands, bindings]);
 
   const font = useSettings((settings) => settings.appearance.editor.font);
   const previousFont = useRef(font);
@@ -67,7 +73,7 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
   // Defaults to the line separator the file already uses, or the platform's if the file has none.
   const lineSeparator: LineSeparator =
     useEditorSettings(description?.name, 'lineSeparator') ??
-    (code.includes('\r\n') || (!code.includes('\n') && OS === 'windows') ? '\r\n' : '\n');
+    (code.includes('\r\n') || (!code.includes('\n') && PLATFORM === 'windows') ? '\r\n' : '\n');
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
   useEffect(() => {
@@ -81,6 +87,7 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
         // Has to be first to let a plugin's theme and keymap take precedence over Elsewise's.
         PLUGINS.of([]),
         // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
+        KEYS.of(keys),
         EditorView.updateListener.of((update) => {
           if (update.focusChanged && update.view.hasFocus) {
             editorManager.activate(update.view);
@@ -180,6 +187,10 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
       view.current?.dispatch({ effects: PLUGINS.reconfigure([]) });
     }
   }, [plugins]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: KEYS.reconfigure(keys) });
+  }, [keys]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: THEME.reconfigure(theme) });

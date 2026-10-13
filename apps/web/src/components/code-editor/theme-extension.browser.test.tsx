@@ -38,14 +38,15 @@ vi.mock('@/appearance/themes', async (original) => {
   const actual = await original<typeof import('@/appearance/themes')>();
   return {
     ...actual,
-    useTheme: () => {
-      const elsewise = actual.resolveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
+    useActiveTheme: () => {
+      const elsewise = actual.resolveActiveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
       return { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
     },
   };
 });
 
 const SETTINGS: Settings = {
+  ...DEFAULT_SETTINGS,
   appearance: {
     ...DEFAULT_SETTINGS.appearance,
     general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },

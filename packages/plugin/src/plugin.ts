@@ -64,20 +64,20 @@ export interface Appearance {
   /**
    * The colors of the interface, editor and terminal.
    */
-  readonly theme: ResolvedTheme;
+  readonly theme: ActiveTheme;
 
   /**
    * Registers a `listener` that is called with the new theme when it changes.
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  onThemeChange(listener: (theme: ResolvedTheme) => void): Disposable;
+  onThemeChange(listener: (theme: ActiveTheme) => void): Disposable;
 }
 
 /**
  * The colors of the interface, editor and terminal, each under its selected theme and the brightness.
  */
-export interface ResolvedTheme {
+export interface ActiveTheme {
   /**
    * The interface's colors.
    */

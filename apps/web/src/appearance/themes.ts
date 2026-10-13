@@ -1,5 +1,5 @@
 import { BundledTheme, type ThemeId } from '@elsewise/bridge';
-import { type ResolvedTheme, Theme } from '@elsewise/plugin';
+import { type ActiveTheme, Theme } from '@elsewise/plugin';
 import { useMemo } from 'react';
 import { useBrightness, useSettings } from '@/settings/settings';
 
@@ -21,7 +21,7 @@ export const THEMES: readonly LoadedTheme[] = Object.entries(
  *
  * The editor and terminal fallback to the interface's theme if unspecified.
  */
-export function useTheme(): ResolvedTheme {
+export function useActiveTheme(): ActiveTheme {
   const general = useSettings((settings) => settings.appearance.general.theme);
   const editor = useSettings((settings) => settings.appearance.editor.theme);
   const terminal = useSettings((settings) => settings.appearance.terminal.theme);
@@ -29,9 +29,9 @@ export function useTheme(): ResolvedTheme {
 
   return useMemo(
     () => ({
-      interface: resolveTheme(THEMES, general, brightness).interface,
-      editor: resolveTheme(THEMES, editor ?? general, brightness).editor,
-      terminal: resolveTheme(THEMES, terminal ?? general, brightness).terminal,
+      interface: resolveActiveTheme(THEMES, general, brightness).interface,
+      editor: resolveActiveTheme(THEMES, editor ?? general, brightness).editor,
+      terminal: resolveActiveTheme(THEMES, terminal ?? general, brightness).terminal,
     }),
     [general, editor, terminal, brightness],
   );
@@ -40,7 +40,11 @@ export function useTheme(): ResolvedTheme {
 /**
  * Resolves the `id`'s theme for the given `brightness` with unspecified colors defaulting to Elsewise's.
  */
-export function resolveTheme(themes: readonly LoadedTheme[], id: ThemeId, brightness: 'light' | 'dark'): ResolvedTheme {
+export function resolveActiveTheme(
+  themes: readonly LoadedTheme[],
+  id: ThemeId,
+  brightness: 'light' | 'dark',
+): ActiveTheme {
   const elsewise = THEMES.find((loaded) => loaded.id.name === 'elsewise')?.theme[brightness];
   const variant = themes.find(
     ({ id: other }) =>
@@ -57,5 +61,5 @@ export function resolveTheme(themes: readonly LoadedTheme[], id: ThemeId, bright
       tokens: { ...elsewise?.editor.tokens, ...variant?.editor.tokens },
     },
     terminal: { ...elsewise?.terminal, ...variant?.terminal },
-  } as ResolvedTheme;
+  } as ActiveTheme;
 }

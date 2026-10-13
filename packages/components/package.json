@@ -33,7 +33,7 @@
     "./components/toggle": "./src/components/toggle.tsx",
     "./components/tooltip": "./src/components/tooltip.tsx",
     "./lib/file-icons.gen": "./src/lib/file-icons.gen.ts",
-    "./lib/os": "./src/lib/os.ts",
+    "./lib/platform": "./src/lib/platform.ts",
     "./lib/utils": "./src/lib/utils.ts",
     "./styles.css": "./src/styles.css",
     "./elsewise.css": "./src/elsewise.css"
