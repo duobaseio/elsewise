@@ -1,0 +1,281 @@
+edition = "2024";
+
+package elsewise.daemon.v1;
+
+// Reads, writes and watches the files.
+//
+// Common fields:
+// - `root`: the absolute, `/`-separated path of the folder a request works in, typically a worktree's folder.
+// - `relative_path`: a location inside the root, `/`-separated with no `.` or `..` segment. Empty refers to the root
+//   itself.
+// - `hash`: the SHA-256 of a file's content.
+service FileSystemService {
+  // Watches directories.
+  //
+  // Each request replaces the stream's entire watch set and repolls each directory for changes.
+  rpc WatchDirectories(stream WatchDirectoriesRequest) returns (stream WatchDirectoriesResponse);
+
+  // Watches files.
+  //
+  // Each request replaces the stream's entire watch set and repolls each file for changes.
+  rpc WatchFiles(stream WatchFilesRequest) returns (stream WatchFilesResponse);
+
+  // Watches the roots being watched and how the daemon follows changes under each.
+  rpc WatchRoots(WatchRootsRequest) returns (stream WatchRootsResponse);
+
+  // Lists a directory.
+  rpc ListDirectory(ListDirectoryRequest) returns (ListDirectoryResponse);
+
+  // Reads a file.
+  //
+  // A file over the daemon's read limit fails RESOURCE_EXHAUSTED.
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+
+  // Writes a file's entire content and creates the file and its parent directories if required.
+  //
+  // A file that no longer matches `base_hash` fails with FAILED_PRECONDITION.
+  rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+
+  // Creates a directory and its parent directories if required.
+  //
+  // An entry already at the path fails ALREADY_EXISTS.
+  rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
+
+  // Renames or moves a file or directory. Creates the destination's parent directories if required.
+  //
+  // An entry already at the destination fails with ALREADY_EXISTS.
+  rpc RenameEntry(RenameEntryRequest) returns (RenameEntryResponse);
+
+  // Recursively deletes a file or directory.
+  rpc DeleteEntry(DeleteEntryRequest) returns (DeleteEntryResponse);
+}
+
+message WatchDirectoriesRequest {
+  // The root the stream watches.
+  //
+  // Set by the first request. A later request that changes it throws an INVALID_ARGUMENT.
+  string root = 1;
+
+  // Every directory to watch.
+  repeated string relative_paths = 2;
+}
+
+message WatchDirectoriesResponse {
+  // The watched directory's path.
+  string relative_path = 1;
+
+  oneof state {
+    DirectoryListing listing = 2;
+
+    Unavailable unavailable = 3;
+  }
+
+  // The directory cannot be listed.
+  //
+  // It stays in the watch set and is reported again once it can be.
+  message Unavailable {
+    // Why the directory cannot be listed.
+    Reason reason = 1;
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Never sent.
+      REASON_OTHER = 1;
+      REASON_NOT_FOUND = 2;
+      REASON_NOT_A_DIRECTORY = 3;
+      REASON_PERMISSION_DENIED = 4;
+    }
+  }
+}
+
+// A directory's listing.
+message DirectoryListing {
+  // The entries sorted by name.
+  repeated Entry entries = 1;
+
+  // The number of children left out for exceeding the daemon's listing limit.
+  uint32 truncated = 2;
+
+  // The number of children left out because their names are not valid UTF-8.
+  uint32 skipped = 3;
+
+  // A child of a directory.
+  message Entry {
+    // The entry's name.
+    string name = 1;
+
+    // The type of this entry.
+    Type type = 2;
+
+    // Whether the entry is itself a symbolic link.
+    bool symlink = 3;
+
+    enum Type {
+      TYPE_UNSPECIFIED = 0; // Never sent.
+      TYPE_OTHER = 1; // Anything else, such as a socket or a broken symbolic link.
+      TYPE_DIRECTORY = 2;
+      TYPE_FILE = 3;
+    }
+  }
+}
+
+message WatchFilesRequest {
+  // The root the stream watches.
+  //
+  // Set by the first request. A later request that changes it throws an INVALID_ARGUMENT.
+  string root = 1;
+
+  // Every file to watch.
+  repeated string relative_paths = 2;
+}
+
+message WatchFilesResponse {
+  // The watched file's path.
+  string relative_path = 1;
+
+  oneof state {
+    Content content = 2;
+
+    Unavailable unavailable = 3;
+  }
+
+  // The content now on disk.
+  //
+  // The actual content can be fetched from `ReadFile`.
+  message Content {
+    // The content's hash.
+    bytes hash = 1;
+  }
+
+  // The file cannot be read.
+  //
+  // It stays in the watch set and is reported again once it can be.
+  message Unavailable {
+    // Why the file cannot be read.
+    Reason reason = 1;
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Never sent.
+      REASON_OTHER = 1;
+      REASON_NOT_FOUND = 2;
+      REASON_NOT_A_FILE = 3;
+      REASON_PERMISSION_DENIED = 4;
+    }
+  }
+}
+
+message WatchRootsRequest {}
+
+message WatchRootsResponse {
+  // Every root watch stream open.
+  repeated Root roots = 1;
+
+  // A root being watched.
+  message Root {
+    // The path.
+    string root = 1;
+
+    // How the daemon is watching for changes.
+    Mode mode = 2;
+
+    // Why this root is in a degraded state.
+    Reason reason = 3;
+
+    enum Mode {
+      MODE_UNSPECIFIED = 0; // Never sent.
+      MODE_NOTIFY = 1;
+      MODE_POLL = 2;
+    }
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Sent when the root is not degraded.
+      REASON_OTHER = 1;
+      REASON_WATCH_LIMIT = 2;
+    }
+  }
+}
+
+message ListDirectoryRequest {
+  // The root of the directory.
+  string root = 1;
+
+  // The directory's path.
+  string relative_path = 2;
+}
+
+message ListDirectoryResponse {
+  // The directory's listing.
+  DirectoryListing listing = 1;
+}
+
+message ReadFileRequest {
+  // The root path.
+  string root = 1;
+
+  // The relative path.
+  string relative_path = 2;
+}
+
+message ReadFileResponse {
+  // The content's hash.
+  bytes hash = 1;
+
+  // Whether the content is binary.
+  bool binary = 2;
+
+  // The file's content.
+  bytes content = 3;
+}
+
+message WriteFileRequest {
+  // The root.
+  string root = 1;
+
+  // The path.
+  string relative_path = 2;
+
+  // The hash the file must currently have on disk.
+  //
+  // Unset means the file must not exist yet and if one is present, it fails with ALREADY_EXISTS.
+  bytes base_hash = 3;
+
+  // The file's new content.
+  bytes content = 4;
+}
+
+message WriteFileResponse {
+  // The written content's hash.
+  bytes hash = 1;
+}
+
+message CreateDirectoryRequest {
+  // The root path.
+  string root = 1;
+
+  // The relative path.
+  string relative_path = 2;
+}
+
+message CreateDirectoryResponse {}
+
+message RenameEntryRequest {
+  // The root path.
+  string root = 1;
+
+  // The relative path.
+  string relative_path = 2;
+
+  // The entry's new path.
+  string new_relative_path = 3;
+}
+
+message RenameEntryResponse {}
+
+message DeleteEntryRequest {
+  // The root path.
+  string root = 1;
+
+  // The relative path.
+  string relative_path = 2;
+}
+
+message DeleteEntryResponse {}
