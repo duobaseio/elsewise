@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { RenameParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
@@ -77,7 +78,7 @@ async function open(server: Server = {}): Promise<EditorView> {
     state: EditorState.create({
       doc: DOC,
       selection: { anchor: 6 },
-      extensions: [instance.client.plugin(URI, 'rust'), history()],
+      extensions: [instance.client.plugin(URI, 'rust'), commandsExtension(), history()],
     }),
     parent: document.body,
   });

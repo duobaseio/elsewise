@@ -1,4 +1,5 @@
 export type { ActiveKeymap, ApplicationCommand, Command, Commands, EditorCommand } from './command.ts';
+export { DEFAULT_COMMANDS } from './command.ts';
 export type {
   Editor,
   EditorContextMenu,

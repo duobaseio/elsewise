@@ -3,12 +3,14 @@ import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorSelection, type EditorState, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
 import { FileIcon } from '@elsewise/components/components/file-icon';
+import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
 import { highlightTree } from '@lezer/highlight';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { Location, ReferenceParams } from 'vscode-languageserver-protocol';
 import { scroll } from '@/components/code-editor/scroll';
 import { hint } from '@/components/code-editor/tooltip';
+import { navigable } from '@/editor/lsp/symbol';
 
 /**
  * A usage of the symbol.
@@ -96,10 +98,103 @@ const message = StateField.define<Tooltip | null>({
   provide: (field) => showTooltip.from(field),
 });
 
-/**
- * The key that shows the usages of the symbol at the cursor.
- */
-export const SHOW_USAGES = 'Mod-Alt-F7';
+export const FIND_USAGES: EditorCommand = {
+  scope: 'editor',
+  id: DEFAULT_COMMANDS.editor.lsp.findUsages,
+  label: 'Find usages',
+  defaultKeys: ['Mod-Alt-F7'],
+  enabled: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.referencesProvider),
+  shown: (_, view, lsp) => Boolean(lsp?.client.serverCapabilities?.referencesProvider) && navigable(view.state),
+  // Based on `@codemirror/lsp-client`'s `findReferences`, which lists the references in a panel.
+  run(_, view, lsp) {
+    if (lsp === null) {
+      return;
+    }
+
+    const { doc } = view.state;
+    const pos = view.state.selection.main.head;
+    lsp.client.sync();
+    lsp.client.withMapping(async (mapping) => {
+      try {
+        const locations = await lsp.client.request<ReferenceParams, Location[] | null>('textDocument/references', {
+          textDocument: { uri: lsp.uri },
+          position: lsp.toPosition(pos),
+          context: { includeDeclaration: true },
+        });
+
+        // Gives up when the document changed while the lsp was asked, since the ranges no longer fit it.
+        if (view.state.doc !== doc) {
+          return;
+        }
+
+        const found = (locations ?? [])
+          .map((location): Usage => {
+            const file = decodeURIComponent(location.uri.slice(location.uri.lastIndexOf('/') + 1));
+            const open = lsp.client.workspace.getFile(location.uri);
+            // TODO: Preview and open usages in files that aren't open once the daemon can read them.
+            if (!open) {
+              return { uri: location.uri, file, line: location.range.start.line + 1, range: null, preview: null };
+            }
+
+            const from = mapping.mapPosition(location.uri, location.range.start, 1);
+            const to = mapping.mapPosition(location.uri, location.range.end, -1);
+            const state = location.uri === lsp.uri ? view.state : open.getView()?.state;
+            const line = (state?.doc ?? open.doc).lineAt(from);
+            return {
+              uri: location.uri,
+              file,
+              line: line.number,
+              range: { from, to },
+              preview: preview(state, line, from, to),
+            };
+          })
+          .sort(
+            (a, b) =>
+              Number(a.uri !== lsp.uri) - Number(b.uri !== lsp.uri) ||
+              a.file.localeCompare(b.file) ||
+              a.uri.localeCompare(b.uri) ||
+              a.line - b.line ||
+              (a.range?.from ?? 0) - (b.range?.from ?? 0),
+          );
+
+        const current = found.findIndex(
+          ({ uri, range }) => uri === lsp.uri && range !== null && range.from <= pos && pos <= range.to,
+        );
+        const others = found.filter((_, i) => i !== current);
+        if (others.length === 0) {
+          view.dispatch({ effects: showMessage.of({ pos, text: 'No usages found' }) });
+          return;
+        }
+        if (others.length === 1 && others[0].range !== null) {
+          open(view, others[0]);
+          return;
+        }
+
+        const symbol = current === -1 ? view.state.wordAt(pos) : found[current].range;
+        const name = symbol ? doc.sliceString(symbol.from, symbol.to) : '';
+        const value: Usages = {
+          name,
+          usages: found,
+          selected:
+            current === -1
+              ? Math.max(
+                  0,
+                  found.findIndex((usage) => usage.range !== null),
+                )
+              : current,
+          tooltip: { pos: symbol?.from ?? pos, create: (view) => popup(view, value) },
+        };
+        view.dispatch({ effects: showUsages.of(value) });
+      } catch (error) {
+        if (view.state.doc === doc) {
+          view.dispatch({
+            effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
+          });
+        }
+      }
+    });
+  },
+};
 
 /**
  * Returns the extension that shows the usages of the symbol at the cursor in a popup.
@@ -114,7 +209,6 @@ export function serverReferences(): LSPClientExtension {
       message,
       Prec.high(
         keymap.of([
-          { key: SHOW_USAGES, run: findUsages, preventDefault: true },
           { key: 'ArrowDown', run: (view) => move(view, (selected) => selected + 1, true) },
           { key: 'ArrowUp', run: (view) => move(view, (selected) => selected - 1, true) },
           { key: 'PageDown', run: (view) => move(view, (selected) => selected + 10, false) },
@@ -150,100 +244,6 @@ export function serverReferences(): LSPClientExtension {
       ),
     ],
   };
-}
-
-// Based on `@codemirror/lsp-client`'s `findReferences`, which lists the references in a panel.
-//
-// Previews the usages in open files when they arrive, and lists the rest by file and line rather than dropping them.
-export function findUsages(view: EditorView): boolean {
-  const plugin = LSPPlugin.get(view);
-  if (!plugin?.client.serverCapabilities?.referencesProvider) {
-    return false;
-  }
-
-  const { doc } = view.state;
-  const pos = view.state.selection.main.head;
-  plugin.client.sync();
-  plugin.client.withMapping(async (mapping) => {
-    try {
-      const locations = await plugin.client.request<ReferenceParams, Location[] | null>('textDocument/references', {
-        textDocument: { uri: plugin.uri },
-        position: plugin.toPosition(pos),
-        context: { includeDeclaration: true },
-      });
-
-      // Gives up when the document changed while the server was asked, since the ranges no longer fit it.
-      if (view.state.doc !== doc) {
-        return;
-      }
-
-      const found = (locations ?? [])
-        .map((location): Usage => {
-          const file = decodeURIComponent(location.uri.slice(location.uri.lastIndexOf('/') + 1));
-          const open = plugin.client.workspace.getFile(location.uri);
-          // TODO: Preview and open usages in files that aren't open once the daemon can read them.
-          if (!open) {
-            return { uri: location.uri, file, line: location.range.start.line + 1, range: null, preview: null };
-          }
-
-          const from = mapping.mapPosition(location.uri, location.range.start, 1);
-          const to = mapping.mapPosition(location.uri, location.range.end, -1);
-          const state = location.uri === plugin.uri ? view.state : open.getView()?.state;
-          const line = (state?.doc ?? open.doc).lineAt(from);
-          return {
-            uri: location.uri,
-            file,
-            line: line.number,
-            range: { from, to },
-            preview: preview(state, line, from, to),
-          };
-        })
-        .sort(
-          (a, b) =>
-            Number(a.uri !== plugin.uri) - Number(b.uri !== plugin.uri) ||
-            a.file.localeCompare(b.file) ||
-            a.uri.localeCompare(b.uri) ||
-            a.line - b.line ||
-            (a.range?.from ?? 0) - (b.range?.from ?? 0),
-        );
-
-      const current = found.findIndex(
-        ({ uri, range }) => uri === plugin.uri && range !== null && range.from <= pos && pos <= range.to,
-      );
-      const others = found.filter((_, i) => i !== current);
-      if (others.length === 0) {
-        view.dispatch({ effects: showMessage.of({ pos, text: 'No usages found' }) });
-        return;
-      }
-      if (others.length === 1 && others[0].range !== null) {
-        open(view, others[0]);
-        return;
-      }
-
-      const symbol = current === -1 ? view.state.wordAt(pos) : found[current].range;
-      const name = symbol ? doc.sliceString(symbol.from, symbol.to) : '';
-      const value: Usages = {
-        name,
-        usages: found,
-        selected:
-          current === -1
-            ? Math.max(
-                0,
-                found.findIndex((usage) => usage.range !== null),
-              )
-            : current,
-        tooltip: { pos: symbol?.from ?? pos, create: (view) => popup(view, value) },
-      };
-      view.dispatch({ effects: showUsages.of(value) });
-    } catch (error) {
-      if (view.state.doc === doc) {
-        view.dispatch({
-          effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
-        });
-      }
-    }
-  });
-  return true;
 }
 
 /**

@@ -18,7 +18,7 @@ function editor(keys: Record<string, Keys>): EditorCommand[] {
 
 // Returns a keymap on `platform` updated with `commands` under `keymap`.
 function updated(
-  commands: readonly (EditorCommand | ApplicationCommand)[],
+  commands: readonly (ApplicationCommand | EditorCommand)[],
   keymap: Keymap = ELSEWISE,
   platform: Platform = 'linux',
 ): ApplicationKeymap {

@@ -1,3 +1,4 @@
+import { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
 import type {
@@ -12,6 +13,23 @@ import type {
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { ApplicationKeymap } from '@/command/application-keymap';
 import { ELSEWISE } from '@/command/keymap';
+import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
+import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
+import { FORMAT } from '@/editor/lsp/format';
+import { FIND_USAGES } from '@/editor/lsp/references';
+import { RENAME } from '@/editor/lsp/rename';
+import { SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
+
+export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] = [
+  // LSP
+  SHOW_CONTEXT_ACTIONS,
+  APPLY_TOP_FIX,
+  GO_TO_DEFINITION,
+  FORMAT,
+  FIND_USAGES,
+  RENAME,
+  SHOW_SIGNATURE_HELP,
+];
 
 /**
  * The commands and their keys.
@@ -20,20 +38,20 @@ export class CommandManager implements Commands {
   readonly application: Application;
   readonly keymap: ApplicationKeymap;
   private readonly listeners = new Set<() => void>();
-  private addedCommands: ReadonlyArray<ReadonlyArray<EditorCommand | ApplicationCommand>> = [];
-  private currentCommands: ReadonlyMap<string, EditorCommand | ApplicationCommand> = new Map();
+  private addedCommands: ReadonlyArray<ReadonlyArray<ApplicationCommand | EditorCommand>> = [];
+  private currentCommands: ReadonlyMap<string, ApplicationCommand | EditorCommand> = new Map();
   private currentSelected: Keymap = ELSEWISE.keymap;
 
   constructor(parts: Omit<Application, 'commands'>, platform?: Platform) {
     this.application = { ...parts, commands: this };
     this.keymap = new ApplicationKeymap(platform);
-    this.keymap.update(this.currentSelected, []);
+    this.add(DEFAULT_COMMANDS);
   }
 
   /**
    * The commands by id.
    */
-  get commands(): ReadonlyMap<string, EditorCommand | ApplicationCommand> {
+  get commands(): ReadonlyMap<string, ApplicationCommand | EditorCommand> {
     return this.currentCommands;
   }
 
@@ -70,7 +88,7 @@ export class CommandManager implements Commands {
    *
    * Returns a disposable that removes the `commands`.
    */
-  add(commands: readonly (EditorCommand | ApplicationCommand)[]): Disposable {
+  add(commands: readonly (ApplicationCommand | EditorCommand)[]): Disposable {
     const added = [...commands];
     this.addedCommands = [added, ...this.addedCommands];
     this.update();
@@ -81,7 +99,7 @@ export class CommandManager implements Commands {
   }
 
   private update() {
-    const commands = new Map<string, EditorCommand | ApplicationCommand>();
+    const commands = new Map<string, ApplicationCommand | EditorCommand>();
     for (const command of this.addedCommands.flat()) {
       if (!commands.has(command.id)) {
         commands.set(command.id, command);
@@ -103,11 +121,16 @@ export class CommandManager implements Commands {
     try {
       if (command.scope === 'editor') {
         const editor = view ?? this.application.editor.active;
-        if (editor === null || command.enabled?.(this.application, editor) === false) {
+        if (editor === null) {
           return false;
         }
 
-        command.run(this.application, editor);
+        const lsp = LSPPlugin.get(editor);
+        if (command.enabled?.(this.application, editor, lsp) === false) {
+          return false;
+        }
+
+        command.run(this.application, editor, lsp);
         return true;
       }
 

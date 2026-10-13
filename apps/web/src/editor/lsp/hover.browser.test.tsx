@@ -7,11 +7,14 @@ import {
 import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
+import { formatKey } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
+import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { builtInCommands, commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
@@ -86,8 +89,12 @@ afterEach(() => {
   }
 });
 
-// Opens a Rust file with `extensions` on a running server behind `fake`.
-async function open(fake: StubTransport, extensions: Extension = []): Promise<EditorView> {
+// Opens a Rust file with `extensions` and `commands` on a running server behind `fake`.
+async function open(
+  fake: StubTransport,
+  extensions: Extension = [],
+  commands = builtInCommands(),
+): Promise<EditorView> {
   const server: LanguageServer = { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => fake };
   const instance = new LanguageServerInstance(server, ROOT);
   await instance.start();
@@ -95,7 +102,13 @@ async function open(fake: StubTransport, extensions: Extension = []): Promise<Ed
   const view = new EditorView({
     state: EditorState.create({
       doc: DOC,
-      extensions: [instance.client.plugin(URI, 'rust'), rust, syntaxHighlighting(defaultHighlightStyle), extensions],
+      extensions: [
+        instance.client.plugin(URI, 'rust'),
+        commandsExtension(commands),
+        rust,
+        syntaxHighlighting(defaultHighlightStyle),
+        extensions,
+      ],
     }),
     parent: document.body,
   });
@@ -291,6 +304,32 @@ describe('serverHover', () => {
     expect(line.querySelector('button code')?.textContent).toBe('connect');
     line.querySelector('button')?.click();
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let channel = connect(1);'));
+  });
+
+  test("hints commands' keys", async () => {
+    const commands = builtInCommands();
+    commands.selected = { name: 'Test', keys: { [APPLY_TOP_FIX.id]: ['Mod-k'], [SHOW_CONTEXT_ACTIONS.id]: [] } };
+    const view = await open(
+      transport(null, [PROBLEM], () => [FIX]),
+      [],
+      commands,
+    );
+
+    const { tooltip } = await hoverProblem(view);
+
+    const line = tooltip.querySelector('.cm-lsp-actions-hover') as HTMLElement;
+    expect([...line.querySelectorAll('kbd')].map((key) => key.textContent)).toEqual([formatKey('Mod-k')]);
+    expect(line.textContent).toBe(`Rename to connect ${formatKey('Mod-k')} · More actions`);
+  });
+
+  test('shows actions at problem on More actions', async () => {
+    const view = await open(transport(null, [PROBLEM], () => [FIX]));
+
+    const { tooltip } = await hoverProblem(view);
+    [...tooltip.querySelectorAll('button')].find((button) => button.textContent === 'More actions')?.click();
+
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-lsp-action')?.textContent).toBe('Rename to connect'));
+    expect(view.state.selection.main.head).toBe(DOC.indexOf('attach'));
   });
 
   test('omits fix line when server has none', async () => {

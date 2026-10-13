@@ -36,7 +36,7 @@ export class ApplicationKeymap implements ActiveKeymap {
   /**
    * Updates the keys of `commands` under `keymap`.
    */
-  update(keymap: Keymap, commands: Iterable<EditorCommand | ApplicationCommand>) {
+  update(keymap: Keymap, commands: Iterable<ApplicationCommand | EditorCommand>) {
     const written = new Map<string, readonly string[]>();
     const keys = { editor: new Map<string, string[]>(), application: new Map<string, string[]>() };
     for (const command of commands) {

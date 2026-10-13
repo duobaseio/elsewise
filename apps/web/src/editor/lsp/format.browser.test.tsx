@@ -7,6 +7,7 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { DocumentRangeFormattingParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
@@ -60,7 +61,12 @@ async function open(
   const view = new EditorView({
     state: EditorState.create({
       doc,
-      extensions: [instance.client.plugin(URI, 'rust'), history(), EditorState.allowMultipleSelections.of(true)],
+      extensions: [
+        instance.client.plugin(URI, 'rust'),
+        commandsExtension(),
+        history(),
+        EditorState.allowMultipleSelections.of(true),
+      ],
     }),
     parent: document.body,
   });
@@ -81,7 +87,7 @@ function press(view: EditorView): boolean {
 
 const CAPABILITIES = { documentFormattingProvider: true, documentRangeFormattingProvider: true };
 
-describe('serverFormat', () => {
+describe('FORMAT', () => {
   test("applies server's edits in one undo step", async () => {
     const view = await open({ documentFormattingProvider: true }, () => [
       { range: { start: { line: 0, character: 3 }, end: { line: 0, character: 5 } }, newText: ' ' },
@@ -115,7 +121,7 @@ describe('serverFormat', () => {
     const format = vi.fn(() => []);
     const view = await open({}, format);
 
-    press(view);
+    expect(press(view)).toBe(false);
     await new Promise(requestAnimationFrame);
 
     expect(format).not.toHaveBeenCalled();
@@ -176,7 +182,7 @@ describe('serverFormat', () => {
     const view = await open({ documentFormattingProvider: true }, format, formatRange);
     view.dispatch({ selection: { anchor: 0, head: 3 } });
 
-    press(view);
+    expect(press(view)).toBe(false);
     await new Promise(requestAnimationFrame);
 
     expect(format).not.toHaveBeenCalled();
@@ -188,7 +194,7 @@ describe('serverFormat', () => {
     const view = await open({ documentFormattingProvider: true }, format);
     view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });
 
-    press(view);
+    expect(press(view)).toBe(false);
     await new Promise(requestAnimationFrame);
 
     expect(format).not.toHaveBeenCalled();

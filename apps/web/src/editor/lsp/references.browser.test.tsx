@@ -4,6 +4,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
@@ -57,7 +58,11 @@ async function open(locations: unknown[] = TOTALS.map((total) => location(total)
     state: EditorState.create({
       doc,
       selection: { anchor: 6 },
-      extensions: [instance.client.plugin(URI, 'rust'), EditorView.theme({ '&': { height: '200px' } })],
+      extensions: [
+        instance.client.plugin(URI, 'rust'),
+        commandsExtension(),
+        EditorView.theme({ '&': { height: '200px' } }),
+      ],
     }),
     parent: document.body,
   });

@@ -1,6 +1,7 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField, type Text } from '@codemirror/state';
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
+import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
 import {
   type CodeAction,
   type CodeActionParams,
@@ -88,15 +89,80 @@ const message = StateField.define<Tooltip | null>({
 
 const showMessage = StateEffect.define<{ pos: number; text: string } | null>();
 
-/**
- * The key that shows the code actions at the cursor.
- */
-export const SHOW_ACTIONS = 'Alt-Enter';
+export const APPLY_TOP_FIX: EditorCommand = {
+  scope: 'editor',
+  id: DEFAULT_COMMANDS.editor.lsp.applyTopFix,
+  label: 'Apply top fix',
+  defaultKeys: ['Shift-Alt-Enter'],
+  enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
+  shown: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
+  // Applies the quick fix the server prefers, or else the first.
+  run(_, view, lsp) {
+    if (lsp === null) {
+      return;
+    }
 
-/**
- * The key that applies the top quick fix at the cursor.
- */
-export const APPLY_TOP_FIX = 'Shift-Alt-Enter';
+    const pos = view.state.selection.main.head;
+    const doc = view.state.doc;
+    void requestActions(view, ...at(view, lsp)).then(
+      ({ actions: found }) => {
+        const fix = found.find(isFix);
+        if (fix) {
+          void apply(view, fix, doc);
+        }
+      },
+      (error) => {
+        if (view.state.doc === doc) {
+          view.dispatch({
+            effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
+          });
+        }
+      },
+    );
+  },
+};
+
+export const SHOW_CONTEXT_ACTIONS: EditorCommand = {
+  scope: 'editor',
+  id: DEFAULT_COMMANDS.editor.lsp.showContextActions,
+  label: 'Show context actions',
+  defaultKeys: ['Alt-Enter'],
+  enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
+  shown: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
+  run(_, view, lsp) {
+    if (lsp === null) {
+      return;
+    }
+
+    const pos = view.state.selection.main.head;
+    const doc = view.state.doc;
+    void requestActions(view, ...at(view, lsp)).then(
+      ({ actions: found }) => {
+        if (view.state.doc !== doc) {
+          return;
+        }
+        if (found.length === 0) {
+          view.dispatch({ effects: showMessage.of({ pos, text: 'No context actions available' }) });
+          return;
+        }
+
+        const value: Actions = {
+          actions: found,
+          selected: 0,
+          tooltip: { pos, create: (view) => popup(view, value) },
+        };
+        view.dispatch({ effects: [showActionsEffect.of(value), showMessage.of(null)] });
+      },
+      (error) => {
+        if (view.state.doc === doc) {
+          view.dispatch({
+            effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
+          });
+        }
+      },
+    );
+  },
+};
 
 /**
  * Returns the extension that shows and applies the server's code actions.
@@ -131,8 +197,6 @@ export function serverActions(): LSPClientExtension {
       message,
       Prec.high(
         keymap.of([
-          { key: SHOW_ACTIONS, run: showActions, preventDefault: true },
-          { key: APPLY_TOP_FIX, run: applyTopFix, preventDefault: true },
           { key: 'ArrowDown', run: (view) => move(view, 1) },
           { key: 'ArrowUp', run: (view) => move(view, -1) },
           {
@@ -164,76 +228,6 @@ export function serverActions(): LSPClientExtension {
       ),
     ],
   };
-}
-
-/**
- * Shows the code actions at the cursor in a popup.
- */
-export function showActions(view: EditorView): boolean {
-  const plugin = LSPPlugin.get(view);
-  if (!plugin?.client.serverCapabilities?.codeActionProvider) {
-    return false;
-  }
-
-  const pos = view.state.selection.main.head;
-  const doc = view.state.doc;
-  void requestActions(view, ...at(view, plugin)).then(
-    ({ actions: found }) => {
-      if (view.state.doc !== doc) {
-        return;
-      }
-      if (found.length === 0) {
-        view.dispatch({ effects: showMessage.of({ pos, text: 'No context actions available' }) });
-        return;
-      }
-
-      const value: Actions = {
-        actions: found,
-        selected: 0,
-        tooltip: { pos, create: (view) => popup(view, value) },
-      };
-      view.dispatch({ effects: [showActionsEffect.of(value), showMessage.of(null)] });
-    },
-    (error) => {
-      if (view.state.doc === doc) {
-        view.dispatch({
-          effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
-        });
-      }
-    },
-  );
-  return true;
-}
-
-/**
- * Applies the top quick fix at the cursor.
- *
- * The top quick fix is the one the server prefers, or else the first.
- */
-export function applyTopFix(view: EditorView): boolean {
-  const plugin = LSPPlugin.get(view);
-  if (!plugin?.client.serverCapabilities?.codeActionProvider) {
-    return false;
-  }
-
-  const pos = view.state.selection.main.head;
-  const doc = view.state.doc;
-  void requestActions(view, ...at(view, plugin)).then(
-    ({ actions: found }) => {
-      const fix = found.find(isFix);
-      if (fix) {
-        void apply(view, fix, doc);
-      }
-    },
-    (error) => {
-      if (view.state.doc === doc) {
-        view.dispatch({
-          effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
-        });
-      }
-    },
-  );
-  return true;
 }
 
 /**

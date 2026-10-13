@@ -8,10 +8,8 @@ import { type ApplyWorkspaceEditParams, MessageType, type ShowMessageParams } fr
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
-import { serverDefinition } from '@/editor/lsp/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
-import { serverFormat } from '@/editor/lsp/format';
 import { serverHighlights } from '@/editor/lsp/highlights';
 import { serverHover } from '@/editor/lsp/hover';
 import { serverReferences } from '@/editor/lsp/references';
@@ -143,8 +141,6 @@ export class LanguageServerInstance {
         serverRename(),
         serverReferences(),
         serverHighlights(),
-        serverDefinition(),
-        serverFormat(),
         serverActions(),
         serverDiagnostics(),
         serverEdits(),

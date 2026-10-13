@@ -26,6 +26,7 @@ import { useSearchExtension } from '@/components/code-editor/search/search-bar';
 import { useSettingsExtension } from '@/components/code-editor/settings-extension';
 import { useThemeExtension } from '@/components/code-editor/theme-extension';
 import { useEditorManager } from '@/editor/editor-manager';
+import { COMMANDS } from '@/editor/facets';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 const PLUGINS = new Compartment();
@@ -88,6 +89,7 @@ export function CodeEditor({ path, code, root }: CodeEditorProps) {
         PLUGINS.of([]),
         // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
         KEYS.of(keys),
+        COMMANDS.of(commands),
         EditorView.updateListener.of((update) => {
           if (update.focusChanged && update.view.hasFocus) {
             editorManager.activate(update.view);

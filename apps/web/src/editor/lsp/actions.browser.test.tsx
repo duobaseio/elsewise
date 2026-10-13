@@ -1,11 +1,12 @@
 import { history, undo } from '@codemirror/commands';
 import { forEachDiagnostic } from '@codemirror/lint';
-import { EditorState } from '@codemirror/state';
+import { EditorState, StateEffect } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { CodeActionParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.ts';
@@ -76,7 +77,7 @@ async function open(
     state: EditorState.create({
       doc: DOC,
       selection: { anchor: 16 },
-      extensions: [instance.client.plugin(URI, 'typescript'), history()],
+      extensions: [instance.client.plugin(URI, 'typescript'), commandsExtension(), history()],
     }),
     parent: document.body,
   });
@@ -179,6 +180,19 @@ describe('serverActions', () => {
     await new Promise(requestAnimationFrame);
 
     expect(view.dom.querySelector('.cm-tooltip')).toBeNull();
+    expect(view.state.doc.toString()).toBe(DOC);
+  });
+
+  test("doesn't show or apply actions in read-only document", async () => {
+    const actions = vi.fn((_: CodeActionParams) => [ADD_IMPORT]);
+    const { view } = await open(actions);
+    view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });
+
+    expect(press(view, 'Enter', { altKey: true })).toBe(false);
+    expect(press(view, 'Enter', { altKey: true, shiftKey: true })).toBe(false);
+    await new Promise(requestAnimationFrame);
+
+    expect(actions).not.toHaveBeenCalled();
     expect(view.state.doc.toString()).toBe(DOC);
   });
 

@@ -26,6 +26,7 @@
   },
   "peerDependencies": {
     "@codemirror/language": "^6.12.4",
+    "@codemirror/lsp-client": "^6.3.0",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
     "react": "^19.3.0"

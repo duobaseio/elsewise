@@ -15,7 +15,7 @@ import {
   DocumentHighlightKind,
   type DocumentHighlightParams,
 } from 'vscode-languageserver-protocol';
-import { symbol } from '@/components/code-editor/symbol';
+import { symbol } from '@/editor/lsp/symbol';
 
 const READ = Decoration.mark({ class: 'cm-lsp-highlight' });
 const WRITE = Decoration.mark({ class: 'cm-lsp-highlight cm-lsp-highlight-write' });

@@ -9,7 +9,8 @@ import {
   type Diagnostic as LSPDiagnostic,
 } from 'vscode-languageserver-protocol';
 import { appendCode } from '@/components/code-editor/tooltip';
-import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_ACTIONS, showActions } from '@/editor/lsp/actions';
+import { COMMANDS } from '@/editor/facets';
+import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { problems, SEVERITIES } from '@/editor/lsp/diagnostics';
 import { documentation } from '@/editor/lsp/documentation';
 import { highlightClick } from '@/editor/lsp/highlights';
@@ -86,15 +87,21 @@ export function serverHover(): Extension {
               dom.addEventListener('click', run);
               return dom;
             };
-            const key = (binding: string) =>
-              Object.assign(document.createElement('kbd'), { textContent: formatKey(binding) });
+
+            // Returns the command's first key, after a space, or nothing if it has none.
+            const commands = view.state.facet(COMMANDS);
+            const key = (id: string) => {
+              const binding = commands?.keymap.commands.get(id)?.[0];
+              return binding === undefined
+                ? []
+                : [' ', Object.assign(document.createElement('kbd'), { textContent: formatKey(binding) })];
+            };
 
             const fix = actions.find(isFix);
             if (fix) {
               line.append(
                 button(fix.title, () => void apply(view, fix, doc)),
-                ' ',
-                key(APPLY_TOP_FIX),
+                ...key(APPLY_TOP_FIX.id),
                 ' · ',
               );
             }
@@ -106,10 +113,9 @@ export function serverHover(): Extension {
                   view.dispatch({ selection: { anchor: current.from } });
                 }
                 view.focus();
-                showActions(view);
+                commands?.run(SHOW_CONTEXT_ACTIONS.id, view);
               }),
-              ' ',
-              key(SHOW_ACTIONS),
+              ...key(SHOW_CONTEXT_ACTIONS.id),
             );
           }
 

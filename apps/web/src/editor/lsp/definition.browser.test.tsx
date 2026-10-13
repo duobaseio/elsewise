@@ -1,8 +1,10 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
+import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
@@ -33,7 +35,7 @@ afterEach(() => {
   }
 });
 
-describe('serverDefinition', () => {
+describe('GO_TO_DEFINITION', () => {
   test('centers off-screen definition', async () => {
     const instance = new LanguageServerInstance(
       { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: transport } satisfies LanguageServer,
@@ -45,13 +47,19 @@ describe('serverDefinition', () => {
       state: EditorState.create({
         doc: DOC,
         selection: { anchor: 2 },
-        extensions: [instance.client.plugin(URI, 'rust'), EditorView.theme({ '&': { height: '200px' } })],
+        extensions: [
+          instance.client.plugin(URI, 'rust'),
+          commandsExtension(),
+          EditorView.theme({ '&': { height: '200px' } }),
+        ],
       }),
       parent: document.body,
     });
     views.push(view);
 
-    expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'F12' }), 'editor')).toBe(true);
+    // Presses Mod-b.
+    const modifier = PLATFORM === 'mac' ? { metaKey: true } : { ctrlKey: true };
+    expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'b', ...modifier }), 'editor')).toBe(true);
 
     await vi.waitFor(() => {
       expect(view.state.selection.main.head).toBe(DOC.indexOf('total = 1'));

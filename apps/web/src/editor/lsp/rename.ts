@@ -3,7 +3,8 @@ import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showTooltip, type Tooltip, WidgetType } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { highlightTree } from '@lezer/highlight';
+import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
+import { highlightTree, tags } from '@lezer/highlight';
 import type {
   DocumentHighlight,
   DocumentHighlightParams,
@@ -13,6 +14,7 @@ import type {
   WorkspaceEdit,
 } from 'vscode-languageserver-protocol';
 import { hint } from '@/components/code-editor/tooltip';
+import { symbol } from '@/editor/lsp/symbol';
 
 /**
  * A symbol being renamed.
@@ -122,10 +124,133 @@ const message = StateField.define<Tooltip | null>({
 
 const showMessage = StateEffect.define<{ pos: number; text: string } | null>();
 
-/**
- * The key that renames the symbol at the cursor.
- */
-export const RENAME = 'Shift-F6';
+export const RENAME: EditorCommand = {
+  scope: 'editor',
+  id: DEFAULT_COMMANDS.editor.lsp.rename,
+  label: 'Rename…',
+  defaultKeys: ['Shift-F6'],
+  enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.renameProvider),
+  shown(_, view, lsp) {
+    const { state } = view;
+    const { from, to } = state.selection.main;
+    const word = symbol(state);
+    return (
+      Boolean(lsp?.client.serverCapabilities?.renameProvider) &&
+      state.selection.ranges.length === 1 &&
+      word !== null &&
+      from >= word.from &&
+      to <= word.to &&
+      !word.is(tags.keyword) &&
+      !word.is(tags.comment) &&
+      !word.is(tags.string)
+    );
+  },
+  // Based on `@codemirror/lsp-client`'s `renameSymbol`.
+  run(_, view, lsp) {
+    const provider = lsp?.client.serverCapabilities?.renameProvider;
+    if (lsp === null || !provider) {
+      return;
+    }
+
+    const { doc } = view.state;
+    const pos = view.state.selection.main.head;
+    const params = { position: lsp.toPosition(pos), textDocument: { uri: lsp.uri } };
+    const word = view.state.wordAt(pos);
+    lsp.client.sync();
+    void (async () => {
+      try {
+        // Sends both requests before awaiting either.
+        const preparing =
+          typeof provider === 'object' && provider.prepareProvider
+            ? lsp.client.request<PrepareRenameParams, PrepareRenameResult | null>('textDocument/prepareRename', params)
+            : null;
+        const highlighting = lsp.client.serverCapabilities?.documentHighlightProvider
+          ? lsp.client
+              .request<DocumentHighlightParams, DocumentHighlight[] | null>('textDocument/documentHighlight', params)
+              .catch(() => null)
+          : null;
+
+        let range: { from: number; to: number; placeholder?: string } | null = word;
+        if (preparing) {
+          const result = await preparing;
+          if (result == null || 'defaultBehavior' in result) {
+            range = result?.defaultBehavior ? word : null;
+          } else {
+            const prepared = 'range' in result ? result.range : result;
+            range = {
+              from: lsp.fromPosition(prepared.start, doc),
+              to: lsp.fromPosition(prepared.end, doc),
+              placeholder: 'placeholder' in result ? result.placeholder : undefined,
+            };
+          }
+        }
+        const highlights = await highlighting;
+
+        // Gives up when the document changed while the lsp was asked, since the ranges no longer fit it.
+        if (view.state.doc !== doc) {
+          return;
+        }
+        if (range === null) {
+          view.dispatch({ effects: showMessage.of({ pos, text: "This can't be renamed" }) });
+          return;
+        }
+
+        const { from, to } = range;
+        const name = doc.sliceString(from, to);
+        const occurrences = (highlights ?? [])
+          .map((highlight) => ({
+            from: lsp.fromPosition(highlight.range.start, doc),
+            to: lsp.fromPosition(highlight.range.end, doc),
+          }))
+          .filter((occurrence) => occurrence.to <= from || occurrence.from >= to)
+          .filter((occurrence) => doc.sliceString(occurrence.from, occurrence.to) === name);
+
+        // The symbol's token classes, to keep its colour while it is typed.
+        let classes = '';
+        highlightTree(
+          syntaxTree(view.state),
+          { style: (tags) => highlightingFor(view.state, tags) },
+          (start, _end, style) => {
+            if (start <= from) {
+              classes = style;
+            }
+          },
+          from,
+          to,
+        );
+
+        const typed = range.placeholder ?? name;
+        view.dispatch({
+          effects: startRenaming.of({
+            from,
+            to,
+            name,
+            occurrences,
+            typed,
+            pending: false,
+            field: new Field(typed, classes),
+            hint: {
+              pos: from,
+              above: true,
+              create: () => ({
+                dom: hint('cm-lsp-rename-hint', [
+                  ['Enter', 'rename'],
+                  ['Escape', 'cancel'],
+                ]),
+              }),
+            },
+          }),
+        });
+      } catch (error) {
+        if (view.state.doc === doc) {
+          view.dispatch({
+            effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
+          });
+        }
+      }
+    })();
+  },
+};
 
 /**
  * Returns the extension that renames the symbol at the cursor in place.
@@ -140,7 +265,6 @@ export function serverRename(): LSPClientExtension {
       message,
       Prec.high(
         keymap.of([
-          { key: RENAME, run: rename, preventDefault: true },
           {
             key: 'Escape',
             run: (view) => {
@@ -155,114 +279,6 @@ export function serverRename(): LSPClientExtension {
       ),
     ],
   };
-}
-
-// Based on `@codemirror/lsp-client`'s `renameSymbol`, which renames the word at the cursor to a name typed in a panel.
-export function rename(view: EditorView): boolean {
-  const plugin = LSPPlugin.get(view);
-  const provider = plugin?.client.serverCapabilities?.renameProvider;
-  if (!plugin || !provider) {
-    return false;
-  }
-
-  const { doc } = view.state;
-  const pos = view.state.selection.main.head;
-  const params = { position: plugin.toPosition(pos), textDocument: { uri: plugin.uri } };
-  const word = view.state.wordAt(pos);
-  plugin.client.sync();
-  void (async () => {
-    try {
-      // Sends both requests before awaiting either.
-      const preparing =
-        typeof provider === 'object' && provider.prepareProvider
-          ? plugin.client.request<PrepareRenameParams, PrepareRenameResult | null>('textDocument/prepareRename', params)
-          : null;
-      const highlighting = plugin.client.serverCapabilities?.documentHighlightProvider
-        ? plugin.client
-            .request<DocumentHighlightParams, DocumentHighlight[] | null>('textDocument/documentHighlight', params)
-            .catch(() => null)
-        : null;
-
-      let range: { from: number; to: number; placeholder?: string } | null = word;
-      if (preparing) {
-        const result = await preparing;
-        if (result == null || 'defaultBehavior' in result) {
-          range = result?.defaultBehavior ? word : null;
-        } else {
-          const prepared = 'range' in result ? result.range : result;
-          range = {
-            from: plugin.fromPosition(prepared.start, doc),
-            to: plugin.fromPosition(prepared.end, doc),
-            placeholder: 'placeholder' in result ? result.placeholder : undefined,
-          };
-        }
-      }
-      const highlights = await highlighting;
-
-      // Gives up when the document changed while the server was asked, since the ranges no longer fit it.
-      if (view.state.doc !== doc) {
-        return;
-      }
-      if (range === null) {
-        view.dispatch({ effects: showMessage.of({ pos, text: "This can't be renamed" }) });
-        return;
-      }
-
-      const { from, to } = range;
-      const name = doc.sliceString(from, to);
-      const occurrences = (highlights ?? [])
-        .map((highlight) => ({
-          from: plugin.fromPosition(highlight.range.start, doc),
-          to: plugin.fromPosition(highlight.range.end, doc),
-        }))
-        .filter((occurrence) => occurrence.to <= from || occurrence.from >= to)
-        .filter((occurrence) => doc.sliceString(occurrence.from, occurrence.to) === name);
-
-      // The symbol's token classes, to keep its colour while it is typed.
-      let classes = '';
-      highlightTree(
-        syntaxTree(view.state),
-        { style: (tags) => highlightingFor(view.state, tags) },
-        (start, _end, style) => {
-          if (start <= from) {
-            classes = style;
-          }
-        },
-        from,
-        to,
-      );
-
-      const typed = range.placeholder ?? name;
-      view.dispatch({
-        effects: startRenaming.of({
-          from,
-          to,
-          name,
-          occurrences,
-          typed,
-          pending: false,
-          field: new Field(typed, classes),
-          hint: {
-            pos: from,
-            above: true,
-            create: () => ({
-              dom: hint('cm-lsp-rename-hint', [
-                ['Enter', 'rename'],
-                ['Escape', 'cancel'],
-              ]),
-            }),
-          },
-        }),
-      });
-    } catch (error) {
-      if (view.state.doc === doc) {
-        view.dispatch({
-          effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
-        });
-      }
-    }
-  })();
-  return true;
 }
 
 /**

@@ -32,9 +32,9 @@ function eclipse(keys: Keymap['keys']): Keymap {
   return { name: 'Eclipse', keys };
 }
 
-// Returns a view that stands in for an editor, named `name`.
+// Returns a view that stands in for an editor, named `name`, without a language server.
 function view(name: string): EditorView {
-  return { name } as unknown as EditorView;
+  return { name, plugin: () => null } as unknown as EditorView;
 }
 
 let error: ReturnType<typeof vi.spyOn>;
@@ -136,6 +136,7 @@ describe('run', () => {
     editor.activate(active);
     expect(manager.run('c')).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(active);
+    expect(run.mock.lastCall?.[2]).toBeNull();
 
     expect(manager.run('c', target)).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(target);
@@ -176,7 +177,7 @@ describe('keymap', () => {
 
     expect(manager.keymap.name).toBe('Eclipse');
     expect(manager.keymap.commands.get('rename')).toEqual(['Alt-r']);
-    expect([...manager.keymap.keys.editor]).toEqual([['Alt-r', ['rename']]]);
+    expect(manager.keymap.keys.editor.get('Alt-r')).toEqual(['rename']);
   });
 
   test('lists later-added command first', () => {
@@ -195,7 +196,7 @@ describe('keymap', () => {
     expect(manager.keymap.keys.editor.get('Ctrl-r')).toEqual(['rename']);
 
     dispose();
-    expect(manager.keymap.keys.editor.size).toBe(0);
+    expect(manager.keymap.keys.editor.has('Ctrl-r')).toBe(false);
   });
 });
 
@@ -207,7 +208,7 @@ describe('onKeymapChange', () => {
     manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', defaultKeys: ['Mod-r'], run: () => {} }]);
 
     expect(listener).toHaveBeenCalledExactlyOnceWith(manager.keymap);
-    expect(manager.keymap.commands).toEqual(new Map([['rename', ['Mod-r']]]));
+    expect(manager.keymap.commands.get('rename')).toEqual(['Mod-r']);
   });
 
   test('skips unchanged', () => {

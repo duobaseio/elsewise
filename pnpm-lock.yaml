@@ -328,7 +328,14 @@ importers:
     dependencies:
       '@codemirror/language':
         specifier: ^6.12.4
+<<<<<<< HEAD
         version: 6.13.1
+=======
+        version: 6.12.4
+      '@codemirror/lsp-client':
+        specifier: ^6.3.0
+        version: 6.3.0
+>>>>>>> 6cacc6e (Migrate LSP features to commands)
       '@codemirror/state':
         specifier: ^6.7.6
         version: 6.7.6

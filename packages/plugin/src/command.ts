@@ -1,6 +1,24 @@
+import type { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
+
+/**
+ * The ids of the built-in commands.
+ */
+export const DEFAULT_COMMANDS = {
+  editor: {
+    lsp: {
+      applyTopFix: 'elsewise.editor.lsp.applyTopFix',
+      showContextActions: 'elsewise.editor.lsp.showContextActions',
+      goToDefinition: 'elsewise.editor.lsp.goToDefinition',
+      format: 'elsewise.editor.lsp.format',
+      findUsages: 'elsewise.editor.lsp.findUsages',
+      rename: 'elsewise.editor.lsp.rename',
+      showSignatureHelp: 'elsewise.editor.lsp.showSignatureHelp',
+    },
+  },
+} as const;
 
 /**
  * The commands.
@@ -23,7 +41,7 @@ export interface Commands {
    *
    * Returns a disposable that removes them.
    */
-  add(commands: readonly (EditorCommand | ApplicationCommand)[]): Disposable;
+  add(commands: readonly (ApplicationCommand | EditorCommand)[]): Disposable;
 
   /**
    * Runs the command with `id` against an optional `target`.
@@ -103,7 +121,8 @@ export interface ApplicationCommand extends Command {
 /**
  * A command that runs in an active editor.
  *
- * Its keys fire while an editor has focus.
+ * Its keys fire while an editor has focus. `lsp` is the editor's connection to its language server, or `null` without
+ * one.
  */
 export interface EditorCommand extends Command {
   readonly scope: 'editor';
@@ -113,15 +132,15 @@ export interface EditorCommand extends Command {
    *
    * A disabled command is greyed out in menus, and pressing its keys does not run it.
    */
-  enabled?(application: Application, view: EditorView): boolean;
+  enabled?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
 
   /**
    * Returns whether the command is shown in menus. Defaults to true.
    */
-  shown?(application: Application, view: EditorView): boolean;
+  shown?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
 
   /**
    * Runs the command against `view`.
    */
-  run(application: Application, view: EditorView): void;
+  run(application: Application, view: EditorView, lsp: LSPPlugin | null): void;
 }

@@ -3,6 +3,7 @@ import { LSPPlugin } from '@codemirror/lsp-client';
 import { type Extension, Prec, StateEffect, StateField } from '@codemirror/state';
 import { type EditorView, keymap, showTooltip, type Tooltip, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
+import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
 import { highlightCode } from '@lezer/highlight';
 import {
   type SignatureHelp,
@@ -46,6 +47,31 @@ const signatures = StateField.define<Signatures | null>({
 
 const setSignatures = StateEffect.define<{ data: SignatureHelp; pos: number } | null>();
 
+export const SHOW_SIGNATURE_HELP: EditorCommand = {
+  scope: 'editor',
+  id: DEFAULT_COMMANDS.editor.lsp.showSignatureHelp,
+  label: 'Parameter info',
+  defaultKeys: ['Mod-p'],
+  enabled: (_, view, lsp) =>
+    view.plugin(requests) !== null && Boolean(lsp?.client.serverCapabilities?.signatureHelpProvider),
+  shown: (_, view, lsp) =>
+    view.plugin(requests) !== null && Boolean(lsp?.client.serverCapabilities?.signatureHelpProvider),
+  // Based on `@codemirror/lsp-client`'s `showSignatureHelp`.
+  run(_, view, lsp) {
+    const requester = view.plugin(requests);
+    if (!requester || lsp === null) {
+      return;
+    }
+
+    const shown = view.state.field(signatures);
+    requester.start(lsp, {
+      triggerKind: SignatureHelpTriggerKind.Invoked,
+      activeSignatureHelp: shown?.data,
+      isRetrigger: !!shown,
+    });
+  },
+};
+
 /**
  * Returns the extension that shows the signatures of the call at the cursor, with the parameter the cursor is in.
  *
@@ -57,7 +83,6 @@ export function serverSignatureHelp(): Extension {
     requests,
     Prec.high(
       keymap.of([
-        { key: 'Mod-Shift-Space', run: showSignatureHelp },
         {
           key: 'Escape',
           run: (view) => {
@@ -186,25 +211,6 @@ const requests = ViewPlugin.fromClass(
     }
   },
 );
-
-// Copied from `@codemirror/lsp-client`'s `showSignatureHelp`.
-//
-// Doesn't add the extension when missing.
-function showSignatureHelp(view: EditorView): boolean {
-  const requester = view.plugin(requests);
-  const plugin = LSPPlugin.get(view);
-  if (!requester || !plugin) {
-    return false;
-  }
-
-  const shown = view.state.field(signatures);
-  requester.start(plugin, {
-    triggerKind: SignatureHelpTriggerKind.Invoked,
-    activeSignatureHelp: shown?.data,
-    isRetrigger: !!shown,
-  });
-  return true;
-}
 
 // Copied from `@codemirror/lsp-client`'s `sameSignatures`.
 function sameSignatures(a: SignatureHelp, b: SignatureHelp): boolean {
