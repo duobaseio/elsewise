@@ -78,7 +78,7 @@ message WatchDirectoriesResponse {
     Reason reason = 1;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0;
+      REASON_UNSPECIFIED = 0; // Never sent.
       REASON_OTHER = 1;
       REASON_NOT_FOUND = 2;
       REASON_NOT_A_DIRECTORY = 3;
@@ -110,7 +110,7 @@ message DirectoryListing {
     bool symlink = 3;
 
     enum Type {
-      TYPE_UNSPECIFIED = 0;
+      TYPE_UNSPECIFIED = 0; // Never sent.
       TYPE_OTHER = 1; // Anything else, such as a socket or a broken symbolic link.
       TYPE_DIRECTORY = 2;
       TYPE_FILE = 3;
@@ -154,8 +154,7 @@ message WatchFilesResponse {
     Reason reason = 1;
 
     enum Reason {
-      // Never sent; every unavailable file has a reason.
-      REASON_UNSPECIFIED = 0;
+      REASON_UNSPECIFIED = 0; // Never sent.
       REASON_OTHER = 1;
       REASON_NOT_FOUND = 2;
       REASON_NOT_A_FILE = 3;
@@ -182,13 +181,13 @@ message WatchRootsResponse {
     Reason reason = 3;
 
     enum Mode {
-      MODE_UNSPECIFIED = 0;
+      MODE_UNSPECIFIED = 0; // Never sent.
       MODE_NOTIFY = 1;
       MODE_POLL = 2;
     }
 
     enum Reason {
-      REASON_UNSPECIFIED = 0;
+      REASON_UNSPECIFIED = 0; // Sent when the root is not degraded.
       REASON_OTHER = 1;
       REASON_WATCH_LIMIT = 2;
     }

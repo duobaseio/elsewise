@@ -48,7 +48,7 @@ export async function replaceFile(absoluteNativePath: string, content: Uint8Arra
   const name = `.${path.basename(realPath)}.${randomBytes(6).toString('hex')}.tmp`;
   const temporary = path.join(path.dirname(realPath), name);
   try {
-    await fs.writeFile(temporary, content, { flag: 'wx' });
+    await fs.writeFile(temporary, content, { flag: 'wx', mode });
     if (mode !== undefined) {
       await fs.chmod(temporary, mode);
     }
