@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import { Code } from '@elsewise/transport';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   WatchDirectoriesResponse_Unavailable_Reason as DirectoryReason,
   WatchFilesResponse_Unavailable_Reason as FileReason,
@@ -92,13 +92,13 @@ describe('WatchDirectories', () => {
     const { seen } = collect(call.responses);
 
     await call.send({ root, relativePaths: [''] });
-    await vi.waitFor(() => expect(directoryNames(seen, '')).toEqual(['a.txt']));
+    await expect.poll(() => directoryNames(seen, '')).toEqual(['a.txt']);
 
     await fs.writeFile(harness.at('b.txt'), '');
-    await vi.waitFor(() => expect(directoryNames(seen, '')).toEqual(['a.txt', 'b.txt']));
+    await expect.poll(() => directoryNames(seen, '')).toEqual(['a.txt', 'b.txt']);
 
     await fs.rm(harness.at('a.txt'));
-    await vi.waitFor(() => expect(directoryNames(seen, '')).toEqual(['b.txt']));
+    await expect.poll(() => directoryNames(seen, '')).toEqual(['b.txt']);
     call.cancel();
   });
 
@@ -107,11 +107,11 @@ describe('WatchDirectories', () => {
     const { seen } = collect(call.responses);
 
     await call.send({ root, relativePaths: ['src'] });
-    await vi.waitFor(() => expect(directoryNames(seen, 'src')).toBe(DirectoryReason.NOT_FOUND));
+    await expect.poll(() => directoryNames(seen, 'src')).toBe(DirectoryReason.NOT_FOUND);
 
     await fs.mkdir(harness.at('src'));
     await fs.writeFile(harness.at('src', 'a.ts'), '');
-    await vi.waitFor(() => expect(directoryNames(seen, 'src')).toEqual(['a.ts']));
+    await expect.poll(() => directoryNames(seen, 'src')).toEqual(['a.ts']);
     call.cancel();
   });
 
@@ -122,7 +122,7 @@ describe('WatchDirectories', () => {
 
     await call.send({ root, relativePaths: ['a.txt'] });
 
-    await vi.waitFor(() => expect(directoryNames(seen, 'a.txt')).toBe(DirectoryReason.NOT_A_DIRECTORY));
+    await expect.poll(() => directoryNames(seen, 'a.txt')).toBe(DirectoryReason.NOT_A_DIRECTORY);
     call.cancel();
   });
 });
@@ -134,10 +134,10 @@ describe('WatchFiles', () => {
     const { seen } = collect(call.responses);
 
     await call.send({ root, relativePaths: ['a.txt'] });
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toEqual(sha256('one')));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256('one'));
 
     await fs.writeFile(harness.at('a.txt'), 'two');
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toEqual(sha256('two')));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256('two'));
     call.cancel();
   });
 
@@ -145,12 +145,12 @@ describe('WatchFiles', () => {
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['a.txt'] });
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
 
     const content = new TextEncoder().encode('new');
     const { hash } = await harness.client.writeFile({ root, relativePath: 'a.txt', content });
 
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toEqual(hash));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(hash);
     call.cancel();
   });
 
@@ -160,11 +160,11 @@ describe('WatchFiles', () => {
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['a.txt', 'dir'] });
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toEqual(sha256('')));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256(''));
 
     await fs.rm(harness.at('a.txt'));
 
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
     expect(fileHash(seen, 'dir')).toBe(FileReason.NOT_A_FILE);
     call.cancel();
   });
@@ -175,11 +175,11 @@ describe('WatchFiles', () => {
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['src/a.ts'] });
-    await vi.waitFor(() => expect(fileHash(seen, 'src/a.ts')).toEqual(sha256('')));
+    await expect.poll(() => fileHash(seen, 'src/a.ts')).toEqual(sha256(''));
 
     await fs.rename(harness.at('src'), harness.at('lib'));
 
-    await vi.waitFor(() => expect(fileHash(seen, 'src/a.ts')).toBe(FileReason.NOT_FOUND));
+    await expect.poll(() => fileHash(seen, 'src/a.ts')).toBe(FileReason.NOT_FOUND);
     call.cancel();
   });
 });
@@ -188,15 +188,15 @@ describe('WatchRoots', () => {
   test('stream updates on roots', async () => {
     const abort = new AbortController();
     const { seen } = collect(harness.client.watchRoots({}, { signal: abort.signal }));
-    await vi.waitFor(() => expect(seen.at(-1)?.roots).toEqual([]));
+    await expect.poll(() => seen.at(-1)?.roots).toEqual([]);
 
     const call = harness.client.watchFiles();
     collect(call.responses);
     await call.send({ root, relativePaths: [] });
-    await vi.waitFor(() => expect(seen.at(-1)?.roots).toMatchObject([{ root, mode: Mode.NOTIFY }]));
+    await expect.poll(() => seen.at(-1)?.roots).toMatchObject([{ root, mode: Mode.NOTIFY }]);
 
     call.cancel();
-    await vi.waitFor(() => expect(seen.at(-1)?.roots).toEqual([]));
+    await expect.poll(() => seen.at(-1)?.roots).toEqual([]);
     abort.abort();
   });
 });
@@ -392,11 +392,11 @@ describe('polling', () => {
     const call = harness.client.watchDirectories();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['node_modules/pkg'] });
-    await vi.waitFor(() => expect(directoryNames(seen, 'node_modules/pkg')).toEqual([]));
+    await expect.poll(() => directoryNames(seen, 'node_modules/pkg')).toEqual([]);
 
     await fs.writeFile(harness.at('node_modules', 'pkg', 'index.js'), '');
 
-    await vi.waitFor(() => expect(directoryNames(seen, 'node_modules/pkg')).toEqual(['index.js']));
+    await expect.poll(() => directoryNames(seen, 'node_modules/pkg')).toEqual(['index.js']);
     call.cancel();
   });
 
@@ -408,15 +408,15 @@ describe('polling', () => {
     const { seen } = collect(call.responses);
 
     await call.send({ root: missing, relativePaths: ['a.txt'] });
-    await vi.waitFor(() =>
-      expect(roots.seen.at(-1)?.roots).toMatchObject([{ root: missing, mode: Mode.POLL, reason: Reason.OTHER }]),
-    );
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND));
+    await expect
+      .poll(() => roots.seen.at(-1)?.roots)
+      .toMatchObject([{ root: missing, mode: Mode.POLL, reason: Reason.OTHER }]);
+    await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
 
     await fs.mkdir(harness.at('missing'));
     await fs.writeFile(harness.at('missing', 'a.txt'), 'late');
 
-    await vi.waitFor(() => expect(fileHash(seen, 'a.txt')).toEqual(sha256('late')));
+    await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256('late'));
     call.cancel();
     abort.abort();
   });
