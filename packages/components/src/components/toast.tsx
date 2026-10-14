@@ -64,7 +64,7 @@ export function ToastContent({ className, ...props }: ToastPrimitive.Content.Pro
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        'flex h-full items-center gap-3 overflow-hidden p-4 transition-opacity duration-400 ease-[ease] motion-reduce:transition-none data-behind:opacity-0 data-expanded:opacity-100',
+        'flex h-full items-start gap-3 overflow-hidden p-4 transition-opacity duration-400 ease-[ease] motion-reduce:transition-none data-behind:opacity-0 data-expanded:opacity-100',
         className,
       )}
       {...props}
@@ -98,7 +98,12 @@ export function ToastAction({
   ...props
 }: ToastPrimitive.Action.Props) {
   return (
-    <ToastPrimitive.Action data-slot="toast-action" render={render} className={cn('shrink-0', className)} {...props} />
+    <ToastPrimitive.Action
+      data-slot="toast-action"
+      render={render}
+      className={cn('shrink-0 self-center', className)}
+      {...props}
+    />
   );
 }
 
@@ -113,7 +118,7 @@ export function ToastClose({
       data-slot="toast-close"
       aria-label="Close toast"
       render={render}
-      className={cn('shrink-0 text-(--toast-ink-2) hover:text-(--toast-ink)', className)}
+      className={cn('-me-2 -mt-1.5 shrink-0 text-(--toast-ink-2) hover:text-(--toast-ink)', className)}
       {...props}
     >
       {children ?? <Icon name="close" aria-hidden="true" />}
