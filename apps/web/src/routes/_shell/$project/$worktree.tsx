@@ -14,7 +14,7 @@ import {
   type IDockviewPanelProps,
 } from 'dockview-react';
 import { useEffect, useRef, useState } from 'react';
-import { CodeEditor } from '@/components/code-editor/code-editor';
+import { Editor } from '@/editor/editor';
 // TODO: Back this with the daemon.
 import FAKE_CODE from './$worktree.tsx?raw';
 
@@ -291,7 +291,7 @@ function EditorPanel(props: IDockviewPanelProps<{ path: string }>) {
   // TODO: Back this with the daemon.
   const root = new URL(import.meta.env.ELSEWISE_REPOSITORY);
 
-  return <CodeEditor code={FAKE_CODE} path={props.params.path} root={root} />;
+  return <Editor code={FAKE_CODE} path={props.params.path} root={root} />;
 }
 
 // TODO: Replace with the terminal once it is migrated.

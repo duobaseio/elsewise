@@ -8,12 +8,12 @@ import {
   type HoverParams,
   type Diagnostic as LSPDiagnostic,
 } from 'vscode-languageserver-protocol';
-import { appendCode } from '@/components/code-editor/tooltip';
-import { COMMANDS } from '@/editor/facets';
+import { COMMANDS } from '@/editor/editor';
 import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { problems, SEVERITIES } from '@/editor/lsp/diagnostics';
 import { documentation } from '@/editor/lsp/documentation';
 import { highlightClick } from '@/editor/lsp/highlights';
+import { appendCode } from '@/editor/tooltip';
 
 /**
  * The milliseconds to wait for the server's fixes before showing a problem without them.

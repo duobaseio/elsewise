@@ -38,8 +38,8 @@ import {
   LSPErrorCodes,
   type TextEdit,
 } from 'vscode-languageserver-protocol';
-import { hint } from '@/components/code-editor/tooltip';
 import { documentation } from '@/editor/lsp/documentation';
+import { hint } from '@/editor/tooltip';
 
 /**
  * The completion type of each kind of item.

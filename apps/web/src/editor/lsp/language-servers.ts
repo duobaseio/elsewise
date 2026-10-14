@@ -3,7 +3,7 @@ import type { Extension } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
-import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 import { type ApplyWorkspaceEditParams, MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
@@ -254,6 +254,32 @@ export function serverUri(url: URL): string {
 export const LanguageServersContext = createContext<LanguageServers | null>(null);
 
 /**
+ * Returns the CodeMirror extension that connects the document at `path` to the language server for `language` in the
+ * worktree at `root`.
+ *
+ * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
+ */
+export function useLanguageServerExtension(
+  root: URL | undefined,
+  language: string | undefined,
+  path: string,
+): Extension {
+  const servers = useLanguageServers();
+  const subscribe = useCallback((listener: () => void) => servers.subscribe(listener), [servers]);
+  const server = useSyncExternalStore(subscribe, () => (language === undefined ? undefined : servers.find(language)));
+
+  // Uses href rather than root since a caller's new URL for the same root would otherwise reconnect the document.
+  const href = root?.href;
+  return useMemo(() => {
+    if (href === undefined || language === undefined || server === undefined) {
+      return [];
+    }
+
+    return servers.connect(new URL(href), language, new URL(path, href)) ?? [];
+  }, [servers, server, href, language, path]);
+}
+
+/**
  * Returns the language servers.
  */
 export function useLanguageServers(): LanguageServers {
@@ -263,15 +289,4 @@ export function useLanguageServers(): LanguageServers {
   }
 
   return servers;
-}
-
-/**
- * Returns the server for `language`, or `undefined` if no server serves it.
- *
- * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
- */
-export function useLanguageServer(language: string | undefined): LanguageServer | undefined {
-  const servers = useLanguageServers();
-  const subscribe = useCallback((listener: () => void) => servers.subscribe(listener), [servers]);
-  return useSyncExternalStore(subscribe, () => (language === undefined ? undefined : servers.find(language)));
 }

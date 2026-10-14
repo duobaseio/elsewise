@@ -2,8 +2,8 @@ import { EditorSelection } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
 import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
 import type { DefinitionParams, Location } from 'vscode-languageserver-protocol';
-import { scroll } from '@/components/code-editor/scroll';
 import { navigable } from '@/editor/lsp/symbol';
+import { scroll } from '@/editor/scroll';
 
 /**
  * Replaces `@codemirror/lsp-client`'s `jumpToDefinitionKeymap`.

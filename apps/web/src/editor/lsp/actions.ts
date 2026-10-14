@@ -11,9 +11,9 @@ import {
   type ExecuteCommandParams,
   type Range,
 } from 'vscode-languageserver-protocol';
-import { appendCode, hint } from '@/components/code-editor/tooltip';
 import { problems } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit } from '@/editor/lsp/edits';
+import { appendCode, hint } from '@/editor/tooltip';
 
 // A bulb, and the exclamation mark cut out of it for a quick fix.
 const BULB =

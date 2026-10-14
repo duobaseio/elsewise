@@ -13,8 +13,8 @@ import type {
   RenameParams,
   WorkspaceEdit,
 } from 'vscode-languageserver-protocol';
-import { hint } from '@/components/code-editor/tooltip';
 import { symbol } from '@/editor/lsp/symbol';
+import { hint } from '@/editor/tooltip';
 
 /**
  * A symbol being renamed.
