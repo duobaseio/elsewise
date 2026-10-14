@@ -30,7 +30,7 @@ test.each(['Dockerfile', 'build.zig.zon', 'main.rs', 'notes.qqqzzz'])('%s keeps 
   expect(markupOf(name, ICONS)).toBe(markupOf(name));
 });
 
-test.each(['constructor', 'toString', '__proto__', 'notes.valueOf'])('%s draws the fallback', (name) => {
+test.each(['constructor', 'toString', '__proto__', 'notes.valueOf'])('%s draws the generic icon', (name) => {
   expect(markupOf(name)).toBe(markupOf('notes.qqqzzz'));
 });
 

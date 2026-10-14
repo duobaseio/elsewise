@@ -99,7 +99,7 @@ test('every entry of the given file icons reaches the rules', () => {
     {
       names: { ...DEFAULT_FILE_ICONS.names, makefile: { kind: 'letters', letters: 'XM', tint: null } },
       extensions: { ...DEFAULT_FILE_ICONS.extensions, rs: { kind: 'letters', letters: 'XR', tint: null } },
-      fallback: { kind: 'letters', letters: 'XF', tint: null },
+      generic: { kind: 'letters', letters: 'XG', tint: null },
     },
     CHEVRON,
   );
@@ -113,7 +113,7 @@ test('every entry of the given file icons reaches the rules', () => {
   expect(lettersFor('makefile')).toBe('XM');
   expect(lettersFor('src/MAIN.RS')).toBe('XR');
   expect(lettersFor('src/main.rs')).toBe('XR');
-  expect(lettersFor('unknown.zzz')).toBe('XF');
+  expect(lettersFor('unknown.zzz')).toBe('XG');
 });
 
 test('an overridden spec leaves no orphaned symbol behind', () => {

@@ -10,7 +10,7 @@ const importPath = '../assets/file-icons';
 
 const folders = {'slug': 'simple-icons', 'devicon': 'dev-icons'};
 const kinds = ['slug', 'devicon', 'phosphor', 'letterform'];
-const fallbackIcon = 'file';
+const genericIcon = 'file';
 
 void main() {
   final root = File.fromUri(Platform.script).parent.parent.parent.absolute.path;
@@ -18,7 +18,7 @@ void main() {
   final doc = jsonDecode(map.readAsStringSync()) as Map<String, dynamic>;
 
   final referenced = {for (final kind in folders.keys) kind: <String>{}};
-  final phosphor = <String>{fallbackIcon};
+  final phosphor = <String>{genericIcon};
   final problems = <String>[];
   for (final MapEntry(key: section, value: specs) in doc.entries) {
     for (final MapEntry(:key, value: spec) in (specs as Map<String, dynamic>).entries) {
@@ -99,7 +99,7 @@ String emit(Map<String, dynamic> doc, Map<String, Set<String>> referenced, Set<S
   buffer
     ..writeln()
     ..writeln(
-      "export const FALLBACK_FILE_ICON: FileIconData = { kind: 'phosphor', name: ${quote(fallbackIcon)}, tint: null };",
+      "export const GENERIC_FILE_ICON: FileIconData = { kind: 'phosphor', name: ${quote(genericIcon)}, tint: null };",
     )
     ..writeln()
     ..writeln('export const PHOSPHOR_ICONS = {');

@@ -32,7 +32,7 @@ test.each(THEMES)('file icon kinds (%s)', async (theme) => {
       names: ['data.proto', 'notes.txt', 'proof.lean'],
     },
     { label: 'media', names: ['photo.png', 'anim.gif', 'Main.java'] },
-    { label: 'fallback', names: ['notes.qqqzzz'] },
+    { label: 'generic', names: ['notes.qqqzzz'] },
   ];
 
   await render(
