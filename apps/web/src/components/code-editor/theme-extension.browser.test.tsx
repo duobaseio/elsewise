@@ -161,7 +161,7 @@ test('selected completion keeps text color, and list shows whole rows', async ()
   expect(style(selected).color).toBe(style(tooltip).color);
   expect(style(selected).color).not.toBe('rgb(255, 255, 255)');
   const list = style(tooltip?.querySelector('ul') ?? null);
-  expect(Number.parseFloat(list.maxHeight)).toBe(10 * 22 + 8);
+  expect(Number.parseFloat(list.maxHeight)).toBe(10 * 24 + 8);
 });
 
 test('hovered row of completions, usages and actions takes hover color, unless selected', async () => {
@@ -257,7 +257,7 @@ test('usages are listed like completions, each in search match color', async () 
     (_, i) =>
       `<li class="cm-lsp-reference"><span class="cm-lsp-reference-preview">let <mark class="cm-lsp-reference-match">total</mark> = ${i};</span><span class="cm-lsp-reference-location">main.rs<span class="cm-lsp-reference-line">${i + 1}</span></span></li>`,
   );
-  popup.innerHTML = `<div class="cm-lsp-references-header">Usages of <code>total</code></div><ul class="cm-lsp-references-list">${rows.join('')}</ul><div class="cm-lsp-references-hint"><kbd>↩</kbd> open</div>`;
+  popup.innerHTML = `<ul class="cm-lsp-references-list">${rows.join('')}</ul><div class="cm-lsp-references-hint"><kbd>↩</kbd> open</div>`;
   popup.querySelector('li')?.setAttribute('aria-selected', 'true');
   await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: popup }) })]);
   const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
@@ -269,7 +269,7 @@ test('usages are listed like completions, each in search match color', async () 
   expect(style(popup.querySelector('.cm-lsp-references-hint kbd')).color).toBe(text3);
   expect(style(popup.querySelector('.cm-lsp-references-hint')).color).not.toBe(text3);
   expect(style(popup.querySelector('.cm-lsp-reference')).cursor).toBe('default');
-  expect(list.clientHeight).toBe(10 * 22 + 8);
+  expect(list.clientHeight).toBe(10 * 24 + 8);
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
 });
 

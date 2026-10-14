@@ -351,20 +351,10 @@ function popup(view: EditorView, value: Usages) {
   const dom = document.createElement('div');
   dom.className = 'cm-lsp-references';
 
-  const header = dom.appendChild(document.createElement('div'));
-  header.className = 'cm-lsp-references-header';
-  const count = value.usages.length === 1 ? '1 usage' : `${value.usages.length} usages`;
-  const title = document.createElement('span');
-  title.append('Usages of ', Object.assign(document.createElement('code'), { textContent: value.name }));
-  header.append(
-    title,
-    Object.assign(document.createElement('span'), { className: 'cm-lsp-references-count', textContent: count }),
-  );
-
   const list = dom.appendChild(document.createElement('ul'));
   list.className = 'cm-lsp-references-list';
   list.role = 'listbox';
-  list.ariaLabel = 'Usages';
+  list.ariaLabel = `Usages of ${value.name}`;
   const icons = new Map<string, string>();
   const options = value.usages.map((usage) => {
     const option = list.appendChild(document.createElement('li'));
@@ -394,11 +384,18 @@ function popup(view: EditorView, value: Usages) {
     return option;
   });
 
-  dom.append(
+  const footer = dom.appendChild(
     hint('cm-lsp-references-hint', [
       ['Enter', 'open'],
       ['Escape', 'close'],
     ]),
+  );
+  // First, so it floats to the right of the keys on the same line.
+  footer.prepend(
+    Object.assign(document.createElement('span'), {
+      className: 'cm-lsp-references-count',
+      textContent: value.usages.length === 1 ? '1 usage' : `${value.usages.length} usages`,
+    }),
   );
 
   // Keeps the focus in the editor, as completion does.

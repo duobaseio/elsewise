@@ -1,2 +1,2 @@
-export * from './dirs';
-export * from './json';
+export * from './dirs.ts';
+export * from './json.ts';

@@ -102,7 +102,8 @@ describe('serverReferences', () => {
 
     const popup = await find(view);
 
-    expect(popup.querySelector('.cm-lsp-references-header')?.textContent).toBe('Usages of total3 usages');
+    expect(popup.querySelector('[role="listbox"]')?.ariaLabel).toBe('Usages of total');
+    expect(popup.querySelector('.cm-lsp-references-count')?.textContent).toBe('3 usages');
     expect(rows(popup)).toHaveLength(3);
     expect(selected(popup)).toBe(0);
   });
