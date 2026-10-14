@@ -4,7 +4,7 @@ import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { ContextMenu, Disposable, Editor, EditorDocument, LanguageServer } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu';
+import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
 
 /**
  * The code editor as plugins see it.

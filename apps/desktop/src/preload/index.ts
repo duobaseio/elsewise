@@ -21,6 +21,9 @@ const settings: SettingsBridge = {
 };
 
 const window: WindowBridge = {
+  cut: () => ipcRenderer.send('window:cut'),
+  copy: () => ipcRenderer.send('window:copy'),
+  paste: () => ipcRenderer.send('window:paste'),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
 };

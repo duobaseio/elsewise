@@ -33,15 +33,19 @@ export const Keymap = z.lazy(() =>
 export const Keys = z.lazy(() => z.array(z.union([Key, PlatformKey])));
 
 /**
- * A key, overridden on the platforms that name their own.
+ * A key, replaced on the platforms that are given.
  */
 export const PlatformKey = z.lazy(() =>
-  z.object({
-    key: Key,
-    mac: Key.optional(),
-    windows: Key.optional(),
-    linux: Key.optional(),
-  }),
+  z
+    .object({
+      key: Key.optional(),
+      mac: Key.optional(),
+      windows: Key.optional(),
+      linux: Key.optional(),
+    })
+    .refine(({ key, mac, windows, linux }) => [key, mac, windows, linux].some((slot) => slot !== undefined), {
+      message: 'No key given',
+    }),
 );
 
 /**

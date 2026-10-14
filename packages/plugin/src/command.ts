@@ -8,6 +8,11 @@ import type { Application, Disposable } from './plugin.ts';
  */
 export const DEFAULT_COMMANDS = {
   editor: {
+    clipboard: {
+      cut: 'elsewise.editor.clipboard.cut',
+      copy: 'elsewise.editor.clipboard.copy',
+      paste: 'elsewise.editor.clipboard.paste',
+    },
     lsp: {
       applyTopFix: 'elsewise.editor.lsp.applyTopFix',
       showContextActions: 'elsewise.editor.lsp.showContextActions',

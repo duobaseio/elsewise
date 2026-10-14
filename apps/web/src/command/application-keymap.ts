@@ -44,6 +44,10 @@ export class ApplicationKeymap implements ActiveKeymap {
       const own: string[] = [];
       for (const binding of entry ?? command.defaultKeys ?? []) {
         const key = typeof binding === 'string' ? binding : (binding[this.platform] ?? binding.key);
+        if (key === undefined) {
+          continue;
+        }
+
         const normalized = normalizeKey(key, this.platform);
         if (normalized === null) {
           console.warn(`Invalid key ${key} of command ${command.id}`);

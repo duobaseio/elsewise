@@ -72,6 +72,13 @@ describe('commands', () => {
     }
   });
 
+  test('skips platform key without slot for platform', () => {
+    const keys: Keys = ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }];
+
+    expect(updated(editor({ cut: keys }), ELSEWISE, 'mac').commands.get('cut')).toEqual(['Mod-x']);
+    expect(updated(editor({ cut: keys }), ELSEWISE, 'linux').commands.get('cut')).toEqual(['Mod-x', 'Shift-Delete']);
+  });
+
   test('uses default keys for invalid entry', () => {
     const keymap = updated(
       editor({ rename: ['Shift-F6'] }),

@@ -9,6 +9,9 @@ afterEach(() => {
 function desktop() {
   window.bridge = {
     window: {
+      cut() {},
+      copy() {},
+      paste() {},
       setBrightness() {},
       setBackground() {},
     },

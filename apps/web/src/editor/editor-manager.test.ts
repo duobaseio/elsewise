@@ -3,7 +3,7 @@ import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
 import type { ContextMenu, ContextMenuGroup, ContextMenuItem, LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu';
+import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
 import { EditorManager } from './editor-manager';
 
 // Returns a language named `name` whose grammar never loads.

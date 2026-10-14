@@ -90,6 +90,10 @@ function createWindow() {
 
     return { action: 'deny' };
   });
+
+  main.webContents.ipc.on('window:cut', (event) => event.sender.cut());
+  main.webContents.ipc.on('window:copy', (event) => event.sender.copy());
+  main.webContents.ipc.on('window:paste', (event) => event.sender.paste());
   main.webContents.ipc.on(
     'window:brightness',
     (_event, brightness: Brightness) => (nativeTheme.themeSource = brightness),
