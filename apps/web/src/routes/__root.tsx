@@ -47,7 +47,7 @@ function RootComponent() {
       commands,
       editor,
       languageServers: new LanguageServers(editor),
-      loader: new PluginLoader(commands.application),
+      loader: new PluginLoader(commands.application, editor),
     };
   });
 
@@ -63,8 +63,13 @@ function RootComponent() {
   // TODO: Replace with lazy loading.
   useEffect(() => {
     for (const plugin of installed) {
-      if (plugin.enabled) {
-        void loader.load(plugin.id, plugin.url);
+      if (!plugin.enabled) {
+        continue;
+      }
+      if ('error' in plugin) {
+        console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
+      } else {
+        void loader.load(plugin.manifest.id, plugin.url, plugin.manifest);
       }
     }
   }, [loader, installed]);

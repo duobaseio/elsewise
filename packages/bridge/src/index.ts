@@ -2,7 +2,7 @@ import type { PluginsBridge } from './plugins.js';
 import type { SettingsBridge } from './settings.js';
 import type { WindowBridge } from './window.js';
 
-export { InstalledPlugin, PluginId, type PluginsBridge } from './plugins.js';
+export { InstalledPlugin, InvalidPlugin, PluginEntry, PluginId, type PluginsBridge } from './plugins.js';
 export {
   Brightness,
   BundledKeymap,

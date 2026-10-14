@@ -9,6 +9,8 @@ export type Key = z.infer<typeof Key>;
  * A sparse map of commands and their keys.
  *
  * Entries for unknown commands are always kept. A command without an entry uses its default keys.
+ *
+ * See {@link DEFAULT_COMMANDS} for the built-in commands.
  */
 export const Keymap = z.lazy(() =>
   z.object({

@@ -2,17 +2,9 @@ import type { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type {
-  Disposable,
-  Editor,
-  EditorContextMenu,
-  EditorContextMenuItem,
-  EditorContextSubmenu,
-  EditorDocument,
-  LanguageServer,
-} from '@elsewise/plugin';
+import type { ContextMenu, Disposable, Editor, EditorDocument, LanguageServer } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu/default-context-menu';
+import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu';
 
 /**
  * The code editor as plugins see it.
@@ -26,8 +18,8 @@ export class EditorManager implements Editor {
   private currentLanguages: readonly LanguageDescription[] = DEFAULT_LANGUAGES;
   private addedLanguageServers: readonly (readonly LanguageServer[])[] = [];
   private currentLanguageServers: readonly LanguageServer[] = [];
-  private addedContextMenuItems: readonly EditorContextMenu[] = [DEFAULT_CONTEXT_MENU];
-  private currentContextMenuItems: EditorContextMenu = DEFAULT_CONTEXT_MENU;
+  private addedContextMenus: readonly ContextMenu[] = [DEFAULT_CONTEXT_MENU];
+  private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus);
 
   get active(): EditorView | null {
     return this.current;
@@ -108,61 +100,63 @@ export class EditorManager implements Editor {
   }
 
   /**
-   * The built-in and the added context menu items, keyed by the id of the group that they are shown in.
+   * The active editor context menu.
    */
-  get contextMenuItems(): EditorContextMenu {
-    return this.currentContextMenuItems;
+  get contextMenu(): ContextMenu {
+    return this.currentContextMenu;
   }
 
-  addContextMenuItems(items: EditorContextMenu): Disposable {
-    const added = { ...items };
-    const merged = this.merge([...this.addedContextMenuItems, added]);
-    this.addedContextMenuItems = [...this.addedContextMenuItems, added];
-    this.currentContextMenuItems = merged;
+  /**
+   * Adds a plugin's `menu` to the context menu.
+   *
+   * Returns a disposable that removes it.
+   */
+  addContextMenu(menu: ContextMenu): Disposable {
+    const added = { ...menu };
+    this.addedContextMenus = [...this.addedContextMenus, added];
+    this.currentContextMenu = this.merge(this.addedContextMenus);
     this.notify();
     return () => {
-      // Merges what is left again rather than taking the items back out of the submenus they were merged into.
-      this.addedContextMenuItems = this.addedContextMenuItems.filter((other) => other !== added);
-      this.currentContextMenuItems = this.merge(this.addedContextMenuItems);
+      this.addedContextMenus = this.addedContextMenus.filter((other) => other !== added);
+      this.currentContextMenu = this.merge(this.addedContextMenus);
       this.notify();
     };
   }
 
-  // Returns `menus` as one menu, in which the submenus with the same id in a group are one submenu.
-  private merge(menus: readonly EditorContextMenu[]): EditorContextMenu {
-    const groups = new Map<string, { items: EditorContextMenuItem[]; submenus: Map<string, EditorContextSubmenu[]> }>();
-    for (const [group, entries] of menus.flatMap((menu) => Object.entries(menu))) {
-      let merged = groups.get(group);
-      if (merged === undefined) {
-        merged = { items: [], submenus: new Map() };
-        groups.set(group, merged);
+  // Returns `menus` as one: the first submenu or group added with an id wins, and the items are in order of addition.
+  private merge(menus: readonly ContextMenu[]): ContextMenu {
+    const submenus: ContextMenu['submenus'] = {};
+    const groups: ContextMenu['groups'] = {};
+    const items: ContextMenu['items'] = {};
+    for (const menu of menus) {
+      for (const [id, submenu] of Object.entries(menu.submenus)) {
+        if (Object.hasOwn(submenus, id)) {
+          console.warn(`Context submenu ${id} was already added`);
+          continue;
+        }
+
+        submenus[id] = submenu;
       }
 
-      for (const entry of entries) {
-        if (entry.type === 'item') {
-          merged.items.push(entry);
+      for (const [id, group] of Object.entries(menu.groups)) {
+        if (Object.hasOwn(groups, id)) {
+          console.warn(`Context menu group ${id} was already added`);
+          continue;
+        }
+
+        groups[id] = group;
+      }
+
+      for (const [id, added] of Object.entries(menu.items)) {
+        if (Object.hasOwn(items, id)) {
+          items[id].push(...added);
         } else {
-          merged.submenus.set(entry.id, [...(merged.submenus.get(entry.id) ?? []), entry]);
+          items[id] = [...added];
         }
       }
     }
 
-    return Object.fromEntries(
-      [...groups].map(([group, { items, submenus }]) => [
-        group,
-        [
-          ...items,
-          ...[...submenus.values()].map(
-            (same): EditorContextSubmenu => ({
-              type: 'submenu',
-              id: same[0].id,
-              label: same[0].label,
-              items: this.merge(same.map((submenu) => submenu.items)),
-            }),
-          ),
-        ],
-      ]),
-    );
+    return { submenus, groups, items };
   }
 
   /**

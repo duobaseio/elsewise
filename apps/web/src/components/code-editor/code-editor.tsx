@@ -19,7 +19,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
-import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu/context-menu';
+import { CodeEditorContextMenu, rightClickContextMenu } from '@/components/code-editor/context-menu';
 import { useLanguageServerExtension } from '@/components/code-editor/language-server-extension';
 import { link } from '@/components/code-editor/link.ts';
 import { useSearchExtension } from '@/components/code-editor/search/search-bar';

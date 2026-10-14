@@ -25,8 +25,11 @@ pnpm --filter @elsewise/plugin-example-language-server build      # also: serve,
    ```bash
    pnpm --filter @elsewise/plugin-example-language-server build
    cd plugins/examples/language-server
-   node ../../../apps/desktop/scripts/plugin.mjs add io.duobase.elsewise.examples.language-server "Language server example"
+   node ../../../apps/desktop/scripts/plugin.mjs add
    ```
+
+   `add` takes the plugin's id from `manifest.json`, and links the bundle, so a rebuild needs no second `add`, but a
+   change to the manifest does.
 
 2. Serve the language server, and leave it running:
 

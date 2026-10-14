@@ -6,7 +6,7 @@ import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, onTestFinished, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import type {
@@ -516,28 +516,6 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await vi.waitFor(() => expect(document.querySelector('.cm-lsp-references')).not.toBeNull());
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-references-${theme}`);
-  });
-
-  test('context menu', async () => {
-    // The menu is portalled to the body, outside the editor's brightness, so the page takes it as the app does.
-    document.documentElement.dataset.brightness = theme;
-    onTestFinished(() => {
-      delete document.documentElement.dataset.brightness;
-    });
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    const rect = view.coordsAtPos(view.state.doc.toString().indexOf('channel.send_raw') + 2);
-    if (rect === null) {
-      throw new Error('offscreen');
-    }
-    const content = view.contentDOM.getBoundingClientRect();
-    await userEvent.click(view.contentDOM, {
-      button: 'right',
-      position: { x: rect.left - content.left, y: rect.top - content.top + 1 },
-    });
-    await expect.element(page.getByRole('menuitem', { name: /^Find usages/ })).toBeVisible();
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`code-editor-context-menu-${theme}`);
   });
 
   test('symbol highlights', async () => {

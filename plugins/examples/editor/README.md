@@ -15,28 +15,18 @@ are left out of the bundle.
 
 ## Trying it
 
-1. Build the plugin.
-2. Copy `bundle/` to `<data folder>/plugins/io.duobase.elsewise.examples.editor/bundle/`.
-3. Add the plugin to `<data folder>/plugins.json`:
+1. Build the plugin, and add it to the plugins installed on this machine:
 
-   ```json
-   [
-     {
-       "id": "io.duobase.elsewise.examples.editor",
-       "name": "Editor example",
-       "version": "1.0.0",
-       "url": "app://elsewise/plugins/io.duobase.elsewise.examples.editor/bundle/main.js",
-       "enabled": true
-     }
-   ]
+   ```bash
+   pnpm --filter @elsewise/plugin-example-editor build
+   cd plugins/examples/editor
+   node ../../../apps/desktop/scripts/plugin.mjs add
    ```
 
-4. Restart Elsewise.
+   `add` takes the plugin's id from `manifest.json`, and links the bundle, so a rebuild needs no second `add`, but a
+   change to the manifest does.
 
-The data folder is:
+2. Run Elsewise, e.g. `pnpm --filter @elsewise/web dev` and `pnpm --filter @elsewise/desktop dev`. Its editor shows
+   `apps/web/src/routes/_shell/$project/$worktree.tsx` until it can open files.
 
-| Platform | Path                                                    |
-|----------|---------------------------------------------------------|
-| macOS    | `~/Library/Application Support/com.duobase.elsewise`    |
-| Windows  | `%LOCALAPPDATA%\duobase\elsewise\data`                  |
-| Linux    | `$XDG_DATA_HOME/elsewise`, or `~/.local/share/elsewise` |
+To remove the plugin, run `plugin.mjs remove io.duobase.elsewise.examples.editor` from the same folder.

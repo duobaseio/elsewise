@@ -1,13 +1,15 @@
-import type { InstalledPlugin } from '@elsewise/bridge';
-import type { Application, Plugin, PluginContext } from '@elsewise/plugin';
+import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
+import type { Application, Manifest, Plugin, PluginContext } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import type { EditorManager } from '@/editor/editor-manager';
 
 /**
- * Every installed plugin.
+ * Every installed plugin, and every invalid one.
  */
 export const pluginsQuery = queryOptions({
   queryKey: ['plugins'],
-  queryFn: async (): Promise<readonly InstalledPlugin[]> => (await window.bridge?.plugins?.load()) ?? [],
+  queryFn: async (): Promise<readonly (InstalledPlugin | InvalidPlugin)[]> =>
+    (await window.bridge?.plugins?.load()) ?? [],
   staleTime: 'static',
   gcTime: Number.POSITIVE_INFINITY,
 });
@@ -15,9 +17,11 @@ export const pluginsQuery = queryOptions({
 /**
  * Returns the installed plugins.
  */
-export function usePlugins(): readonly InstalledPlugin[];
-export function usePlugins<T>(select: (plugins: readonly InstalledPlugin[]) => T): T;
-export function usePlugins<T>(select?: (plugins: readonly InstalledPlugin[]) => T): readonly InstalledPlugin[] | T {
+export function usePlugins(): readonly (InstalledPlugin | InvalidPlugin)[];
+export function usePlugins<T>(select: (plugins: readonly (InstalledPlugin | InvalidPlugin)[]) => T): T;
+export function usePlugins<T>(
+  select?: (plugins: readonly (InstalledPlugin | InvalidPlugin)[]) => T,
+): readonly (InstalledPlugin | InvalidPlugin)[] | T {
   return useSuspenseQuery({ ...pluginsQuery, select }).data;
 }
 
@@ -26,12 +30,15 @@ export class PluginLoader {
 
   private readonly plugins = new Map<string, Promise<PluginContext | undefined>>();
 
-  constructor(private readonly application: Application) {}
+  constructor(
+    private readonly application: Application,
+    private readonly editor: EditorManager,
+  ) {}
 
   /**
-   * Loads and enables the plugin with `id`.
+   * Adds what `manifest` declares, then loads and enables the plugin with `id`.
    */
-  load(id: string, url: string): Promise<void> {
+  load(id: string, url: string, manifest: Manifest): Promise<void> {
     return this.enqueue(id, async (loaded) => {
       if (loaded) {
         return loaded;
@@ -39,6 +46,10 @@ export class PluginLoader {
 
       const context: PluginContext = { id, subscriptions: [] };
       try {
+        if (manifest.contextMenus.editor !== undefined) {
+          context.subscriptions.push(this.editor.addContextMenu(manifest.contextMenus.editor));
+        }
+
         // As modules are cached by URLs, using a counter makes a reload import the plugin's current code.
         // Unlike a query, a fragment never reaches the server.
         //

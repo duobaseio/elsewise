@@ -1,3 +1,4 @@
+import { Manifest } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
@@ -9,11 +10,18 @@ const APPEARANCE = new AppearanceManager(
   'dark',
   resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
 );
-const APPLICATION = commands().application;
+const EDITOR = new EditorManager();
+const APPLICATION = commands(EDITOR).application;
+const EMPTY = Manifest.parse({ id: 'a', name: 'A', version: '1.0.0' });
 
-// Returns commands with their own application and editor.
-function commands(): CommandManager {
-  return new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+// Returns commands with their own application, for `editor`.
+function commands(editor = new EditorManager()): CommandManager {
+  return new CommandManager({ appearance: APPEARANCE, editor });
+}
+
+// Returns a loader for `commands` and its editor.
+function loader(current: CommandManager = commands()): PluginLoader {
+  return new PluginLoader(current.application, current.application.editor as EditorManager);
 }
 
 // What the plugins below did, in order. They reach it as the global `events`.
@@ -58,14 +66,32 @@ const SLOW = plugin(`
 
 describe('load', () => {
   test('enables plugin with id', async () => {
-    await new PluginLoader(APPLICATION).load('a', RECORDING);
+    await new PluginLoader(APPLICATION, EDITOR).load('a', RECORDING, EMPTY);
 
     expect(events).toEqual(['enable a']);
   });
 
+  test("adds manifest's context menu until unloaded", async () => {
+    const current = commands();
+    const editor = current.application.editor as EditorManager;
+    const menu = {
+      submenus: {},
+      groups: { 'a.group': { order: 0 } },
+      items: { 'a.group': [{ type: 'item' as const, order: 0, command: 'a.run' }] },
+    };
+    const subject = loader(current);
+    await subject.load('a', RECORDING, { ...EMPTY, contextMenus: { editor: menu } });
+
+    expect(editor.contextMenu.groups['a.group']).toEqual({ order: 0 });
+
+    await subject.unload('a');
+
+    expect(editor.contextMenu.groups['a.group']).toBeUndefined();
+  });
+
   test('adds commands', async () => {
     const current = commands();
-    await new PluginLoader(current.application).load(
+    await loader(current).load(
       'a',
       plugin(`
         export function enable(application, context) {
@@ -74,6 +100,7 @@ describe('load', () => {
           );
         }
       `),
+      EMPTY,
     );
 
     expect(current.commands.get('a.rename')?.label).toBe('Rename');
@@ -81,7 +108,7 @@ describe('load', () => {
 
   test('runs commands with application', async () => {
     const current = commands();
-    await new PluginLoader(current.application).load(
+    await loader(current).load(
       'a',
       plugin(`
         export async function enable(application) {
@@ -96,21 +123,22 @@ describe('load', () => {
           application.commands.run('a.run');
         }
       `),
+      EMPTY,
     );
 
     expect(events).toEqual(['run with application']);
   });
 
   test('ignores loaded plugin', async () => {
-    const loader = new PluginLoader(APPLICATION);
-    await loader.load('a', RECORDING);
-    await loader.load('a', RECORDING);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
+    await loader.load('a', RECORDING, EMPTY);
+    await loader.load('a', RECORDING, EMPTY);
 
     expect(events).toEqual(['enable a']);
   });
 
   test('logs failed import', async () => {
-    await new PluginLoader(APPLICATION).load('a', plugin('this is not javascript'));
+    await new PluginLoader(APPLICATION, EDITOR).load('a', plugin('this is not javascript'), EMPTY);
 
     expect(events).toEqual([]);
     expect(error).toHaveBeenCalledOnce();
@@ -123,26 +151,26 @@ describe('load', () => {
         events.push('enable ' + context.id);
       }
     `);
-    const loader = new PluginLoader(APPLICATION);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
     vi.stubGlobal('broken', true);
-    await loader.load('a', url);
+    await loader.load('a', url, EMPTY);
     vi.stubGlobal('broken', false);
-    await loader.load('a', url);
+    await loader.load('a', url, EMPTY);
 
     expect(events).toEqual(['enable a']);
     expect(error).toHaveBeenCalledOnce();
   });
 
   test('logs module without enable', async () => {
-    const loader = new PluginLoader(APPLICATION);
-    await loader.load('a', plugin('export const enable = 1;'));
+    const loader = new PluginLoader(APPLICATION, EDITOR);
+    await loader.load('a', plugin('export const enable = 1;'), EMPTY);
 
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0]?.[0]).toContain("has no 'enable' function");
   });
 
   test('disposes subscriptions when enable throws', async () => {
-    const loader = new PluginLoader(APPLICATION);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
     await loader.load(
       'a',
       plugin(`
@@ -151,6 +179,7 @@ describe('load', () => {
           throw new Error('failed');
         }
       `),
+      EMPTY,
     );
 
     expect(events).toEqual(['dispose']);
@@ -158,10 +187,10 @@ describe('load', () => {
   });
 
   test('re-enables unloaded plugin', async () => {
-    const loader = new PluginLoader(APPLICATION);
-    await loader.load('a', RECORDING);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
+    await loader.load('a', RECORDING, EMPTY);
     await loader.unload('a');
-    await loader.load('a', RECORDING);
+    await loader.load('a', RECORDING, EMPTY);
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first', 'enable a']);
   });
@@ -171,21 +200,21 @@ describe('load', () => {
       events.push('evaluate');
       export function enable() {}
     `);
-    const loader = new PluginLoader(APPLICATION);
-    await loader.load('a', url);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
+    await loader.load('a', url, EMPTY);
     await loader.unload('a');
-    await loader.load('a', url);
+    await loader.load('a', url, EMPTY);
 
     expect(events).toEqual(['evaluate', 'evaluate']);
   });
 
   test('does not wait for another plugin', async () => {
     vi.stubGlobal('gate', Promise.withResolvers<void>().promise);
-    const loader = new PluginLoader(APPLICATION);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
 
-    void loader.load('a', SLOW);
+    void loader.load('a', SLOW, EMPTY);
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
-    await loader.load('b', RECORDING);
+    await loader.load('b', RECORDING, EMPTY);
 
     expect(events).toEqual(['enable started', 'enable b']);
   });
@@ -193,17 +222,17 @@ describe('load', () => {
 
 describe('unload', () => {
   test('disposes subscriptions in reverse order', async () => {
-    const loader = new PluginLoader(APPLICATION);
-    await loader.load('a', RECORDING);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
+    await loader.load('a', RECORDING, EMPTY);
     await loader.unload('a');
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 
   test('ignores plugin not loaded', async () => {
-    const loader = new PluginLoader(APPLICATION);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
     await loader.unload('a');
-    await loader.load('a', RECORDING);
+    await loader.load('a', RECORDING, EMPTY);
     await loader.unload('a');
     await loader.unload('a');
 
@@ -211,7 +240,7 @@ describe('unload', () => {
   });
 
   test('continues past throwing disposable', async () => {
-    const loader = new PluginLoader(APPLICATION);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
     await loader.load(
       'a',
       plugin(`
@@ -223,6 +252,7 @@ describe('unload', () => {
           );
         }
       `),
+      EMPTY,
     );
     await loader.unload('a');
 
@@ -233,9 +263,9 @@ describe('unload', () => {
   test('waits for pending load', async () => {
     const gate = Promise.withResolvers<void>();
     vi.stubGlobal('gate', gate.promise);
-    const loader = new PluginLoader(APPLICATION);
+    const loader = new PluginLoader(APPLICATION, EDITOR);
 
-    void loader.load('a', SLOW);
+    void loader.load('a', SLOW, EMPTY);
     const unloaded = loader.unload('a');
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
     gate.resolve();

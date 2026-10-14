@@ -1,15 +1,9 @@
 import { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
-import {
-  DEFAULT_EDITOR_CONTEXT_MENU,
-  type EditorContextMenu,
-  type EditorContextMenuItem,
-  type EditorContextSubmenu,
-  type LanguageServer,
-} from '@elsewise/plugin';
+import type { ContextMenu, ContextMenuGroup, ContextMenuItem, LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu/default-context-menu';
+import { DEFAULT_CONTEXT_MENU } from '@/components/code-editor/context-menu';
 import { EditorManager } from './editor-manager';
 
 // Returns a language named `name` whose grammar never loads.
@@ -22,9 +16,19 @@ function server(id: string): LanguageServer {
   return { id, name: id, languages: { Toy: 'toy' }, start: () => new Promise(() => {}) };
 }
 
-// Returns a submenu with `id`, `label` and `items`.
-function submenu(id: string, label: string, items: EditorContextMenu): EditorContextSubmenu {
-  return { type: 'submenu', id, label, items };
+// Returns an item that runs the command with `id`.
+function item(id: string): ContextMenuItem {
+  return { type: 'item', order: 0, command: id };
+}
+
+// Returns a group in the submenu with id `menu`, or in the menu itself.
+function group(menu?: string): ContextMenuGroup {
+  return menu === undefined ? { order: 0 } : { menu, order: 0 };
+}
+
+// Returns a menu that adds `submenus`, `groups` and `items`.
+function menu({ submenus = {}, groups = {}, items = {} }: Partial<ContextMenu>): ContextMenu {
+  return { submenus, groups, items };
 }
 
 // Returns a view that stands in for an editor, named `name`.
@@ -153,186 +157,105 @@ describe('addLanguageServers', () => {
   });
 });
 
-describe('addContextMenuItems', () => {
-  const first: EditorContextMenuItem = { type: 'item', id: 'first', label: 'First', command: () => {} };
-  const second: EditorContextMenuItem = { type: 'item', id: 'second', label: 'Second', command: () => {} };
-  const third: EditorContextMenuItem = { type: 'item', id: 'third', label: 'Third', command: () => {} };
-
-  test('adds items until disposed', () => {
+describe('addContextMenu', () => {
+  test('adds submenus, groups and items until disposed', () => {
     const editor = new EditorManager();
-    const dispose = editor.addContextMenuItems({ a: [first], b: [second] });
+    const added = menu({
+      submenus: { menu: 'Menu' },
+      groups: { a: group(), b: group('menu') },
+      items: { a: [item('first')], b: [item('second')] },
+    });
+    const dispose = editor.addContextMenu(added);
 
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first], b: [second] });
+    expect(editor.contextMenu.submenus.menu).toBe('Menu');
+    expect(editor.contextMenu.groups.a).toEqual(group());
+    expect(editor.contextMenu.groups.b).toEqual(group('menu'));
+    expect(editor.contextMenu.items.a).toEqual([item('first')]);
+    expect(editor.contextMenu.items.b).toEqual([item('second')]);
 
     dispose();
 
-    expect(editor.contextMenuItems).toEqual(DEFAULT_CONTEXT_MENU);
+    expect(editor.contextMenu.submenus.menu).toBeUndefined();
+    expect(editor.contextMenu.groups.a).toBeUndefined();
+    expect(editor.contextMenu.items.a).toBeUndefined();
   });
 
-  test('adds items to built-in ones', () => {
+  test('has built-in submenus, groups and items', () => {
     const editor = new EditorManager();
-    const clipboard = DEFAULT_EDITOR_CONTEXT_MENU.clipboard.id;
-    editor.addContextMenuItems({ [clipboard]: [first] });
 
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      [clipboard]: [...(DEFAULT_CONTEXT_MENU[clipboard] ?? []), first],
-    });
+    expect(editor.contextMenu).toEqual(DEFAULT_CONTEXT_MENU);
   });
 
-  test('merges items of same group', () => {
+  test('appends items of group in order of addition', () => {
     const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [first], b: [second] });
-    editor.addContextMenuItems({ a: [third] });
+    editor.addContextMenu(menu({ groups: { a: group() }, items: { a: [item('first')] } }));
+    editor.addContextMenu(menu({ items: { a: [item('second')] } }));
 
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first, third], b: [second] });
+    expect(editor.contextMenu.items.a).toEqual([item('first'), item('second')]);
   });
 
   test('removes only disposed items from group', () => {
     const editor = new EditorManager();
-    const dispose = editor.addContextMenuItems({ a: [first], b: [second] });
-    editor.addContextMenuItems({ a: [third] });
+    const dispose = editor.addContextMenu(menu({ groups: { a: group() }, items: { a: [item('first')] } }));
+    editor.addContextMenu(menu({ items: { a: [item('second')] } }));
     dispose();
 
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [third] });
+    expect(editor.contextMenu.items.a).toEqual([item('second')]);
   });
 
   test('removes only disposed addition when added twice', () => {
     const editor = new EditorManager();
-    const items = { a: [first] };
-    const dispose = editor.addContextMenuItems(items);
-    editor.addContextMenuItems(items);
+    const added = menu({ items: { a: [item('first')] } });
+    const dispose = editor.addContextMenu(added);
+    editor.addContextMenu(added);
     dispose();
 
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first] });
+    expect(editor.contextMenu.items.a).toEqual([item('first')]);
   });
 
-  test('throws and keeps items when entry is neither item nor submenu', () => {
+  test('keeps first submenu with id and warns', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const editor = new EditorManager();
-    const dispose = editor.addContextMenuItems({ a: [first] });
+    editor.addContextMenu(menu({ submenus: { same: 'Original' } }));
+    editor.addContextMenu(menu({ submenus: { same: 'Other' } }));
 
-    expect(() => editor.addContextMenuItems({ a: [{ type: 'separator' } as never] })).toThrow();
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first] });
+    expect(editor.contextMenu.submenus.same).toBe('Original');
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('same'));
+  });
 
-    editor.addContextMenuItems({ a: [second] });
+  test('keeps first group with id and warns', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const editor = new EditorManager();
+    editor.addContextMenu(menu({ groups: { same: { order: 1 } } }));
+    editor.addContextMenu(menu({ groups: { same: { order: 2 } } }));
+
+    expect(editor.contextMenu.groups.same).toEqual({ order: 1 });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('same'));
+  });
+
+  test('keeps later submenu when first is disposed', () => {
+    const editor = new EditorManager();
+    const dispose = editor.addContextMenu(menu({ submenus: { menu: 'Original' } }));
+    editor.addContextMenu(menu({ submenus: { menu: 'Other' } }));
     dispose();
 
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [second] });
+    expect(editor.contextMenu.submenus.menu).toBe('Other');
   });
 
-  test('throws and keeps items when submenu contains itself', () => {
+  test('keeps items added before their group', () => {
     const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [first] });
-    const items: Record<string, EditorContextSubmenu[]> = {};
-    const loop: EditorContextSubmenu = { type: 'submenu', id: 'loop', label: 'Loop', items };
-    items.x = [loop];
+    editor.addContextMenu(menu({ items: { a: [item('first')] } }));
+    editor.addContextMenu(menu({ groups: { a: group() } }));
 
-    expect(() => editor.addContextMenuItems({ a: [loop] })).toThrow(RangeError);
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first] });
-
-    editor.addContextMenuItems({ a: [second] });
-
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first, second] });
+    expect(editor.contextMenu.groups.a).toEqual(group());
+    expect(editor.contextMenu.items.a).toEqual([item('first')]);
   });
 
-  test('merges group named after property of every object', () => {
+  test('keeps group named after property of every object', () => {
     const editor = new EditorManager();
-    editor.addContextMenuItems({ constructor: [first] });
-    editor.addContextMenuItems({ constructor: [second] });
+    editor.addContextMenu(menu({ groups: { constructor: group() }, items: { constructor: [item('first')] } }));
 
-    expect(Object.entries(editor.contextMenuItems)).toContainEqual(['constructor', [first, second]]);
-  });
-
-  test("merges same-id submenus' items in group", () => {
-    const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [submenu('menu', 'Menu', { x: [first] })] });
-    editor.addContextMenuItems({ a: [submenu('menu', 'Menu', { x: [second], y: [third] })] });
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [submenu('menu', 'Menu', { x: [first, second], y: [third] })],
-    });
-  });
-
-  test('keeps label of submenu added first', () => {
-    const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [submenu('menu', 'Original', { x: [first] })] });
-    editor.addContextMenuItems({ a: [submenu('menu', 'Other', { x: [second] })] });
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [submenu('menu', 'Original', { x: [first, second] })],
-    });
-  });
-
-  test('merges submenus nested in submenus', () => {
-    const editor = new EditorManager();
-    editor.addContextMenuItems({
-      a: [submenu('outer', 'Outer', { x: [submenu('inner', 'Inner', { p: [first] })] })],
-    });
-    editor.addContextMenuItems({
-      a: [submenu('outer', 'Outer', { x: [submenu('inner', 'Inner', { p: [second], q: [third] })] })],
-    });
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [submenu('outer', 'Outer', { x: [submenu('inner', 'Inner', { p: [first, second], q: [third] })] })],
-    });
-  });
-
-  test('keeps same-id items apart', () => {
-    const editor = new EditorManager();
-    const same: EditorContextMenuItem = { ...second, id: first.id };
-    editor.addContextMenuItems({ a: [first] });
-    editor.addContextMenuItems({ a: [same] });
-
-    expect(editor.contextMenuItems).toEqual({ ...DEFAULT_CONTEXT_MENU, a: [first, same] });
-  });
-
-  test('keeps same-id submenu and item apart', () => {
-    const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [first] });
-    editor.addContextMenuItems({ a: [submenu(first.id, 'Menu', { x: [second] })] });
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [first, submenu(first.id, 'Menu', { x: [second] })],
-    });
-  });
-
-  test('keeps same-id submenus in different groups apart', () => {
-    const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [submenu('menu', 'Menu', { x: [first] })] });
-    editor.addContextMenuItems({ b: [submenu('menu', 'Menu', { x: [second] })] });
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [submenu('menu', 'Menu', { x: [first] })],
-      b: [submenu('menu', 'Menu', { x: [second] })],
-    });
-  });
-
-  test('removes only disposed items from merged submenu', () => {
-    const editor = new EditorManager();
-    editor.addContextMenuItems({ a: [submenu('menu', 'Menu', { x: [first] })] });
-    const dispose = editor.addContextMenuItems({ a: [submenu('menu', 'Menu', { x: [second], y: [third] })] });
-    dispose();
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [submenu('menu', 'Menu', { x: [first] })],
-    });
-  });
-
-  test('keeps merged submenu when first-added submenu is disposed', () => {
-    const editor = new EditorManager();
-    const dispose = editor.addContextMenuItems({ a: [submenu('menu', 'Original', { x: [first] })] });
-    editor.addContextMenuItems({ a: [submenu('menu', 'Other', { x: [second] })] });
-    dispose();
-
-    expect(editor.contextMenuItems).toEqual({
-      ...DEFAULT_CONTEXT_MENU,
-      a: [submenu('menu', 'Other', { x: [second] })],
-    });
+    expect(editor.contextMenu.groups.constructor).toEqual(group());
+    expect(editor.contextMenu.items.constructor).toEqual([item('first')]);
   });
 });
