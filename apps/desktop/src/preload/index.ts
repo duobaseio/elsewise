@@ -11,13 +11,6 @@ const settings: SettingsBridge = {
   save: (value) => ipcRenderer.invoke('settings:save', value),
   loadPlugin: (plugin) => ipcRenderer.invoke('settings:load-plugin', plugin),
   savePlugin: (plugin, value) => ipcRenderer.invoke('settings:save-plugin', plugin, value),
-  onOpen: (listener) => {
-    const forward = () => listener();
-    ipcRenderer.on('settings:open', forward);
-    return () => {
-      ipcRenderer.off('settings:open', forward);
-    };
-  },
 };
 
 const window: WindowBridge = {

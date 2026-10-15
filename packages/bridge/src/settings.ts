@@ -48,13 +48,6 @@ export interface SettingsBridge {
    * Throws an error if `value` is not JSON-serializable.
    */
   savePlugin<T>(plugin: string, value: T & Json<T>): Promise<void>;
-
-  /**
-   * Registers a `listener` that is called when the user opens the settings from the embedder, e.g. its menu bar.
-   *
-   * Returns a function that unregisters the `listener`.
-   */
-  onOpen(listener: () => void): () => void;
 }
 
 /**
