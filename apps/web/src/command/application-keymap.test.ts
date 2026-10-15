@@ -140,10 +140,10 @@ describe('keys', () => {
     expect([...updated(editor({ rename: ['Mod-r'] })).keys.editor]).toEqual([['Ctrl-r', ['rename']]]);
   });
 
-  test('lists commands in order', () => {
+  test('lists later-added command first', () => {
     expect(updated(editor({ first: ['Mod-r'], second: ['Ctrl-r'] })).keys.editor.get('Ctrl-r')).toEqual([
-      'first',
       'second',
+      'first',
     ]);
   });
 

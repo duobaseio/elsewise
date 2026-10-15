@@ -219,10 +219,10 @@ describe('keymap', () => {
     expect(manager.keymap.keys.editor.get('Alt-r')).toEqual(['rename']);
   });
 
-  test('lists earlier-added command first', () => {
+  test('lists later-added command first', () => {
     expect(bound({ first: ['Mod-k'], second: ['Ctrl-k'] }).keymap.keys.editor.get('Ctrl-k')).toEqual([
-      'first',
       'second',
+      'first',
     ]);
   });
 

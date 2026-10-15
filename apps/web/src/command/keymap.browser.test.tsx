@@ -56,7 +56,7 @@ describe('editorKeymap', () => {
     expect(fallback).not.toHaveBeenCalled();
   });
 
-  test('runs earlier-added command first', () => {
+  test('runs later-added command first', () => {
     const first = vi.fn(() => true);
     const second = vi.fn(() => true);
     const view = open(
@@ -66,8 +66,8 @@ describe('editorKeymap', () => {
     );
     press(view);
 
-    expect(first).toHaveBeenCalledOnce();
-    expect(second).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
   });
 
   test('runs uppercase letter held with Shift alone', () => {
@@ -106,8 +106,7 @@ describe('editorKeymap', () => {
     );
     press(view);
 
-    expect(second).toHaveBeenCalledOnce();
-    expect(first).toHaveBeenCalledOnce();
-    expect(fallback).toHaveBeenCalledOnce();
+    expect(second).toHaveBeenCalledBefore(first);
+    expect(first).toHaveBeenCalledBefore(fallback);
   });
 });

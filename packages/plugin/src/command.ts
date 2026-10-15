@@ -175,8 +175,8 @@ export interface Commands {
   /**
    * Adds `commands`.
    *
-   * A command with an already existing id is rejected. Commands that share a key are tried in the order they were added,
-   * built-in commands first, until one is enabled.
+   * A command with an already existing id is rejected. Commands that share a key are tried from the last added to the
+   * first, until one applies.
    *
    * Returns a disposable that removes the added `commands`.
    */

@@ -27,8 +27,8 @@ export class ApplicationKeymap implements ActiveKeymap {
   }
 
   /**
-   * The keys as CodeMirror normalizes them for this platform, and their associated commands in the order they were
-   * added.
+   * The keys as CodeMirror normalizes them for this platform, and their associated commands from the last added to the
+   * first.
    */
   get keys(): Readonly<Record<'editor' | 'application', ReadonlyMap<string, readonly string[]>>> {
     return this.currentKeys;
@@ -60,7 +60,7 @@ export class ApplicationKeymap implements ActiveKeymap {
         }
         const ids = keys[command.scope].get(normalized) ?? [];
         if (!ids.includes(command.id)) {
-          keys[command.scope].set(normalized, [...ids, command.id]);
+          keys[command.scope].set(normalized, [command.id, ...ids]);
         }
       }
 
