@@ -1,4 +1,5 @@
 import type { LanguageDescription } from '@codemirror/language';
+import type { LSPClient, LSPClientExtension } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from './plugin.ts';
@@ -82,6 +83,26 @@ export interface LanguageServer {
    * ```
    */
   readonly initializationOptions?: unknown;
+
+  /**
+   * The LSP client extensions.
+   *
+   * Their **notification** handlers run before Elsewise's, and their CodeMirror extensions take precedence over
+   * Elsewise's. When both set the same client capability, Elsewise's wins.
+   */
+  readonly extensions?: readonly (Extension | LSPClientExtension)[];
+
+  /**
+   * The server's **request** handlers that take precedence over Elsewise's.
+   *
+   * A handler returns the result, or a promise of it. A thrown error or rejection is sent to the server as an error.
+   *
+   * For example, to handle `typescript-language-server`'s non-LSP compliant message:
+   * ```ts
+   * { '_typescript.rename': (client, { textDocument, position }: RenameParams) => null }
+   * ```
+   */
+  readonly handlers?: Readonly<Record<string, (client: LSPClient, params: never) => unknown>>;
 
   /**
    * Starts the server for the worktree at `root` and returns a transport to it.

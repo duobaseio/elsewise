@@ -4,7 +4,12 @@ import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
-import { type ApplyWorkspaceEditParams, MessageType, type ShowMessageParams } from 'vscode-languageserver-protocol';
+import {
+  type ApplyWorkspaceEditParams,
+  ErrorCodes,
+  MessageType,
+  type ShowMessageParams,
+} from 'vscode-languageserver-protocol';
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
@@ -135,6 +140,10 @@ export class LanguageServerInstance {
       rootUri: serverUri(root),
       initializationOptions: server.initializationOptions,
       extensions: [
+        // First, so the plugin's notification handlers and editor extensions, which lsp-client tries in order, take
+        // precedence over Elsewise's, while its client capabilities, which lsp-client merges in order, give way to
+        // them.
+        ...(server.extensions ?? []),
         serverCompletion(),
         serverHover(),
         serverSignatureHelp(),
@@ -144,18 +153,21 @@ export class LanguageServerInstance {
         serverActions(),
         serverDiagnostics(),
         serverEdits(),
+        {
+          notificationHandlers: {
+            // Shows the server's messages in toasts rather than lsp-client's bar, and drops its logs as lsp-client
+            // does.
+            'window/showMessage': (_, { type, message }: ShowMessageParams) => {
+              const kind = MESSAGE_TYPES.get(type);
+              if (kind !== undefined) {
+                toast.add({ type: kind, title: server.name, description: message });
+              }
+              return true;
+            },
+          },
+        },
       ],
       sanitizeHTML: (html) => DOMPurify.sanitize(html),
-      notificationHandlers: {
-        // Shows the server's messages in toasts rather than lsp-client's bar, and drops its logs as lsp-client does.
-        'window/showMessage': (_, { type, message }: ShowMessageParams) => {
-          const kind = MESSAGE_TYPES.get(type);
-          if (kind !== undefined) {
-            toast.add({ type: kind, title: server.name, description: message });
-          }
-          return true;
-        },
-      },
     });
   }
 
@@ -184,6 +196,11 @@ export class LanguageServerInstance {
         }
       });
 
+      // The plugin's handlers take precedence over Elsewise's.
+      const requests = new Map<string, (client: LSPClient, params: never) => unknown>([
+        ...REQUESTS,
+        ...Object.entries(this.server.handlers ?? {}),
+      ]);
       const handlers = new Map<(message: string) => void, Disposable>();
       this.client.connect({
         send: (message) => transport.send(message),
@@ -192,9 +209,20 @@ export class LanguageServerInstance {
             handler,
             transport.onMessage((message) => {
               const { id, method, params } = JSON.parse(message);
-              const response = id !== undefined && REQUESTS.get(method);
+              const response = id !== undefined && requests.get(method);
               if (response) {
-                transport.send(JSON.stringify({ jsonrpc: '2.0', id, result: response(this.client, params) }));
+                void (async () => {
+                  let reply: object;
+                  try {
+                    reply = { result: (await response(this.client, params as never)) ?? null };
+                  } catch (error) {
+                    reply = { error: { code: ErrorCodes.InternalError, message: (error as Error).message } };
+                  }
+
+                  if (this.transport === transport) {
+                    transport.send(JSON.stringify({ jsonrpc: '2.0', id, ...reply }));
+                  }
+                })();
               } else {
                 handler(message);
               }

@@ -1,3 +1,4 @@
+import { EditorState, Facet } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -154,6 +155,36 @@ describe('connect', () => {
     });
   });
 
+  test('sends client capabilities of extensions under core', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([
+      server(() => fake, {
+        extensions: [
+          { clientCapabilities: { textDocument: { rename: { prepareSupport: false } }, experimental: { toy: 1 } } },
+        ],
+      }),
+    ]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({
+      method: 'initialize',
+      params: { capabilities: { textDocument: { rename: { prepareSupport: true } }, experimental: { toy: 1 } } },
+    });
+  });
+
+  test('adds extensions to documents', () => {
+    const editor = new EditorManager();
+    const toy = Facet.define<number>();
+    editor.addLanguageServers([
+      server(() => new StubTransport(), { extensions: [toy.of(1), { editorExtension: toy.of(2) }] }),
+    ]);
+    const state = EditorState.create({ extensions: new LanguageServers(editor).connect(ROOT, 'Toy', URI) });
+
+    expect(state.facet(toy)).toEqual([1, 2]);
+  });
+
   test('starts server once per root', async () => {
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
@@ -284,6 +315,75 @@ describe('LanguageServerInstance.start', () => {
       [{ type: 'warning', title: 'Toy', description: 'Slow' }],
       [{ type: 'info', title: 'Toy', description: 'Ready' }],
     ]);
+  });
+
+  test('hands notifications to extensions ahead of core', async () => {
+    const add = vi.spyOn(toast, 'add');
+    const status = vi.fn(() => true);
+    const message = vi.fn(() => true);
+    const fake = new StubTransport();
+    const instance = new LanguageServerInstance(
+      server(() => fake, {
+        extensions: [{ notificationHandlers: { 'toy/status': status, 'window/showMessage': message } }],
+      }),
+      ROOT,
+    );
+    await instance.start();
+    fake.notify('toy/status', { busy: true });
+    fake.notify('window/showMessage', { type: 3, message: 'Ready' });
+
+    expect(status).toHaveBeenCalledWith(instance.client, { busy: true });
+    expect(message).toHaveBeenCalledWith(instance.client, { type: 3, message: 'Ready' });
+    expect(add).not.toHaveBeenCalled();
+  });
+
+  test('answers requests with request handlers', async () => {
+    const fake = new StubTransport();
+    const instance = new LanguageServerInstance(
+      server(() => fake, {
+        handlers: {
+          'toy/increment': (_, { n }: { n: number }) => n + 1,
+          'toy/decrement': async (_, { n }: { n: number }) => n - 1,
+          'toy/ignore': () => {},
+        },
+      }),
+      ROOT,
+    );
+    await instance.start();
+
+    expect(await fake.request('toy/increment', { n: 1 })).toEqual({ result: 2 });
+    expect(await fake.request('toy/decrement', { n: 1 })).toEqual({ result: 0 });
+    expect(await fake.request('toy/ignore', {})).toEqual({ result: null });
+  });
+
+  test('answers requests with error when handler fails', async () => {
+    const fake = new StubTransport();
+    const instance = new LanguageServerInstance(
+      server(() => fake, {
+        handlers: {
+          'toy/throw': () => {
+            throw new Error('Thrown');
+          },
+          'toy/reject': () => Promise.reject(new Error('Rejected')),
+        },
+      }),
+      ROOT,
+    );
+    await instance.start();
+
+    expect(await fake.request('toy/throw', {})).toEqual({ error: { code: -32603, message: 'Thrown' } });
+    expect(await fake.request('toy/reject', {})).toEqual({ error: { code: -32603, message: 'Rejected' } });
+  });
+
+  test('answers requests with request handlers ahead of core', async () => {
+    const fake = new StubTransport();
+    const instance = new LanguageServerInstance(
+      server(() => fake, { handlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),
+      ROOT,
+    );
+    await instance.start();
+
+    expect(await fake.request('workspace/applyEdit', { edit: {} })).toEqual({ result: { applied: false } });
   });
 
   test("doesn't say server that was stopped stopped", async () => {
