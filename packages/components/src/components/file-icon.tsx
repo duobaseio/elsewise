@@ -4,9 +4,9 @@ import { type CSSProperties, createContext, type ReactNode, useContext, useMemo 
 
 import {
   EXTENSION_ICONS,
-  GENERIC_FILE_ICON,
   FILENAME_ICONS,
   type FileIconData,
+  GENERIC_FILE_ICON,
   type IconTint,
   PHOSPHOR_ICONS,
 } from '../lib/file-icons.gen';
