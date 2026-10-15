@@ -52,7 +52,7 @@ function press(init: Partial<KeyboardEvent> = {}): KeyboardEvent {
 }
 
 // Returns an application command `id` bound to Ctrl-k.
-function command(id: string, run: () => void, enabled = true): ApplicationCommand {
+function command(id: string, run: () => boolean, enabled = true): ApplicationCommand {
   return { id, label: id, scope: 'application', defaultKeys: ['Ctrl-k'], enabled: () => enabled, run };
 }
 
@@ -81,7 +81,7 @@ describe('resolveKeymap', () => {
 
 describe('installApplicationKeys', () => {
   test('runs matching command', () => {
-    const run = vi.fn();
+    const run = vi.fn(() => true);
     const { window } = install(command('a', run));
     window.dispatchEvent(press());
     window.dispatchEvent(press({ key: 'j', keyCode: 74 }));
@@ -90,7 +90,7 @@ describe('installApplicationKeys', () => {
   });
 
   test('prevents default', () => {
-    const { window } = install(command('a', () => {}));
+    const { window } = install(command('a', () => true));
     const handled = press();
     const unbound = press({ key: 'j', keyCode: 74 });
     window.dispatchEvent(handled);
@@ -101,7 +101,7 @@ describe('installApplicationKeys', () => {
   });
 
   test('skips handled key', () => {
-    const run = vi.fn();
+    const run = vi.fn(() => true);
     const window = new EventTarget() as Window;
     window.addEventListener('keydown', (event) => event.preventDefault());
     const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
@@ -113,7 +113,7 @@ describe('installApplicationKeys', () => {
   });
 
   test('skips composition', () => {
-    const run = vi.fn();
+    const run = vi.fn(() => true);
     const { window } = install(command('a', run));
     window.dispatchEvent(press({ isComposing: true }));
 
@@ -121,8 +121,8 @@ describe('installApplicationKeys', () => {
   });
 
   test('falls through disabled command', () => {
-    const first = vi.fn();
-    const second = vi.fn();
+    const first = vi.fn(() => true);
+    const second = vi.fn(() => true);
     const { window } = install(command('first', first), command('second', second, false));
     const event = press();
     window.dispatchEvent(event);
@@ -133,7 +133,7 @@ describe('installApplicationKeys', () => {
   });
 
   test('stops on dispose', () => {
-    const run = vi.fn();
+    const run = vi.fn(() => true);
     const { window, dispose } = install(command('a', run));
     dispose();
     window.dispatchEvent(press());

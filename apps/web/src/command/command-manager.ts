@@ -13,6 +13,7 @@ import type {
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { ApplicationKeymap } from '@/command/application-keymap';
 import { ELSEWISE } from '@/command/keymap';
+import { CARET, EDIT, FOLD, HISTORY, SEARCH } from '@/editor/default-commands';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
 import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
@@ -26,6 +27,12 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   CUT,
   COPY,
   PASTE,
+  // Editor
+  ...HISTORY,
+  ...SEARCH,
+  ...FOLD,
+  ...EDIT,
+  ...CARET,
   // LSP
   SHOW_CONTEXT_ACTIONS,
   APPLY_TOP_FIX,
@@ -135,16 +142,14 @@ export class CommandManager implements Commands {
           return false;
         }
 
-        command.run(this.application, editor, lsp);
-        return true;
+        return command.run(this.application, editor, lsp);
       }
 
       if (command.enabled?.(this.application) === false) {
         return false;
       }
 
-      command.run(this.application);
-      return true;
+      return command.run(this.application);
     } catch (error) {
       console.error(`Command ${command.label} failed`, error);
       return true;

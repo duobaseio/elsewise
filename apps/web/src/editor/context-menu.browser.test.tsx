@@ -66,7 +66,7 @@ function mount(
 }
 
 // Returns an editor command with `id` whose label is `id`, with `run` and the `rest` of its fields.
-function command(id: string, run: EditorCommand['run'] = () => {}, rest: Partial<EditorCommand> = {}): EditorCommand {
+function command(id: string, run: EditorCommand['run'] = () => true, rest: Partial<EditorCommand> = {}): EditorCommand {
   return { scope: 'editor', id, label: id, run, ...rest };
 }
 

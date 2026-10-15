@@ -1,5 +1,11 @@
 import type { EditorView } from '@codemirror/view';
-import { type ContextMenu, DEFAULT_COMMANDS, DEFAULT_EDITOR_CONTEXT_MENU, type EditorCommand } from '@elsewise/plugin';
+import {
+  type ContextMenu,
+  DEFAULT_COMMANDS,
+  DEFAULT_EDITOR_CONTEXT_MENU,
+  DEFAULT_KEYS,
+  type EditorCommand,
+} from '@elsewise/plugin';
 
 const { actions, clipboard, navigate, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
 const { lsp } = DEFAULT_COMMANDS.editor;
@@ -31,28 +37,37 @@ export const CUT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.cut,
   label: 'Cut',
-  defaultKeys: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
+  defaultKeys: DEFAULT_KEYS.editor.clipboard.cut,
   enabled: (_, view) => !view.state.readOnly,
   shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
-  run: (_, view) => perform(view, 'cut'),
+  run: (_, view) => {
+    perform(view, 'cut');
+    return true;
+  },
 };
 
 export const COPY: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.copy,
   label: 'Copy',
-  defaultKeys: ['Mod-c', { windows: 'Ctrl-Insert', linux: 'Ctrl-Insert' }],
+  defaultKeys: DEFAULT_KEYS.editor.clipboard.copy,
   shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
-  run: (_, view) => perform(view, 'copy'),
+  run: (_, view) => {
+    perform(view, 'copy');
+    return true;
+  },
 };
 
 export const PASTE: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.paste,
   label: 'Paste',
-  defaultKeys: ['Mod-v', { windows: 'Shift-Insert', linux: 'Shift-Insert' }],
+  defaultKeys: DEFAULT_KEYS.editor.clipboard.paste,
   enabled: (_, view) => !view.state.readOnly,
-  run: (_, view) => perform(view, 'paste'),
+  run: (_, view) => {
+    perform(view, 'paste');
+    return true;
+  },
 };
 
 function perform(view: EditorView, action: 'cut' | 'copy' | 'paste') {

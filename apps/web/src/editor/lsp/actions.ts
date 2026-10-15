@@ -1,7 +1,7 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField, type Text } from '@codemirror/state';
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
-import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import {
   type CodeAction,
   type CodeActionParams,
@@ -93,13 +93,13 @@ export const APPLY_TOP_FIX: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.applyTopFix,
   label: 'Apply top fix',
-  defaultKeys: ['Shift-Alt-Enter'],
+  defaultKeys: DEFAULT_KEYS.editor.lsp.applyTopFix,
   enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
   shown: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
   // Applies the quick fix the server prefers, or else the first.
   run(_, view, lsp) {
     if (lsp === null) {
-      return;
+      return false;
     }
 
     const pos = view.state.selection.main.head;
@@ -119,6 +119,7 @@ export const APPLY_TOP_FIX: EditorCommand = {
         }
       },
     );
+    return true;
   },
 };
 
@@ -126,12 +127,12 @@ export const SHOW_CONTEXT_ACTIONS: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.showContextActions,
   label: 'Show context actions',
-  defaultKeys: ['Alt-Enter'],
+  defaultKeys: DEFAULT_KEYS.editor.lsp.showContextActions,
   enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
   shown: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.codeActionProvider),
   run(_, view, lsp) {
     if (lsp === null) {
-      return;
+      return false;
     }
 
     const pos = view.state.selection.main.head;
@@ -161,6 +162,7 @@ export const SHOW_CONTEXT_ACTIONS: EditorCommand = {
         }
       },
     );
+    return true;
   },
 };
 

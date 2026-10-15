@@ -12,7 +12,7 @@ function editor(keys: Record<string, Keys>): EditorCommand[] {
     label: id,
     scope: 'editor',
     defaultKeys,
-    run: () => {},
+    run: () => true,
   }));
 }
 
@@ -114,7 +114,7 @@ describe('commands', () => {
     const keymap = updated(editor({ rename: ['Mod-r'] }));
     const commands = keymap.commands;
     keymap.update({ name: 'Elsewise', keys: { rename: ['Mod-r'] } }, [
-      { id: 'rename', label: 'Rename', scope: 'application', defaultKeys: ['Mod-r'], run: () => {} },
+      { id: 'rename', label: 'Rename', scope: 'application', defaultKeys: ['Mod-r'], run: () => true },
     ]);
 
     expect(keymap.commands).toBe(commands);
@@ -150,7 +150,7 @@ describe('keys', () => {
   test('separates scopes', () => {
     const keymap = updated([
       ...editor({ rename: ['Mod-r'] }),
-      { id: 'settings', label: 'Settings', scope: 'application', defaultKeys: ['Mod-,'], run: () => {} },
+      { id: 'settings', label: 'Settings', scope: 'application', defaultKeys: ['Mod-,'], run: () => true },
     ]);
 
     expect([...keymap.keys.editor]).toEqual([['Ctrl-r', ['rename']]]);

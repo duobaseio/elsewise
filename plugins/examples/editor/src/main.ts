@@ -72,12 +72,21 @@ function excuse(id: string): EditorCommand {
       const indent = /^\s*/.exec(line.text)?.[0] ?? '';
       const text = EXCUSES[Math.floor(Math.random() * EXCUSES.length)];
       view.dispatch({ changes: { from: line.from, insert: `${indent}${comment(view.state)} ${text}\n` } });
+      return true;
     },
   };
 }
 
 function reaction(id: string, label: string, text: () => string): EditorCommand {
-  return { scope: 'editor', id, label, run: (_, view) => view.dispatch(view.state.replaceSelection(text())) };
+  return {
+    scope: 'editor',
+    id,
+    label,
+    run: (_, view) => {
+      view.dispatch(view.state.replaceSelection(text()));
+      return true;
+    },
+  };
 }
 
 function tone(id: string, label: string, transform: (text: string) => string): EditorCommand {
@@ -86,12 +95,14 @@ function tone(id: string, label: string, transform: (text: string) => string): E
     id,
     label,
     shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
-    run: (_, view) =>
+    run: (_, view) => {
       view.dispatch(
         view.state.changeByRange((range) => ({
           changes: { from: range.from, to: range.to, insert: transform(view.state.sliceDoc(range.from, range.to)) },
           range,
         })),
-      ),
+      );
+      return true;
+    },
   };
 }

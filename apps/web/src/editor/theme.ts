@@ -151,6 +151,15 @@ const METRICS = EditorView.theme({
     mask: 'var(--fold-marker) center / contain no-repeat',
   },
   '.cm-fold-marker:not([data-open])': { transform: 'rotate(-90deg)' },
+  '.cm-foldPlaceholder': {
+    margin: '0 2px',
+    padding: '0 4px',
+    border: 'none',
+    borderRadius: '4px',
+    backgroundColor: 'var(--layer-selected)',
+    color: 'var(--text-2)',
+  },
+  '.cm-foldPlaceholder:hover': { color: 'var(--foreground)' },
 
   '.cm-lintRange.cm-lintRange-deprecated': { backgroundImage: 'none', textDecoration: 'line-through' },
   // Draws an underline under unnecessary code only if there are additional problems.

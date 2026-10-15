@@ -1,7 +1,7 @@
 import { closeBrackets } from '@codemirror/autocomplete';
-import { defaultKeymap, history, historyKeymap, indentLess, insertTab } from '@codemirror/commands';
-import { bracketMatching, foldGutter, foldKeymap, LanguageDescription } from '@codemirror/language';
-import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
+import { history, simplifySelection, standardKeymap } from '@codemirror/commands';
+import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
+import { highlightSelectionMatches } from '@codemirror/search';
 import { Compartment, EditorState, type Extension, Facet } from '@codemirror/state';
 import {
   crosshairCursor,
@@ -133,13 +133,8 @@ export function Editor({ path, code, root }: EditorProps) {
         rightClickContextMenu,
         link(),
 
-        keymap.of([
-          ...defaultKeymap,
-          ...historyKeymap,
-          ...searchKeymap,
-          ...foldKeymap,
-          { key: 'Tab', run: insertTab, shift: indentLess },
-        ]),
+        // Escape is not a command to keep it from taking precedence over the popups' own Escape.
+        keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
       ],
     });
     // Applies the plugins' extensions separately to keep a broken plugin from leaving the file without an editor.

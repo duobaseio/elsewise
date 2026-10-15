@@ -32,7 +32,7 @@ async function mount(
 // Returns an application command with `id` whose label is `id`, with `run` and the `rest` of its fields.
 function command(
   id: string,
-  run: ApplicationCommand['run'] = () => {},
+  run: ApplicationCommand['run'] = () => true,
   rest: Partial<ApplicationCommand> = {},
 ): ApplicationCommand {
   return { scope: 'application', id, label: id, run, ...rest };
@@ -102,7 +102,7 @@ describe('CommandContextMenu', () => {
   });
 
   test("shows command's label and first key", async () => {
-    const commands = setUp([command('a.rename', () => {}, { label: 'Rename…', defaultKeys: ['Shift-F6', 'F2'] })]);
+    const commands = setUp([command('a.rename', () => true, { label: 'Rename…', defaultKeys: ['Shift-F6', 'F2'] })]);
     await mount(menu({ groups: { a: group() }, items: { a: [item('a.rename')] } }), commands);
 
     await open();
@@ -111,7 +111,12 @@ describe('CommandContextMenu', () => {
 
   test('calls onClosed before running item', async () => {
     const events: string[] = [];
-    const commands = setUp([command('Item', () => events.push('run'))]);
+    const commands = setUp([
+      command('Item', () => {
+        events.push('run');
+        return true;
+      }),
+    ]);
     await mount(menu({ groups: { a: group() }, items: { a: [item('Item')] } }), commands, {
       onClosed: () => events.push('closed'),
     });
@@ -122,7 +127,7 @@ describe('CommandContextMenu', () => {
   });
 
   test('hides editor command without view', async () => {
-    const commands = setUp([{ scope: 'editor', id: 'Editor', label: 'Editor', run: () => {} }, command('Other')]);
+    const commands = setUp([{ scope: 'editor', id: 'Editor', label: 'Editor', run: () => true }, command('Other')]);
     await mount(menu({ groups: { a: group() }, items: { a: [item('Editor'), item('Other')] } }), commands);
 
     await open();
@@ -132,7 +137,7 @@ describe('CommandContextMenu', () => {
   test('hides item of hidden or unknown command', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let shown = true;
-    const commands = setUp([command('Item', () => {}, { shown: () => shown }), command('Other')]);
+    const commands = setUp([command('Item', () => true, { shown: () => shown }), command('Other')]);
     await mount(
       menu({ groups: { a: group() }, items: { a: [item('Item'), item('Unknown'), item('Other')] } }),
       commands,
@@ -149,7 +154,7 @@ describe('CommandContextMenu', () => {
   });
 
   test('disables item of disabled command', async () => {
-    const commands = setUp([command('Item', () => {}, { enabled: () => false })]);
+    const commands = setUp([command('Item', () => true, { enabled: () => false })]);
     await mount(menu({ groups: { a: group() }, items: { a: [item('Item')] } }), commands);
 
     await open();
@@ -159,7 +164,7 @@ describe('CommandContextMenu', () => {
   test('hides item whose command throws on shown', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const commands = setUp([
-      command('Broken', () => {}, {
+      command('Broken', () => true, {
         shown: () => {
           throw new Error('nope');
         },
@@ -194,7 +199,7 @@ describe('CommandContextMenu', () => {
   });
 
   test('stays closed with nothing to show', async () => {
-    const commands = setUp([command('Item', () => {}, { shown: () => false })]);
+    const commands = setUp([command('Item', () => true, { shown: () => false })]);
     await mount(menu({ groups: { a: group() }, items: { a: [item('Item')] } }), commands);
 
     await userEvent.click(page.getByTestId('target'), { button: 'right' });
@@ -230,7 +235,7 @@ describe('CommandContextMenu', () => {
   });
 
   test('hides submenu with nothing shown, undeclared or inside itself', async () => {
-    const commands = setUp([command('Hidden item', () => {}, { shown: () => false }), command('Item')]);
+    const commands = setUp([command('Hidden item', () => true, { shown: () => false }), command('Item')]);
     await mount(
       menu({
         submenus: { empty: 'Empty', loop: 'Loop' },

@@ -13,6 +13,52 @@ export const DEFAULT_COMMANDS = {
       copy: 'elsewise.editor.clipboard.copy',
       paste: 'elsewise.editor.clipboard.paste',
     },
+    history: {
+      undo: 'elsewise.editor.history.undo',
+      redo: 'elsewise.editor.history.redo',
+      undoSelection: 'elsewise.editor.history.undoSelection',
+      redoSelection: 'elsewise.editor.history.redoSelection',
+    },
+    search: {
+      find: 'elsewise.editor.search.find',
+      replace: 'elsewise.editor.search.replace',
+      findNext: 'elsewise.editor.search.findNext',
+      findPrevious: 'elsewise.editor.search.findPrevious',
+      selectNextOccurrence: 'elsewise.editor.search.selectNextOccurrence',
+      selectAllOccurrences: 'elsewise.editor.search.selectAllOccurrences',
+      goToLine: 'elsewise.editor.search.goToLine',
+    },
+    fold: {
+      fold: 'elsewise.editor.fold.fold',
+      unfold: 'elsewise.editor.fold.unfold',
+      foldAll: 'elsewise.editor.fold.foldAll',
+      unfoldAll: 'elsewise.editor.fold.unfoldAll',
+    },
+    edit: {
+      indent: 'elsewise.editor.edit.indent',
+      unindent: 'elsewise.editor.edit.unindent',
+      autoIndent: 'elsewise.editor.edit.autoIndent',
+      toggleLineComment: 'elsewise.editor.edit.toggleLineComment',
+      toggleBlockComment: 'elsewise.editor.edit.toggleBlockComment',
+      duplicateLine: 'elsewise.editor.edit.duplicateLine',
+      duplicateLineUp: 'elsewise.editor.edit.duplicateLineUp',
+      deleteLine: 'elsewise.editor.edit.deleteLine',
+      moveLineUp: 'elsewise.editor.edit.moveLineUp',
+      moveLineDown: 'elsewise.editor.edit.moveLineDown',
+      startNewLine: 'elsewise.editor.edit.startNewLine',
+      toggleTabFocusMode: 'elsewise.editor.edit.toggleTabFocusMode',
+    },
+    caret: {
+      addCaretAbove: 'elsewise.editor.caret.addCaretAbove',
+      addCaretBelow: 'elsewise.editor.caret.addCaretBelow',
+      selectLine: 'elsewise.editor.caret.selectLine',
+      extendSelection: 'elsewise.editor.caret.extendSelection',
+      moveToMatchingBracket: 'elsewise.editor.caret.moveToMatchingBracket',
+      syntaxLeft: 'elsewise.editor.caret.syntaxLeft',
+      syntaxRight: 'elsewise.editor.caret.syntaxRight',
+      selectSyntaxLeft: 'elsewise.editor.caret.selectSyntaxLeft',
+      selectSyntaxRight: 'elsewise.editor.caret.selectSyntaxRight',
+    },
     lsp: {
       applyTopFix: 'elsewise.editor.lsp.applyTopFix',
       showContextActions: 'elsewise.editor.lsp.showContextActions',
@@ -24,6 +70,79 @@ export const DEFAULT_COMMANDS = {
     },
   },
 } as const;
+
+/**
+ * The default keys of the built-in commands. Commands with no keys have empty lists.
+ *
+ * See {@link DEFAULT_COMMANDS}.
+ */
+export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
+  editor: {
+    clipboard: {
+      cut: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
+      copy: ['Mod-c', { windows: 'Ctrl-Insert', linux: 'Ctrl-Insert' }],
+      paste: ['Mod-v', { windows: 'Shift-Insert', linux: 'Shift-Insert' }],
+    },
+    history: {
+      undo: ['Mod-z'],
+      redo: ['Mod-Shift-z'],
+      undoSelection: ['Mod-u'],
+      redoSelection: [{ key: 'Alt-u', mac: 'Mod-Shift-u' }],
+    },
+    search: {
+      find: ['Mod-f'],
+      replace: ['Mod-r'],
+      findNext: [{ key: 'F3', mac: 'Mod-g' }],
+      findPrevious: [{ key: 'Shift-F3', mac: 'Mod-Shift-g' }],
+      selectNextOccurrence: [{ key: 'Alt-j', mac: 'Ctrl-g' }],
+      // Uppercase since Windows has no Shift-form for keys pressed with Ctrl-Alt.
+      selectAllOccurrences: [{ key: 'Ctrl-Alt-J', mac: 'Ctrl-Mod-g' }],
+      goToLine: [{ key: 'Ctrl-g', mac: 'Mod-l' }],
+    },
+    fold: {
+      fold: ['Mod--'],
+      unfold: ['Mod-='],
+      foldAll: ['Mod-Shift--'],
+      unfoldAll: ['Mod-Shift-='],
+    },
+    edit: {
+      indent: ['Tab'],
+      unindent: ['Shift-Tab'],
+      autoIndent: ['Ctrl-Alt-i'],
+      toggleLineComment: ['Mod-/'],
+      toggleBlockComment: [{ key: 'Ctrl-Shift-/', mac: 'Mod-Alt-/' }],
+      duplicateLine: ['Mod-d'],
+      duplicateLineUp: [],
+      deleteLine: [{ key: 'Ctrl-y', mac: 'Mod-Backspace' }],
+      moveLineUp: ['Shift-Alt-ArrowUp'],
+      moveLineDown: ['Shift-Alt-ArrowDown'],
+      startNewLine: ['Shift-Enter'],
+      toggleTabFocusMode: [{ key: 'Ctrl-m', mac: 'Shift-Alt-m' }],
+    },
+    caret: {
+      addCaretAbove: ['Mod-Alt-ArrowUp'],
+      addCaretBelow: ['Mod-Alt-ArrowDown'],
+      selectLine: [{ key: 'Alt-l', mac: 'Ctrl-l' }],
+      extendSelection: [{ key: 'Ctrl-w', mac: 'Alt-ArrowUp' }],
+      moveToMatchingBracket: [{ key: 'Ctrl-Shift-m', mac: 'Ctrl-m' }],
+      syntaxLeft: [{ key: 'Alt-ArrowLeft', mac: 'Ctrl-ArrowLeft' }],
+      syntaxRight: [{ key: 'Alt-ArrowRight', mac: 'Ctrl-ArrowRight' }],
+      selectSyntaxLeft: [{ key: 'Shift-Alt-ArrowLeft', mac: 'Shift-Ctrl-ArrowLeft' }],
+      selectSyntaxRight: [{ key: 'Shift-Alt-ArrowRight', mac: 'Shift-Ctrl-ArrowRight' }],
+    },
+    lsp: {
+      applyTopFix: ['Shift-Alt-Enter'],
+      showContextActions: ['Alt-Enter'],
+      goToDefinition: ['Mod-b'],
+      format: ['Mod-Alt-l'],
+      findUsages: ['Mod-Alt-F7'],
+      rename: ['Shift-F6'],
+      showSignatureHelp: ['Mod-p'],
+    },
+  },
+};
+
+type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<T[K]> };
 
 /**
  * The commands.
@@ -52,8 +171,10 @@ export interface Commands {
    * Runs the command with `id` against an optional `target`.
    *
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
+   *
+   * Returns whether the command ran and applied.
    */
-  run(id: string, target?: EditorView): void;
+  run(id: string, target?: EditorView): boolean;
 }
 
 /**
@@ -119,8 +240,10 @@ export interface ApplicationCommand extends Command {
 
   /**
    * Runs the command.
+   *
+   * Returns whether the command applied. If it did not, its keys fall through to the next command.
    */
-  run(application: Application): void;
+  run(application: Application): boolean;
 }
 
 /**
@@ -146,6 +269,8 @@ export interface EditorCommand extends Command {
 
   /**
    * Runs the command against `view`.
+   *
+   * Returns whether the command applied. If it did not, its keys fall through to the next command.
    */
-  run(application: Application, view: EditorView, lsp: LSPPlugin | null): void;
+  run(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
 }

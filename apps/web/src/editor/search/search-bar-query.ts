@@ -26,7 +26,7 @@ export interface Matches {
 /**
  * Whether the "replace" row is open.
  *
- * Editor state so that `Mod-Alt-f` can open it before the bar has been rendered.
+ * Editor state so that the find and replace commands can set it before the bar has been rendered.
  */
 export const replaceRow = StateField.define<boolean>({
   create: () => false,

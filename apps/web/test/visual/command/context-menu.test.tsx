@@ -11,18 +11,18 @@ import { EditorManager } from '@/editor/editor-manager';
 import { THEMES } from '../../sheet';
 
 const COMMANDS: ApplicationCommand[] = [
-  { scope: 'application', id: 'actions', label: 'Show context actions', defaultKeys: ['Alt-Enter'], run: () => {} },
-  { scope: 'application', id: 'usages', label: 'Find usages', defaultKeys: ['Mod-Alt-F7'], run: () => {} },
+  { scope: 'application', id: 'actions', label: 'Show context actions', defaultKeys: ['Alt-Enter'], run: () => true },
+  { scope: 'application', id: 'usages', label: 'Find usages', defaultKeys: ['Mod-Alt-F7'], run: () => true },
   {
     scope: 'application',
     id: 'definition',
     label: 'Go to definition',
     defaultKeys: ['Mod-b'],
     enabled: () => false,
-    run: () => {},
+    run: () => true,
   },
-  { scope: 'application', id: 'rename', label: 'Rename…', defaultKeys: ['Shift-F6'], run: () => {} },
-  { scope: 'application', id: 'extract', label: 'Extract function', run: () => {} },
+  { scope: 'application', id: 'rename', label: 'Rename…', defaultKeys: ['Shift-F6'], run: () => true },
+  { scope: 'application', id: 'extract', label: 'Extract function', run: () => true },
 ];
 
 // Groups with keys, a disabled item, and a submenu.

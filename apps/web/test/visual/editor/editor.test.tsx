@@ -1,4 +1,5 @@
 import { startCompletion } from '@codemirror/autocomplete';
+import { foldCode } from '@codemirror/language';
 import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
@@ -380,6 +381,15 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-search-${theme}`);
+  });
+
+  test('folded', async () => {
+    const view = await mount(theme);
+    view.dispatch({ selection: { anchor: view.state.doc.line(2).from } });
+    foldCode(view);
+    await expect.poll(() => document.querySelector('.cm-foldPlaceholder')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-folded-${theme}`);
   });
 
   test('diagnostics', async () => {

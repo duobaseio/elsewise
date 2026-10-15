@@ -2,7 +2,6 @@ import {
   closeSearchPanel,
   findNext,
   findPrevious,
-  openSearchPanel,
   replaceAll,
   replaceNext,
   SearchQuery,
@@ -17,7 +16,9 @@ import { Input } from '@elsewise/components/components/input';
 import { Kbd } from '@elsewise/components/components/kbd';
 import { Toggle } from '@elsewise/components/components/toggle';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
+import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import {
   type ComponentProps,
   type KeyboardEvent,
@@ -29,13 +30,23 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useCommandManager } from '@/command/command-manager';
+import { eventKeys } from '@/command/keys';
 import { scroll } from '@/editor/scroll';
 import { describe, replaceRow, toggleReplaceRow, useSearchBarQuery } from '@/editor/search/search-bar-query';
 
-const OPEN_REPLACE = 'Mod-Alt-f';
+const OPEN_REPLACE = 'Mod-r';
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
 const CLOSE = 'Escape';
+
+// The commands whose keys also fire in the search bar.
+const PANEL: readonly string[] = [
+  DEFAULT_COMMANDS.editor.search.find,
+  DEFAULT_COMMANDS.editor.search.replace,
+  DEFAULT_COMMANDS.editor.search.findNext,
+  DEFAULT_COMMANDS.editor.search.findPrevious,
+];
 
 interface Mounted {
   view: EditorView;
@@ -76,17 +87,7 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
     return [
       search({ top: true, createPanel, scrollToMatch: scroll }),
       replaceRow,
-      keymap.of([
-        {
-          key: OPEN_REPLACE,
-          scope: 'editor search-panel',
-          run: (view) => {
-            openSearchPanel(view);
-            view.dispatch({ effects: toggleReplaceRow.of(true) });
-            return true;
-          },
-        },
-      ]),
+      keymap.of([{ key: CLOSE, scope: 'editor search-panel', run: closeSearchPanel }]),
     ];
   }, []);
 
@@ -102,6 +103,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
   const field = useRef<HTMLInputElement>(null);
   const typed = useRef<string | null>(null);
   const replaceId = useId();
+  const commands = useCommandManager();
 
   // `openSearchPanel` focuses the field and selects its text, but that does not work with a React-rendered bar:
   // * On the first open, the field has not been rendered yet, so the bar focuses it on mount.
@@ -150,7 +152,11 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
   }
 
   function keydown(event: KeyboardEvent<HTMLElement>) {
-    if (runScopeHandlers(view, event.nativeEvent, 'search-panel')) {
+    // Runs the search commands bound to the key since the editor's keys only fire in the document.
+    const ran = eventKeys(event.nativeEvent, PLATFORM).some((key) =>
+      commands.keymap.keys.editor.get(key)?.some((id) => PANEL.includes(id) && commands.run(id, view)),
+    );
+    if (ran || runScopeHandlers(view, event.nativeEvent, 'search-panel')) {
       event.preventDefault();
     } else if (event.key === 'Enter' && event.target === field.current) {
       event.preventDefault();

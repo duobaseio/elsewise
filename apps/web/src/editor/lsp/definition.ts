@@ -1,6 +1,6 @@
 import { EditorSelection } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import type { DefinitionParams, Location } from 'vscode-languageserver-protocol';
 import { navigable } from '@/editor/lsp/symbol';
 import { scroll } from '@/editor/scroll';
@@ -12,13 +12,13 @@ export const GO_TO_DEFINITION: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.goToDefinition,
   label: 'Go to definition',
-  defaultKeys: ['Mod-b'],
+  defaultKeys: DEFAULT_KEYS.editor.lsp.goToDefinition,
   enabled: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.definitionProvider),
   shown: (_, view, lsp) => Boolean(lsp?.client.serverCapabilities?.definitionProvider) && navigable(view.state),
   // Copied from `@codemirror/lsp-client`'s `jumpToOrigin`.
   run(_, view, lsp) {
     if (lsp === null) {
-      return;
+      return false;
     }
 
     lsp.client.sync();
@@ -50,5 +50,6 @@ export const GO_TO_DEFINITION: EditorCommand = {
         toast.add({ type: 'error', title: 'Go to definition failed', description: (error as Error).message });
       }
     });
+    return true;
   },
 };

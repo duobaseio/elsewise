@@ -3,7 +3,7 @@ import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showTooltip, type Tooltip, WidgetType } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import { highlightTree, tags } from '@lezer/highlight';
 import type {
   DocumentHighlight,
@@ -128,7 +128,7 @@ export const RENAME: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.rename,
   label: 'Rename…',
-  defaultKeys: ['Shift-F6'],
+  defaultKeys: DEFAULT_KEYS.editor.lsp.rename,
   enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.renameProvider),
   shown(_, view, lsp) {
     const { state } = view;
@@ -149,7 +149,7 @@ export const RENAME: EditorCommand = {
   run(_, view, lsp) {
     const provider = lsp?.client.serverCapabilities?.renameProvider;
     if (lsp === null || !provider) {
-      return;
+      return false;
     }
 
     const { doc } = view.state;
@@ -249,6 +249,7 @@ export const RENAME: EditorCommand = {
         }
       }
     })();
+    return true;
   },
 };
 

@@ -3,7 +3,7 @@ import { LSPPlugin } from '@codemirror/lsp-client';
 import { type Extension, Prec, StateEffect, StateField } from '@codemirror/state';
 import { type EditorView, keymap, showTooltip, type Tooltip, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import { highlightCode } from '@lezer/highlight';
 import {
   type SignatureHelp,
@@ -51,7 +51,7 @@ export const SHOW_SIGNATURE_HELP: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.showSignatureHelp,
   label: 'Parameter info',
-  defaultKeys: ['Mod-p'],
+  defaultKeys: DEFAULT_KEYS.editor.lsp.showSignatureHelp,
   enabled: (_, view, lsp) =>
     view.plugin(requests) !== null && Boolean(lsp?.client.serverCapabilities?.signatureHelpProvider),
   shown: (_, view, lsp) =>
@@ -60,7 +60,7 @@ export const SHOW_SIGNATURE_HELP: EditorCommand = {
   run(_, view, lsp) {
     const requester = view.plugin(requests);
     if (!requester || lsp === null) {
-      return;
+      return false;
     }
 
     const shown = view.state.field(signatures);
@@ -69,6 +69,7 @@ export const SHOW_SIGNATURE_HELP: EditorCommand = {
       activeSignatureHelp: shown?.data,
       isRetrigger: !!shown,
     });
+    return true;
   },
 };
 

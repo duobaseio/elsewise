@@ -1,6 +1,6 @@
 import { getIndentUnit, indentUnit } from '@codemirror/language';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMANDS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import type { DocumentFormattingParams, DocumentRangeFormattingParams, TextEdit } from 'vscode-languageserver-protocol';
 
 /**
@@ -11,7 +11,7 @@ export const FORMAT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.format,
   label: 'Format',
-  defaultKeys: ['Mod-Alt-l'],
+  defaultKeys: DEFAULT_KEYS.editor.lsp.format,
   // Copied from `@codemirror/lsp-client`'s `formatDocument`.
   //
   // Formats only the selection, with `textDocument/rangeFormatting`, when there is one. Leaves the key to the editor
@@ -30,7 +30,7 @@ export const FORMAT: EditorCommand = {
   },
   run(_, view, lsp) {
     if (lsp === null) {
-      return;
+      return false;
     }
 
     const ranges = view.state.selection.ranges.filter((range) => !range.empty);
@@ -90,5 +90,6 @@ export const FORMAT: EditorCommand = {
         toast.add({ type: 'error', title: 'Formatting failed', description: (error as Error).message });
       }
     });
+    return true;
   },
 };

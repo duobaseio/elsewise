@@ -46,7 +46,7 @@ function press(view: EditorView, init: KeyboardEventInit = { key: 'k', ctrlKey: 
 
 describe('editorKeymap', () => {
   test('runs command against view', () => {
-    const run = vi.fn();
+    const run = vi.fn<EditorCommand['run']>(() => true);
     const fallback = vi.fn(() => true);
     const view = open(fallback, { id: 'a', label: 'A', scope: 'editor', defaultKeys: ['Ctrl-k'], run });
     press(view);
@@ -57,8 +57,8 @@ describe('editorKeymap', () => {
   });
 
   test('runs later-added command first', () => {
-    const first = vi.fn();
-    const second = vi.fn();
+    const first = vi.fn(() => true);
+    const second = vi.fn(() => true);
     const view = open(
       () => true,
       { id: 'first', label: 'First', scope: 'editor', defaultKeys: ['Ctrl-k'], run: first },
@@ -71,7 +71,7 @@ describe('editorKeymap', () => {
   });
 
   test('runs uppercase letter held with Shift alone', () => {
-    const run = vi.fn();
+    const run = vi.fn(() => true);
     const view = open(() => true, { id: 'a', label: 'A', scope: 'editor', defaultKeys: ['Shift-K'], run });
     press(view, { key: 'K', shiftKey: true });
 
@@ -79,7 +79,7 @@ describe('editorKeymap', () => {
   });
 
   test('falls through disabled command', () => {
-    const run = vi.fn();
+    const run = vi.fn(() => true);
     const fallback = vi.fn(() => true);
     const view = open(fallback, {
       id: 'a',
@@ -92,6 +92,22 @@ describe('editorKeymap', () => {
     press(view);
 
     expect(run).not.toHaveBeenCalled();
+    expect(fallback).toHaveBeenCalledOnce();
+  });
+
+  test('falls through command that did not apply', () => {
+    const first = vi.fn(() => false);
+    const second = vi.fn(() => false);
+    const fallback = vi.fn(() => true);
+    const view = open(
+      fallback,
+      { id: 'first', label: 'First', scope: 'editor', defaultKeys: ['Ctrl-k'], run: first },
+      { id: 'second', label: 'Second', scope: 'editor', defaultKeys: ['Ctrl-k'], run: second },
+    );
+    press(view);
+
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).toHaveBeenCalledOnce();
     expect(fallback).toHaveBeenCalledOnce();
   });
 });

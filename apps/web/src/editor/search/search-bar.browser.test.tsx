@@ -1,12 +1,14 @@
-import { defaultKeymap } from '@codemirror/commands';
-import { openSearchPanel, searchKeymap, searchPanelOpen } from '@codemirror/search';
+import { standardKeymap } from '@codemirror/commands';
+import { openSearchPanel, searchPanelOpen } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { useEffect, useRef } from 'react';
 import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { CommandManagerContext } from '@/command/command-manager';
 import { useSearchExtension } from '@/editor/search/search-bar';
+import { builtInCommands, commandsExtension } from '../../../test/commands';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
 
@@ -21,6 +23,7 @@ function mount(extensions: Extension[] = []): Promise<EditorView> {
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
   });
+  const commands = builtInCommands();
   function Probe() {
     const { search, portal } = useSearchExtension();
     const host = useRef<HTMLDivElement>(null);
@@ -28,7 +31,7 @@ function mount(extensions: Extension[] = []): Promise<EditorView> {
       const created = new EditorView({
         state: EditorState.create({
           doc: DOC,
-          extensions: [search, keymap.of([...defaultKeymap, ...searchKeymap]), ...extensions],
+          extensions: [search, commandsExtension(commands), keymap.of(standardKeymap), ...extensions],
         }),
         parent: host.current as HTMLDivElement,
       });
@@ -37,10 +40,10 @@ function mount(extensions: Extension[] = []): Promise<EditorView> {
       return () => created.destroy();
     }, [search]);
     return (
-      <>
+      <CommandManagerContext value={commands}>
         <div ref={host} />
         {portal}
-      </>
+      </CommandManagerContext>
     );
   }
   render(<Probe />);
@@ -162,7 +165,7 @@ test('toggles and invalid regexp', async () => {
 test('replace row', async () => {
   const view = await mount();
   view.focus();
-  await userEvent.keyboard('{Meta>}{Alt>}f{/Alt}{/Meta}');
+  await userEvent.keyboard('{Meta>}r{/Meta}');
   await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 
   await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
@@ -180,6 +183,37 @@ test('replace row', async () => {
 
   await userEvent.click(page.getByRole('button', { name: 'Replace all' }));
   expect(view.state.doc.toString()).toBe('const a = 1;\nconst b = 2;\nconst c = 3;\nletter\n');
+});
+
+test('find hides replace row', async () => {
+  const view = await mount();
+  const replace = () => page.getByRole('textbox', { name: 'Replace' });
+  view.focus();
+  await userEvent.keyboard('{Meta>}r{/Meta}');
+  await expect.element(replace()).toBeVisible();
+
+  await userEvent.keyboard('{Meta>}f{/Meta}');
+  await expect.element(replace()).not.toBeInTheDocument();
+
+  await userEvent.keyboard('{Meta>}r{/Meta}');
+  await userEvent.keyboard('{Escape}');
+  await userEvent.keyboard('{Meta>}f{/Meta}');
+  await expect.element(find()).toBeVisible();
+  await expect.element(replace()).not.toBeInTheDocument();
+});
+
+test('runs search commands from field', async () => {
+  const view = await mount();
+  openSearchPanel(view);
+  await userEvent.fill(find(), 'let');
+
+  await userEvent.keyboard('{Meta>}g{/Meta}');
+  await expect.element(count()).toHaveTextContent('2/4');
+  await userEvent.keyboard('{Meta>}{Shift>}g{/Shift}{/Meta}');
+  await expect.element(count()).toHaveTextContent('1/4');
+
+  await userEvent.keyboard('{Meta>}r{/Meta}');
+  await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 });
 
 test('Enter in replace field', async () => {
