@@ -11,8 +11,10 @@ import { formatKey } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
+import { COMMANDS } from '@/editor/editor-manager';
 import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { highlightUsages } from '@/editor/lsp/highlights';
+import { SHOW_HOVER } from '@/editor/lsp/hover';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -516,5 +518,107 @@ describe('serverHover', () => {
 
       await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-lint')).not.toBeNull(), { timeout: 2000 });
     });
+  });
+});
+
+describe('SHOW_HOVER', () => {
+  // Puts the cursor at `pos`, runs the command, and returns the hover that opens.
+  async function show(view: EditorView, pos: number): Promise<HTMLElement> {
+    view.dispatch({ selection: { anchor: pos } });
+    expect(view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view)).toBe(true);
+    return vi.waitFor(
+      () => {
+        const tooltip = view.dom.querySelector<HTMLElement>('.cm-tooltip-hover');
+        expect(tooltip).not.toBeNull();
+        return tooltip as HTMLElement;
+      },
+      { timeout: 2000 },
+    );
+  }
+
+  test('opens documentation at cursor', async () => {
+    const fake = transport(markdown('Attaches.'));
+    const view = await open(fake);
+
+    const tooltip = await show(view, DOC.indexOf('attach') + 1);
+
+    expect(tooltip.querySelector('.cm-lsp-content')?.textContent).toContain('Attaches.');
+    expect(fake.sent.find(({ method }) => method === 'textDocument/hover')?.params).toMatchObject({
+      position: { line: 0, character: DOC.indexOf('attach') + 1 },
+    });
+  });
+
+  test('opens despite update while server answers', async () => {
+    let answer = (_: Hover) => {};
+    const fake = new StubTransport(
+      { textDocumentSync: 2, hoverProvider: true },
+      { 'textDocument/hover': () => new Promise<Hover>((resolve) => (answer = resolve)) },
+    );
+    const view = await open(fake);
+    view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
+    view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view);
+    await vi.waitFor(() => expect(fake.methods).toContain('textDocument/hover'));
+
+    view.dispatch({});
+    answer(markdown('Attaches.'));
+
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull());
+  });
+
+  test('shows problems of word cursor ends', async () => {
+    const view = await open(transport(null, [PROBLEM]));
+    await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
+
+    const tooltip = await show(view, DOC.indexOf('attach') + 'attach'.length);
+
+    expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
+  });
+
+  test('stays open on pointer move', async () => {
+    const view = await open(transport(markdown('Attaches.')));
+    await show(view, DOC.indexOf('attach') + 1);
+
+    point(view, DOC.indexOf('channel'));
+    await rest();
+
+    expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
+  });
+
+  test('closes on cursor move', async () => {
+    const view = await open(transport(markdown('Attaches.')));
+    await show(view, DOC.indexOf('attach') + 1);
+
+    view.dispatch({ selection: { anchor: DOC.indexOf('channel') } });
+
+    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+  });
+
+  test('closes on typing', async () => {
+    const view = await open(transport(markdown('Attaches.')));
+    await show(view, DOC.indexOf('attach') + 1);
+
+    view.dispatch({ changes: { from: 0, insert: ' ' }, userEvent: 'input.type' });
+
+    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+  });
+
+  test('closes on Escape', async () => {
+    const view = await open(transport(markdown('Attaches.')));
+    await show(view, DOC.indexOf('attach') + 1);
+
+    expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Escape' }), 'editor')).toBe(true);
+    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+  });
+
+  test('shows nothing without documentation', async () => {
+    const fake = transport(null);
+    const view = await open(fake);
+
+    view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
+    view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view);
+    await vi.waitFor(() => expect(fake.methods).toContain('textDocument/hover'), { timeout: 2000 });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
   });
 });

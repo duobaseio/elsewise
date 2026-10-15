@@ -2,7 +2,7 @@ import { closeBrackets } from '@codemirror/autocomplete';
 import { history, simplifySelection, standardKeymap } from '@codemirror/commands';
 import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
 import { highlightSelectionMatches } from '@codemirror/search';
-import { Compartment, EditorState, type Extension, Facet } from '@codemirror/state';
+import { Compartment, EditorState, type Extension } from '@codemirror/state';
 import {
   crosshairCursor,
   drawSelection,
@@ -16,12 +16,11 @@ import {
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { Commands } from '@elsewise/plugin';
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
 import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
-import { useEditorManager } from '@/editor/editor-manager';
+import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { link } from '@/editor/link.ts';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
 import { useSearchExtension } from '@/editor/search/search-bar';
@@ -35,8 +34,6 @@ const THEME = new Compartment();
 const LANGUAGE = new Compartment();
 const LANGUAGE_SERVER = new Compartment();
 const SETTINGS = new Compartment();
-
-export const COMMANDS = Facet.define<Commands, Commands | null>({ combine: (values) => values[0] ?? null });
 
 export interface EditorProps {
   /**

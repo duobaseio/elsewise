@@ -1,10 +1,15 @@
 import type { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
-import type { Extension } from '@codemirror/state';
+import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { ContextMenu, Disposable, Editor, EditorDocument, LanguageServer } from '@elsewise/plugin';
+import type { Commands, ContextMenu, Disposable, Editor, EditorDocument, LanguageServer } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
+
+/**
+ * The commands that an editor runs.
+ */
+export const COMMANDS = Facet.define<Commands, Commands | null>({ combine: (values) => values[0] ?? null });
 
 /**
  * The code editor as plugins see it.

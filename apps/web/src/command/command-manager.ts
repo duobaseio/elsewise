@@ -18,6 +18,7 @@ import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
 import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
 import { FORMAT } from '@/editor/lsp/format';
+import { SHOW_HOVER } from '@/editor/lsp/hover';
 import { FIND_USAGES } from '@/editor/lsp/references';
 import { RENAME } from '@/editor/lsp/rename';
 import { SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
@@ -37,12 +38,13 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   ...EDIT,
   ...CARET,
   // LSP
-  SHOW_CONTEXT_ACTIONS,
   APPLY_TOP_FIX,
+  SHOW_CONTEXT_ACTIONS,
   GO_TO_DEFINITION,
   FORMAT,
   FIND_USAGES,
   RENAME,
+  SHOW_HOVER,
   SHOW_SIGNATURE_HELP,
 ];
 
