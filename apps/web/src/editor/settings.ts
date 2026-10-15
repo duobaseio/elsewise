@@ -1,5 +1,5 @@
 import { indentUnit } from '@codemirror/language';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState, type Extension, Prec } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { useMemo } from 'react';
 import { completionDocumentation } from '@/editor/lsp/completion';
@@ -23,8 +23,10 @@ export function useSettingsExtension(language: string | undefined): Extension {
 
   return useMemo(
     () => [
-      EditorState.tabSize.of(tabSize),
-      indentUnit.of(indent),
+      // The plugins' extensions come first in the editor's configuration, and these facets take their first value, so
+      // the settings need the precedence to beat a plugin's.
+      Prec.highest(EditorState.tabSize.of(tabSize)),
+      Prec.highest(indentUnit.of(indent)),
       showLineNumbers ? lineNumbers() : [],
       lineWrapping ? EditorView.lineWrapping : [],
       visualGuides(guides),

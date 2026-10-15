@@ -2,7 +2,7 @@ import { closeBrackets } from '@codemirror/autocomplete';
 import { history, simplifySelection, standardKeymap } from '@codemirror/commands';
 import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
 import { highlightSelectionMatches } from '@codemirror/search';
-import { Compartment, EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, type Extension, Prec } from '@codemirror/state';
 import {
   crosshairCursor,
   drawSelection,
@@ -100,7 +100,8 @@ export function Editor({ path, code, root }: EditorProps) {
 
         SETTINGS.of(settings),
         // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
-        EditorState.lineSeparator.of(lineSeparator),
+        // Has the precedence for the same reason as the settings' facets.
+        Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
 
         LANGUAGE.of(description?.support ?? []),
         LANGUAGE_SERVER.of(languageServer),

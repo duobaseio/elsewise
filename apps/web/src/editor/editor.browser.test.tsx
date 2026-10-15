@@ -1,5 +1,6 @@
-import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
+import { indentUnit, LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
+import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import type { LanguageServer } from '@elsewise/plugin';
@@ -176,6 +177,23 @@ test("plugin's theme overrides editor's metrics", async () => {
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
   expect(style(view.contentDOM).paddingBottom).toBe('0px');
+});
+
+test('settings beat plugin indentation facets', async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([EditorState.tabSize.of(2), indentUnit.of('\t')]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+
+  expect(view.state.tabSize).toBe(SETTINGS.appearance.editor.tabSize);
+  expect(view.state.facet(indentUnit)).toBe(SETTINGS.appearance.editor.indentUnit);
+});
+
+test('file line separator beats plugin facet', async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([EditorState.lineSeparator.of('\r\n')]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+
+  expect(view.state.lineBreak).toBe('\n');
 });
 
 test("plugin's extension function receives file", async () => {
