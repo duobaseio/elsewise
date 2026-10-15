@@ -1,64 +1,13 @@
-import { history } from '@codemirror/commands';
-import { foldGutter, LanguageDescription, type LanguageSupport } from '@codemirror/language';
-import { languages } from '@codemirror/language-data';
 import { EditorSelection, EditorState, type Extension } from '@codemirror/state';
-import { EditorView } from '@codemirror/view';
-import { useEffect, useRef } from 'react';
-import { afterEach, beforeAll, describe, expect, test } from 'vitest';
-import { page, userEvent } from 'vitest/browser';
-import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
-import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
+import type { EditorView } from '@codemirror/view';
+import { afterEach, describe, expect, test } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { builtInCommands, commandsExtension } from '../../test/commands';
+import { DOC, labels, menuitem, mount, open } from '../../test/context-menu';
 import { StubTransport } from '../../test/stub-transport';
-
-const DOC = 'fn main() {\n    let a = 1;\n}\n';
-
-let rust: LanguageSupport;
-
-beforeAll(async () => {
-  rust = await (LanguageDescription.matchFilename(languages, 'main.rs') as LanguageDescription).load();
-});
-
-function mount(
-  editor = new EditorManager(),
-  commands = builtInCommands(editor),
-  extensions: Extension = [],
-): Promise<EditorView> {
-  let resolve!: (view: EditorView) => void;
-  const ready = new Promise<EditorView>((r) => {
-    resolve = r;
-  });
-  function Probe() {
-    const host = useRef<HTMLDivElement>(null);
-    const view = useRef<EditorView>(null);
-    useEffect(() => {
-      view.current = new EditorView({
-        state: EditorState.create({
-          doc: DOC,
-          extensions: [history(), foldGutter(), rightClickContextMenu, rust, extensions],
-        }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(view.current);
-      return () => view.current?.destroy();
-    }, []);
-    return (
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <EditorContextMenu view={view}>
-            <div ref={host} />
-          </EditorContextMenu>
-        </CommandManagerContext>
-      </EditorManagerContext>
-    );
-  }
-  render(<Probe />);
-  return ready;
-}
 
 // Returns a view with the built-in menu and commands, and `extensions`, e.g. a language server's.
 function mountBuiltIn(extensions: Extension = []): Promise<EditorView> {
@@ -94,31 +43,6 @@ function range(text: string) {
   const line = DOC.split('\n').findIndex((content) => content.includes(text));
   const character = DOC.split('\n')[line].indexOf(text);
   return { start: { line, character }, end: { line, character: character + text.length } };
-}
-
-// The accessible name carries the shortcut too.
-const menuitem = (name: string) => page.getByRole('menuitem', { name: new RegExp(`^${name}`) });
-
-async function open(view: EditorView, pos: number): Promise<void> {
-  const rect = view.coordsAtPos(pos);
-  if (rect === null) {
-    throw new Error('offscreen');
-  }
-  const content = view.contentDOM.getBoundingClientRect();
-  await userEvent.click(view.contentDOM, {
-    button: 'right',
-    position: { x: rect.left - content.left + 1, y: rect.top - content.top + 1 },
-  });
-  await expect.element(page.getByRole('menu').first()).toBeVisible();
-}
-
-// Returns the labels of the items in `root`, and `-` for each separator. An item's label is its first node, ahead of
-// its shortcut.
-function labels(root: ParentNode = document): (string | null | undefined)[] {
-  return [...root.querySelectorAll('[data-slot="context-menu-item"], [data-slot="context-menu-separator"]')].map(
-    (element) =>
-      element.getAttribute('data-slot') === 'context-menu-separator' ? '-' : element.firstChild?.textContent,
-  );
 }
 
 // Returns the actions asked of the bridge, which records them instead of running them.

@@ -1,18 +1,12 @@
 import { formatKey } from '@elsewise/components/lib/platform';
-import type {
-  ApplicationCommand,
-  ContextMenu,
-  ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSubmenuItem,
-  EditorCommand,
-} from '@elsewise/plugin';
+import type { ApplicationCommand, ContextMenu, EditorCommand } from '@elsewise/plugin';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { type CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu';
 import { builtInCommands } from '../../test/commands';
+import { group, item, labels, menu, menuitem, submenu } from '../../test/context-menu';
 
 // Shows `menu` with `commands` and the `rest` of the props, over a target that `open` right-clicks.
 async function mount(
@@ -38,26 +32,6 @@ function command(
   return { scope: 'application', id, label: id, run, ...rest };
 }
 
-// Returns an item that runs the command with `id` at `order`.
-function item(id: string, order = 0): ContextMenuItem {
-  return { type: 'item', order, command: id };
-}
-
-// Returns an item that opens the submenu with `id` at `order`.
-function submenu(id: string, order = 0): ContextMenuSubmenuItem {
-  return { type: 'submenu', order, submenu: id };
-}
-
-// Returns a group at `order` in the submenu with id `menu`, or in the menu itself.
-function group(order = 0, menu?: string): ContextMenuGroup {
-  return menu === undefined ? { order } : { menu, order };
-}
-
-// Returns a menu with `submenus`, `groups` and `items`.
-function menu({ submenus = {}, groups = {}, items = {} }: Partial<ContextMenu>): ContextMenu {
-  return { submenus, groups, items };
-}
-
 // Returns commands that include `added`.
 function setUp(added: readonly (ApplicationCommand | EditorCommand)[]): CommandManager {
   const commands = builtInCommands();
@@ -65,21 +39,9 @@ function setUp(added: readonly (ApplicationCommand | EditorCommand)[]): CommandM
   return commands;
 }
 
-// The accessible name carries the shortcut too.
-const menuitem = (name: string) => page.getByRole('menuitem', { name: new RegExp(`^${name}`) });
-
 async function open(): Promise<void> {
   await userEvent.click(page.getByTestId('target'), { button: 'right' });
   await expect.element(page.getByRole('menu').first()).toBeVisible();
-}
-
-// Returns the labels of the items in `root`, and `-` for each separator. An item's label is its first node, ahead of
-// its shortcut.
-function labels(root: ParentNode = document): (string | null | undefined)[] {
-  return [...root.querySelectorAll('[data-slot="context-menu-item"], [data-slot="context-menu-separator"]')].map(
-    (element) =>
-      element.getAttribute('data-slot') === 'context-menu-separator' ? '-' : element.firstChild?.textContent,
-  );
 }
 
 describe('CommandContextMenu', () => {
