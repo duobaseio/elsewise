@@ -144,7 +144,7 @@ import rOriginalBrand from '../assets/file-icons/r-original.svg?no-inline';
 import racketOriginalBrand from '../assets/file-icons/racket-original.svg?no-inline';
 import vuejsOriginalBrand from '../assets/file-icons/vuejs-original.svg?no-inline';
 
-export const FALLBACK_FILE_ICON: FileIconData = { kind: 'phosphor', name: 'file', tint: null };
+export const GENERIC_FILE_ICON: FileIconData = { kind: 'phosphor', name: 'file', tint: null };
 
 export const PHOSPHOR_ICONS = {
   'brackets-curly': BracketsCurlyIcon,

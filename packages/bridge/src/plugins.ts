@@ -1,63 +1,75 @@
+import { Manifest, PluginId } from '@elsewise/plugin';
 import * as z from 'zod';
 
-/**
- * A plugin's id, typically reverse domain name notation, e.g. `io.duobase.elsewise`.
- */
-export const PluginId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+export { PluginId };
 
-const SEMVER = new RegExp(
-  String.raw`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
-    String.raw`(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?` +
-    String.raw`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`,
-);
+export type InstalledPlugin = z.infer<typeof InstalledPlugin>;
+export type InvalidPlugin = z.infer<typeof InvalidPlugin>;
+export type PluginEntry = z.infer<typeof PluginEntry>;
 
 /**
- * The plugins installed on this machine.
+ * The plugins installed on this machine: the folders in `<data folder>/plugins`.
  */
 export interface PluginsBridge {
   /**
-   * Returns every installed plugin, enabled or not.
+   * Returns every installed plugin, enabled or not, and every folder whose manifest is missing or malformed.
    */
-  load(): Promise<InstalledPlugin[]>;
+  load(): Promise<(InstalledPlugin | InvalidPlugin)[]>;
 
   /**
-   * Replaces the installed plugins with `plugins`.
+   * Replaces whether each plugin is enabled with `entries`.
    *
-   * Throws an error if two of `plugins` share an id.
+   * Throws an error if two of `entries` share an id.
    */
-  save(plugins: InstalledPlugin[]): Promise<void>;
+  save(entries: PluginEntry[]): Promise<void>;
 }
 
-export type InstalledPlugin = z.infer<typeof InstalledPlugin>;
+/**
+ * A plugin installed on this machine: a folder in `<data folder>/plugins` with a `manifest.json`.
+ */
+export const InstalledPlugin = z.object({
+  /**
+   * The plugin's `manifest.json`.
+   */
+  manifest: Manifest,
+  /**
+   * Whether the plugin is enabled.
+   */
+  enabled: z.boolean(),
+  /**
+   * The URL of the plugin's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`.
+   */
+  url: z.string(),
+});
 
 /**
- * A plugin installed on this machine.
+ * A folder in `<data folder>/plugins` whose `manifest.json` is missing or malformed.
  */
-export const InstalledPlugin = z
-  .object({
-    /**
-     * The plugin's id, typically reverse domain name notation, e.g. `io.duobase.elsewise`.
-     */
-    id: PluginId,
+export const InvalidPlugin = z.object({
+  /**
+   * The name of the folder.
+   */
+  id: z.string(),
+  /**
+   * Whether the plugin is enabled.
+   */
+  enabled: z.boolean(),
+  /**
+   * Why the plugin's `manifest.json` could not be read.
+   */
+  error: z.string(),
+});
 
-    /**
-     * The plugin's display name. Cannot be blank.
-     */
-    name: z.string().regex(/\S/),
-
-    /**
-     * The plugin's version, following SemVer, e.g. `1.2.3`.
-     */
-    version: z.string().regex(SEMVER),
-
-    /**
-     * The URL of the plugin's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`. Cannot be blank.
-     */
-    url: z.string().regex(/\S/),
-
-    /**
-     * Whether the plugin is enabled.
-     */
-    enabled: z.boolean(),
-  })
-  .readonly();
+/**
+ * An entry in `<data folder>/plugins.json`.
+ */
+export const PluginEntry = z.object({
+  /**
+   * The plugin's id, as its manifest declares.
+   */
+  id: PluginId,
+  /**
+   * Whether the plugin is enabled.
+   */
+  enabled: z.boolean(),
+});

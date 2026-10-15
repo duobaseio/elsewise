@@ -1,34 +1,24 @@
 import type { LanguageDescription } from '@codemirror/language';
+import type { LSPClient, LSPClientExtension } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from './plugin.ts';
 
 /**
- * The ids of the built-in groups and items in the editor's context menu.
- */
-export const DEFAULT_EDITOR_CONTEXT_MENU = {
-  actions: {
-    id: '05-actions',
-    items: { show: '10-show' },
-  },
-  clipboard: {
-    id: '10-clipboard',
-    items: { cut: '10-cut', copy: '20-copy', paste: '30-paste' },
-  },
-  navigate: {
-    id: '13-navigate',
-    items: { usages: '10-usages', definition: '20-definition' },
-  },
-  refactor: {
-    id: '16-refactor',
-    items: { rename: '10-rename' },
-  },
-} as const;
-
-/**
  * The code editor.
  */
 export interface Editor {
+  /**
+   * The open editor that is or was last focused.
+   *
+   * `null` when:
+   * * no editor has focused yet.
+   * * the active editor is closed and focus has not shifted to another open editor.
+   *
+   * The active editor remains the same when focus is elsewhere (except on another editor), e.g. in a menu.
+   */
+  readonly active: EditorView | null;
+
   /**
    * Adds `extensions` to the editor, each an extension or a function that returns one for each document.
    *
@@ -49,46 +39,6 @@ export interface Editor {
    * Returns a disposable that removes the `servers`.
    */
   addLanguageServers(servers: readonly LanguageServer[]): Disposable;
-
-  /**
-   * Adds groups of context menu items to the editor's context menu.
-   *
-   * Groups, and the items in each group, are sorted by id. See {@link DEFAULT_EDITOR_CONTEXT_MENU} for the built-in
-   * groups and items. Submenus with the same id in a group are merged.
-   *
-   * To add a group after the built-in groups:
-   * ```ts
-   * editor.addContextMenuItems({
-   *   '20-generate': [{ type: 'item', id: '10-generate', label: 'Generate…', command: generate }],
-   * });
-   * ```
-   *
-   * To add an item to the built-in clipboard group, after its `30-paste` item:
-   * ```ts
-   * editor.addContextMenuItems({
-   *   [DEFAULT_EDITOR_CONTEXT_MENU.clipboard.id]: [
-   *     { type: 'item', id: '35-paste-plain', label: 'Paste plain', command: pastePlain },
-   *   ],
-   * });
-   * ```
-   *
-   * To add an item to a submenu that another plugin added, repeat the submenu with its id:
-   * ```ts
-   * editor.addContextMenuItems({
-   *   '30-refactor': [
-   *     {
-   *       type: 'submenu',
-   *       id: '10-refactor',
-   *       label: 'Refactor',
-   *       items: { '10-code': [{ type: 'item', id: '20-inline', label: 'Inline', command: inline }] },
-   *     },
-   *   ],
-   * });
-   * ```
-   *
-   * Returns a disposable that removes the `items`.
-   */
-  addContextMenuItems(items: EditorContextMenu): Disposable;
 }
 
 /**
@@ -135,6 +85,26 @@ export interface LanguageServer {
   readonly initializationOptions?: unknown;
 
   /**
+   * The LSP client extensions.
+   *
+   * Their **notification** handlers run before Elsewise's, and their CodeMirror extensions take precedence over
+   * Elsewise's. When both set the same client capability, Elsewise's wins.
+   */
+  readonly extensions?: readonly (Extension | LSPClientExtension)[];
+
+  /**
+   * The server's **request** handlers that take precedence over Elsewise's.
+   *
+   * A handler returns the result, or a promise of it. A thrown error or rejection is sent to the server as an error.
+   *
+   * For example, to handle `typescript-language-server`'s non-LSP compliant message:
+   * ```ts
+   * { '_typescript.rename': (client, { textDocument, position }: RenameParams) => null }
+   * ```
+   */
+  readonly handlers?: Readonly<Record<string, (client: LSPClient, params: never) => unknown>>;
+
+  /**
    * Starts the server for the worktree at `root` and returns a transport to it.
    */
   start(root: URL): LanguageServerTransport | Promise<LanguageServerTransport>;
@@ -172,86 +142,4 @@ export interface LanguageServerTransport {
    * Closes the connection.
    */
   close(): void;
-}
-
-/**
- * Items and submenus in the editor's context menu, keyed by the id of the group that they are shown in.
- */
-export type EditorContextMenu = Readonly<Record<string, readonly (EditorContextMenuItem | EditorContextSubmenu)[]>>;
-
-/**
- * An item in the editor's context menu.
- */
-export interface EditorContextMenuItem {
-  /**
-   * The entry's type.
-   */
-  readonly type: 'item';
-
-  /**
-   * The item's id.
-   *
-   * The items in a group are sorted by id. See {@link DEFAULT_EDITOR_CONTEXT_MENU} for the built-in items.
-   *
-   * To add an item after the built-in `30-paste` item:
-   * ```ts
-   * { type: 'item', id: '35-paste-plain', label: 'Paste plain', command: pastePlain }
-   * ```
-   */
-  readonly id: string;
-
-  /**
-   * The item's label.
-   */
-  readonly label: string;
-
-  /**
-   * The item's shortcut in CodeMirror's notation, e.g. `Mod-Shift-k`.
-   *
-   * It is only displayed, not bound.
-   */
-  readonly shortcut?: string;
-
-  /**
-   * Called when the user clicks the item.
-   */
-  command(view: EditorView): void;
-
-  /**
-   * Returns whether the item is shown.
-   *
-   * Without it, the item is always shown.
-   */
-  shown?(view: EditorView): boolean;
-}
-
-/**
- * A submenu in the editor's context menu.
- *
- * It is not shown when none of its items are.
- */
-export interface EditorContextSubmenu {
-  /**
-   * The entry's type.
-   */
-  readonly type: 'submenu';
-
-  /**
-   * The submenu's id.
-   *
-   * Submenus with the same id in a group are merged.
-   */
-  readonly id: string;
-
-  /**
-   * The submenu's label.
-   */
-  readonly label: string;
-
-  /**
-   * The submenu's items, keyed by the id of the group that they are shown in.
-   *
-   * Groups, and the items in each group, are sorted by id.
-   */
-  readonly items: EditorContextMenu;
 }

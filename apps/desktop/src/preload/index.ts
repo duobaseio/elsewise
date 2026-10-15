@@ -11,16 +11,12 @@ const settings: SettingsBridge = {
   save: (value) => ipcRenderer.invoke('settings:save', value),
   loadPlugin: (plugin) => ipcRenderer.invoke('settings:load-plugin', plugin),
   savePlugin: (plugin, value) => ipcRenderer.invoke('settings:save-plugin', plugin, value),
-  onOpen: (listener) => {
-    const forward = () => listener();
-    ipcRenderer.on('settings:open', forward);
-    return () => {
-      ipcRenderer.off('settings:open', forward);
-    };
-  },
 };
 
 const window: WindowBridge = {
+  cut: () => ipcRenderer.send('window:cut'),
+  copy: () => ipcRenderer.send('window:copy'),
+  paste: () => ipcRenderer.send('window:paste'),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
 };

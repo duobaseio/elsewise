@@ -1,13 +1,15 @@
-import type { InstalledPlugin } from '@elsewise/bridge';
-import type { Appearance, Editor, Plugin, PluginContext } from '@elsewise/plugin';
+import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
+import type { Application, Manifest, Plugin, PluginContext } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
+import type { EditorManager } from '@/editor/editor-manager';
 
 /**
- * Every installed plugin.
+ * Every installed plugin, and every invalid one.
  */
 export const pluginsQuery = queryOptions({
   queryKey: ['plugins'],
-  queryFn: async (): Promise<readonly InstalledPlugin[]> => (await window.bridge?.plugins?.load()) ?? [],
+  queryFn: async (): Promise<readonly (InstalledPlugin | InvalidPlugin)[]> =>
+    (await window.bridge?.plugins?.load()) ?? [],
   staleTime: 'static',
   gcTime: Number.POSITIVE_INFINITY,
 });
@@ -15,39 +17,39 @@ export const pluginsQuery = queryOptions({
 /**
  * Returns the installed plugins.
  */
-export function usePlugins(): readonly InstalledPlugin[];
-export function usePlugins<T>(select: (plugins: readonly InstalledPlugin[]) => T): T;
-export function usePlugins<T>(select?: (plugins: readonly InstalledPlugin[]) => T): readonly InstalledPlugin[] | T {
+export function usePlugins(): readonly (InstalledPlugin | InvalidPlugin)[];
+export function usePlugins<T>(select: (plugins: readonly (InstalledPlugin | InvalidPlugin)[]) => T): T;
+export function usePlugins<T>(
+  select?: (plugins: readonly (InstalledPlugin | InvalidPlugin)[]) => T,
+): readonly (InstalledPlugin | InvalidPlugin)[] | T {
   return useSuspenseQuery({ ...pluginsQuery, select }).data;
 }
 
-/**
- * Loads and unloads plugins, and holds the loaded ones.
- */
 export class PluginLoader {
   private static imports = 0;
 
   private readonly plugins = new Map<string, Promise<PluginContext | undefined>>();
 
-  /**
-   * Creates a loader that provides `appearance` and `editor` to the plugins it enables.
-   */
   constructor(
-    private readonly appearance: Appearance,
-    private readonly editor: Editor,
+    private readonly application: Application,
+    private readonly editor: EditorManager,
   ) {}
 
   /**
-   * Loads and enables the plugin with `id`.
+   * Adds what `manifest` declares, then loads and enables the plugin with `id`.
    */
-  load(id: string, url: string): Promise<void> {
+  load(id: string, url: string, manifest: Manifest): Promise<void> {
     return this.enqueue(id, async (loaded) => {
       if (loaded) {
         return loaded;
       }
 
-      const context: PluginContext = { id, appearance: this.appearance, editor: this.editor, subscriptions: [] };
+      const context: PluginContext = { id, subscriptions: [] };
       try {
+        if (manifest.contextMenus.editor !== undefined) {
+          context.subscriptions.push(this.editor.addContextMenu(manifest.contextMenus.editor));
+        }
+
         // As modules are cached by URLs, using a counter makes a reload import the plugin's current code.
         // Unlike a query, a fragment never reaches the server.
         //
@@ -59,7 +61,7 @@ export class PluginLoader {
           return;
         }
 
-        await plugin.enable(context);
+        await plugin.enable(this.application, context);
         return context;
       } catch (error) {
         console.error(`Plugin ${id} failed to load`, error);
@@ -72,7 +74,7 @@ export class PluginLoader {
   /**
    * Unloads the plugin with `id` and disposes its subscriptions.
    *
-   * Waits for the plugin's pending load or unload first, and does nothing if it's then unloaded.
+   * Waits for the plugin's pending load or unload first, and does nothing if it is then unloaded.
    */
   unload(id: string): Promise<void> {
     return this.enqueue(id, async (loaded) => {

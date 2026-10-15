@@ -5,7 +5,8 @@ An example plugin that adds TypeScript's language server to the code editor, con
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin-example-language-server <script>`.
 
 `build` bundles `src/main.ts` into `bundle/main.js`, the plugin's main module. `serve` runs `scripts/serve.mjs`, which
-serves `tsc --lsp` on `ws://127.0.0.1:7300`. The plugin runs in the renderer, which can't start processes.
+serves `typescript-language-server` on `ws://127.0.0.1:7300`. The plugin runs in the renderer, which can't start
+processes.
 
 ## Rules
 

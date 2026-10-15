@@ -35,6 +35,7 @@
     "@electron/fuses": "^2.1.3",
     "@elsewise/bridge": "workspace:*",
     "@elsewise/core": "workspace:*",
+    "@elsewise/plugin": "workspace:*",
     "@elsewise/web": "workspace:*",
     "@types/node": "^26.4.1",
     "electron": "44.7.0",

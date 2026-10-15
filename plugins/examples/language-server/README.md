@@ -1,11 +1,12 @@
 # Language server example
 
 A plugin that adds TypeScript's language server to the code editor using [`@elsewise/plugin`](../../../packages/plugin):
-diagnostics, completion, hover, signature help, go to definition, rename and formatting in TypeScript and JavaScript
-files.
+diagnostics, completion, hover, signature help, go to definition, find usages, rename, formatting and code actions in
+TypeScript and JavaScript files.
 
-The plugin runs in Elsewise's renderer, which can't start processes. Instead, `serve` runs the server, `tsc --lsp` from
-TypeScript 7, behind a WebSocket on `ws://127.0.0.1:7300`, and the plugin connects to it.
+The plugin runs in Elsewise's renderer, which can't start processes. Instead, `serve` runs the server,
+[`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) on TypeScript
+6's `tsserver`, behind a WebSocket on `ws://127.0.0.1:7300`, and the plugin connects to it.
 
 ## Running scripts
 
@@ -24,8 +25,11 @@ pnpm --filter @elsewise/plugin-example-language-server build      # also: serve,
    ```bash
    pnpm --filter @elsewise/plugin-example-language-server build
    cd plugins/examples/language-server
-   node ../../../apps/desktop/scripts/plugin.mjs add io.duobase.elsewise.examples.language-server "Language server example"
+   node ../../../apps/desktop/scripts/plugin.mjs add
    ```
+
+   `add` takes the plugin's id from `manifest.json`, and links the bundle, so a rebuild needs no second `add`, but a
+   change to the manifest does.
 
 2. Serve the language server, and leave it running:
 

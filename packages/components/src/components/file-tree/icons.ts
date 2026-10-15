@@ -56,8 +56,8 @@ export function fileTreeIcons(fileIcons: FileIcons, chevron: string): FileTreeIc
 
   const byFileName = rulesFor(fileIcons.names);
   const byFileExtension = rulesFor(fileIcons.extensions);
-  // Before the sheet is joined: the fallback need not appear in either table.
-  const fallbackId = idOf(fileIcons.fallback);
+  // Before the sheet is joined: the generic icon need not appear in either table.
+  const genericId = idOf(fileIcons.generic);
 
   return {
     set: 'none',
@@ -66,7 +66,7 @@ export function fileTreeIcons(fileIcons: FileIcons, chevron: string): FileTreeIc
     byFileExtension,
     remap: {
       'file-tree-icon-chevron': CHEVRON_ID,
-      'file-tree-icon-file': fallbackId,
+      'file-tree-icon-file': genericId,
     },
   };
 }

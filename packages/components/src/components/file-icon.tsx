@@ -4,9 +4,9 @@ import { type CSSProperties, createContext, type ReactNode, useContext, useMemo 
 
 import {
   EXTENSION_ICONS,
-  FALLBACK_FILE_ICON,
   FILENAME_ICONS,
   type FileIconData,
+  GENERIC_FILE_ICON,
   type IconTint,
   PHOSPHOR_ICONS,
 } from '../lib/file-icons.gen';
@@ -34,14 +34,14 @@ export type FileIcons = {
   /** By extension without its leading dot, such as `ts` or `d.ts`. */
   extensions: Record<string, FileIconData>;
   /** For a name that has no match. */
-  fallback: FileIconData;
+  generic: FileIconData;
 };
 
 /** Elsewise's generated file icons, keyed in lowercase. */
 export const DEFAULT_FILE_ICONS: FileIcons = {
   names: lowercase(FILENAME_ICONS),
   extensions: lowercase(EXTENSION_ICONS),
-  fallback: FALLBACK_FILE_ICON,
+  generic: GENERIC_FILE_ICON,
 };
 
 const FileIconContext = createContext<FileIcons>(DEFAULT_FILE_ICONS);
@@ -55,7 +55,7 @@ export function FileIconProvider({ icons, children }: { icons: Partial<FileIcons
     return {
       names: { ...DEFAULT_FILE_ICONS.names, ...lowercase(icons.names ?? {}) },
       extensions: { ...DEFAULT_FILE_ICONS.extensions, ...lowercase(icons.extensions ?? {}) },
-      fallback: icons.fallback ?? FALLBACK_FILE_ICON,
+      generic: icons.generic ?? GENERIC_FILE_ICON,
     };
   }, [icons]);
   return <FileIconContext value={resolved}>{children}</FileIconContext>;
@@ -105,7 +105,7 @@ export function FileIcon({ name, className }: { name: string; className?: string
   }
 }
 
-function resolve(name: string, { names, extensions, fallback }: FileIcons): FileIconData {
+function resolve(name: string, { names, extensions, generic }: FileIcons): FileIconData {
   name = name.toLowerCase();
 
   // `hasOwn`, or a file named `constructor` finds `Object.prototype`'s.
@@ -122,7 +122,7 @@ function resolve(name: string, { names, extensions, fallback }: FileIcons): File
     dot = name.indexOf('.', dot + 1);
   }
 
-  return fallback;
+  return generic;
 }
 
 function PhosphorIcon({

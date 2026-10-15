@@ -1,18 +1,18 @@
 import type { ComponentProps } from 'react';
-import { type Os, shortcut } from '../lib/os';
+import { formatKey, type Platform } from '../lib/platform';
 import { cn } from '../lib/utils';
 
 /**
  * A shortcut, as muted text. Given a `binding` such as `Mod-Alt-f`, shows the chord in this platform's notation —
- * `⌥⌘F` on a Mac, `Ctrl Alt F` elsewhere — and `os` shows another platform's. Otherwise shows its children.
+ * `⌥⌘F` on a Mac, `Ctrl Alt F` elsewhere — and `platform` shows another platform's. Otherwise shows its children.
  */
 export function Kbd({
   className,
   binding,
-  os,
+  platform,
   children,
   ...props
-}: ComponentProps<'kbd'> & { binding?: string; os?: Os }) {
+}: ComponentProps<'kbd'> & { binding?: string; platform?: Platform }) {
   return (
     <kbd
       data-slot="kbd"
@@ -22,7 +22,7 @@ export function Kbd({
       )}
       {...props}
     >
-      {binding === undefined ? children : shortcut(binding, os)}
+      {binding === undefined ? children : formatKey(binding, platform)}
     </kbd>
   );
 }

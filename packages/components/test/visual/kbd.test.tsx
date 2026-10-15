@@ -5,7 +5,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 import { Kbd, KbdGroup } from '../../src/components/kbd';
-import type { Os } from '../../src/lib/os';
+import type { Platform } from '../../src/lib/platform';
 
 import { Sheet, THEMES } from '../sheet.tsx';
 
@@ -49,7 +49,7 @@ const GROUNDS: readonly { key: string; label: string; className: string }[] = [
 
 const BINDINGS = ['Mod-Alt-f', 'Shift-Enter', 'Escape', 'Ctrl-Shift-ArrowUp'] as const;
 
-const PLATFORMS: readonly Os[] = ['mac', 'windows', 'linux'];
+const PLATFORMS: readonly Platform[] = ['mac', 'windows', 'linux'];
 
 test.each(THEMES)('kbd contents (%s)', async (theme) => {
   await render(
@@ -98,16 +98,21 @@ test.each(THEMES)('kbd shortcuts (%s)', async (theme) => {
         style={{ gridTemplateColumns: `max-content repeat(${PLATFORMS.length}, max-content)` }}
       >
         <div />
-        {PLATFORMS.map((os) => (
-          <div className="text-muted-foreground text-xs" key={os}>
-            {os}
+        {PLATFORMS.map((platform) => (
+          <div className="text-muted-foreground text-xs" key={platform}>
+            {platform}
           </div>
         ))}
         {BINDINGS.map((binding) => (
           <Fragment key={binding}>
             <div className="font-mono text-muted-foreground text-xs">{binding}</div>
-            {PLATFORMS.map((os) => (
-              <Kbd binding={binding} data-testid={`shortcut-${os}-${binding}`} key={os} os={os} />
+            {PLATFORMS.map((platform) => (
+              <Kbd
+                binding={binding}
+                data-testid={`shortcut-${platform}-${binding}`}
+                key={platform}
+                platform={platform}
+              />
             ))}
           </Fragment>
         ))}

@@ -1,5 +1,5 @@
-// Serves TypeScript's language server, `tsc --lsp`, over a WebSocket for the plugin to connect to. Run from the repo
-// root:
+// Serves TypeScript's language server, typescript-language-server, over a WebSocket for the plugin to connect to. Run
+// from the repo root:
 //   pnpm --filter @elsewise/plugin-example-language-server serve
 //
 // Each connection starts a server in the worktree that its `root` query parameter names, a `file:` URL, and stops it
@@ -22,7 +22,10 @@ const PORT = 7300;
 const ORIGINS = new Set(['http://localhost:3000', 'app://elsewise']);
 // The `window/showMessage` type for each `message` command's.
 const MESSAGE_TYPES = { error: 1, warning: 2, info: 3 };
-const TSC = path.join(path.dirname(createRequire(import.meta.url).resolve('typescript/package.json')), 'bin', 'tsc');
+const require = createRequire(import.meta.url);
+const SERVER = path.join(path.dirname(require.resolve('typescript-language-server/package.json')), 'lib', 'cli.mjs');
+// TypeScript 6's, the last to ship the `tsserver.js` that the server runs.
+const TSSERVER = path.join(path.dirname(require.resolve('tsserver/package.json')), 'lib', 'tsserver.js');
 
 const sockets = new WebSocketServer({
   host: '127.0.0.1',
@@ -68,7 +71,7 @@ sockets.on('connection', (socket, request) => {
   }
 
   console.log(`[serve] starting a server in ${root}`);
-  const server = spawn(process.execPath, [TSC, '--lsp', '--stdio'], { cwd: root, stdio: ['pipe', 'pipe', 'inherit'] });
+  const server = spawn(process.execPath, [SERVER, '--stdio'], { cwd: root, stdio: ['pipe', 'pipe', 'inherit'] });
   server.on('error', (error) => {
     console.error(`[serve] the server in ${root} failed`, error);
     socket.close(1011, 'The server failed');
@@ -97,8 +100,10 @@ sockets.on('connection', (socket, request) => {
     }
   });
 
-  socket.on('message', (message) => {
-    const { id, method } = JSON.parse(message.toString('utf8'));
+  socket.on('message', (data) => {
+    let message = data.toString('utf8');
+    const parsed = JSON.parse(message);
+    const { id, method } = parsed;
     if (failing !== null && id !== undefined && method !== undefined && (failing === '*' || failing === method)) {
       failing = null;
       console.log(`[serve] failed ${method}`);
@@ -106,7 +111,16 @@ sockets.on('connection', (socket, request) => {
       return;
     }
 
-    server.stdin.write(`Content-Length: ${message.length}\r\n\r\n`);
+    // Points the server at `TSSERVER`, since the worktree's own TypeScript may have no `tsserver.js`.
+    if (method === 'initialize') {
+      parsed.params.initializationOptions = {
+        ...parsed.params.initializationOptions,
+        tsserver: { ...parsed.params.initializationOptions?.tsserver, path: TSSERVER },
+      };
+      message = JSON.stringify(parsed);
+    }
+
+    server.stdin.write(`Content-Length: ${Buffer.byteLength(message)}\r\n\r\n`);
     server.stdin.write(message);
   });
   socket.on('close', () => server.kill());

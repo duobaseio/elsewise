@@ -72,6 +72,7 @@ describe('settings:load', () => {
     write({ appearance: { general: { brightness: 'dark', theme: { source: 'elsewise', name: 'dracula' } } } });
 
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: {
@@ -89,6 +90,7 @@ describe('settings:load', () => {
     });
 
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: { ...DEFAULT_SETTINGS.appearance.general, font: { family: 'Inter', size: 13, ligatures: true } },
@@ -100,6 +102,7 @@ describe('settings:load', () => {
     write({ appearance: { general: { brightness: 'dark', font: 'Inter' } } });
 
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'dark' },
@@ -111,6 +114,7 @@ describe('settings:load', () => {
     write({ appearance: { general: { brightness: 'light', extra: 1 }, junk: true }, junk: true });
 
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
@@ -137,6 +141,7 @@ describe('settings:load', () => {
     write({ appearance: { editor: { theme: { source: 'elsewise', name: 'dracula' } }, terminal: { theme: null } } });
 
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         editor: { ...DEFAULT_SETTINGS.appearance.editor, theme: { source: 'elsewise', name: 'dracula' } },
@@ -153,6 +158,7 @@ describe('settings:load', () => {
     const theme = { source: 'plugin', plugin: 'com.acme.themes', name: 'nord' };
     write({ appearance: { general: { theme } } });
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: { ...DEFAULT_SETTINGS.appearance, general: { ...DEFAULT_SETTINGS.appearance.general, theme } },
     });
 
@@ -171,6 +177,26 @@ describe('settings:load', () => {
     }
   });
 
+  test('keeps valid keymap and replaces malformed one', () => {
+    expect(DEFAULT_SETTINGS.keymap).toEqual({ source: 'elsewise', name: 'elsewise' });
+
+    const keymap = { source: 'plugin', plugin: 'io.example', name: 'Eclipse' };
+    write({ keymap });
+    expect(load()).toEqual({ ...DEFAULT_SETTINGS, keymap });
+
+    for (const bad of [
+      'elsewise',
+      { source: 'elsewise', name: 'Eclipse' },
+      { source: 'user', name: 'Eclipse' },
+      { source: 'plugin', name: 'Eclipse' },
+      { source: 'plugin', plugin: 'io.example', name: '' },
+      { source: 'plugin', plugin: 'io.example', name: 'Eclipse', extra: 1 },
+    ]) {
+      write({ keymap: bad });
+      expect(load()).toEqual(DEFAULT_SETTINGS);
+    }
+  });
+
   test('keeps language overrides it does not know and drops the leaves it cannot read', () => {
     write({
       appearance: {
@@ -185,6 +211,7 @@ describe('settings:load', () => {
     });
 
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         editor: {
@@ -200,6 +227,7 @@ describe('settings:load', () => {
   test('keeps a valid guide list and replaces a bad one', () => {
     write({ appearance: { editor: { visualGuides: [80, 120], languages: { Markdown: { visualGuides: [72] } } } } });
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         editor: {
@@ -219,6 +247,7 @@ describe('settings:load', () => {
   test('keeps a valid completion documentation toggle and turns a bad or missing one on', () => {
     write({ appearance: { editor: { completionDocumentation: false } } });
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         editor: { ...DEFAULT_SETTINGS.appearance.editor, completionDocumentation: false },
@@ -235,6 +264,7 @@ describe('settings:load', () => {
   test('keeps a valid usage highlighting toggle and turns a bad or missing one on', () => {
     write({ appearance: { editor: { highlightUsages: false } } });
     expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         editor: { ...DEFAULT_SETTINGS.appearance.editor, highlightUsages: false },
@@ -257,7 +287,7 @@ describe('settings:load', () => {
       scrollback: 50000,
     };
     write({ appearance: { terminal } });
-    expect(load()).toEqual({ appearance: { ...DEFAULT_SETTINGS.appearance, terminal } });
+    expect(load()).toEqual({ ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_SETTINGS.appearance, terminal } });
 
     for (const bad of [
       { cursorStyle: 'beam' },
@@ -287,7 +317,7 @@ describe('settings:save', () => {
     };
     save({ appearance: { ...DEFAULT_SETTINGS.appearance, general: { ...general, extra: 1 } } });
 
-    const expected = { appearance: { ...DEFAULT_SETTINGS.appearance, general } };
+    const expected = { ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_SETTINGS.appearance, general } };
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual(expected);
     expect(load()).toEqual(expected);
   });
@@ -296,6 +326,7 @@ describe('settings:save', () => {
     save({ appearance: { general: { brightness: 'light' } } });
 
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
@@ -313,6 +344,7 @@ describe('settings:save', () => {
     });
 
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual({
+      ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: { ...DEFAULT_SETTINGS.appearance.general, font: { family: null, size: 16, ligatures: true } },

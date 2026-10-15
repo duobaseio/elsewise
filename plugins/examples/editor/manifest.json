@@ -1,0 +1,35 @@
+{
+  "id": "io.duobase.elsewise.examples.editor",
+  "name": "Editor example",
+  "version": "1.0.0",
+  "contextMenus": {
+    "editor": {
+      "submenus": {
+        "io.duobase.elsewise.examples.editor.tone": "Tone of voice"
+      },
+      "groups": {
+        "io.duobase.elsewise.examples.editor.reactions": { "order": 30 },
+        "io.duobase.elsewise.examples.editor.tone": { "order": 40 },
+        "io.duobase.elsewise.examples.editor.tones": { "menu": "io.duobase.elsewise.examples.editor.tone" }
+      },
+      "items": {
+        "io.duobase.elsewise.editor.contextmenu.refactor": [
+          { "type": "item", "order": 20, "command": "io.duobase.elsewise.examples.editor.leaveAnExcuse" }
+        ],
+        "io.duobase.elsewise.examples.editor.reactions": [
+          { "type": "item", "order": 10, "command": "io.duobase.elsewise.examples.editor.shrug" },
+          { "type": "item", "order": 20, "command": "io.duobase.elsewise.examples.editor.flipTheTable" },
+          { "type": "item", "order": 30, "command": "io.duobase.elsewise.examples.editor.rollAD20" }
+        ],
+        "io.duobase.elsewise.examples.editor.tone": [
+          { "type": "submenu", "submenu": "io.duobase.elsewise.examples.editor.tone" }
+        ],
+        "io.duobase.elsewise.examples.editor.tones": [
+          { "type": "item", "order": 10, "command": "io.duobase.elsewise.examples.editor.uwu" },
+          { "type": "item", "order": 20, "command": "io.duobase.elsewise.examples.editor.vaporwave" },
+          { "type": "item", "order": 30, "command": "io.duobase.elsewise.examples.editor.mocking" }
+        ]
+      }
+    }
+  }
+}

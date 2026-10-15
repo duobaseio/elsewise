@@ -1,7 +1,6 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
-import { DEFAULT_EDITOR_CONTEXT_MENU, type PluginContext } from '@elsewise/plugin';
+import type { Application, EditorCommand, PluginContext } from '@elsewise/plugin';
 import { colorPicker } from './color-picker.ts';
 
 const EXCUSES = [
@@ -15,7 +14,7 @@ const EXCUSES = [
 /**
  * Called when Elsewise enables the plugin.
  */
-export function enable({ editor, subscriptions }: PluginContext): void {
+export function enable({ commands, editor }: Application, { id, subscriptions }: PluginContext): void {
   subscriptions.push(
     editor.addExtensions([colorPicker]),
     editor.addLanguages([
@@ -42,104 +41,68 @@ export function enable({ editor, subscriptions }: PluginContext): void {
         ),
       }),
     ]),
-    editor.addContextMenuItems({
-      // An item in the built-in refactor group, after the "rename" item.
-      [DEFAULT_EDITOR_CONTEXT_MENU.refactor.id]: [
-        {
-          type: 'item',
-          id: '20-leave-an-excuse',
-          label: 'Leave an excuse',
-          command: excuse,
-          shown: (view) => lineComment(view.state) !== undefined,
-        },
-      ],
-      // A new group after the built-in groups.
-      '30-reactions': [
-        {
-          type: 'item',
-          id: '10-shrug',
-          label: 'Shrug',
-          command: (view) => view.dispatch(view.state.replaceSelection('¯\\_(ツ)_/¯')),
-        },
-        {
-          type: 'item',
-          id: '20-flip-the-table',
-          label: 'Flip the table',
-          command: (view) => view.dispatch(view.state.replaceSelection('(╯°□°)╯︵ ┻━┻')),
-        },
-        {
-          type: 'item',
-          id: '30-roll-a-d20',
-          label: 'Roll a d20',
-          command: (view) => view.dispatch(view.state.replaceSelection(String(1 + Math.floor(Math.random() * 20)))),
-        },
-      ],
-      // A submenu for changing the selection's tone of voice.
-      '40-tone': [
-        {
-          type: 'submenu',
-          id: '10-tone-of-voice',
-          label: 'Tone of voice',
-          items: {
-            '10-tones': [
-              {
-                type: 'item',
-                id: '10-uwu',
-                label: 'uwu',
-                command: (view) => convert(view, (text) => text.replace(/[rl]/g, 'w').replace(/[RL]/g, 'W')),
-                shown: selected,
-              },
-              {
-                type: 'item',
-                id: '20-vaporwave',
-                label: 'ｖａｐｏｒｗａｖｅ',
-                command: (view) =>
-                  convert(view, (text) =>
-                    text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)),
-                  ),
-                shown: selected,
-              },
-              {
-                type: 'item',
-                id: '30-mocking',
-                label: 'mOcKiNg',
-                command: (view) =>
-                  convert(view, (text) =>
-                    [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
-                  ),
-                shown: selected,
-              },
-            ],
-          },
-        },
-      ],
-    }),
+    // The context menu items in `manifest.json` run these.
+    commands.add([
+      excuse(`${id}.leaveAnExcuse`),
+      reaction(`${id}.shrug`, 'Shrug', () => '¯\\_(ツ)_/¯'),
+      reaction(`${id}.flipTheTable`, 'Flip the table', () => '(╯°□°)╯︵ ┻━┻'),
+      reaction(`${id}.rollAD20`, 'Roll a d20', () => String(1 + Math.floor(Math.random() * 20))),
+      tone(`${id}.uwu`, 'uwu', (text) => text.replace(/[rl]/g, 'w').replace(/[RL]/g, 'W')),
+      tone(`${id}.vaporwave`, 'ｖａｐｏｒｗａｖｅ', (text) =>
+        text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)),
+      ),
+      tone(`${id}.mocking`, 'mOcKiNg', (text) =>
+        [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
+      ),
+    ]),
   );
 }
 
-function selected(view: EditorView): boolean {
-  return view.state.selection.ranges.some((range) => !range.empty);
+function excuse(id: string): EditorCommand {
+  const comment = (state: EditorState) =>
+    state.languageDataAt<{ line?: string }>('commentTokens', state.selection.main.head)[0]?.line;
+
+  return {
+    scope: 'editor',
+    id,
+    label: 'Leave an excuse',
+    shown: (_, view) => comment(view.state) !== undefined,
+    run: (_, view) => {
+      const line = view.state.doc.lineAt(view.state.selection.main.head);
+      const indent = /^\s*/.exec(line.text)?.[0] ?? '';
+      const text = EXCUSES[Math.floor(Math.random() * EXCUSES.length)];
+      view.dispatch({ changes: { from: line.from, insert: `${indent}${comment(view.state)} ${text}\n` } });
+      return true;
+    },
+  };
 }
 
-// Replaces each selection with what `transform` returns for its text.
-function convert(view: EditorView, transform: (text: string) => string): void {
-  view.dispatch(
-    view.state.changeByRange((range) => ({
-      changes: { from: range.from, to: range.to, insert: transform(view.state.sliceDoc(range.from, range.to)) },
-      range,
-    })),
-  );
+function reaction(id: string, label: string, text: () => string): EditorCommand {
+  return {
+    scope: 'editor',
+    id,
+    label,
+    run: (_, view) => {
+      view.dispatch(view.state.replaceSelection(text()));
+      return true;
+    },
+  };
 }
 
-// Returns what starts a line comment in the language at the cursor.
-function lineComment(state: EditorState): string | undefined {
-  return state.languageDataAt<{ line?: string }>('commentTokens', state.selection.main.head)[0]?.line;
-}
-
-// Adds a comment with an excuse above the cursor's line.
-function excuse(view: EditorView): void {
-  const line = view.state.doc.lineAt(view.state.selection.main.head);
-  const indent = /^\s*/.exec(line.text)?.[0] ?? '';
-  const text = EXCUSES[Math.floor(Math.random() * EXCUSES.length)];
-  view.dispatch({ changes: { from: line.from, insert: `${indent}${lineComment(view.state)} ${text}\n` } });
+function tone(id: string, label: string, transform: (text: string) => string): EditorCommand {
+  return {
+    scope: 'editor',
+    id,
+    label,
+    shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
+    run: (_, view) => {
+      view.dispatch(
+        view.state.changeByRange((range) => ({
+          changes: { from: range.from, to: range.to, insert: transform(view.state.sliceDoc(range.from, range.to)) },
+          range,
+        })),
+      );
+      return true;
+    },
+  };
 }

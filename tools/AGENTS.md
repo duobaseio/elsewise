@@ -53,7 +53,7 @@ on. `lib/src/tints.dart` splits by chroma:
 - **Chromatic** keeps hue and chroma and moves lightness only until it clears the bar.
 
 `test/src/file_icons/file_icons_golden_test.dart` paints every entry the way `FileIcon` does, one golden sheet per kind
-at `test/golden/<os>/file-icons/<theme>/<kind>.png`, each tint with its measured ratio and any under 3:1 outlined.
+at `test/golden/<platform>/file-icons/<theme>/<kind>.png`, each tint with its measured ratio and any under 3:1 outlined.
 
 The tests need Flutter and a `pnpm install`: fonts and Phosphor paths are read from `packages/components/node_modules`.
 Goldens are per-platform and only macOS is blessed.
