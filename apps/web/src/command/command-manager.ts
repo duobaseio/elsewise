@@ -21,8 +21,11 @@ import { FORMAT } from '@/editor/lsp/format';
 import { FIND_USAGES } from '@/editor/lsp/references';
 import { RENAME } from '@/editor/lsp/rename';
 import { SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
+import { OPEN_SETTINGS } from '@/settings/settings';
 
 export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] = [
+  // Application
+  OPEN_SETTINGS,
   // Clipboard
   CUT,
   COPY,
@@ -96,13 +99,20 @@ export class CommandManager implements Commands {
   }
 
   /**
-   * Adds `commands`, replacing earlier commands with the same ids.
-   *
-   * Returns a disposable that removes the `commands`.
+   * {@inheritDoc}
    */
   add(commands: readonly (ApplicationCommand | EditorCommand)[]): Disposable {
-    const added = [...commands];
-    this.addedCommands = [added, ...this.addedCommands];
+    const ids = new Set(this.currentCommands.keys());
+    const added = commands.filter((command) => {
+      if (ids.has(command.id)) {
+        console.warn(`Command ${command.id} already exists`);
+        return false;
+      }
+
+      ids.add(command.id);
+      return true;
+    });
+    this.addedCommands = [...this.addedCommands, added];
     this.update();
     return () => {
       this.addedCommands = this.addedCommands.filter((other) => other !== added);
@@ -113,9 +123,7 @@ export class CommandManager implements Commands {
   private update() {
     const commands = new Map<string, ApplicationCommand | EditorCommand>();
     for (const command of this.addedCommands.flat()) {
-      if (!commands.has(command.id)) {
-        commands.set(command.id, command);
-      }
+      commands.set(command.id, command);
     }
 
     this.keymap.update(this.currentSelected, commands.values());

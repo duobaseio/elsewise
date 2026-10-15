@@ -27,7 +27,8 @@ export class ApplicationKeymap implements ActiveKeymap {
   }
 
   /**
-   * The keys as CodeMirror normalizes them for this platform, and their associated commands.
+   * The keys as CodeMirror normalizes them for this platform, and their associated commands in the order they were
+   * added.
    */
   get keys(): Readonly<Record<'editor' | 'application', ReadonlyMap<string, readonly string[]>>> {
     return this.currentKeys;

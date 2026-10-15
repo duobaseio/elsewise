@@ -59,12 +59,31 @@ describe('add', () => {
     expect(manager.commands.get('rename')).toBeUndefined();
   });
 
-  test('replaces earlier command with same id', () => {
+  test('rejects already existing id', () => {
     const manager = commands();
     manager.add([{ id: 'rename', label: 'First', scope: 'editor', run: () => true }]);
     manager.add([{ id: 'rename', label: 'Second', scope: 'editor', run: () => true }]);
 
-    expect(manager.commands.get('rename')?.label).toBe('Second');
+    expect(manager.commands.get('rename')?.label).toBe('First');
+    expect(warn).toHaveBeenCalledWith('Command rename already exists');
+  });
+
+  test('rejects already existing id in same plugin', () => {
+    const manager = commands();
+    manager.add([
+      { id: 'rename', label: 'First', scope: 'editor', run: () => true },
+      { id: 'rename', label: 'Second', scope: 'editor', run: () => true },
+    ]);
+
+    expect(manager.commands.get('rename')?.label).toBe('First');
+  });
+
+  test('rejects built-in id', () => {
+    const manager = commands();
+    const builtIn = manager.commands.get('elsewise.application.settings.open');
+    manager.add([{ id: 'elsewise.application.settings.open', label: 'Mine', scope: 'application', run: () => true }]);
+
+    expect(manager.commands.get('elsewise.application.settings.open')).toBe(builtIn);
   });
 
   test('removes only disposed commands', () => {
@@ -78,6 +97,15 @@ describe('add', () => {
 
     expect(manager.commands.get('rename')?.label).toBe('First');
     expect(manager.commands.get('format')).toBeUndefined();
+  });
+
+  test('forgets rejected command', () => {
+    const manager = commands();
+    const dispose = manager.add([{ id: 'rename', label: 'First', scope: 'editor', run: () => true }]);
+    manager.add([{ id: 'rename', label: 'Second', scope: 'editor', run: () => true }]);
+    dispose();
+
+    expect(manager.commands.get('rename')).toBeUndefined();
   });
 
   test('notifies listeners', () => {
@@ -191,10 +219,10 @@ describe('keymap', () => {
     expect(manager.keymap.keys.editor.get('Alt-r')).toEqual(['rename']);
   });
 
-  test('lists later-added command first', () => {
+  test('lists earlier-added command first', () => {
     expect(bound({ first: ['Mod-k'], second: ['Ctrl-k'] }).keymap.keys.editor.get('Ctrl-k')).toEqual([
-      'second',
       'first',
+      'second',
     ]);
   });
 

@@ -7,6 +7,11 @@ import type { Application, Disposable } from './plugin.ts';
  * The ids of the built-in commands.
  */
 export const DEFAULT_COMMANDS = {
+  application: {
+    settings: {
+      open: 'elsewise.application.settings.open',
+    },
+  },
   editor: {
     clipboard: {
       cut: 'elsewise.editor.clipboard.cut',
@@ -77,6 +82,11 @@ export const DEFAULT_COMMANDS = {
  * See {@link DEFAULT_COMMANDS}.
  */
 export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
+  application: {
+    settings: {
+      open: [{ key: 'Ctrl-Alt-s', mac: 'Mod-,' }],
+    },
+  },
   editor: {
     clipboard: {
       cut: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
@@ -163,7 +173,10 @@ export interface Commands {
   /**
    * Adds `commands`.
    *
-   * Returns a disposable that removes them.
+   * A command with an already existing id is rejected. Commands that share a key are tried in the order they were added,
+   * built-in commands first, until one is enabled.
+   *
+   * Returns a disposable that removes the added `commands`.
    */
   add(commands: readonly (ApplicationCommand | EditorCommand)[]): Disposable;
 
