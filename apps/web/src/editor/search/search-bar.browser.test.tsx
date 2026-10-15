@@ -2,6 +2,7 @@ import { standardKeymap } from '@codemirror/commands';
 import { openSearchPanel, searchPanelOpen } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
+import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { useEffect, useRef } from 'react';
 import { afterEach, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -18,12 +19,11 @@ afterEach(() => {
   view = null;
 });
 
-function mount(extensions: Extension[] = []): Promise<EditorView> {
+function mount(extensions: Extension[] = [], commands = builtInCommands()): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
   });
-  const commands = builtInCommands();
   function Probe() {
     const { search, portal } = useSearchExtension();
     const host = useRef<HTMLDivElement>(null);
@@ -214,6 +214,16 @@ test('runs search commands from field', async () => {
 
   await userEvent.keyboard('{Meta>}r{/Meta}');
   await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
+});
+
+test('toggle replace shows keymap key', async () => {
+  const commands = builtInCommands();
+  const view = await mount([], commands);
+  openSearchPanel(view);
+  commands.selected = { name: 'Test', keys: { [DEFAULT_COMMANDS.editor.search.replace]: ['Mod-e'] } };
+
+  await userEvent.hover(page.getByRole('button', { name: 'Toggle replace' }));
+  await expect.element(page.getByText('⌘E'), { timeout: 2000 }).toBeVisible();
 });
 
 test('Enter in replace field', async () => {

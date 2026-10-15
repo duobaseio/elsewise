@@ -35,7 +35,6 @@ import { eventKeys } from '@/command/keys';
 import { scroll } from '@/editor/scroll';
 import { describe, replaceRow, toggleReplaceRow, useSearchBarQuery } from '@/editor/search/search-bar-query';
 
-const OPEN_REPLACE = 'Mod-r';
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
 const CLOSE = 'Escape';
@@ -104,6 +103,9 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
   const typed = useRef<string | null>(null);
   const replaceId = useId();
   const commands = useCommandManager();
+  const openReplace = useCommandManager(
+    (commands) => commands.keymap.commands.get(DEFAULT_COMMANDS.editor.search.replace)?.[0],
+  );
 
   // `openSearchPanel` focuses the field and selects its text, but that does not work with a React-rendered bar:
   // * On the first open, the field has not been rendered yet, so the bar focuses it on mount.
@@ -176,7 +178,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
       {!state.readOnly && (
         <Action
           label="Toggle replace"
-          hint={OPEN_REPLACE}
+          hint={openReplace}
           aria-expanded={replace}
           onClick={() => view.dispatch({ effects: toggleReplaceRow.of(!replace) })}
         >
