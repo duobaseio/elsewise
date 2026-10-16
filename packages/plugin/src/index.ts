@@ -10,7 +10,8 @@ export {
   ContextSubmenuId,
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
-export type { Editor, EditorDocument, LanguageServer, LanguageServerTransport } from './editor.ts';
+export type { Editor, EditorCompletion, EditorCompletionIcon, EditorDocument } from './editor/editor.ts';
+export type { LanguageServer, LanguageServerTransport } from './editor/lsp.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
 export { Manifest, PluginId } from './manifest.ts';
 export type { ActiveTheme, Appearance, Application, Disposable, Plugin, PluginContext } from './plugin.ts';

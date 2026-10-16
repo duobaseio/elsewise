@@ -1,3 +1,4 @@
+import { startCompletion } from '@codemirror/autocomplete';
 import { indentUnit, LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState } from '@codemirror/state';
@@ -202,6 +203,19 @@ test("plugin's extension function receives file", async () => {
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
   expect(view.contentDOM.dataset.path).toBe('main.rs');
+});
+
+test("plugin's completions show without language server", async () => {
+  const editor = new EditorManager();
+  const options = [{ label: 'main', type: 'function' }];
+  editor.addExtensions([EditorState.languageData.of(() => [{ autocomplete: options }])]);
+  const view = await mountEditor('ma\n', 'main.rs', editor);
+  view.dispatch({ selection: { anchor: 2 } });
+  view.focus();
+
+  startCompletion(view);
+
+  await expect.element(page.getByRole('option').getByText('main')).toBeVisible();
 });
 
 test("plugin's language highlights files with extension", async () => {

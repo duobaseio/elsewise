@@ -1,5 +1,5 @@
 import type { Commands } from './command.ts';
-import type { Editor } from './editor.ts';
+import type { Editor } from './editor/editor.ts';
 import type { ThemeVariant } from './theme.ts';
 
 /**

@@ -1,11 +1,10 @@
 import { startCompletion } from '@codemirror/autocomplete';
-import { history, insertTab, undo } from '@codemirror/commands';
-import { HighlightStyle, LanguageDescription, type LanguageSupport, syntaxHighlighting } from '@codemirror/language';
+import { history, undo } from '@codemirror/commands';
+import { LanguageDescription, type LanguageSupport } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView, keymap, runScopeHandlers } from '@codemirror/view';
+import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
-import { tags as t } from '@lezer/highlight';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
   type CompletionItem,
@@ -13,17 +12,12 @@ import {
   CompletionItemTag,
   type InitializeParams,
 } from 'vscode-languageserver-protocol';
-import { completionDocumentation } from '@/editor/lsp/completion';
+import { completion, completionDocumentation } from '@/editor/completion';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { StubTransport } from '../../../test/stub-transport';
 
 const ROOT = new URL('file:///worktree/');
 
-const HIGHLIGHT = HighlightStyle.define([
-  { tag: t.function(t.propertyName), color: '#102030' },
-  { tag: t.propertyName, color: '#405060' },
-  { tag: t.typeName, color: '#708090' },
-]);
 const URI = 'file:///worktree/main.rs';
 
 // Returns a transport to a server that completes with `items`, and resolves an item to its `resolved` counterpart.
@@ -61,13 +55,7 @@ async function open(fake: StubTransport, doc: string, extensions: Extension[] = 
     state: EditorState.create({
       doc: doc.replace('|', ''),
       selection: { anchor: doc.indexOf('|') },
-      extensions: [
-        instance.client.plugin(URI, 'rust'),
-        rust,
-        syntaxHighlighting(HIGHLIGHT),
-        keymap.of([{ key: 'Tab', run: insertTab }]),
-        extensions,
-      ],
+      extensions: [instance.client.plugin(URI, 'rust'), rust, completion(), extensions],
     }),
     parent: document.body,
   });
@@ -116,7 +104,7 @@ describe('serverCompletion', () => {
     });
   });
 
-  test("shows each item's kind as tile colored like syntax", async () => {
+  test("shows each item's kind as letterform", async () => {
     const view = await open(
       transport([
         { label: 'send', kind: CompletionItemKind.Method },
@@ -131,25 +119,9 @@ describe('serverCompletion', () => {
 
     const rows = await complete(view);
 
-    const tiles = Object.fromEntries(
-      rows.map((row) => {
-        const tile = row.querySelector<HTMLElement>('.cm-completionKind');
-        const color = getComputedStyle(tile as HTMLElement).color;
-        return [
-          text(row, '.cm-completionLabel'),
-          [tile?.textContent, color === getComputedStyle(row).color ? 'row' : color],
-        ];
-      }),
-    );
-    expect(tiles).toEqual({
-      send: ['m', 'rgb(16, 32, 48)'],
-      session: ['p', 'rgb(64, 80, 96)'],
-      Session: ['S', 'rgb(112, 128, 144)'],
-      select: ['{}', 'row'],
-      sender: ['t', 'row'],
-      seed: ['', 'row'],
-    });
-    expect(view.dom.querySelector('.cm-completionIcon')).toBeNull();
+    expect(
+      Object.fromEntries(rows.map((row) => [text(row, '.cm-completionLabel'), text(row, '.cm-completionKind')])),
+    ).toEqual({ send: 'm', session: 'p', Session: 'S', select: '{}', sender: 't', seed: '' });
   });
 
   test('shows label details after label and on right, else detail on right', async () => {
@@ -292,27 +264,6 @@ describe('serverCompletion', () => {
 
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('sequence\nuse seq::sequence;\n'));
     expect(fake.methods).toContain('completionItem/resolve');
-  });
-
-  test('inserts with Enter and replaces rest of word with Tab', async () => {
-    const items = [{ label: 'send' }];
-    const inserted = await open(transport(items), 'channel.se|lect()');
-    await complete(inserted);
-    press(inserted, 'Enter');
-    const replaced = await open(transport(items), 'channel.se|lect()');
-    await complete(replaced);
-    press(replaced, 'Tab');
-
-    expect(inserted.state.doc.toString()).toBe('channel.sendlect()');
-    expect(replaced.state.doc.toString()).toBe('channel.send()');
-  });
-
-  test('leaves Tab to editor without completions', async () => {
-    const view = await open(transport([]), 'se|');
-
-    press(view, 'Tab');
-
-    expect(view.state.doc.toString()).toBe('se\t');
   });
 
   test("resolves selected item's documentation, detail as definition", async () => {

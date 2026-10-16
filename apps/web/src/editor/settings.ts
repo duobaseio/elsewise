@@ -2,7 +2,7 @@ import { indentUnit } from '@codemirror/language';
 import { EditorState, type Extension, Prec } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { useMemo } from 'react';
-import { completionDocumentation } from '@/editor/lsp/completion';
+import { completionDocumentation } from '@/editor/completion';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { visualGuides } from '@/editor/visual-guides';
 import { useEditorSettings, useSettings } from '@/settings/settings';

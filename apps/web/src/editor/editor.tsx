@@ -19,6 +19,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
+import { completion } from '@/editor/completion';
 import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { link } from '@/editor/link.ts';
@@ -105,6 +106,7 @@ export function Editor({ path, code, root }: EditorProps) {
 
         LANGUAGE.of(description?.support ?? []),
         LANGUAGE_SERVER.of(languageServer),
+        completion(),
         closeBrackets(),
         bracketMatching(),
         // Has to be after lineNumbers to ensure the fold icon is to the right of it.

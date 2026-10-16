@@ -1,32 +1,14 @@
 import {
-  acceptCompletion,
-  autocompletion,
   type Completion,
   type CompletionContext,
   type CompletionResult,
-  completionStatus,
   insertCompletionText,
   pickedCompletion,
   snippet,
 } from '@codemirror/autocomplete';
-import { highlightingFor } from '@codemirror/language';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
-import {
-  type ChangeDesc,
-  type ChangeSpec,
-  CharCategory,
-  EditorState,
-  Facet,
-  MapMode,
-  Prec,
-  StateEffect,
-  StateField,
-  type Text,
-} from '@codemirror/state';
-import { type EditorView, keymap, ViewPlugin } from '@codemirror/view';
-import { letterformClass } from '@elsewise/components/components/letter-icon';
-import { cn } from '@elsewise/components/lib/utils';
-import { type Tag, tags as t } from '@lezer/highlight';
+import { type ChangeDesc, type ChangeSpec, EditorState, MapMode, type Text } from '@codemirror/state';
+import type { EditorCompletion } from '@elsewise/plugin';
 import {
   type CompletionItem,
   CompletionItemKind,
@@ -38,8 +20,8 @@ import {
   LSPErrorCodes,
   type TextEdit,
 } from 'vscode-languageserver-protocol';
+import { completionDocumentation } from '@/editor/completion';
 import { documentation } from '@/editor/lsp/documentation';
-import { hint } from '@/editor/tooltip';
 
 /**
  * The completion type of each kind of item.
@@ -71,57 +53,6 @@ const KINDS = {
   [CompletionItemKind.Operator]: 'operator',
   [CompletionItemKind.TypeParameter]: 'type-parameter',
 } as const satisfies Record<CompletionItemKind, string>;
-
-/**
- * The letters of each completion type's tile, and the syntax tag it is colored like. Types are uppercase, values
- * lowercase. CodeMirror's own types are included for completions that come from elsewhere.
- */
-const TILES = new Map<string, readonly [letters: string, tag: Tag | null]>([
-  ['class', ['C', t.typeName]],
-  ['struct', ['S', t.typeName]],
-  ['interface', ['I', t.typeName]],
-  ['enum', ['E', t.typeName]],
-  ['type-parameter', ['T', t.typeName]],
-  ['type', ['T', t.typeName]],
-  ['module', ['M', t.namespace]],
-  ['namespace', ['M', t.namespace]],
-  ['method', ['m', t.function(t.propertyName)]],
-  ['function', ['f', t.function(t.variableName)]],
-  ['constructor', ['f', t.function(t.variableName)]],
-  ['field', ['p', t.propertyName]],
-  ['property', ['p', t.propertyName]],
-  ['variable', ['v', t.variableName]],
-  ['value', ['v', t.variableName]],
-  ['constant', ['c', t.constant(t.name)]],
-  ['enum-member', ['e', t.constant(t.name)]],
-  ['keyword', ['k', t.keyword]],
-  ['snippet', ['{}', null]],
-]);
-
-const OTHER = ['t', null] as const;
-
-/**
- * Whether completions show the selected item's documentation beside the list, true unless set.
- */
-export const completionDocumentation = Facet.define<boolean, boolean>({ combine: (values) => values.at(-1) ?? true });
-/**
- * Whether the next picked completion replaces the rest of the word after the cursor.
- */
-const replacing = StateField.define<boolean>({
-  create: () => false,
-  update: (value, tr) => tr.effects.find((effect) => effect.is(setReplacing))?.value ?? value,
-});
-
-const setReplacing = StateEffect.define<boolean>();
-
-/**
- * A completion with what a server says about it beyond CodeMirror's {@link Completion}.
- */
-export interface ServerCompletion extends Completion {
-  deprecated?: boolean;
-  /** The text shown right after the label, such as the parameters or where an import comes from. */
-  tail?: string;
-}
 
 /**
  * A server's completion item, resolved at most once, when shown or picked.
@@ -158,56 +89,7 @@ export function serverCompletion(): LSPClientExtension {
         },
       },
     },
-    editorExtension: [
-      EditorState.languageData.of(() => [{ autocomplete: serverCompletionSource }]),
-      autocompletion({
-        icons: false,
-        addToOptions: [
-          { position: 20, render: tile },
-          { position: 51, render: tail },
-        ],
-        optionClass: (completion: ServerCompletion) => (completion.deprecated ? 'cm-completion-deprecated' : ''),
-      }),
-      replacing,
-      // Adds the hint below the list, once the tooltip is drawn.
-      ViewPlugin.define((view) => ({
-        update(update) {
-          if (completionStatus(update.state) !== 'active') {
-            return;
-          }
-          view.requestMeasure({
-            read: () => view.dom.querySelector('.cm-tooltip-autocomplete'),
-            write: (tooltip) => {
-              if (tooltip && !tooltip.querySelector(':scope > .cm-completion-hint')) {
-                tooltip.append(
-                  hint('cm-completion-hint', [
-                    ['Enter', 'insert'],
-                    ['Tab', 'replace'],
-                  ]),
-                );
-              }
-            },
-          });
-        },
-      })),
-      Prec.highest(keymap.of([{ key: 'Tab', run: replace }])),
-      EditorState.transactionFilter.of((tr) => {
-        if (!tr.startState.field(replacing) || !tr.annotation(pickedCompletion)) {
-          return tr;
-        }
-
-        const state = tr.startState;
-        const pos = state.selection.main.head;
-        const word = state.charCategorizer(pos);
-        let end = pos;
-        while (end < state.doc.lineAt(pos).to && word(state.sliceDoc(end, end + 1)) === CharCategory.Word) {
-          end++;
-        }
-
-        const changes = end === pos ? [] : { from: tr.changes.mapPos(pos, 1), to: tr.changes.mapPos(end, 1) };
-        return [tr, { changes, effects: setReplacing.of(false), sequential: true }];
-      }),
-    ],
+    editorExtension: [EditorState.languageData.of(() => [{ autocomplete: serverCompletionSource }])],
   };
 }
 
@@ -258,9 +140,9 @@ async function serverCompletionSource(context: CompletionContext): Promise<Compl
   const list: CompletionList = Array.isArray(result) ? { isIncomplete: false, items: result } : result;
   const defaults = list.itemDefaults;
   const documented = context.state.facet(completionDocumentation);
-  const options = list.items.map((item): ServerCompletion => {
+  const options = list.items.map((item): EditorCompletion => {
     const text = item.textEdit?.newText || item.textEditText || item.insertText || item.label;
-    const option: ServerCompletion = {
+    const option: EditorCompletion = {
       label: item.filterText || item.label,
       displayLabel: item.filterText && item.filterText !== item.label ? item.label : undefined,
       type: item.kind && KINDS[item.kind],
@@ -314,48 +196,6 @@ async function serverCompletionSource(context: CompletionContext): Promise<Compl
     commitCharacters: defaults?.commitCharacters,
     validFor: list.isIncomplete ? undefined : prefixRegexp(list.items),
   };
-}
-
-function tile(completion: Completion, state: EditorState): Node {
-  const dom = document.createElement('span');
-  const type = completion.type?.split(' ')[0];
-  if (type === undefined) {
-    dom.className = 'cm-completionKind';
-    return dom;
-  }
-
-  const [letters, tag] = TILES.get(type) ?? OTHER;
-  const highlight = tag === null ? null : highlightingFor(state, [tag]);
-  dom.className = cn(letterformClass(letters), 'cm-completionKind font-sans text-[11px]/none', highlight);
-  dom.textContent = letters;
-  dom.style.borderColor = 'color-mix(in srgb, currentColor 45%, transparent)';
-  return dom;
-}
-
-function tail(completion: ServerCompletion): Node | null {
-  if (!completion.tail) {
-    return null;
-  }
-
-  const dom = document.createElement('span');
-  dom.className = 'cm-completionTail';
-  dom.textContent = completion.tail;
-  return dom;
-}
-
-// Picks the selected completion over the rest of the word after the cursor.
-function replace(view: EditorView): boolean {
-  if (completionStatus(view.state) !== 'active') {
-    return false;
-  }
-
-  view.dispatch({ effects: setReplacing.of(true) });
-  const picked = acceptCompletion(view);
-  // Clears it when nothing was picked, or a completion applied itself without saying so.
-  if (view.state.field(replacing)) {
-    view.dispatch({ effects: setReplacing.of(false) });
-  }
-  return picked;
 }
 
 // Returns the offset of `position` in `doc`, or null if it is outside it.

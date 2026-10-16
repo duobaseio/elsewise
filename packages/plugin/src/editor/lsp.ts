@@ -1,55 +1,6 @@
-import type { LanguageDescription } from '@codemirror/language';
 import type { LSPClient, LSPClientExtension } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
-import type { Disposable } from './plugin.ts';
-
-/**
- * The code editor.
- */
-export interface Editor {
-  /**
-   * The open editor that is or was last focused.
-   *
-   * `null` when:
-   * * no editor has focused yet.
-   * * the active editor is closed and focus has not shifted to another open editor.
-   *
-   * The active editor remains the same when focus is elsewhere (except on another editor), e.g. in a menu.
-   */
-  readonly active: EditorView | null;
-
-  /**
-   * Adds `extensions` to the editor, each an extension or a function that returns one for each document.
-   *
-   * Returns a disposable that removes the `extensions`.
-   */
-  addExtensions(extensions: readonly (Extension | ((document: EditorDocument) => Extension))[]): Disposable;
-
-  /**
-   * Adds `languages`, which take precedence over the built-in languages for the same files.
-   *
-   * Returns a disposable that removes the `languages`.
-   */
-  addLanguages(languages: readonly LanguageDescription[]): Disposable;
-
-  /**
-   * Adds language servers, which take precedence over the servers added earlier for the same languages.
-   *
-   * Returns a disposable that removes the `servers`.
-   */
-  addLanguageServers(servers: readonly LanguageServer[]): Disposable;
-}
-
-/**
- * A document open in the editor.
- */
-export interface EditorDocument {
-  /**
-   * The document's path.
-   */
-  readonly path: string;
-}
+import type { Disposable } from '../plugin.ts';
 
 /**
  * A language server.

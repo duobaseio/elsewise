@@ -2,10 +2,12 @@ import { startCompletion } from '@codemirror/autocomplete';
 import { foldCode } from '@codemirror/language';
 import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
+import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -263,8 +265,40 @@ const RUST: LanguageServer = {
   },
 };
 
-// Mounts the editor, on `HOVERED` with a Rust language server if `hovered`, else on `code`.
-async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Promise<EditorView> {
+// Returns the `data:` URL of an SVG of `path` in a 16 by 16 box.
+const svg = (path: string) =>
+  `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="${path}"/></svg>`,
+  )}`;
+
+// Completions with a plugin's icons: tagged and plain letters and SVGs, and a colored image, beside a type's
+// letterform.
+const ICONS: EditorCompletion[] = [
+  { label: 'session', type: 'variable', detail: 'Session' },
+  { label: 'send', icon: { letters: 'Fn', tag: tags.function(tags.variableName) }, tail: '(bytes: &[u8])' },
+  { label: 'select', icon: { letters: 'R' }, detail: 'macro' },
+  { label: 'sender', icon: { svg: svg('M9 1 3 9h4l-1 6 6-8H8l1-6Z'), tag: tags.keyword }, detail: 'Sender<Bytes>' },
+  { label: 'secret', icon: { svg: svg('M5 7V5a3 3 0 0 1 6 0v2h1v7H4V7Zm1.5 0h3V5a1.5 1.5 0 0 0-3 0Z') } },
+  {
+    label: 'serde',
+    icon: {
+      image: `data:image/svg+xml,${encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" fill="#e5533d"/>' +
+          '<circle cx="8" cy="8" r="3.5" fill="#f6c343"/></svg>',
+      )}`,
+    },
+    detail: 'crate',
+  },
+];
+
+// Mounts the editor, on `HOVERED` with a Rust language server if `hovered`, else on `code`, with a plugin's
+// `extensions`.
+async function mount(
+  theme: 'light' | 'dark',
+  hovered = false,
+  code = CODE,
+  extensions: readonly Extension[] = [],
+): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
     ...DEFAULT_SETTINGS,
@@ -277,6 +311,7 @@ async function mount(theme: 'light' | 'dark', hovered = false, code = CODE): Pro
   if (hovered) {
     editor.addLanguageServers([RUST]);
   }
+  editor.addExtensions(extensions);
   const commands = new CommandManager({
     appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
     editor,
@@ -475,6 +510,17 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await complete(view, '    ma', false);
 
       await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-completion-statement-${theme}`);
+    });
+
+    test('with icons', async () => {
+      const view = await mount(theme, false, CODE, [EditorState.languageData.of(() => [{ autocomplete: ICONS }])]);
+      const end = view.state.doc.lineAt(CODE.indexOf('let (tx, rx)')).to;
+      view.dispatch({ changes: { from: end, insert: '\n    se' }, selection: { anchor: end + 7 } });
+      view.focus();
+      startCompletion(view);
+      await vi.waitFor(() => expect(document.querySelectorAll('.cm-tooltip-autocomplete li')).toHaveLength(6));
+
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-completion-icons-${theme}`);
     });
   });
 
