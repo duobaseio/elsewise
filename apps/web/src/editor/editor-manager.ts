@@ -1,10 +1,11 @@
 import type { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { type Extension, Facet } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Commands, ContextMenu, Disposable, Editor, EditorDocument, LanguageServer } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
+import { hoverSources } from '@/editor/hover';
 
 /**
  * The commands that an editor runs.
@@ -102,6 +103,10 @@ export class EditorManager implements Editor {
       this.currentLanguageServers = this.addedLanguageServers.flat();
       this.notify();
     };
+  }
+
+  addHoverTooltipSources(sources: readonly { source: HoverTooltipSource; order?: number }[]): Disposable {
+    return this.addExtensions(sources.map((source) => hoverSources.of(source)));
   }
 
   /**

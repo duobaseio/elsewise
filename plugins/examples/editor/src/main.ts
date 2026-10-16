@@ -1,7 +1,7 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
 import type { Application, EditorCommand, PluginContext } from '@elsewise/plugin';
-import { colorPicker } from './color-picker.ts';
+import { colorHover, colorPicker } from './color-picker.ts';
 import { keys, reactions } from './completions.ts';
 
 const EXCUSES = [
@@ -43,6 +43,7 @@ export function enable({ commands, editor }: Application, { id, subscriptions }:
         support: new LanguageSupport(dotenv, dotenv.data.of({ autocomplete: keys })),
       }),
     ]),
+    editor.addHoverTooltipSources([{ source: colorHover }]),
     // The context menu items in `manifest.json` run these.
     commands.add([
       excuse(`${id}.leaveAnExcuse`),

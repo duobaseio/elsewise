@@ -4,7 +4,7 @@ import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemir
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import type { LanguageServer } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, type LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
@@ -14,7 +14,7 @@ import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { Editor } from '@/editor/editor';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { COMMANDS, EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 import { StubTransport } from '../../test/stub-transport';
@@ -216,6 +216,68 @@ test("plugin's completions show without language server", async () => {
   startCompletion(view);
 
   await expect.element(page.getByRole('option').getByText('main')).toBeVisible();
+});
+
+// A plugin's hover source of a section reading `text` over the whole document.
+function blame(text: string) {
+  return {
+    source: (view: EditorView) => ({
+      pos: 0,
+      end: view.state.doc.length,
+      create: () => ({ dom: Object.assign(document.createElement('div'), { className: 'blame', textContent: text }) }),
+    }),
+  };
+}
+
+// Moves the pointer over `pos` in `view`.
+function point(view: EditorView, pos: number): void {
+  const { left, top, bottom } = view.coordsAtPos(pos) as DOMRect;
+  const [x, y] = [left + 1, (top + bottom) / 2];
+  document
+    .elementFromPoint(x, y)
+    ?.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+}
+
+test("plugin's hover section shows without language server", async () => {
+  const editor = new EditorManager();
+  editor.addHoverTooltipSources([blame('You, yesterday')]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+
+  point(view, 4);
+
+  await expect
+    .poll(() => view.dom.querySelector('.cm-tooltip-hover .blame')?.textContent, { timeout: 2000 })
+    .toBe('You, yesterday');
+});
+
+test("plugin's hover section goes once disposed", async () => {
+  const editor = new EditorManager();
+  const dispose = editor.addHoverTooltipSources([blame('You, yesterday')]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+  view.dispatch({ selection: { anchor: 4 } });
+  const show = () => view.state.facet(COMMANDS)?.run(DEFAULT_COMMANDS.editor.hover.show, view);
+  show();
+  await expect.poll(() => view.dom.querySelector('.cm-tooltip-hover .blame')).not.toBeNull();
+
+  dispose();
+  // Waits for the editor to drop the plugin's extensions, which it does on its next render.
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  view.dispatch({ selection: { anchor: 3 } });
+  show();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
+});
+
+test("plugin's hover section shows on quick documentation", async () => {
+  const editor = new EditorManager();
+  editor.addHoverTooltipSources([blame('You, yesterday')]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+  view.dispatch({ selection: { anchor: 4 } });
+
+  view.state.facet(COMMANDS)?.run(DEFAULT_COMMANDS.editor.hover.show, view);
+
+  await expect.poll(() => view.dom.querySelector('.cm-tooltip-hover .blame')?.textContent).toBe('You, yesterday');
 });
 
 test("plugin's language highlights files with extension", async () => {

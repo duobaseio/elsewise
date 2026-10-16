@@ -1,6 +1,6 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView, Tooltip } from '@codemirror/view';
-import type { EditorDiagnostic } from '@elsewise/plugin';
+import { DEFAULT_HOVER_SECTIONS, type EditorDiagnostic } from '@elsewise/plugin';
 import type { Hover, HoverParams } from 'vscode-languageserver-protocol';
 import { COMMANDS } from '@/editor/editor-manager';
 import { hoverSources, type ProblemAction, problemActionSources } from '@/editor/hover';
@@ -12,7 +12,12 @@ import { documentation } from '@/editor/lsp/documentation';
  * the problems there, to the hover.
  */
 export function serverHover(): LSPClientExtension {
-  return { editorExtension: [hoverSources.of(lookUp), problemActionSources.of(actionsFor)] };
+  return {
+    editorExtension: [
+      hoverSources.of({ source: lookUp, order: DEFAULT_HOVER_SECTIONS.documentation }),
+      problemActionSources.of(actionsFor),
+    ],
+  };
 }
 
 // Copied from `@codemirror/lsp-client`'s `lspTooltipSource`.

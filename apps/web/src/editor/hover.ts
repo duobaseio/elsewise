@@ -11,7 +11,13 @@ import {
   type Tooltip,
 } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand, type EditorDiagnostic } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMANDS,
+  DEFAULT_HOVER_SECTIONS,
+  DEFAULT_KEYS,
+  type EditorCommand,
+  type EditorDiagnostic,
+} from '@elsewise/plugin';
 import { COMMANDS } from '@/editor/editor-manager';
 import { appendCode } from '@/editor/tooltip';
 
@@ -25,16 +31,19 @@ const FIXES_DELAY = 300;
  */
 export type ProblemAction = Action & { command?: string };
 
+// TODO: Replace with the editor-level action sources, which let plugins add actions in an order shared with the context
+// actions popup.
 /**
  * The sources of each problem's actions in the hover, after the problem's own, in order.
  */
 export const problemActionSources =
-    Facet.define<(view: EditorView, diagnostic: EditorDiagnostic) => Promise<ProblemAction[]>>();
+  Facet.define<(view: EditorView, diagnostic: EditorDiagnostic) => Promise<ProblemAction[]>>();
 
 /**
- * The sources of the hover's sections below the problems, in order.
+ * The sources of the hover's sections, shown lowest `order` first, then those without an order, each in the order
+ * added when equal. The problems are at {@link DEFAULT_HOVER_SECTIONS.problems}.
  */
-export const hoverSources = Facet.define<HoverTooltipSource>();
+export const hoverSources = Facet.define<{ source: HoverTooltipSource; order?: number }>();
 
 /**
  * Whether a click in the code closes the hovers, and keeps them closed until the mouse moves away, false unless set.
@@ -129,7 +138,7 @@ export const SHOW_HOVER: EditorCommand = {
 };
 
 /**
- * Returns the extension that shows the problems and the {@link hoverSources} sections for the code under the pointer,
+ * Returns the extension that shows the problems and the {@link hoverSources}' sections for the code under the pointer,
  * or under the cursor on {@link SHOW_HOVER}.
  */
 export function hover(): Extension {
@@ -175,7 +184,8 @@ async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tool
     }
   });
 
-  const [fixes, sections] = await Promise.all([
+  const sources = view.state.facet(hoverSources);
+  const [fixes, tooltips] = await Promise.all([
     Promise.all(
       found.map(async ({ diagnostic }) =>
         (
@@ -192,10 +202,10 @@ async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tool
         ).flat(),
       ),
     ),
-    Promise.all(view.state.facet(hoverSources).map((source) => Promise.try(source, view, pos, side).catch(() => null))),
+    Promise.all(sources.map(({ source }) => Promise.try(source, view, pos, side).catch(() => null))),
   ]);
 
-  const tooltips: Tooltip[] = [];
+  const sections: { order: number; tooltips: readonly Tooltip[] }[] = [];
   // Based on `@codemirror/lint`'s `lintTooltip`.
   //
   // Adds each problem's code, and a line for its actions and the server's fixes.
@@ -277,14 +287,26 @@ async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tool
       }
     }
 
-    tooltips.push({
-      pos: Math.min(...found.map(({ from }) => from)),
-      end: Math.max(...found.map(({ to }) => to)),
-      above: true,
-      create: () => ({ dom }),
+    sections.push({
+      order: DEFAULT_HOVER_SECTIONS.problems,
+      tooltips: [
+        {
+          pos: Math.min(...found.map(({ from }) => from)),
+          end: Math.max(...found.map(({ to }) => to)),
+          above: true,
+          create: () => ({ dom }),
+        },
+      ],
     });
   }
 
-  tooltips.push(...sections.flatMap((section) => section ?? []));
-  return tooltips.length > 0 ? tooltips : null;
+  for (const [i, { order = Number.POSITIVE_INFINITY }] of sources.entries()) {
+    const result = tooltips[i];
+    if (result) {
+      sections.push({ order, tooltips: [result].flat() });
+    }
+  }
+
+  const shown = sections.toSorted((a, b) => a.order - b.order || 0).flatMap((section) => section.tooltips);
+  return shown.length > 0 ? shown : null;
 }

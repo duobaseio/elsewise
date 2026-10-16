@@ -10,12 +10,13 @@ export {
   ContextSubmenuId,
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
-export type {
-  Editor,
-  EditorCompletion,
-  EditorCompletionIcon,
-  EditorDiagnostic,
-  EditorDocument,
+export {
+  DEFAULT_HOVER_SECTIONS,
+  type Editor,
+  type EditorCompletion,
+  type EditorCompletionIcon,
+  type EditorDiagnostic,
+  type EditorDocument,
 } from './editor/editor.ts';
 export type { LanguageServer, LanguageServerTransport } from './editor/lsp.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';

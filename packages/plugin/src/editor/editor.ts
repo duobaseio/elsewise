@@ -2,11 +2,21 @@ import type { Completion } from '@codemirror/autocomplete';
 import type { LanguageDescription } from '@codemirror/language';
 import type { Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Tag } from '@lezer/highlight';
 import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol';
 import type { Disposable } from '../plugin.ts';
 import type { LanguageServer } from './lsp.ts';
+
+/**
+ * The orders of the built-in hover sections, shown lowest first.
+ *
+ * See {@link Editor.addHoverTooltipSources}.
+ */
+export const DEFAULT_HOVER_SECTIONS = {
+  problems: 10,
+  documentation: 20,
+} as const;
 
 /**
  * The code editor.
@@ -43,6 +53,27 @@ export interface Editor {
    * Returns a disposable that removes the `servers`.
    */
   addLanguageServers(servers: readonly LanguageServer[]): Disposable;
+
+  /**
+   * Adds hover sections from `sources`.
+   *
+   * Sections are shown by `order`, lowest first. Sections with the same order are shown in the order added, and sections
+   * without one are shown last.
+   *
+   * The hover opens once every source has returned
+   *
+   * ```ts
+   * editor.addHoverTooltipSources([
+   *   { source: summary, order: 15 }, // Shown between the problems and the documentation.
+   *   { source: blame }, // Shown last.
+   * ]);
+   * ```
+   *
+   * Returns a disposable that removes the `sources`.
+   *
+   * See {@link DEFAULT_HOVER_SECTIONS}.
+   */
+  addHoverTooltipSources(sources: readonly { source: HoverTooltipSource; order?: number }[]): Disposable;
 }
 
 /**

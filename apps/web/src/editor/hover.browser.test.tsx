@@ -54,6 +54,22 @@ function press(view: EditorView, pos: number): void {
   target?.dispatchEvent(new MouseEvent('mouseup', { clientX: x, clientY: y, bubbles: true }));
 }
 
+// Returns a source of a section named `name`, at `order`.
+function section(name: string, order?: number): Extension {
+  const source = async (_: EditorView, pos: number) => ({
+    pos,
+    create: () => ({ dom: Object.assign(document.createElement('div'), { className: name }) }),
+  });
+  return hoverSources.of({ source, order });
+}
+
+// Returns the names of `tooltip`'s sections, `problems` for the problems.
+function names(tooltip: HTMLElement): string[] {
+  return [...tooltip.querySelectorAll('.cm-tooltip-section')].map((element) =>
+    element.classList.contains('cm-tooltip-lint') ? 'problems' : element.classList[0],
+  );
+}
+
 // Waits past the delay before a hover opens.
 function rest(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 600));
@@ -159,24 +175,31 @@ describe('hover', () => {
     expect(view.state.doc.toString()).toBe('let channel = connect(1);');
   });
 
-  test('shows sections below problems', async () => {
-    const view = open(
-      [PROBLEM],
-      [
-        hoverSources.of(async (_, pos) => ({
-          pos,
-          create: () => ({ dom: Object.assign(document.createElement('div'), { className: 'docs' }) }),
-        })),
-      ],
-    );
+  test('shows sections without order below problems', async () => {
+    const view = open([PROBLEM], [section('docs')]);
 
     point(view, PROBLEM.from + 1);
     const tooltip = await opened(view);
 
-    await vi.waitFor(() => expect(tooltip.querySelectorAll('.cm-tooltip-section')).toHaveLength(2));
-    const [first, second] = tooltip.querySelectorAll('.cm-tooltip-section');
-    expect(first.querySelector('.cm-diagnostic-error')).not.toBeNull();
-    expect(second.classList).toContain('docs');
+    await vi.waitFor(() => expect(names(tooltip)).toEqual(['problems', 'docs']));
+  });
+
+  test('shows sections lowest order first, rest last', async () => {
+    const view = open([PROBLEM], [section('last'), section('late', 30), section('early', 5)]);
+
+    point(view, PROBLEM.from + 1);
+    const tooltip = await opened(view);
+
+    await vi.waitFor(() => expect(names(tooltip)).toEqual(['early', 'problems', 'late', 'last']));
+  });
+
+  test('keeps equal orders as added', async () => {
+    const view = open([PROBLEM], [section('first', 10), section('second', 10)]);
+
+    point(view, PROBLEM.from + 1);
+    const tooltip = await opened(view);
+
+    await vi.waitFor(() => expect(names(tooltip)).toEqual(['problems', 'first', 'second']));
   });
 
   test('closes on click, until pointer moves', async () => {
