@@ -8,7 +8,8 @@ import {
 } from '@codemirror/autocomplete';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { type ChangeDesc, type ChangeSpec, EditorState, MapMode, type Text } from '@codemirror/state';
-import type { EditorCompletion } from '@elsewise/plugin';
+import { toast } from '@elsewise/components/components/toast';
+import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
 import {
   type CompletionItem,
   CompletionItemKind,
@@ -22,6 +23,7 @@ import {
 } from 'vscode-languageserver-protocol';
 import { completionDocumentation } from '@/editor/completion';
 import { documentation } from '@/editor/lsp/documentation';
+import { run } from '@/editor/lsp/language-servers';
 
 /**
  * The completion type of each kind of item.
@@ -65,12 +67,13 @@ interface Resolvable {
 }
 
 /**
- * Returns the client extension that completes code from the server's suggestions.
+ * Returns the client extension that completes code from `server`'s suggestions.
  *
  * It replaces `@codemirror/lsp-client`'s `serverCompletion()`, which drops an item's kind, label details and
- * deprecation, and never resolves its documentation or additional edits.
+ * deprecation, never resolves its documentation or additional edits, and never runs its command.
  */
-export function serverCompletion(): LSPClientExtension {
+export function serverCompletion(server: LanguageServer): LSPClientExtension {
+  const source = (context: CompletionContext) => serverCompletionSource(context, server);
   return {
     clientCapabilities: {
       textDocument: {
@@ -89,15 +92,19 @@ export function serverCompletion(): LSPClientExtension {
         },
       },
     },
-    editorExtension: [EditorState.languageData.of(() => [{ autocomplete: serverCompletionSource }])],
+    editorExtension: [EditorState.languageData.of(() => [{ autocomplete: source }])],
   };
 }
 
 // Copied from `@codemirror/lsp-client`'s `serverCompletionSource`.
 //
 // Keeps an item's kind, label details and deprecation, resolves its documentation when shown and its additional edits
-// when picked, and shows its detail above the documentation. Has no `validFor` option.
-async function serverCompletionSource(context: CompletionContext): Promise<CompletionResult | null> {
+// when picked, and shows its detail above the documentation. Has no `validFor` option. Lets `server` change the items
+// first.
+async function serverCompletionSource(
+  context: CompletionContext,
+  server: LanguageServer,
+): Promise<CompletionResult | null> {
   const plugin = context.view && LSPPlugin.get(context.view);
   const provider = plugin?.client.serverCapabilities?.completionProvider;
   if (!plugin || !provider) {
@@ -138,6 +145,10 @@ async function serverCompletionSource(context: CompletionContext): Promise<Compl
   }
 
   const list: CompletionList = Array.isArray(result) ? { isIncomplete: false, items: result } : result;
+  if (server.completionItems) {
+    list.items = await server.completionItems(plugin.client, list.items, params);
+  }
+
   const defaults = list.itemDefaults;
   const documented = context.state.facet(completionDocumentation);
   const options = list.items.map((item): EditorCompletion => {
@@ -172,7 +183,7 @@ async function serverCompletionSource(context: CompletionContext): Promise<Compl
       // Turns LSP's `$1` tab stops into CodeMirror's `${1}`, and unescapes the rest as `@codemirror/lsp-client` does.
       const template = text.replace(/\\([$}\\])|\$(\d+)/g, (_, escaped, field) => escaped || `\${${field}}`);
       option.apply = apply(resolvable, text, template);
-    } else if (item.additionalTextEdits || provider.resolveProvider) {
+    } else if (item.additionalTextEdits || provider.resolveProvider || item.command) {
       option.apply = apply(resolvable, text, null);
     } else if (option.label !== text) {
       option.apply = text;
@@ -260,24 +271,34 @@ function prefixRegexp(items: CompletionItem[]): RegExp {
   return new RegExp(`^(?:${escaped.join('|')})?\\w*$`);
 }
 
-// Returns an apply that inserts `text`, or a snippet of `template`, and makes the item's additional edits.
-//
-// Copied from `@codemirror/lsp-client`'s `applyEdits`. The edits are in the document the server has. They are made with
-// the text when known by then, so that they are undone together, else after it once the item is resolved.
+// Copied from `@codemirror/lsp-client`'s `applyEdits`.
 function apply(resolvable: Resolvable, text: string, template: string | null): Completion['apply'] {
   return (view, completion, from, to) => {
     const plugin = LSPPlugin.get(view);
-    const known = resolvable.item.additionalTextEdits ? resolvable.item : resolvable.resolved;
-    if (!plugin || (known && template === null)) {
-      const changes = plugin ? edits(plugin.syncedDoc, plugin.unsyncedChanges, known?.additionalTextEdits ?? []) : [];
+    const finish = (plugin: LSPPlugin) => {
+      const command = resolvable.resolved?.command ?? resolvable.item.command;
+      if (command) {
+        run(view, plugin, command).catch((error) => {
+          toast.add({ type: 'error', title: 'Command failed', description: (error as Error).message });
+        });
+      }
+    };
+
+    const inline = resolvable.item.additionalTextEdits ? resolvable.item : resolvable.resolved;
+    if (!plugin || (inline && template === null)) {
+      const changes = plugin ? edits(plugin.syncedDoc, plugin.unsyncedChanges, inline?.additionalTextEdits ?? []) : [];
       view.dispatch(insertCompletionText(view.state, text, from, to), {
         changes,
         annotations: pickedCompletion.of(completion),
       });
+
+      if (plugin) {
+        finish(plugin);
+      }
       return;
     }
 
-    // Tracks the changes since the document the server has, including the text's.
+    // Maps the additional edits since their positions are in the document the server had before the insertion.
     void plugin.client.withMapping(async (mapping) => {
       const doc = plugin.syncedDoc;
       if (template === null) {
@@ -288,15 +309,19 @@ function apply(resolvable: Resolvable, text: string, template: string | null): C
         snippet(template)(view, completion, from, to);
       }
 
-      const { additionalTextEdits } = known ?? (await resolvable.resolve());
-      if (!additionalTextEdits?.length || LSPPlugin.get(view) !== plugin) {
+      const { additionalTextEdits } = inline ?? (await resolvable.resolve());
+      if (LSPPlugin.get(view) !== plugin) {
         return;
       }
-      plugin.client.sync();
-      const changes = mapping.getMapping(plugin.uri);
-      if (changes) {
-        view.dispatch({ changes: edits(doc, changes, additionalTextEdits) });
+
+      if (additionalTextEdits?.length) {
+        plugin.client.sync();
+        const changes = mapping.getMapping(plugin.uri);
+        if (changes) {
+          view.dispatch({ changes: edits(doc, changes, additionalTextEdits) });
+        }
       }
+      finish(plugin);
     });
   };
 }

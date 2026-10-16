@@ -2,6 +2,7 @@ import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirro
 import type { EditorState } from '@codemirror/state';
 import type { Application, EditorCommand, PluginContext } from '@elsewise/plugin';
 import { colorPicker } from './color-picker.ts';
+import { keys, reactions } from './completions.ts';
 
 const EXCUSES = [
   'It worked on my machine.',
@@ -11,34 +12,35 @@ const EXCUSES = [
   'Temporary fix, 2019.',
 ];
 
+const dotenv = StreamLanguage.define({
+  token(stream) {
+    if (stream.sol() && stream.match(/^\s*#.*/)) {
+      return 'comment';
+    }
+    if (stream.sol() && stream.match(/^\w+(?==)/)) {
+      return 'propertyName';
+    }
+    if (stream.eat('=')) {
+      return 'operator';
+    }
+
+    stream.skipToEnd();
+    return 'string';
+  },
+});
+
 /**
  * Called when Elsewise enables the plugin.
  */
 export function enable({ commands, editor }: Application, { id, subscriptions }: PluginContext): void {
   subscriptions.push(
-    editor.addExtensions([colorPicker]),
+    editor.addExtensions([colorPicker, reactions]),
     editor.addLanguages([
       LanguageDescription.of({
         name: 'Dotenv',
         filename: /(^|[\\/])\.env(\.\w+)?$/,
-        support: new LanguageSupport(
-          StreamLanguage.define({
-            token(stream) {
-              if (stream.sol() && stream.match(/^\s*#.*/)) {
-                return 'comment';
-              }
-              if (stream.sol() && stream.match(/^\w+(?==)/)) {
-                return 'propertyName';
-              }
-              if (stream.eat('=')) {
-                return 'operator';
-              }
-
-              stream.skipToEnd();
-              return 'string';
-            },
-          }),
-        ),
+        // Completes keys in Dotenv documents only.
+        support: new LanguageSupport(dotenv, dotenv.data.of({ autocomplete: keys })),
       }),
     ]),
     // The context menu items in `manifest.json` run these.

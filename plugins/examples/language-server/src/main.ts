@@ -1,5 +1,5 @@
 import { type Application, DEFAULT_COMMANDS, type LanguageServerTransport, type PluginContext } from '@elsewise/plugin';
-import type { TextDocumentPositionParams } from 'vscode-languageserver-protocol';
+import { CompletionItemKind, InsertTextFormat, type TextDocumentPositionParams } from 'vscode-languageserver-protocol';
 
 // Matches `scripts/serve.mjs`.
 const SERVER = 'ws://127.0.0.1:7300';
@@ -31,6 +31,37 @@ export function enable({ editor, commands }: Application, { subscriptions }: Plu
             }
             return null;
           },
+        },
+        // Completes a function or method with its parentheses, then opens parameter info inside them, unless they
+        // follow already.
+        completionItems: (client, items, { textDocument, position }) => {
+          const doc = client.workspace.getFile(textDocument.uri)?.doc;
+          const next = doc?.line(position.line + 1).text.charAt(position.character);
+          if (next === '(') {
+            return items;
+          }
+
+          return items.map((item) => {
+            if (
+              (item.kind !== CompletionItemKind.Function && item.kind !== CompletionItemKind.Method) ||
+              item.insertTextFormat === InsertTextFormat.Snippet
+            ) {
+              return item;
+            }
+
+            const text = `${item.textEdit?.newText ?? item.insertText ?? item.label}($0)`;
+            return {
+              ...item,
+              insertText: text,
+              textEdit: item.textEdit && { ...item.textEdit, newText: text },
+              insertTextFormat: InsertTextFormat.Snippet,
+              command: { title: 'Parameter info', command: 'editor.action.triggerParameterHints' },
+            };
+          });
+        },
+        commandHandlers: {
+          'editor.action.triggerParameterHints': (_, view) =>
+            commands.run(DEFAULT_COMMANDS.editor.lsp.showSignatureHelp, view),
         },
         // Each connection is a server of its own, for the worktree at `root`. A frame is one message.
         start: (root) =>

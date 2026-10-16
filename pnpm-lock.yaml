@@ -353,6 +353,9 @@ importers:
       react:
         specifier: ^19.3.0
         version: 19.3.0
+      vscode-languageserver-protocol:
+        specifier: ^3.18.4
+        version: 3.18.4
       zod:
         specifier: ^4.6.5
         version: 4.6.7
@@ -403,6 +406,9 @@ importers:
 
   plugins/examples/editor:
     dependencies:
+      '@codemirror/autocomplete':
+        specifier: ^6.20.3
+        version: 6.20.3
       '@codemirror/language':
         specifier: ^6.12.4
         version: 6.13.1
@@ -412,6 +418,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.13
         version: 6.43.14
+      '@lezer/highlight':
+        specifier: ^1.2.5
+        version: 1.2.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.14
@@ -427,6 +436,10 @@ importers:
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
 
   plugins/examples/language-server:
+    dependencies:
+      vscode-languageserver-protocol:
+        specifier: ^3.18.4
+        version: 3.18.4
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.14
@@ -446,9 +459,6 @@ importers:
       vite:
         specifier: ^8.3.0
         version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
-      vscode-languageserver-protocol:
-        specifier: ^3.18.4
-        version: 3.18.4
       ws:
         specifier: ^8.22.0
         version: 8.22.0

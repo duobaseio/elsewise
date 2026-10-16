@@ -48,11 +48,13 @@ afterEach(() => {
   }
 });
 
-// Opens `DOC` with the cursor in `shout`, on a server with `PROBLEM` that answers code actions with `actions`.
+// Opens `DOC` with the cursor in `shout`, on a server with `PROBLEM` that answers code actions with `actions`, and the
+// plugin's `commandHandlers`.
 async function open(
   actions: (params: CodeActionParams) => unknown,
   capabilities: object = {},
   answers: ConstructorParameters<typeof StubTransport>[1] = {},
+  commandHandlers: LanguageServer['commandHandlers'] = {},
 ): Promise<{ view: EditorView; stub: StubTransport }> {
   const stub = new StubTransport(
     { textDocumentSync: 2, diagnosticProvider: {}, codeActionProvider: true, ...capabilities },
@@ -68,6 +70,7 @@ async function open(
       name: 'TypeScript',
       languages: { TypeScript: 'typescript' },
       start: () => stub,
+      commandHandlers,
     } satisfies LanguageServer,
     new URL('file:///worktree/'),
   );
@@ -241,6 +244,22 @@ describe('serverActions', () => {
         arguments: [1],
       });
     });
+  });
+
+  test("runs action's command with plugin's handler instead", async () => {
+    const run = vi.fn();
+    const { view, stub } = await open(
+      () => [{ title: 'Run it', command: 'fix.run', arguments: [1] }],
+      {},
+      {},
+      { 'fix.run': run },
+    );
+    await show(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() => expect(run).toHaveBeenCalledWith(expect.anything(), view, [1]));
+    expect(stub.methods).not.toContain('workspace/executeCommand');
   });
 
   test("applies command's edit in one undo step", async () => {

@@ -1,6 +1,7 @@
 # Editor example
 
-A toy plugin that modifies the code editor using [`@elsewise/plugin`](../../../packages/plugin).
+A toy plugin that adds to the code editor, e.g. completions and a color picker, using
+[`@elsewise/plugin`](../../../packages/plugin).
 
 ## Running scripts
 
@@ -28,5 +29,7 @@ are left out of the bundle.
 
 2. Run Elsewise, e.g. `pnpm --filter @elsewise/web dev` and `pnpm --filter @elsewise/desktop dev`. Its editor shows
    `apps/web/src/routes/_shell/$project/$worktree.tsx` until it can open files.
+
+3. Type e.g. `:sh` in any file, or start a key in a `.env` file, to see the plugin's completions.
 
 To remove the plugin, run `plugin.mjs remove io.duobase.elsewise.examples.editor` from the same folder.

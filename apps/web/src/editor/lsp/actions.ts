@@ -8,11 +8,11 @@ import {
   CodeActionTriggerKind,
   type Command,
   type Diagnostic,
-  type ExecuteCommandParams,
   type Range,
 } from 'vscode-languageserver-protocol';
 import { problems } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit } from '@/editor/lsp/edits';
+import { run } from '@/editor/lsp/language-servers';
 import { appendCode, hint } from '@/editor/tooltip';
 
 // A bulb, and the exclamation mark cut out of it for a quick fix.
@@ -310,11 +310,7 @@ export async function apply(view: EditorView, action: CodeAction | undefined, do
     }
 
     if (resolved.command) {
-      const { command, arguments: args } = resolved.command;
-      await plugin.client.request<ExecuteCommandParams, unknown>('workspace/executeCommand', {
-        command,
-        arguments: args,
-      });
+      await run(view, plugin, resolved.command);
     }
   } catch (error) {
     view.dispatch({

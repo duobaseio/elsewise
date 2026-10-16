@@ -1,12 +1,15 @@
-import { LSPClient } from '@codemirror/lsp-client';
-import type { Extension } from '@codemirror/state';
+import { LSPClient, type LSPPlugin } from '@codemirror/lsp-client';
+import { type Extension, Facet } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 import {
   type ApplyWorkspaceEditParams,
+  type Command,
   ErrorCodes,
+  type ExecuteCommandParams,
   MessageType,
   type ShowMessageParams,
 } from 'vscode-languageserver-protocol';
@@ -117,6 +120,11 @@ const REQUESTS = new Map([
   ['workspace/applyEdit', (client: LSPClient, { edit }: ApplyWorkspaceEditParams) => applyWorkspaceEdit(client, edit)],
 ]);
 
+const commandHandlers = Facet.define<
+  NonNullable<LanguageServer['commandHandlers']>,
+  NonNullable<LanguageServer['commandHandlers']>
+>({ combine: (values) => values[0] ?? {} });
+
 /**
  * A language server instance.
  */
@@ -144,7 +152,7 @@ export class LanguageServerInstance {
         // precedence over Elsewise's, while its client capabilities, which lsp-client merges in order, give way to
         // them.
         ...(server.extensions ?? []),
-        serverCompletion(),
+        serverCompletion(server),
         serverHover(),
         serverSignatureHelp(),
         serverRename(),
@@ -154,6 +162,7 @@ export class LanguageServerInstance {
         serverDiagnostics(),
         serverEdits(),
         {
+          editorExtension: commandHandlers.of(server.commandHandlers ?? {}),
           notificationHandlers: {
             // Shows the server's messages in toasts rather than lsp-client's bar, and drops its logs as lsp-client
             // does.
@@ -277,6 +286,18 @@ export function serverUri(url: URL): string {
       encodeURIComponent(character).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`),
     );
   return `${url.protocol}//${url.host}${path}`;
+}
+
+export async function run(view: EditorView, plugin: LSPPlugin, { command, arguments: args }: Command): Promise<void> {
+  // Some implementations have non-compliant client commands.
+  const handlers = view.state.facet(commandHandlers);
+  if (Object.hasOwn(handlers, command)) {
+    await handlers[command](plugin.client, view, (args ?? []) as never[]);
+    return;
+  }
+
+  plugin.client.sync();
+  await plugin.client.request<ExecuteCommandParams, unknown>('workspace/executeCommand', { command, arguments: args });
 }
 
 export const LanguageServersContext = createContext<LanguageServers | null>(null);

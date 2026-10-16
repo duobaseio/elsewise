@@ -2,14 +2,17 @@ import { startCompletion } from '@codemirror/autocomplete';
 import { history, undo } from '@codemirror/commands';
 import { LanguageDescription, type LanguageSupport } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
+import type { LSPClient } from '@codemirror/lsp-client';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
+import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
   type CompletionItem,
   CompletionItemKind,
   CompletionItemTag,
+  CompletionTriggerKind,
   type InitializeParams,
 } from 'vscode-languageserver-protocol';
 import { completion, completionDocumentation } from '@/editor/completion';
@@ -45,9 +48,21 @@ afterEach(() => {
   }
 });
 
-// Opens `doc` on a running server behind `fake`, with the cursor at its `|`, and `extensions` after the rest.
-async function open(fake: StubTransport, doc: string, extensions: Extension[] = []): Promise<EditorView> {
-  const server: LanguageServer = { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => fake };
+// Opens `doc` on a running server behind `fake`, with the cursor at its `|`, `extensions` after the rest, and the
+// plugin's `hooks` on the server.
+async function open(
+  fake: StubTransport,
+  doc: string,
+  extensions: Extension[] = [],
+  hooks: Pick<LanguageServer, 'commandHandlers' | 'completionItems'> = {},
+): Promise<EditorView> {
+  const server: LanguageServer = {
+    id: 'rust',
+    name: 'Rust',
+    languages: { Rust: 'rust' },
+    start: () => fake,
+    ...hooks,
+  };
   const instance = new LanguageServerInstance(server, ROOT);
   await instance.start();
   await instance.client.initializing;
@@ -309,5 +324,155 @@ describe('serverCompletion', () => {
 
     expect(view.dom.querySelector('.cm-completionInfo')).toBeNull();
     expect(fake.methods).not.toContain('completionItem/resolve');
+  });
+
+  test('gives items to plugin with request', async () => {
+    const completionItems = vi.fn((_client: LSPClient, items: CompletionItem[]) => items);
+    const view = await open(transport([{ label: 'send' }]), 'channel.se|', [], { completionItems });
+
+    await complete(view);
+
+    expect(completionItems).toHaveBeenCalledWith(expect.anything(), [{ label: 'send' }], {
+      position: { line: 0, character: 10 },
+      textDocument: { uri: URI },
+      context: { triggerKind: CompletionTriggerKind.Invoked },
+    });
+  });
+
+  test('shows items plugin returns', async () => {
+    const view = await open(transport([{ label: 'send' }, { label: 'session' }]), 'channel.se|', [], {
+      completionItems: (_, items) =>
+        items.filter(({ label }) => label !== 'session').map((item) => ({ ...item, label: 'send_all' })),
+    });
+
+    const rows = await complete(view);
+
+    expect(rows.map((row) => text(row, '.cm-completionLabel'))).toEqual(['send_all']);
+  });
+
+  test('awaits items plugin resolves', async () => {
+    const view = await open(transport([{ label: 'send' }]), 'channel.se|', [], {
+      completionItems: async () => [{ label: 'select' }],
+    });
+
+    const rows = await complete(view);
+
+    expect(rows.map((row) => text(row, '.cm-completionLabel'))).toEqual(['select']);
+  });
+
+  test('resolves item as plugin returned it', async () => {
+    const fake = transport([{ label: 'send' }]);
+    const view = await open(fake, 'channel.se|', [], {
+      completionItems: (_, items) => items.map((item) => ({ ...item, data: 'marked' })),
+    });
+
+    await complete(view);
+
+    await vi.waitFor(() =>
+      expect(fake.sent.find(({ method }) => method === 'completionItem/resolve')?.params).toEqual({
+        label: 'send',
+        data: 'marked',
+      }),
+    );
+  });
+
+  test("runs item's command on server after insertion", async () => {
+    const fake = new StubTransport(
+      { textDocumentSync: 2, completionProvider: {}, executeCommandProvider: { commands: ['send.hint'] } },
+      {
+        'textDocument/completion': () => [
+          { label: 'send', command: { title: 'Hint', command: 'send.hint', arguments: [1] } },
+        ],
+        'workspace/executeCommand': () => null,
+      },
+    );
+    const view = await open(fake, 'channel.se|');
+    await complete(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() =>
+      expect(fake.sent.find(({ method }) => method === 'workspace/executeCommand')?.params).toEqual({
+        command: 'send.hint',
+        arguments: [1],
+      }),
+    );
+    const methods = fake.methods;
+    expect(methods.lastIndexOf('textDocument/didChange')).toBeLessThan(methods.indexOf('workspace/executeCommand'));
+  });
+
+  test("runs item's command with plugin's handler instead", async () => {
+    const fake = transport([{ label: 'send' }]);
+    let inserted: string | undefined;
+    const hint = vi.fn((_client: LSPClient, view: EditorView) => {
+      inserted = view.state.doc.toString();
+    });
+    const view = await open(fake, 'channel.se|', [], {
+      completionItems: (_, items) =>
+        items.map((item) => ({ ...item, command: { title: 'Hint', command: 'editor.hint', arguments: [1] } })),
+      commandHandlers: { 'editor.hint': hint },
+    });
+    await complete(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() => expect(hint).toHaveBeenCalledWith(expect.anything(), view, [1]));
+    expect(inserted).toBe('channel.send');
+    expect(fake.methods).not.toContain('workspace/executeCommand');
+  });
+
+  test("runs resolved item's command", async () => {
+    const hint = vi.fn();
+    const view = await open(
+      transport([{ label: 'send' }], { send: { command: { title: 'Hint', command: 'editor.hint' } } }),
+      'channel.se|',
+      [],
+      { commandHandlers: { 'editor.hint': hint } },
+    );
+    await complete(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() => expect(hint).toHaveBeenCalledWith(expect.anything(), view, []));
+  });
+
+  test("runs item's command when resolved without one", async () => {
+    const hint = vi.fn();
+    const view = await open(
+      transport([{ label: 'send', command: { title: 'Hint', command: 'editor.hint' } }], {
+        send: { command: undefined },
+      }),
+      'channel.se|',
+      [],
+      { commandHandlers: { 'editor.hint': hint } },
+    );
+    await complete(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() => expect(hint).toHaveBeenCalledWith(expect.anything(), view, []));
+  });
+
+  test('says when command failed', async () => {
+    const add = vi.spyOn(toast, 'add');
+    const view = await open(
+      transport([{ label: 'send', command: { title: 'Hint', command: 'editor.hint' } }]),
+      'channel.se|',
+      [],
+      {
+        commandHandlers: {
+          'editor.hint': () => {
+            throw new Error('No hints');
+          },
+        },
+      },
+    );
+    await complete(view);
+
+    press(view, 'Enter');
+
+    await vi.waitFor(() =>
+      expect(add).toHaveBeenCalledWith({ type: 'error', title: 'Command failed', description: 'No hints' }),
+    );
   });
 });
