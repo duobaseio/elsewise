@@ -341,7 +341,7 @@ describe('LanguageServerInstance.start', () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
-        handlers: {
+        requestHandlers: {
           'toy/increment': (_, { n }: { n: number }) => n + 1,
           'toy/decrement': async (_, { n }: { n: number }) => n - 1,
           'toy/ignore': () => {},
@@ -360,7 +360,7 @@ describe('LanguageServerInstance.start', () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
-        handlers: {
+        requestHandlers: {
           'toy/throw': () => {
             throw new Error('Thrown');
           },
@@ -378,7 +378,7 @@ describe('LanguageServerInstance.start', () => {
   test('answers requests with request handlers ahead of core', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
-      server(() => fake, { handlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),
+      server(() => fake, { requestHandlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),
       ROOT,
     );
     await instance.start();

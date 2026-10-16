@@ -2,7 +2,8 @@
 
 A plugin that adds TypeScript's language server to the code editor using [`@elsewise/plugin`](../../../packages/plugin):
 diagnostics, completion, hover, signature help, go to definition, find usages, rename, formatting and code actions in
-TypeScript and JavaScript files.
+TypeScript and JavaScript files. A refactor that makes up a name, e.g. extracting a constant, starts renaming it, through
+a handler for the server's `_typescript.rename` request.
 
 The plugin runs in Elsewise's renderer, which can't start processes. Instead, `serve` runs the server,
 [`typescript-language-server`](https://github.com/typescript-language-server/typescript-language-server) on TypeScript

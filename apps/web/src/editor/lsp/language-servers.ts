@@ -199,7 +199,7 @@ export class LanguageServerInstance {
       // The plugin's handlers take precedence over Elsewise's.
       const requests = new Map<string, (client: LSPClient, params: never) => unknown>([
         ...REQUESTS,
-        ...Object.entries(this.server.handlers ?? {}),
+        ...Object.entries(this.server.requestHandlers ?? {}),
       ]);
       const handlers = new Map<(message: string) => void, Disposable>();
       this.client.connect({

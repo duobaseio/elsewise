@@ -93,7 +93,7 @@ export interface LanguageServer {
   readonly extensions?: readonly (Extension | LSPClientExtension)[];
 
   /**
-   * The server's **request** handlers that take precedence over Elsewise's.
+   * The handlers for server's requests which take precedence over Elsewise's.
    *
    * A handler returns the result, or a promise of it. A thrown error or rejection is sent to the server as an error.
    *
@@ -102,7 +102,7 @@ export interface LanguageServer {
    * { '_typescript.rename': (client, { textDocument, position }: RenameParams) => null }
    * ```
    */
-  readonly handlers?: Readonly<Record<string, (client: LSPClient, params: never) => unknown>>;
+  readonly requestHandlers?: Readonly<Record<string, (client: LSPClient, params: never) => unknown>>;
 
   /**
    * Starts the server for the worktree at `root` and returns a transport to it.
