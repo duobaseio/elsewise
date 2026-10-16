@@ -171,9 +171,8 @@ async function facade(specifier: string, file: string): Promise<string> {
     return `export * from ${quoted};${hasDefault ? ` export { default } from ${quoted};` : ''}\n`;
   }
 
-  // CommonJS, e.g. React: list the names `export *` can't find. Re-exports them by name rather than from the default
-  // import, which is the module's `default` rather than its exports when it sets `__esModule`, e.g.
-  // vscode-languageserver-protocol.
+  // CommonJS, e.g. React: list the names `export *` can't find. Re-exported by name since the default import is
+  // `exports.default` rather than `exports` when `__esModule` is set.
   const names = Object.keys(createRequire(file)(file)).filter(
     (name) => name !== 'default' && /^[A-Za-z_$][\w$]*$/.test(name),
   );

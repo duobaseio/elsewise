@@ -1,20 +1,14 @@
 import { language } from '@codemirror/language';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
-import { Facet, type Range, StateEffect, StateField } from '@codemirror/state';
-import {
-  closeHoverTooltips,
-  Decoration,
-  type DecorationSet,
-  EditorView,
-  ViewPlugin,
-  type ViewUpdate,
-} from '@codemirror/view';
+import { Facet, type Range, StateEffect } from '@codemirror/state';
+import { Decoration, type DecorationSet, type EditorView, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { tags } from '@lezer/highlight';
 import {
   type DocumentHighlight,
   DocumentHighlightKind,
   type DocumentHighlightParams,
 } from 'vscode-languageserver-protocol';
+import { closeHoverOnClick } from '@/editor/hover';
 import { symbol } from '@/editor/lsp/symbol';
 
 const READ = Decoration.mark({ class: 'cm-lsp-highlight' });
@@ -28,49 +22,15 @@ const showHighlights = StateEffect.define<DecorationSet>();
 export const highlightUsages = Facet.define<boolean, boolean>({ combine: (values) => values.at(-1) ?? true });
 
 /**
- * Where the mouse was pressed in the code to highlight the usages at the caret, or `null` once it has moved. Hovers
- * stay closed while it's set, so the click shows the usages rather than a tooltip.
- */
-export const highlightClick = StateField.define<{ x: number; y: number } | null>({
-  create: () => null,
-  update(value, tr) {
-    for (const effect of tr.effects) {
-      if (effect.is(setHighlightClick)) {
-        value = effect.value;
-      }
-    }
-    return value;
-  },
-});
-
-const setHighlightClick = StateEffect.define<{ x: number; y: number } | null>();
-
-// While usages are highlighted, closes the hovers on a click in the code, and keeps them closed until the mouse moves
-// away, so they open only on hover.
-const clicks = EditorView.domEventHandlers({
-  mousedown(event, view) {
-    if (view.state.facet(highlightUsages) && view.contentDOM.contains(event.target as Node)) {
-      view.dispatch({ effects: [setHighlightClick.of({ x: event.clientX, y: event.clientY }), closeHoverTooltips] });
-    }
-    return false;
-  },
-  mousemove(event, view) {
-    const click = view.state.field(highlightClick);
-    // Ignores dragging a selection, and the move to the same spot that can follow a click.
-    if (click && event.buttons === 0 && (event.clientX !== click.x || event.clientY !== click.y)) {
-      view.dispatch({ effects: setHighlightClick.of(null) });
-    }
-    return false;
-  },
-});
-
-/**
  * Returns the extension that highlights the usages of the symbol at the caret while nothing is selected.
  */
 export function serverHighlights(): LSPClientExtension {
   return {
     clientCapabilities: { textDocument: { documentHighlight: {} } },
-    editorExtension: [highlights, highlightClick, clicks],
+    editorExtension: [
+      highlights,
+      closeHoverOnClick.compute([highlightUsages], (state) => state.facet(highlightUsages)),
+    ],
   };
 }
 

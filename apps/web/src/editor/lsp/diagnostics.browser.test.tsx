@@ -1,10 +1,10 @@
 import { forEachDiagnostic } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { EditorDiagnostic, LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, DocumentDiagnosticParams, InitializeParams } from 'vscode-languageserver-protocol';
-import { problems, pullAllDiagnostics } from '@/editor/lsp/diagnostics';
+import { pullAllDiagnostics } from '@/editor/lsp/diagnostics';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { StubTransport } from '../../../test/stub-transport';
 
@@ -73,6 +73,13 @@ function open(instance: LanguageServerInstance, uri = URI, doc = 'let bad = 1'):
 function shown(view: EditorView): [from: number, to: number, severity: string][] {
   const result: [number, number, string][] = [];
   forEachDiagnostic(view.state, (diagnostic, from, to) => result.push([from, to, diagnostic.severity]));
+  return result;
+}
+
+// Returns the server's diagnostics that `view` shows, where they are now.
+function served(view: EditorView): [item: Diagnostic | undefined, from: number, to: number][] {
+  const result: [Diagnostic | undefined, number, number][] = [];
+  forEachDiagnostic(view.state, (diagnostic: EditorDiagnostic, from, to) => result.push([diagnostic.lsp, from, to]));
   return result;
 }
 
@@ -335,7 +342,7 @@ describe('serverDiagnostics', () => {
     fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item] });
 
     await vi.waitFor(() => expect(shown(view)).toEqual([[4, 7, 'warning']]));
-    expect(view.state.field(problems)).toEqual([{ item, from: 4, to: 7 }]);
+    expect(served(view)).toEqual([[item, 4, 7]]);
   });
 
   test('syncs edit for server that pushes, without asking it', async () => {
@@ -368,9 +375,9 @@ describe('serverDiagnostics', () => {
 
     view.dispatch({ changes: { from: 0, insert: '  ' } });
 
-    const [problem] = view.state.field(problems);
-    expect([problem.from, problem.to]).toEqual([6, 9]);
-    expect(problem.item.range).toEqual({ start: { line: 0, character: 4 }, end: { line: 0, character: 7 } });
+    const [[item, from, to]] = served(view);
+    expect([from, to]).toEqual([6, 9]);
+    expect(item?.range).toEqual({ start: { line: 0, character: 4 }, end: { line: 0, character: 7 } });
   });
 });
 

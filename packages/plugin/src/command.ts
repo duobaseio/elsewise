@@ -64,6 +64,9 @@ export const DEFAULT_COMMANDS = {
       selectSyntaxLeft: 'elsewise.editor.caret.selectSyntaxLeft',
       selectSyntaxRight: 'elsewise.editor.caret.selectSyntaxRight',
     },
+    hover: {
+      show: 'elsewise.editor.hover.show',
+    },
     lsp: {
       applyTopFix: 'elsewise.editor.lsp.applyTopFix',
       showContextActions: 'elsewise.editor.lsp.showContextActions',
@@ -71,7 +74,6 @@ export const DEFAULT_COMMANDS = {
       format: 'elsewise.editor.lsp.format',
       findUsages: 'elsewise.editor.lsp.findUsages',
       rename: 'elsewise.editor.lsp.rename',
-      showHover: 'elsewise.editor.lsp.showHover',
       showSignatureHelp: 'elsewise.editor.lsp.showSignatureHelp',
     },
   },
@@ -141,6 +143,9 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       selectSyntaxLeft: [{ key: 'Shift-Alt-ArrowLeft', mac: 'Shift-Ctrl-ArrowLeft' }],
       selectSyntaxRight: [{ key: 'Shift-Alt-ArrowRight', mac: 'Shift-Ctrl-ArrowRight' }],
     },
+    hover: {
+      show: [{ windows: 'Ctrl-q', mac: 'F1' }, { mac: 'Ctrl-j' }], // Ctrl-q quits application on Linux.
+    },
     lsp: {
       applyTopFix: ['Shift-Alt-Enter'],
       showContextActions: ['Alt-Enter'],
@@ -148,7 +153,6 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       format: ['Mod-Alt-l'],
       findUsages: ['Mod-Alt-F7'],
       rename: ['Shift-F6'],
-      showHover: [{ windows: 'Ctrl-q', mac: 'F1' }, { mac: 'Ctrl-j' }], // Ctrl-q quits application on Linux.
       showSignatureHelp: ['Mod-p'],
     },
   },

@@ -13,12 +13,12 @@ import type {
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { ApplicationKeymap } from '@/command/application-keymap';
 import { ELSEWISE } from '@/command/keymap';
-import { CARET, EDIT, FOLD, HISTORY, SEARCH } from '@/editor/default-commands';
+import { CARET, EDIT, FOLD, HISTORY, SEARCH } from '@/editor/codemirror-commands';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
+import { SHOW_HOVER } from '@/editor/hover';
 import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
 import { FORMAT } from '@/editor/lsp/format';
-import { SHOW_HOVER } from '@/editor/lsp/hover';
 import { FIND_USAGES } from '@/editor/lsp/references';
 import { RENAME } from '@/editor/lsp/rename';
 import { SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
@@ -37,6 +37,7 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   ...FOLD,
   ...EDIT,
   ...CARET,
+  SHOW_HOVER,
   // LSP
   APPLY_TOP_FIX,
   SHOW_CONTEXT_ACTIONS,
@@ -44,7 +45,6 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   FORMAT,
   FIND_USAGES,
   RENAME,
-  SHOW_HOVER,
   SHOW_SIGNATURE_HELP,
 ];
 

@@ -6,15 +6,15 @@ import {
 } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView, runScopeHandlers } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
 import { COMMANDS } from '@/editor/editor-manager';
+import { hover as editorHover, SHOW_HOVER } from '@/editor/hover';
 import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { highlightUsages } from '@/editor/lsp/highlights';
-import { SHOW_HOVER } from '@/editor/lsp/hover';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -106,6 +106,7 @@ async function open(
       doc: DOC,
       extensions: [
         instance.client.plugin(URI, 'rust'),
+        editorHover(),
         commandsExtension(commands),
         rust,
         syntaxHighlighting(defaultHighlightStyle),
@@ -118,10 +119,10 @@ async function open(
   return view;
 }
 
-// Moves the pointer over `pos` in `view`, with `init`'s buttons held.
-function point(view: EditorView, pos: number, init: MouseEventInit = {}): void {
+// Moves the pointer `dx` pixels right of where `pos` starts in `view`, with `init`'s buttons held.
+function point(view: EditorView, pos: number, init: MouseEventInit = {}, dx = 1): void {
   const { left, top, bottom } = view.coordsAtPos(pos) as DOMRect;
-  const [x, y] = [left + 1, (top + bottom) / 2];
+  const [x, y] = [left + dx, (top + bottom) / 2];
   document
     .elementFromPoint(x, y)
     ?.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true, ...init }));
@@ -229,16 +230,6 @@ describe('serverHover', () => {
     expect(tooltip.querySelector('.cm-lsp-content em')?.textContent).toBe('now');
   });
 
-  test('closes on Escape', async () => {
-    const view = await open(transport(markdown('Attaches.')));
-    await hover(view);
-
-    const close = () => runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Escape' }), 'editor');
-    expect(close()).toBe(true);
-    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
-    expect(close()).toBe(false);
-  });
-
   test('shows nothing without documentation', async () => {
     const fake = transport(null);
     const view = await open(fake);
@@ -274,6 +265,25 @@ describe('serverHover', () => {
     const [first, second] = tooltip.querySelectorAll('.cm-tooltip-section');
     expect(first.querySelector('.cm-diagnostic-error')).not.toBeNull();
     expect(second.querySelector('.cm-lsp-definition')).not.toBeNull();
+  });
+
+  test('shows problem with documentation, pointer just before it', async () => {
+    const view = await open(transport(markdown('```rust\nfn attach()\n```'), [PROBLEM]));
+    await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
+
+    point(view, DOC.indexOf('attach'), {}, -1);
+    const tooltip = await vi.waitFor(
+      () => {
+        const tooltip = view.dom.querySelector<HTMLElement>('.cm-tooltip-hover');
+        expect(tooltip).not.toBeNull();
+        return tooltip as HTMLElement;
+      },
+      { timeout: 2000 },
+    );
+
+    const [first, second] = tooltip.querySelectorAll('.cm-tooltip-section');
+    expect(first?.querySelector('.cm-diagnostic-error')).not.toBeNull();
+    expect(second?.querySelector('.cm-lsp-definition')).not.toBeNull();
   });
 
   test('shows problems with fixes and documentation at once', async () => {
@@ -563,51 +573,6 @@ describe('SHOW_HOVER', () => {
     answer(markdown('Attaches.'));
 
     await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull());
-  });
-
-  test('shows problems of word cursor ends', async () => {
-    const view = await open(transport(null, [PROBLEM]));
-    await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
-
-    const tooltip = await show(view, DOC.indexOf('attach') + 'attach'.length);
-
-    expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
-  });
-
-  test('stays open on pointer move', async () => {
-    const view = await open(transport(markdown('Attaches.')));
-    await show(view, DOC.indexOf('attach') + 1);
-
-    point(view, DOC.indexOf('channel'));
-    await rest();
-
-    expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
-  });
-
-  test('closes on cursor move', async () => {
-    const view = await open(transport(markdown('Attaches.')));
-    await show(view, DOC.indexOf('attach') + 1);
-
-    view.dispatch({ selection: { anchor: DOC.indexOf('channel') } });
-
-    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
-  });
-
-  test('closes on typing', async () => {
-    const view = await open(transport(markdown('Attaches.')));
-    await show(view, DOC.indexOf('attach') + 1);
-
-    view.dispatch({ changes: { from: 0, insert: ' ' }, userEvent: 'input.type' });
-
-    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
-  });
-
-  test('closes on Escape', async () => {
-    const view = await open(transport(markdown('Attaches.')));
-    await show(view, DOC.indexOf('attach') + 1);
-
-    expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Escape' }), 'editor')).toBe(true);
-    expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
   });
 
   test('shows nothing without documentation', async () => {

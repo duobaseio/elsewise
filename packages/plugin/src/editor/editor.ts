@@ -1,8 +1,10 @@
 import type { Completion } from '@codemirror/autocomplete';
 import type { LanguageDescription } from '@codemirror/language';
+import type { Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { Tag } from '@lezer/highlight';
+import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol';
 import type { Disposable } from '../plugin.ts';
 import type { LanguageServer } from './lsp.ts';
 
@@ -108,3 +110,47 @@ export interface EditorCompletion extends Completion {
  * * `image`: the URL of an image, drawn as it is.
  */
 export type EditorCompletionIcon = { letters: string; tag?: Tag } | { svg: string; tag?: Tag } | { image: string };
+
+/**
+ * A diagnostic with what the editor shows beyond CodeMirror's {@link Diagnostic}.
+ *
+ * To add diagnostics:
+ * ```ts
+ * function lint(view: EditorView): EditorDiagnostic[] {
+ *   const at = view.state.doc.toString().indexOf('var ');
+ *   if (at < 0) {
+ *     return [];
+ *   }
+ *   return [{
+ *     from: at,
+ *     to: at + 3,
+ *     severity: 'warning',
+ *     message: 'Use `let` instead of `var`',
+ *     source: 'eslint',
+ *     code: 'no-var',
+ *     codeHref: 'https://eslint.org/docs/latest/rules/no-var',
+ *   }];
+ * }
+ *
+ * editor.addExtensions([linter(lint)]);
+ * ```
+ *
+ * The editor shows a diagnostic's message with the parts quoted in backticks as code, unless it has
+ * {@link Diagnostic.renderMessage}.
+ */
+export interface EditorDiagnostic extends Diagnostic {
+  /**
+   * The language server's diagnostic, which is sent back to the server when asking for code actions.
+   */
+  lsp?: LSPDiagnostic;
+
+  /**
+   * The diagnostic's code, e.g. `no-var`, shown after its source.
+   */
+  code?: string | number;
+
+  /**
+   * The URL of a description of the code, which the code links to. Only `http` and `https` URLs are linked.
+   */
+  codeHref?: string;
+}

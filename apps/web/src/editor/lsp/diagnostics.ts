@@ -1,7 +1,7 @@
-import { type Diagnostic, linter, setDiagnostics } from '@codemirror/lint';
+import { type Diagnostic, setDiagnostics } from '@codemirror/lint';
 import { type LSPClient, type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
-import { StateEffect, StateField } from '@codemirror/state';
 import { type EditorView, type PluginValue, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import type { EditorDiagnostic } from '@elsewise/plugin';
 import {
   DiagnosticSeverity,
   DiagnosticTag,
@@ -23,7 +23,7 @@ const TAGS = {
   [DiagnosticTag.Deprecated]: 'cm-lintRange-deprecated',
 } as const satisfies Record<DiagnosticTag, string>;
 
-export const SEVERITIES = {
+const SEVERITIES = {
   [DiagnosticSeverity.Error]: 'error',
   [DiagnosticSeverity.Warning]: 'warning',
   [DiagnosticSeverity.Information]: 'info',
@@ -35,25 +35,6 @@ const CANCELLED = new Set<number>([
   LSPErrorCodes.ContentModified,
   LSPErrorCodes.ServerCancelled,
 ]);
-
-/**
- * The server's diagnostics for the editor's document, with their ranges mapped through edits since.
- */
-export const problems = StateField.define<readonly { item: LSPDiagnostic; from: number; to: number }[]>({
-  create: () => [],
-  update(value, tr) {
-    for (const effect of tr.effects) {
-      if (effect.is(setProblems)) {
-        return effect.value;
-      }
-    }
-    return tr.docChanged
-      ? value.map((entry) => ({ ...entry, from: tr.changes.mapPos(entry.from), to: tr.changes.mapPos(entry.to) }))
-      : value;
-  },
-});
-
-const setProblems = StateEffect.define<readonly { item: LSPDiagnostic; from: number; to: number }[]>();
 
 const syncer = ViewPlugin.define((view) => new DiagnosticsSyncer(view));
 
@@ -94,14 +75,7 @@ export function serverDiagnostics(): LSPClientExtension {
         return true;
       },
     },
-    // Adds the linter at a higher precedence since a problem would otherwise be shown below the documentation.
-    editorExtension: [
-      problems,
-      syncer,
-      // Leaves the problems to `serverHover`, which shows them with their fixes. Returns `null`, since the linter shows
-      // `[]` as an empty tooltip.
-      linter(null, { tooltipFilter: () => null as unknown as Diagnostic[] }),
-    ],
+    editorExtension: syncer,
   };
 }
 
@@ -196,16 +170,18 @@ class DiagnosticsSyncer implements PluginValue {
  * Replaces the editor's problems with the server's diagnostics `items`.
  */
 function replaceProblems(view: EditorView, plugin: LSPPlugin, items: LSPDiagnostic[]): void {
-  const diagnostics = items.map((item) => convert(plugin, item));
-  view.dispatch(setDiagnostics(view.state, diagnostics), {
-    effects: setProblems.of(items.map((item, i) => ({ item, from: diagnostics[i].from, to: diagnostics[i].to }))),
-  });
+  view.dispatch(
+    setDiagnostics(
+      view.state,
+      items.map((item) => convert(plugin, item)),
+    ),
+  );
 }
 
 // Based on `@codemirror/lsp-client`'s `serverDiagnostics`.
 //
-// Widens a problem at a point, and tags it as unnecessary or deprecated.
-function convert(plugin: LSPPlugin, item: LSPDiagnostic): Diagnostic {
+// Widens a problem at a point, tags it as unnecessary or deprecated, and keeps its source, code and Markdown message.
+function convert(plugin: LSPPlugin, item: LSPDiagnostic): EditorDiagnostic {
   let from = plugin.unsyncedChanges.mapPos(plugin.fromPosition(item.range.start, plugin.syncedDoc));
   let to = plugin.unsyncedChanges.mapPos(plugin.fromPosition(item.range.end, plugin.syncedDoc));
   // Widens a problem at a point, which the linter would mark with a triangle, to the word there, or else a character
@@ -233,11 +209,23 @@ function convert(plugin: LSPPlugin, item: LSPDiagnostic): Diagnostic {
     }
   }
 
+  const { source, severity, tags, code, codeDescription, message } = item;
   return {
+    lsp: item,
     from,
     to,
-    severity: SEVERITIES[item.severity ?? DiagnosticSeverity.Error],
-    markClass: item.tags?.map((tag) => TAGS[tag]).join(' ') || 'cm-lintRange-plain',
-    message: typeof item.message === 'string' ? item.message : item.message.value,
+    severity: SEVERITIES[severity ?? DiagnosticSeverity.Error],
+    markClass: tags?.map((tag) => TAGS[tag]).join(' ') || 'cm-lintRange-plain',
+    source: source,
+    code: code,
+    codeHref: codeDescription?.href,
+    message: typeof message === 'string' ? message : message.value,
+    ...(typeof message === 'object' && {
+      renderMessage: () => {
+        const template = document.createElement('template');
+        template.innerHTML = plugin.docToHTML(message);
+        return template.content;
+      },
+    }),
   };
 }

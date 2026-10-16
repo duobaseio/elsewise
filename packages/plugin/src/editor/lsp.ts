@@ -89,9 +89,9 @@ export interface LanguageServer {
    * Modifies and returns the completion items to be shown.
    */
   completionItems?(
-      client: LSPClient,
-      items: CompletionItem[],
-      params: CompletionParams,
+    client: LSPClient,
+    items: CompletionItem[],
+    params: CompletionParams,
   ): CompletionItem[] | Promise<CompletionItem[]>;
 }
 

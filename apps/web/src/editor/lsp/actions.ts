@@ -1,7 +1,8 @@
+import { forEachDiagnostic } from '@codemirror/lint';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField, type Text } from '@codemirror/state';
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand, type EditorDiagnostic } from '@elsewise/plugin';
 import {
   type CodeAction,
   type CodeActionParams,
@@ -10,7 +11,6 @@ import {
   type Diagnostic,
   type Range,
 } from 'vscode-languageserver-protocol';
-import { problems } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit } from '@/editor/lsp/edits';
 import { run } from '@/editor/lsp/language-servers';
 import { appendCode, hint } from '@/editor/tooltip';
@@ -353,7 +353,13 @@ function at(view: EditorView, plugin: LSPPlugin): [Range, Diagnostic[]] {
   const { state } = view;
   const { from, to } = state.selection.main;
   const line = state.doc.lineAt(state.selection.main.head);
-  const found = state.field(problems, false) ?? [];
+  const found: { item: Diagnostic; from: number; to: number }[] = [];
+  forEachDiagnostic(state, (diagnostic: EditorDiagnostic, start, end) => {
+    const item = diagnostic.lsp;
+    if (item) {
+      found.push({ item, from: start, to: end });
+    }
+  });
   const touching = found.filter((problem) => problem.from <= to && problem.to >= from);
   const near = found.filter((problem) => problem.from <= line.to && problem.to >= line.from);
 
