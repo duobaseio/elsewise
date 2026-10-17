@@ -18,12 +18,12 @@ function server(id: string): LanguageServer {
 
 // Returns an item that runs the command with `id`.
 function item(id: string): ContextMenuItem {
-  return { type: 'item', order: 0, command: id };
+  return { type: 'item', command: id };
 }
 
 // Returns a group in the submenu with id `menu`, or in the menu itself.
 function group(menu?: string): ContextMenuGroup {
-  return menu === undefined ? { order: 0 } : { menu, order: 0 };
+  return menu === undefined ? {} : { menu };
 }
 
 // Returns a menu that adds `submenus`, `groups` and `items`.

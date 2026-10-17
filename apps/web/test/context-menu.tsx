@@ -88,17 +88,17 @@ export function menu({ submenus = {}, groups = {}, items = {} }: Partial<Context
   return { submenus, groups, items };
 }
 
-/** Returns a group at `order` in the submenu with id `menu`, or in the menu itself. */
-export function group(order = 0, menu?: string): ContextMenuGroup {
-  return menu === undefined ? { order } : { menu, order };
+/** Returns a group at `order`, or without one, in the submenu with id `menu`, or in the menu itself. */
+export function group(order?: number, menu?: string): ContextMenuGroup {
+  return { ...(menu === undefined ? {} : { menu }), ...(order === undefined ? {} : { order }) };
 }
 
-/** Returns an item that runs the command with `id` at `order`. */
-export function item(id: string, order = 0): ContextMenuItem {
-  return { type: 'item', order, command: id };
+/** Returns an item that runs the command with `id` at `order`, or without one. */
+export function item(id: string, order?: number): ContextMenuItem {
+  return { type: 'item', ...(order === undefined ? {} : { order }), command: id };
 }
 
-/** Returns an item that opens the submenu with `id` at `order`. */
-export function submenu(id: string, order = 0): ContextMenuSubmenuItem {
-  return { type: 'submenu', order, submenu: id };
+/** Returns an item that opens the submenu with `id` at `order`, or without one. */
+export function submenu(id: string, order?: number): ContextMenuSubmenuItem {
+  return { type: 'submenu', ...(order === undefined ? {} : { order }), submenu: id };
 }

@@ -43,7 +43,7 @@ describe('EditorContextMenu', () => {
 
   test('fills submenu from several additions, and keeps it when first is disposed', async () => {
     const [editor, commands] = setUp([command('A'), command('B'), command('Item')]);
-    editor.addContextMenu(menu({ groups: { base: group() }, items: { base: [item('Item')] } }));
+    editor.addContextMenu(menu({ groups: { base: group(0) }, items: { base: [item('Item')] } }));
     const dispose = editor.addContextMenu(
       menu({
         submenus: { more: 'More' },

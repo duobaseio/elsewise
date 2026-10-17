@@ -99,7 +99,10 @@ export function CommandContextMenu({ menu, view, onClosed, className, children }
 function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, path: readonly string[]): Group[] {
   const lsp = view === null ? null : LSPPlugin.get(view);
   const groups: Group[] = [];
-  const sorted = Object.entries(menu.groups).sort(([a, x], [b, y]) => x.order - y.order || a.localeCompare(b));
+  const sorted = Object.entries(menu.groups).sort(
+    ([a, x], [b, y]) =>
+      (x.order ?? Number.POSITIVE_INFINITY) - (y.order ?? Number.POSITIVE_INFINITY) || a.localeCompare(b),
+  );
   for (const [id, group] of sorted) {
     if (group.menu !== path.at(-1)) {
       continue;
@@ -123,7 +126,13 @@ function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, 
 
         const inner = resolve(menu, commands, view, [...path, item.submenu]);
         if (inner.length > 0) {
-          entries.push({ type: 'submenu', id: item.submenu, label: declared, order: item.order, groups: inner });
+          entries.push({
+            type: 'submenu',
+            id: item.submenu,
+            label: declared,
+            order: item.order ?? Number.POSITIVE_INFINITY,
+            groups: inner,
+          });
         }
         continue;
       }
@@ -156,7 +165,7 @@ function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, 
           label: command.label,
           key: commands.keymap.commands.get(command.id)?.[0],
           disabled: enabled === false,
-          order: item.order,
+          order: item.order ?? Number.POSITIVE_INFINITY,
           run: () => commands.run(command.id, view ?? undefined),
         });
       } catch (error) {

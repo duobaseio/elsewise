@@ -103,9 +103,9 @@ export const ContextMenuGroup = z.object({
    */
   menu: ContextSubmenuId.optional(),
   /**
-   * The order of this group in its menu, shown lowest first and by id when equal. Defaults to 0.
+   * The order of this group in its menu, shown lowest first and by id when equal. Groups without one are shown last.
    */
-  order: z.number().default(0),
+  order: z.number().optional(),
 });
 
 /**
@@ -114,9 +114,9 @@ export const ContextMenuGroup = z.object({
 export const ContextMenuItem = z.object({
   type: z.literal('item'),
   /**
-   * The order of this item in its group, shown lowest first and by label when equal. Defaults to 0.
+   * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
-  order: z.number().default(0),
+  order: z.number().optional(),
   /**
    * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Omitted if the id is invalid or missing.
    *
@@ -131,9 +131,9 @@ export const ContextMenuItem = z.object({
 export const ContextMenuSubmenuItem = z.object({
   type: z.literal('submenu'),
   /**
-   * The order of this item in its group, shown lowest first and by label when equal. Defaults to 0.
+   * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
-  order: z.number().default(0),
+  order: z.number().optional(),
   /**
    * The id of the submenu it opens. Omitted if the id is invalid or missing.
    *
