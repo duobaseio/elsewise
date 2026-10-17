@@ -5,7 +5,7 @@ import { Channel, type Client, createClient, WebSocketWire } from '@elsewise/tra
 import { createDaemon } from '../../src/daemon';
 import { toProtocolPath } from '../../src/fs/path';
 import type { FileSystemOptions } from '../../src/fs/service';
-import { FileSystemService } from '../../src/gen/elsewise/daemon/v1/file_system_service_pb';
+import { FileSystemService } from '../../src/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { PROTOCOL, startWebSocketServer, TOKEN_PREFIX } from '../../src/websocket';
 
 const TOKEN = 'test-token';

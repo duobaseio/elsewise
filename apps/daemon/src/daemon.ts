@@ -2,8 +2,8 @@ import { type Channel, serve } from '@elsewise/transport';
 import { DirectoryWatcher } from './directory-watcher';
 import { TEMPORARY_FILE_PATTERN } from './fs/file';
 import { type FileSystemOptions, FileSystemServiceImpl } from './fs/service';
-import { FileSystemService } from './gen/elsewise/daemon/v1/file_system_service_pb';
-import { InfoService } from './gen/elsewise/daemon/v1/info_service_pb';
+import { FileSystemService } from './gen/elsewise/daemon/file_system/v1/file_system_service_pb';
+import { InfoService } from './gen/elsewise/daemon/info/v1/info_service_pb';
 import { InfoServiceImpl } from './info/service';
 
 export interface Daemon {

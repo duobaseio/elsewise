@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, expect, test } from 'vitest';
-import { DirectoryListing_Entry_Type as Type } from '../gen/elsewise/daemon/v1/file_system_service_pb';
+import { DirectoryListing_Entry_Type as Type } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { listDirectory } from './directory';
 
 let root: string;

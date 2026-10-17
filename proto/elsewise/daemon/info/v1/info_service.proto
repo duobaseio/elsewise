@@ -1,6 +1,6 @@
 edition = "2024";
 
-package elsewise.daemon.v1;
+package elsewise.daemon.info.v1;
 
 // Describes the running daemon.
 service InfoService {

@@ -21,7 +21,7 @@ import {
   type WatchFilesResponseSchema,
   type WatchRootsRequest,
   type WriteFileRequest,
-} from '../gen/elsewise/daemon/v1/file_system_service_pb';
+} from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { listDirectory } from './directory';
 import { attempt, errnoOf } from './error';
 import { createFile, hashContent, hashFile, isBinary, replaceFile } from './file';

@@ -1,8 +1,9 @@
 # Protobuf
 
 The source of truth for the desktop ↔ daemon protocol. Managed with `buf` (v2; STANDARD lint, WIRE breaking); one
-service per file, edition 2024. The rpcs live in `elsewise.daemon.v1`; the envelope that multiplexes them lives in
-`elsewise.transport.v1` and is implemented per language under `transport/`.
+service per file, edition 2024. The rpcs live under `elsewise.daemon` (`elsewise.daemon.git.v1`,
+`elsewise.daemon.project.v1`, …); the envelope that multiplexes them lives in `elsewise.transport.v1` and is
+implemented per language under `transport/`.
 
 ## Line limit
 
@@ -22,7 +23,7 @@ Reflowing never merges paragraphs: a blank `//` line stays a paragraph break.
 `buf format` does not rewrap comments, and `buf lint` does not measure line length — both are on you. To check a file:
 
 ```sh
-awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/daemon/v1/*.proto
+awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/daemon/**/*.proto
 ```
 
 ## Doc comments
@@ -36,6 +37,15 @@ awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/d
   `FAILED_PRECONDITION` that means re-reading before retrying. Never write that failures arrive as error statuses;
   that is true of every rpc.
 - Document the `_UNSPECIFIED` zero value as never sent — e.g. `// Never sent; every entry has a type.`
+
+## Field names
+
+- A path on the wire is a **protocol path**: `/`-separated on every platform, whatever the daemon's machine uses.
+  Comments say "protocol path", never "`/`-separated".
+- A path field is named `relative_path` or `absolute_path`, never `path`. The name says which kind it is, so the
+  comment does not have to: an absolute path is a protocol path that is absolute on the daemon's machine, and a
+  relative one is a protocol path with no `.` or `..` segment, resolved against a root. `FileSystemService` predates
+  the rule and keeps `root` for the absolute path a request works in.
 
 ## Commands
 

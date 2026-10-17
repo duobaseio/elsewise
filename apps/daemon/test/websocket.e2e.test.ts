@@ -2,7 +2,7 @@ import { Channel, createClient, WebSocketWire } from '@elsewise/transport';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import manifest from '../package.json' with { type: 'json' };
 import { createDaemon } from '../src/daemon';
-import { InfoService } from '../src/gen/elsewise/daemon/v1/info_service_pb';
+import { InfoService } from '../src/gen/elsewise/daemon/info/v1/info_service_pb';
 import { PROTOCOL, startWebSocketServer, TOKEN_PREFIX, type WebSocketServerHandle } from '../src/websocket';
 
 const TOKEN = 'test-token';

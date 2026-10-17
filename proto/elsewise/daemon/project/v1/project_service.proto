@@ -1,0 +1,316 @@
+edition = "2024";
+
+package elsewise.daemon.project.v1;
+
+import "elsewise/daemon/git/v1/git.proto";
+
+// A project represents a git repository on the daemon's machine. A workspace represents a git worktree for a project.
+//
+// Common fields:
+// - `absolute_path`: the absolute protocol path of a folder on the daemon's machine.
+service ProjectService {
+  // Creates a project.
+  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse);
+
+  // Clones a repository and creates a project from it.
+  //
+  // Progress arrives as the clone runs, and the last response carries the project. Cancelling the stream aborts the
+  // clone and removes the folder.
+  rpc CloneProject(CloneProjectRequest) returns (stream CloneProjectResponse);
+
+  // Returns every project.
+  rpc GetProjects(GetProjectsRequest) returns (GetProjectsResponse);
+
+  // Updates a project.
+  rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
+
+  // Deletes a project.
+  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+
+  // Creates a workspace.
+  rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse);
+
+  // Returns every workspace of a project.
+  rpc GetWorkspaces(GetWorkspacesRequest) returns (GetWorkspacesResponse);
+
+  // Updates a workspace.
+  rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse);
+
+  // Deletes a workspace.
+  //
+  // The main workspace cannot be deleted.
+  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse);
+}
+
+message CreateProjectRequest {
+  // Where the repository comes from.
+  oneof source {
+    New new = 1;
+    Existing existing = 2;
+  }
+
+  // A repository the daemon creates.
+  //
+  // The folder is initialised as an empty git repository.
+  message New {
+    // The display name.
+    string name = 1;
+
+    // Where the repository goes.
+    //
+    // Empty puts it under the daemon's projects directory with the kebab-cased of `name`. A folder that already
+    // exists and is not empty fails with ALREADY_EXISTS.
+    string absolute_path = 2;
+  }
+
+  // A repository already on the daemon's machine.
+  //
+  // The folder must be a git repository's main working tree that has not been added.
+  message Existing {
+    // The display name.
+    //
+    // Empty uses the folder's name.
+    string name = 1;
+
+    // The repository's path.
+    string absolute_path = 2;
+  }
+}
+
+message CreateProjectResponse {
+  // The created project.
+  Project project = 1;
+}
+
+message CloneProjectRequest {
+  // The repository's URL.
+  //
+  // Credentials come from the daemon's machine. A URL that needs credentials it cannot find fails with
+  // FAILED_PRECONDITION.
+  string url = 1;
+
+  // Where the repository goes.
+  //
+  // Empty puts it under the daemon's projects directory.
+  string absolute_path = 2;
+
+  // The display name.
+  //
+  // Empty uses the folder's name.
+  string name = 3;
+}
+
+message CloneProjectResponse {
+  oneof event {
+    elsewise.daemon.git.v1.Progress progress = 1;
+    Project project = 2;
+  }
+}
+
+message GetProjectsRequest {}
+
+message GetProjectsResponse {
+  // Every project.
+  repeated Project projects = 1;
+}
+
+message UpdateProjectRequest {
+  // The project to update.
+  string project_id = 1;
+
+  // The new display name.
+  string name = 2;
+}
+
+message UpdateProjectResponse {
+  // The project after the update.
+  Project project = 1;
+}
+
+message DeleteProjectRequest {
+  // The project to delete.
+  string project_id = 1;
+
+  // Whether to delete the project from disk.
+  //
+  // The main worktree and every linked worktree will be deleted locally.
+  bool delete_files = 2;
+}
+
+message DeleteProjectResponse {}
+
+message Project {
+  // The id.
+  string id = 1;
+
+  // The display name.
+  string name = 2;
+
+  // The main worktree's path.
+  string absolute_path = 3;
+
+  // The state of the project.
+  oneof state {
+    Ok ok = 4;
+    Missing missing = 5;
+    Broken broken = 6;
+  }
+
+  // The project is healthy.
+  message Ok {}
+
+  // The absolute path is missing from the file system.
+  message Missing {}
+
+  // The folder is on disk but is no longer a git repository.
+  message Broken {}
+}
+
+message CreateWorkspaceRequest {
+  // The project to create the workspace in.
+  string project_id = 1;
+
+  // Where the workspace comes from.
+  oneof source {
+    New new = 2;
+    Existing existing = 3;
+  }
+
+  // A workspace the daemon creates.
+  //
+  // The folder goes under the daemon's workspaces directory (named by the kebab-cased `name`) and is added as a linked
+  // worktree of the project's repository. A workspace of the project with the same folder name fails with
+  // ALREADY_EXISTS.
+  message New {
+    // The display name.
+    //
+    // Empty uses a generated name.
+    string name = 1;
+
+    // The branch checked out in the workspace.
+    //
+    // Empty uses the kebab-cased `name`. A branch that already exists is checked out as it is, and one that does not is
+    // created from `base`.
+    string branch = 2;
+
+    // The commit-ish the branch is created from (e.g. branch, tag, or commit hash).
+    //
+    // Empty uses the repository's HEAD. Set together with a `branch` that already exists, it fails with
+    // FAILED_PRECONDITION.
+    string base = 3;
+  }
+
+  // A linked worktree already on the daemon's machine.
+  //
+  // The folder must be a linked worktree of the project's repository that has not been added.
+  message Existing {
+    // The display name.
+    //
+    // Empty uses the folder's name.
+    string name = 1;
+
+    // The worktree's path.
+    string absolute_path = 2;
+  }
+}
+
+message CreateWorkspaceResponse {
+  // The created workspace.
+  Workspace workspace = 1;
+}
+
+message GetWorkspacesRequest {
+  // The project whose workspaces to return.
+  string project_id = 1;
+}
+
+message GetWorkspacesResponse {
+  // Every workspace of the project.
+  repeated Workspace workspaces = 1;
+}
+
+message UpdateWorkspaceRequest {
+  // The project the workspace belongs to.
+  string project_id = 1;
+
+  // The workspace to update.
+  string workspace_id = 2;
+
+  // The new display name.
+  //
+  // Unset leaves it as is.
+  string name = 3;
+
+  // Renames the existing branch of this workspace.
+  //
+  // Unset leaves it as is. A workspace with no branch checked out fails with FAILED_PRECONDITION, and a branch that
+  // already exists fails with ALREADY_EXISTS.
+  string branch = 4;
+}
+
+message UpdateWorkspaceResponse {
+  // The workspace after the update.
+  Workspace workspace = 1;
+}
+
+message DeleteWorkspaceRequest {
+  // The project the workspace belongs to.
+  string project_id = 1;
+
+  // The workspace to delete.
+  string workspace_id = 2;
+
+  // Whether to delete the workspace from disk.
+  //
+  // The folder will be deleted locally and removed from the repository's worktrees. Otherwise the daemon only stops
+  // tracking it.
+  bool delete_files = 3;
+
+  // Whether to delete the branch checked out in the workspace as well.
+  //
+  // A workspace with no branch checked out leaves nothing to delete. If set without `delete_files`, it fails with
+  // INVALID_ARGUMENT (as git cannot delete a branch that is still checked out).
+  bool delete_branch = 4;
+}
+
+message DeleteWorkspaceResponse {}
+
+message Workspace {
+  // The project's id.
+  string project_id = 1;
+
+  // The id.
+  string id = 2;
+
+  // The display name.
+  string name = 3;
+
+  // The workspace's path.
+  string absolute_path = 4;
+
+  // Whether this is the repository's main worktree.
+  bool main = 5;
+
+  // What shape the workspace is in.
+  oneof state {
+    Ok ok = 6;
+    Missing missing = 7;
+    Detached detached = 8;
+    Broken broken = 9;
+  }
+
+  // The workspace is healthy.
+  message Ok {
+    // The branch checked out in the workspace.
+    string branch = 1;
+  }
+
+  // The absolute path is missing from the file system.
+  message Missing {}
+
+  // The workspace has a commit checked out rather than a branch.
+  message Detached {}
+
+  // The folder is on disk but is no longer a worktree of the project's repository.
+  message Broken {}
+}

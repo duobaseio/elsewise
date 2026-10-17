@@ -10,7 +10,7 @@ import {
   DirectoryListing_Entry_Type as Type,
   type WatchDirectoriesResponse,
   type WatchFilesResponse,
-} from '../../src/gen/elsewise/daemon/v1/file_system_service_pb';
+} from '../../src/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { collect, type Harness, startHarness } from './harness';
 
 const posix = process.platform !== 'win32';

@@ -1,0 +1,1161 @@
+edition = "2024";
+
+package elsewise.daemon.git.v1;
+
+import "elsewise/daemon/git/v1/git.proto";
+
+// Runs git in a worktree on the daemon's machine.
+//
+// Common fields:
+// - `absolute_path`: the absolute protocol path of the worktree a request runs in. A folder that is not a git worktree
+//   fails with FAILED_PRECONDITION.
+// - `relative_path`: the protocol path of an entry inside the worktree.
+// - `revision`: anything git resolves to a commit (e.g. a branch, tag, or commit hash).
+//
+// Behaviors:
+// - Credentials come from the daemon's machine. A remote that needs credentials it cannot find fails with
+//   FAILED_PRECONDITION.
+// - Merge, Rebase, CherryPick, Revert and Pull stop on conflicts rather than fail. The client is expected to call
+//   ContinueOperation, SkipOperation or AbortOperation after the conflicts are resolved.
+service GitService {
+  // Returns the status of a worktree.
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+
+  // Watches the status of a worktree.
+  rpc WatchStatus(WatchStatusRequest) returns (stream WatchStatusResponse);
+
+  // Stages changes.
+  //
+  // Staging a conflicted entry marks it resolved.
+  rpc Stage(StageRequest) returns (StageResponse);
+
+  // Unstages changes.
+  rpc Unstage(UnstageRequest) returns (UnstageResponse);
+
+  // Discards unstaged changes and untracked entries.
+  rpc Discard(DiscardRequest) returns (DiscardResponse);
+
+  // Restores entries to how they are at a revision, on disk and staged.
+  rpc Restore(RestoreRequest) returns (RestoreResponse);
+
+  // Returns a diff.
+  //
+  // A diff over the daemon's read limit fails with RESOURCE_EXHAUSTED.
+  rpc GetDiff(GetDiffRequest) returns (GetDiffResponse);
+
+  // Reads a file as it is at a revision.
+  //
+  // A file over the daemon's read limit fails with RESOURCE_EXHAUSTED.
+  rpc ReadFileAtRevision(ReadFileAtRevisionRequest) returns (ReadFileAtRevisionResponse);
+
+  // Returns which commit last changed every line of a file.
+  rpc GetBlame(GetBlameRequest) returns (GetBlameResponse);
+
+  // Commits the staged changes.
+  //
+  // Nothing staged fails with FAILED_PRECONDITION, unless `amend` is set.
+  rpc Commit(CommitRequest) returns (CommitResponse);
+
+  // Returns a page of the commit history.
+  rpc GetLog(GetLogRequest) returns (GetLogResponse);
+
+  // Returns a commit and what it changed.
+  rpc GetCommit(GetCommitRequest) returns (GetCommitResponse);
+
+  // Resets the current branch to a revision.
+  rpc Reset(ResetRequest) returns (ResetResponse);
+
+  // Returns every branch.
+  rpc GetBranches(GetBranchesRequest) returns (GetBranchesResponse);
+
+  // Creates a branch.
+  rpc CreateBranch(CreateBranchRequest) returns (CreateBranchResponse);
+
+  // Renames a branch.
+  rpc RenameBranch(RenameBranchRequest) returns (RenameBranchResponse);
+
+  // Sets or clears the upstream of a branch.
+  rpc SetBranchUpstream(SetBranchUpstreamRequest) returns (SetBranchUpstreamResponse);
+
+  // Deletes a branch.
+  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse);
+
+  // Checks out a branch or a revision.
+  //
+  // Local changes the checkout would overwrite fail with FAILED_PRECONDITION.
+  rpc Checkout(CheckoutRequest) returns (CheckoutResponse);
+
+  // Returns every worktree of the repository.
+  rpc GetWorktrees(GetWorktreesRequest) returns (GetWorktreesResponse);
+
+  // Adds a linked worktree.
+  rpc AddWorktree(AddWorktreeRequest) returns (AddWorktreeResponse);
+
+  // Moves a linked worktree to another path.
+  rpc MoveWorktree(MoveWorktreeRequest) returns (MoveWorktreeResponse);
+
+  // Locks a linked worktree so it cannot be moved, removed or pruned.
+  rpc LockWorktree(LockWorktreeRequest) returns (LockWorktreeResponse);
+
+  // Unlocks a linked worktree.
+  rpc UnlockWorktree(UnlockWorktreeRequest) returns (UnlockWorktreeResponse);
+
+  // Removes a linked worktree.
+  rpc RemoveWorktree(RemoveWorktreeRequest) returns (RemoveWorktreeResponse);
+
+  // Prunes every linked worktree whose folder is gone.
+  rpc PruneWorktrees(PruneWorktreesRequest) returns (PruneWorktreesResponse);
+
+  // Returns every tag.
+  rpc GetTags(GetTagsRequest) returns (GetTagsResponse);
+
+  // Creates a tag.
+  rpc CreateTag(CreateTagRequest) returns (CreateTagResponse);
+
+  // Deletes a tag.
+  rpc DeleteTag(DeleteTagRequest) returns (DeleteTagResponse);
+
+  // Merges a revision into the current branch.
+  rpc Merge(MergeRequest) returns (MergeResponse);
+
+  // Rebases the current branch onto a revision.
+  rpc Rebase(RebaseRequest) returns (RebaseResponse);
+
+  // Applies commits on top of the current branch.
+  rpc CherryPick(CherryPickRequest) returns (CherryPickResponse);
+
+  // Applies the inverse of commits on top of the current branch.
+  rpc Revert(RevertRequest) returns (RevertResponse);
+
+  // Continues the operation in progress once its conflicts are resolved.
+  //
+  // No operation in progress, or a conflict still unresolved, fails with FAILED_PRECONDITION.
+  rpc ContinueOperation(ContinueOperationRequest) returns (ContinueOperationResponse);
+
+  // Skips the commit the operation in progress stopped on and continues.
+  //
+  // No operation in progress, or a merge, fails with FAILED_PRECONDITION.
+  rpc SkipOperation(SkipOperationRequest) returns (SkipOperationResponse);
+
+  // Aborts the operation in progress and restores the worktree to how it was before.
+  //
+  // No operation in progress fails with FAILED_PRECONDITION.
+  rpc AbortOperation(AbortOperationRequest) returns (AbortOperationResponse);
+
+  // Resolves conflicted entries by taking one side whole, and stages them.
+  rpc ResolveConflicts(ResolveConflictsRequest) returns (ResolveConflictsResponse);
+
+  // Returns every remote.
+  rpc GetRemotes(GetRemotesRequest) returns (GetRemotesResponse);
+
+  // Adds a remote.
+  rpc AddRemote(AddRemoteRequest) returns (AddRemoteResponse);
+
+  // Updates a remote.
+  //
+  // Renaming keeps the remote's branches and every upstream that points at them.
+  rpc UpdateRemote(UpdateRemoteRequest) returns (UpdateRemoteResponse);
+
+  // Removes a remote.
+  rpc RemoveRemote(RemoveRemoteRequest) returns (RemoveRemoteResponse);
+
+  // Fetches from a remote.
+  //
+  // Progress arrives as the fetch runs, and the stream ends when it is done. Cancelling the stream aborts the fetch.
+  rpc Fetch(FetchRequest) returns (stream FetchResponse);
+
+  // Fetches from a remote and integrates the fetched branch into the current one.
+  //
+  // Progress arrives as the pull runs, and the last response carries the result. Cancelling the stream aborts the pull.
+  rpc Pull(PullRequest) returns (stream PullResponse);
+
+  // Pushes a branch to a remote.
+  //
+  // Progress arrives as the push runs, and the stream ends when it is done. Cancelling the stream aborts the push.
+  rpc Push(PushRequest) returns (stream PushResponse);
+
+  // Returns every stash.
+  rpc GetStashes(GetStashesRequest) returns (GetStashesResponse);
+
+  // Stashes the changes in the worktree.
+  //
+  // Nothing to stash fails with FAILED_PRECONDITION.
+  rpc PushStash(PushStashRequest) returns (PushStashResponse);
+
+  // Applies a stash to the worktree.
+  //
+  // A stash that stops on conflicts leaves no operation in progress, so ContinueOperation and AbortOperation do not
+  // apply. The client resolves the conflicts with Stage, ResolveConflicts or Restore.
+  rpc ApplyStash(ApplyStashRequest) returns (ApplyStashResponse);
+
+  // Drops a stash.
+  rpc DropStash(DropStashRequest) returns (DropStashResponse);
+
+  // Returns the git identity.
+  rpc GetIdentity(GetIdentityRequest) returns (GetIdentityResponse);
+
+  // Sets the git identity.
+  rpc SetIdentity(SetIdentityRequest) returns (SetIdentityResponse);
+}
+
+message GetStatusRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Whether to include ignored entries.
+  bool include_ignored = 2;
+}
+
+message GetStatusResponse {
+  // The worktree's status.
+  Status status = 1;
+}
+
+message WatchStatusRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Whether to include ignored entries.
+  bool include_ignored = 2;
+}
+
+message WatchStatusResponse {
+  // The worktree's status.
+  Status status = 1;
+}
+
+message StageRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every entry to stage.
+  //
+  // A directory covers everything under it. Empty stages every change in the worktree.
+  repeated string relative_paths = 2;
+}
+
+message StageResponse {}
+
+message UnstageRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every entry to unstage.
+  //
+  // A directory covers everything under it. Empty unstages every change.
+  repeated string relative_paths = 2;
+}
+
+message UnstageResponse {}
+
+message DiscardRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every entry to discard.
+  //
+  // A directory covers everything under it. Empty discards every change in the worktree.
+  repeated string relative_paths = 2;
+}
+
+message DiscardResponse {}
+
+message RestoreRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every entry to restore.
+  //
+  // A directory covers everything under it. Empty covers the whole worktree.
+  repeated string relative_paths = 2;
+
+  // The revision to restore from.
+  //
+  // Empty uses HEAD.
+  string revision = 3;
+}
+
+message RestoreResponse {}
+
+message GetDiffRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // What the diff compares.
+  oneof target {
+    Unstaged unstaged = 2;
+    Staged staged = 3;
+    Revisions revisions = 4;
+  }
+
+  // Every entry to limit the diff to.
+  //
+  // A directory covers everything under it. Empty covers the whole worktree.
+  repeated string relative_paths = 5;
+
+  // The unstaged changes, against what is staged.
+  message Unstaged {}
+
+  // The staged changes, against HEAD.
+  message Staged {}
+
+  // A revision against another, or against the files on disk.
+  message Revisions {
+    // The revision the diff starts from.
+    string from_revision = 1;
+
+    // The revision the diff ends at.
+    //
+    // Empty uses the files on disk.
+    string to_revision = 2;
+  }
+}
+
+message GetDiffResponse {
+  // The diffs as a patch.
+  bytes patch = 1;
+}
+
+message ReadFileAtRevisionRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The file's path.
+  string relative_path = 2;
+
+  // The revision to read the file at.
+  //
+  // Empty reads the file as staged.
+  string revision = 3;
+}
+
+message ReadFileAtRevisionResponse {
+  // Whether the content is binary.
+  bool binary = 1;
+
+  // The file's content.
+  bytes content = 2;
+}
+
+message GetBlameRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The file's path.
+  string relative_path = 2;
+
+  // The revision to blame the file at.
+  //
+  // Empty blames the file on disk.
+  string revision = 3;
+}
+
+message GetBlameResponse {
+  // Every range of lines in order.
+  repeated Range ranges = 1;
+
+  // Consecutive lines last changed by the same commit.
+  message Range {
+    // The first line's number, starting at 1.
+    uint32 line = 1;
+
+    // The number of lines.
+    uint32 line_count = 2;
+
+    // The hash of the commit that last changed the lines.
+    //
+    // Empty for lines not committed yet.
+    string hash = 3;
+
+    // Who wrote the commit.
+    Identity author = 4;
+
+    // The first line of the commit's message.
+    string summary = 5;
+
+    // The first line's number in the commit starting at 1.
+    //
+    // Empty for lines not committed yet.
+    uint32 original_line = 6;
+
+    // The file's path in the commit.
+    //
+    // Empty for lines not committed yet.
+    string original_relative_path = 7;
+  }
+}
+
+message CommitRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The commit message.
+  //
+  // Empty fails with INVALID_ARGUMENT, unless `amend` is set which keeps the previous message.
+  string message = 2;
+
+  // Whether to replace the current commit instead of adding one on top of it.
+  bool amend = 3;
+}
+
+message CommitResponse {
+  // The created commit.
+  Commit commit = 1;
+}
+
+message GetLogRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every revision the history starts from.
+  //
+  // Empty uses HEAD.
+  repeated string revisions = 2;
+
+  // Every entry to limit the history to.
+  //
+  // A directory covers everything under it. Empty covers the whole worktree.
+  repeated string relative_paths = 3;
+
+  // The number of commits to skip.
+  //
+  // Empty skips nothing.
+  uint32 skip = 4;
+
+  // The most commits to return.
+  //
+  // Empty uses the daemon limit.
+  uint32 limit = 5;
+}
+
+message GetLogResponse {
+  // The commits sorted by newest to oldest.
+  repeated Commit commits = 1;
+}
+
+message GetCommitRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The commit's revision.
+  string revision = 2;
+}
+
+message GetCommitResponse {
+  // The commit.
+  Commit commit = 1;
+
+  // Every entry the commit changed.
+  repeated Entry entries = 2;
+
+  // An entry a commit changed.
+  message Entry {
+    // The entry's path.
+    string relative_path = 1;
+
+    // The entry's path before a rename or copy.
+    //
+    // Empty otherwise.
+    string original_relative_path = 2;
+
+    // The change.
+    Change change = 3;
+  }
+}
+
+message ResetRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The revision to reset to.
+  //
+  // Empty uses HEAD.
+  string revision = 2;
+
+  // What the reset touches.
+  Mode mode = 3;
+
+  enum Mode {
+    MODE_UNSPECIFIED = 0; // Fails with INVALID_ARGUMENT.
+    MODE_SOFT = 1; // Moves the branch and keeps every change, staged and unstaged.
+    MODE_MIXED = 2; // Moves the branch and unstages every change, keeping the files on disk.
+    MODE_HARD = 3; // Moves the branch and discards every change, staged and unstaged.
+  }
+}
+
+message ResetResponse {}
+
+message GetBranchesRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message GetBranchesResponse {
+  // Every branch.
+  //
+  // Sorted by local branch then remote branch, each sorted by name.
+  //
+  // Symbolic branches (e.g. `origin/HEAD`) are left out.
+  repeated Branch branches = 1;
+}
+
+message CreateBranchRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The branch's name.
+  //
+  // A branch that already exists fails with ALREADY_EXISTS.
+  string name = 2;
+
+  // The revision the branch starts from.
+  //
+  // Empty uses HEAD.
+  string revision = 3;
+
+  // Whether to check the branch out in the worktree.
+  bool checkout = 4;
+}
+
+message CreateBranchResponse {
+  // The created branch.
+  Branch branch = 1;
+}
+
+message RenameBranchRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The branch's name.
+  string name = 2;
+
+  // The branch's new name.
+  //
+  // A branch that already exists fails with ALREADY_EXISTS.
+  string new_name = 3;
+}
+
+message RenameBranchResponse {
+  // The branch after the rename.
+  Branch branch = 1;
+}
+
+message SetBranchUpstreamRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The branch's name.
+  //
+  // Empty uses the current branch.
+  string branch = 2;
+
+  // The upstream (e.g. `origin/main`).
+  //
+  // Empty clears it.
+  string upstream = 3;
+}
+
+message SetBranchUpstreamResponse {
+  // The branch after the update.
+  Branch branch = 1;
+}
+
+message DeleteBranchRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The branch's name.
+  //
+  // A branch checked out in any worktree fails with FAILED_PRECONDITION.
+  string name = 2;
+
+  // Whether to delete the branch even when it has commits not merged into its upstream or HEAD.
+  bool force = 3;
+}
+
+message DeleteBranchResponse {}
+
+message CheckoutRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // What to check out.
+  oneof target {
+    // The name of a branch to check out.
+    //
+    // Behaviors:
+    // - A remote only branch will create a corresponding local branch.
+    // - A branch checked out in another worktree fails with FAILED_PRECONDITION.
+    string branch = 2;
+
+    // A revision to check out.
+    string revision = 3;
+  }
+}
+
+message CheckoutResponse {}
+
+message GetWorktreesRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message GetWorktreesResponse {
+  // Every worktree of the repository.
+  repeated Worktree worktrees = 1;
+}
+
+message AddWorktreeRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Where the new worktree goes.
+  //
+  // A folder that already exists and is not empty fails with ALREADY_EXISTS.
+  string new_absolute_path = 2;
+
+  // The branch checked out in the new worktree.
+  //
+  // A branch that already exists is checked out as it is, and one that does not is created from `revision`. A branch
+  // checked out in another worktree fails with FAILED_PRECONDITION. Empty checks `revision` out detached.
+  string branch = 3;
+
+  // The revision a new branch starts from or check out from the detached revision.
+  //
+  // Empty uses HEAD. Set together with a `branch` that already exists, it fails with FAILED_PRECONDITION.
+  string revision = 4;
+}
+
+message AddWorktreeResponse {
+  // The added worktree.
+  Worktree worktree = 1;
+}
+
+message MoveWorktreeRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The path of the worktree to move.
+  //
+  // The main worktree fails with INVALID_ARGUMENT and a locked worktree with FAILED_PRECONDITION.
+  string worktree_absolute_path = 2;
+
+  // Where the worktree goes.
+  //
+  // A folder that already exists fails with ALREADY_EXISTS.
+  string new_absolute_path = 3;
+}
+
+message MoveWorktreeResponse {
+  // The worktree after the move.
+  Worktree worktree = 1;
+}
+
+message LockWorktreeRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The path of the worktree to lock.
+  //
+  // The main worktree fails with INVALID_ARGUMENT, and a worktree already locked with FAILED_PRECONDITION.
+  string worktree_absolute_path = 2;
+
+  // Why the worktree is locked.
+  //
+  // Empty gives no reason.
+  string reason = 3;
+}
+
+message LockWorktreeResponse {
+  // The worktree after the lock.
+  Worktree worktree = 1;
+}
+
+message UnlockWorktreeRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The path of the worktree to unlock.
+  //
+  // A worktree that is not locked fails with FAILED_PRECONDITION.
+  string worktree_absolute_path = 2;
+}
+
+message UnlockWorktreeResponse {
+  // The worktree after the unlock.
+  Worktree worktree = 1;
+}
+
+message RemoveWorktreeRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The path of the worktree to remove.
+  //
+  // The main worktree fails with INVALID_ARGUMENT and a locked worktree with FAILED_PRECONDITION.
+  string worktree_absolute_path = 2;
+
+  // Whether to force remove the worktree.
+  bool force = 3;
+}
+
+message RemoveWorktreeResponse {}
+
+message PruneWorktreesRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message PruneWorktreesResponse {
+  // Every pruned worktree's path.
+  repeated string pruned_absolute_paths = 1;
+}
+
+message GetTagsRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message GetTagsResponse {
+  // Every tag sorted by name.
+  repeated Tag tags = 1;
+}
+
+message CreateTagRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The tag's name.
+  //
+  // A tag that already exists fails with ALREADY_EXISTS.
+  string name = 2;
+
+  // The revision the tag points at.
+  //
+  // Empty uses HEAD.
+  string revision = 3;
+
+  // The tag's message.
+  //
+  // Empty creates a lightweight tag.
+  string message = 4;
+}
+
+message CreateTagResponse {
+  // The created tag.
+  Tag tag = 1;
+}
+
+message DeleteTagRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The tag's name.
+  string name = 2;
+}
+
+message DeleteTagResponse {}
+
+message MergeRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The revision to merge.
+  string revision = 2;
+
+  // Whether the merge may fast-forward.
+  FastForward fast_forward = 3;
+
+  // Whether to stage the merged changes instead of committing them.
+  //
+  // `fast_forward` is ignored.
+  bool squash = 4;
+}
+
+message MergeResponse {
+  // Whether the merge stopped on conflicts.
+  bool conflicted = 1;
+}
+
+message RebaseRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The revision to rebase onto.
+  string revision = 2;
+
+  // Whether to keep the merge commits of the current branch.
+  bool rebase_merges = 3;
+}
+
+message RebaseResponse {
+  // Whether the rebase stopped on conflicts.
+  bool conflicted = 1;
+}
+
+message CherryPickRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every commit to apply in order.
+  repeated string revisions = 2;
+
+  // The number of the parent a merge commit is applied against starting at 1.
+  //
+  // Empty fails with FAILED_PRECONDITION on a merge commit.
+  uint32 mainline = 3;
+}
+
+message CherryPickResponse {
+  // Whether the cherry-pick stopped on conflicts.
+  bool conflicted = 1;
+}
+
+message RevertRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every commit to revert in order.
+  repeated string revisions = 2;
+
+  // The number of the parent a merge commit is applied against starting at 1.
+  //
+  // Empty fails with FAILED_PRECONDITION on a merge commit.
+  uint32 mainline = 3;
+}
+
+message RevertResponse {
+  // Whether the revert stopped on conflicts.
+  bool conflicted = 1;
+}
+
+message ContinueOperationRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message ContinueOperationResponse {
+  // Whether the operation stopped on conflicts again.
+  bool conflicted = 1;
+}
+
+message SkipOperationRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message SkipOperationResponse {
+  // Whether the operation stopped on conflicts again.
+  bool conflicted = 1;
+}
+
+message AbortOperationRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message AbortOperationResponse {}
+
+message ResolveConflictsRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every entry to resolve.
+  //
+  // A directory covers everything under it. Empty covers every conflicted entry.
+  repeated string relative_paths = 2;
+
+  // The side to take.
+  Side side = 3;
+
+  enum Side {
+    SIDE_UNSPECIFIED = 0; // Never sent.
+    SIDE_OURS = 1; // The side HEAD is on, which during a rebase is the branch rebased onto.
+    SIDE_THEIRS = 2; // The side being brought in, which during a rebase is the commit replayed.
+  }
+}
+
+message ResolveConflictsResponse {}
+
+message GetRemotesRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message GetRemotesResponse {
+  // Every remote sorted by name.
+  repeated Remote remotes = 1;
+}
+
+message AddRemoteRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The remote's name.
+  //
+  // A remote that already exists fails with ALREADY_EXISTS.
+  string name = 2;
+
+  // The remote's URL.
+  string url = 3;
+}
+
+message AddRemoteResponse {
+  // The added remote.
+  Remote remote = 1;
+}
+
+message UpdateRemoteRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The remote.
+  string remote = 2;
+
+  // The new name.
+  //
+  // Unset leaves it as is. A remote that already exists fails with ALREADY_EXISTS.
+  string name = 3;
+
+  // The new URL fetched from.
+  //
+  // Unset leaves it as is.
+  string fetch_url = 4;
+
+  // The new URL pushed to.
+  //
+  // Unset leaves it as is.
+  string push_url = 5;
+}
+
+message UpdateRemoteResponse {
+  // The remote after the update.
+  Remote remote = 1;
+}
+
+message RemoveRemoteRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The remote's name.
+  string name = 2;
+}
+
+message RemoveRemoteResponse {}
+
+message FetchRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The remote to fetch from.
+  //
+  // Empty fetches every remote.
+  string remote = 2;
+
+  // Whether to drop the remote branches that no longer exist on the remote.
+  bool prune = 3;
+}
+
+message FetchResponse {
+  oneof event {
+    Progress progress = 1;
+  }
+}
+
+message PullRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The remote to pull from.
+  //
+  // Empty uses the current branch's upstream and a branch with no upstream then fails with FAILED_PRECONDITION.
+  string remote = 2;
+
+  // The branch on the remote to pull.
+  //
+  // Empty uses the upstream's branch.
+  string branch = 3;
+
+  // How to bring the fetched branch into the current one.
+  Mode mode = 4;
+
+  // Whether the merge may fast-forward.
+  //
+  // Ignored when `mode` rebases.
+  FastForward fast_forward = 5;
+
+  enum Mode {
+    MODE_UNSPECIFIED = 0; // Sent to merge the fetched branch into the current one.
+    MODE_REBASE = 1; // Rebase the current branch onto the fetched one.
+    MODE_REBASE_MERGES = 2; // Rebase, keeping the merge commits of the current branch.
+  }
+}
+
+message PullResponse {
+  oneof event {
+    Progress progress = 1;
+    Result result = 2;
+  }
+
+  // The outcome of the pull.
+  message Result {
+    // Whether the pull stopped on conflicts.
+    bool conflicted = 1;
+  }
+}
+
+message PushRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The remote to push to.
+  //
+  // Empty uses the branch's upstream remote, or `origin` when it has none or a tag is pushed.
+  string remote = 2;
+
+  // What to push.
+  //
+  // Unset pushes the current branch.
+  oneof target {
+    // The branch to push.
+    string branch = 3;
+
+    // The tag to push.
+    //
+    // `set_upstream` is ignored.
+    string tag = 7;
+  }
+
+  // Whether to make the pushed branch the upstream of the local one.
+  bool set_upstream = 4;
+
+  // How to push a remote branch that does not descend from the pushed one.
+  Force force = 5;
+
+  // Whether to delete the branch or tag from remote.
+  //
+  // `set_upstream` and `force` are ignored.
+  bool delete = 6;
+
+  enum Force {
+    FORCE_UNSPECIFIED = 0; // Sent to fail with FAILED_PRECONDITION.
+    FORCE_WITH_LEASE = 1; // Overwrite what the last fetch saw, and fail with FAILED_PRECONDITION past that.
+    FORCE_ALWAYS = 2; // Overwrite whatever is there.
+  }
+}
+
+message PushResponse {
+  oneof event {
+    Progress progress = 1;
+  }
+}
+
+message GetStashesRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message GetStashesResponse {
+  // Every stash sorted with newest first.
+  repeated Stash stashes = 1;
+}
+
+message PushStashRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The stash's message.
+  //
+  // Empty uses a generated one.
+  string message = 2;
+
+  // Which entries the stash takes.
+  Scope scope = 3;
+
+  // Every entry to stash.
+  //
+  // A directory covers everything under it. Empty covers the whole worktree.
+  repeated string relative_paths = 4;
+
+  enum Scope {
+    SCOPE_UNSPECIFIED = 0; // Sent to stash tracked entries only.
+    SCOPE_UNTRACKED = 1; // Tracked and untracked entries.
+    SCOPE_ALL = 2; // Tracked, untracked and ignored entries.
+  }
+}
+
+message PushStashResponse {
+  // The created stash.
+  Stash stash = 1;
+}
+
+message ApplyStashRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The stash's index.
+  uint32 index = 2;
+
+  // Whether to drop the stash once it is applied (e.g. `git stash pop`).
+  //
+  // A stash that stopped on conflicts is kept.
+  bool drop = 3;
+
+  // Whether to restore the staged changes as staged.
+  //
+  // Otherwise everything comes back unstaged.
+  bool restore_index = 4;
+}
+
+message ApplyStashResponse {
+  // Whether the stash stopped on conflicts.
+  bool conflicted = 1;
+}
+
+message DropStashRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The stash's index.
+  uint32 index = 2;
+}
+
+message DropStashResponse {}
+
+message GetIdentityRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+}
+
+message GetIdentityResponse {
+  // The name.
+  //
+  // Empty when none is configured.
+  string name = 1;
+
+  // The email.
+  //
+  // Empty when none is configured.
+  string email = 2;
+}
+
+message SetIdentityRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The name.
+  string name = 2;
+
+  // The email.
+  string email = 3;
+
+  // Where the identity is set.
+  Scope scope = 4;
+
+  enum Scope {
+    SCOPE_UNSPECIFIED = 0; // Sent to set it for this repository.
+    SCOPE_GLOBAL = 1; // Set it for every repository on the daemon's machine.
+  }
+}
+
+message SetIdentityResponse {}

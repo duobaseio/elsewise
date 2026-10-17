@@ -1,0 +1,324 @@
+edition = "2024";
+
+package elsewise.daemon.git.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message Status {
+  // The branch checked out in the worktree.
+  //
+  // Empty when a commit is checked out instead.
+  string branch = 1;
+
+  // The checked-out commit's hash.
+  //
+  // Empty in a repository with no commits yet.
+  string hash = 2;
+
+  // The branch's upstream (e.g. `origin/main`).
+  //
+  // Empty when the branch has none.
+  string upstream = 3;
+
+  // Whether the upstream no longer exists.
+  //
+  // `ahead` and `behind` are 0 then.
+  bool upstream_gone = 4;
+
+  // The number of commits the branch is ahead of its upstream.
+  uint32 ahead = 5;
+
+  // The number of commits the branch is behind its upstream.
+  uint32 behind = 6;
+
+  // The operation in progress.
+  //
+  // Unset when none is.
+  oneof operation {
+    Other other = 7;
+    Merge merge = 8;
+    Rebase rebase = 9;
+    CherryPick cherry_pick = 10;
+    Revert revert = 11;
+  }
+
+  // Every entry that is changed, untracked, ignored or conflicted.
+  //
+  // Ignored entries are only included when the request asks for them.
+  repeated Entry entries = 12;
+
+  // An operation this message does not describe (e.g. a bisect).
+  message Other {}
+
+  // A merge.
+  message Merge {
+    // The hash of every commit being merged.
+    repeated string hashes = 1;
+  }
+
+  // A rebase.
+  message Rebase {
+    // The number of the commit being replayed, starting at 1.
+    uint32 step = 1;
+
+    // The number of commits to replay.
+    uint32 total = 2;
+
+    // The hash of the commit whose replay stopped the rebase.
+    //
+    // Empty when it stopped between commits (e.g. on a `break`).
+    string hash = 3;
+  }
+
+  // A cherry-pick.
+  message CherryPick {
+    // The hash of the commit being picked.
+    string hash = 1;
+  }
+
+  // A revert.
+  message Revert {
+    // The hash of the commit being reverted.
+    string hash = 1;
+  }
+
+  // An entry the status reports.
+  message Entry {
+    // The entry's path.
+    string relative_path = 1;
+
+    // What the entry is.
+    oneof kind {
+      Changed changed = 2;
+      Untracked untracked = 3;
+      Ignored ignored = 4;
+      Conflicted conflicted = 5;
+    }
+
+    // A tracked entry with a staged or unstaged change.
+    message Changed {
+      // The staged change against HEAD.
+      Change staged = 1;
+
+      // The unstaged change against what is staged.
+      Change unstaged = 2;
+
+      // The entry's path before a rename or copy.
+      //
+      // Empty otherwise.
+      string original_relative_path = 3;
+    }
+
+    // An entry git neither tracks nor ignores.
+    message Untracked {}
+
+    // An entry git ignores.
+    message Ignored {}
+
+    // An entry the operation in progress left with conflicts.
+    message Conflicted {
+      // How the two sides conflict.
+      Kind kind = 1;
+
+      enum Kind {
+        KIND_UNSPECIFIED = 0; // Never sent.
+        KIND_OTHER = 1;
+        KIND_BOTH_MODIFIED = 2;
+        KIND_BOTH_ADDED = 3;
+        KIND_BOTH_DELETED = 4;
+        KIND_DELETED_BY_US = 5;
+        KIND_DELETED_BY_THEM = 6;
+        KIND_ADDED_BY_US = 7;
+        KIND_ADDED_BY_THEM = 8;
+      }
+    }
+  }
+}
+
+// How an entry differs between two states of the repository.
+enum Change {
+  CHANGE_UNSPECIFIED = 0; // Sent when the two states match.
+  CHANGE_OTHER = 1;
+  CHANGE_ADDED = 2;
+  CHANGE_MODIFIED = 3;
+  CHANGE_DELETED = 4;
+  CHANGE_RENAMED = 5;
+  CHANGE_COPIED = 6;
+}
+
+message Commit {
+  // The hash.
+  string hash = 1;
+
+  // Every parent's hash.
+  repeated string parent_hashes = 2;
+
+  // Who wrote the changes.
+  Identity author = 3;
+
+  // Who made the commit.
+  Identity committer = 4;
+
+  // The message.
+  string message = 5;
+}
+
+// Represents who did an action.
+message Identity {
+  // The name.
+  string name = 1;
+
+  // The email.
+  string email = 2;
+
+  // When it happened.
+  google.protobuf.Timestamp time = 3;
+}
+
+message Branch {
+  // The name (e.g. `main`, or `origin/main` for a remote branch).
+  string name = 1;
+
+  // The remote the branch belongs to.
+  //
+  // Empty for a local branch.
+  string remote = 2;
+
+  // The latest commit.
+  Commit commit = 3;
+
+  // The upstream (e.g. `origin/main`).
+  //
+  // Empty when the branch has none (e.g. remote branch).
+  string upstream = 4;
+
+  // Whether the upstream no longer exists.
+  //
+  // `ahead` and `behind` are 0 then.
+  bool upstream_gone = 5;
+
+  // The number of commits the branch is ahead of its upstream.
+  uint32 ahead = 6;
+
+  // The number of commits the branch is behind its upstream.
+  uint32 behind = 7;
+
+  // The worktree the branch is checked out in.
+  //
+  // Empty when it is not checked out anywhere.
+  string worktree_absolute_path = 8;
+}
+
+message Worktree {
+  // The path.
+  string absolute_path = 1;
+
+  // The branch checked out in the worktree.
+  //
+  // Empty when a commit is checked out instead.
+  string branch = 2;
+
+  // The checked-out commit's hash.
+  //
+  // Empty in a repository with no commits yet.
+  string hash = 3;
+
+  // Whether this is the repository's main worktree.
+  bool main = 4;
+
+  // Whether the worktree is locked.
+  //
+  // Keeps it from being moved, removed or pruned.
+  bool locked = 5;
+
+  // Why the worktree is locked.
+  //
+  // Empty when it is not locked or was locked without a reason.
+  string lock_reason = 6;
+
+  // If this worktree is prunable.
+  bool prunable = 7;
+}
+
+message Tag {
+  // The name.
+  string name = 1;
+
+  // The hash of the commit.
+  string hash = 2;
+
+  // The message.
+  //
+  // Empty for a lightweight tag.
+  string message = 3;
+
+  // Who made the tag.
+  //
+  // Unset for a lightweight tag.
+  Identity tagger = 4;
+}
+
+message Remote {
+  // The name.
+  string name = 1;
+
+  // The URL fetched from.
+  string fetch_url = 2;
+
+  // The URL pushed to.
+  string push_url = 3;
+}
+
+message Stash {
+  // The index with 0 being the newest.
+  uint32 index = 1;
+
+  // The hash of the commit holding the stash.
+  string hash = 2;
+
+  // The branch it was made on.
+  //
+  // Empty when a commit was checked out instead.
+  string branch = 3;
+
+  // The hash of the commit it was made on.
+  string base_hash = 4;
+
+  // The message.
+  string message = 5;
+
+  // When it was made.
+  google.protobuf.Timestamp time = 6;
+
+  // Whether untracked or ignored entries were included.
+  bool untracked = 7;
+}
+
+// Whether a merge may move the branch forward without a merge commit.
+enum FastForward {
+  FAST_FORWARD_UNSPECIFIED = 0; // Sent to fast-forward when possible, and merge otherwise.
+  FAST_FORWARD_NEVER = 1; // Always create a merge commit.
+  FAST_FORWARD_ONLY = 2; // Fast-forward or fail with FAILED_PRECONDITION.
+}
+
+// The progress of a transfer.
+message Progress {
+  // The phase.
+  Phase phase = 1;
+
+  // How much of the phase is done (from 0 to 100).
+  uint32 percent = 2;
+
+  enum Phase {
+    PHASE_UNSPECIFIED = 0; // Never sent.
+    PHASE_OTHER = 1;
+    PHASE_ENUMERATING = 2; // Enumerating objects to send.
+    PHASE_COUNTING = 3; // Counting objects.
+    PHASE_COMPRESSING = 4; // Compressing objects.
+    PHASE_WRITING = 5; // Writing objects to the remote.
+    PHASE_RECEIVING = 6; // Receiving objects.
+    PHASE_RESOLVING = 7; // Resolving deltas.
+    PHASE_UNPACKING = 8; // Unpacking objects (instead of receiving and resolving), for a small transfer.
+    PHASE_CHECKING_OUT = 9; // Checking out files.
+  }
+}

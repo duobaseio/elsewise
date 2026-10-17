@@ -6,7 +6,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import {
   DirectoryListing_Entry_Type,
   type DirectoryListingSchema,
-} from '../gen/elsewise/daemon/v1/file_system_service_pb';
+} from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 
 /** Lists a directory. */
 export async function listDirectory(

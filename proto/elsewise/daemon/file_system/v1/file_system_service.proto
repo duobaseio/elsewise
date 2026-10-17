@@ -1,13 +1,14 @@
 edition = "2024";
 
-package elsewise.daemon.v1;
+package elsewise.daemon.file_system.v1;
 
 // Reads, writes and watches the files.
 //
 // Common fields:
-// - `root`: the absolute, `/`-separated path of the folder a request works in, typically a worktree's folder.
-// - `relative_path`: a location inside the root, `/`-separated with no `.` or `..` segment. Empty refers to the root
-//   itself.
+// - `root`: the absolute, protocol path (`/`-separated path) of the folder a request works in, typically a worktree's
+//   folder.
+// - `relative_path`: a location inside the root, protocol path (`/`-separated) with no `.` or `..` segment. Empty
+//   refers to the root itself.
 // - `hash`: the SHA-256 of a file's content.
 service FileSystemService {
   // Watches directories.

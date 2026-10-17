@@ -1,6 +1,6 @@
 # Daemon
 
-The Elsewise daemon: a plain Node process that serves the `elsewise.daemon.v1` services over `@elsewise/transport`.
+The Elsewise daemon: a plain Node process that serves the `elsewise.daemon.*` services over `@elsewise/transport`.
 Today it listens for WebSocket clients on loopback; a later topology has it dial out to a backend instead, so nothing
 outside `websocket.ts` may assume the daemon is the server.
 
@@ -23,7 +23,7 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/daemon <script>`.
 ## Wiring
 
 No DI framework. A service is a class that takes what it depends on in its constructor, and `createDaemon` is the
-only place that constructs anything. Adding a service means a proto under `proto/elsewise/daemon/v1/`, a folder
+only place that constructs anything. Adding a service means a proto under `proto/elsewise/daemon/`, a folder
 under `src/`, and one `serve` line in `daemon.ts`.
 
 ## Connecting
