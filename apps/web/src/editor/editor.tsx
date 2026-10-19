@@ -16,7 +16,7 @@ import {
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
 import { completion } from '@/editor/completion';
@@ -56,11 +56,20 @@ export function Editor({ path, code, root }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView>(null);
 
-  const plugins = usePluginsExtension(path);
   const editorManager = useEditorManager();
   const theme = useThemeExtension();
   const languages = useEditorManager((editor) => editor.languages);
   const description = LanguageDescription.matchFilename(languages, path);
+  const [settled, setSettled] = useState<LanguageDescription | null>(null);
+  const language =
+    description === null
+      ? undefined
+      : description.support !== undefined
+        ? description
+        : description === settled
+          ? undefined
+          : null;
+  const plugins = usePluginsExtension(path, language);
   const { search, portal } = useSearchExtension();
   const settings = useSettingsExtension(description?.name);
   const languageServer = useLanguageServerExtension(root, description?.name, path);
@@ -168,10 +177,14 @@ export function Editor({ path, code, root }: EditorProps) {
       (support) => {
         if (live) {
           view.current?.dispatch({ effects: LANGUAGE.reconfigure(support) });
+          setSettled(description);
         }
       },
       (error) => {
         console.error(`Language ${description.name} failed to load`, error);
+        if (live) {
+          setSettled(description);
+        }
       },
     );
 
@@ -240,15 +253,19 @@ export function Editor({ path, code, root }: EditorProps) {
   );
 }
 
-function usePluginsExtension(path: string): Extension {
+// Returns the plugins' extensions for the file, without those from functions while its `language` loads (null), so
+// that they see its `support`.
+function usePluginsExtension(path: string, language: LanguageDescription | null | undefined): Extension {
   const extensions = useEditorManager((editor) => editor.extensions);
 
   return useMemo(() => {
     try {
-      return extensions.map((extension) => (typeof extension === 'function' ? extension({ path }) : extension));
+      return extensions.flatMap((extension) =>
+        typeof extension === 'function' ? (language === null ? [] : extension({ path, language })) : extension,
+      );
     } catch (error) {
       console.error('Plugin extension failed', error);
       return [];
     }
-  }, [extensions, path]);
+  }, [extensions, path, language]);
 }

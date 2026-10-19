@@ -205,6 +205,42 @@ test("plugin's extension function receives file", async () => {
   expect(view.contentDOM.dataset.path).toBe('main.rs');
 });
 
+test("plugin's extension function receives loaded language", async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([
+    ({ language }) =>
+      EditorView.contentAttributes.of({
+        'data-language': `${language?.name} ${language?.support?.language.name}`,
+      }),
+  ]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+
+  await expect.poll(() => view.contentDOM.dataset.language).toBe('Rust rust');
+});
+
+test("plugin's plain extension applies before language loads", async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([
+    EditorView.contentAttributes.of({ 'data-plain': '' }),
+    ({ language }) => EditorView.contentAttributes.of({ 'data-language': String(language?.name) }),
+  ]);
+  const view = await mountEditor('func main() {}\n', 'main.go', editor);
+
+  expect(view.contentDOM.dataset.plain).toBe('');
+  expect(view.contentDOM.dataset.language).toBeUndefined();
+  await expect.poll(() => view.contentDOM.dataset.language).toBe('Go');
+});
+
+test("plugin's extension function receives no language for unknown file", async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([
+    ({ language }) => EditorView.contentAttributes.of({ 'data-language': String(language?.name) }),
+  ]);
+  const view = await mountEditor('fn main() {}\n', 'main.unknown', editor);
+
+  expect(view.contentDOM.dataset.language).toBe('undefined');
+});
+
 test("plugin's completions show without language server", async () => {
   const editor = new EditorManager();
   const options = [{ label: 'main', type: 'function' }];

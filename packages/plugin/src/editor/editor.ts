@@ -36,6 +36,17 @@ export interface Editor {
   /**
    * Adds `extensions` to the editor, each an extension or a function that returns one for each document.
    *
+   * ```ts
+   * editor.addExtensions([
+   *   // In every document.
+   *   EditorState.languageData.of(() => [{ autocomplete: reactions }]),
+   *
+   *   // In TypeScript documents only.
+   *   ({ language }) =>
+   *     language?.name === 'TypeScript' ? language.support.language.data.of({ autocomplete: imports }) : [],
+   * ]);
+   * ```
+   *
    * Returns a disposable that removes the `extensions`.
    */
   addExtensions(extensions: readonly (Extension | ((document: EditorDocument) => Extension))[]): Disposable;
@@ -84,6 +95,11 @@ export interface EditorDocument {
    * The document's path.
    */
   readonly path: string;
+
+  /**
+   * The document's language, with its `support` loaded, or undefined if none matches the path.
+   */
+  readonly language?: LanguageDescription;
 }
 
 /**
@@ -100,11 +116,15 @@ export interface EditorDocument {
  *   return { from: word.from, options };
  * }
  *
- * editor.addExtensions([EditorState.languageData.of(() => [{ autocomplete: source }])]);
+ * editor.addExtensions([
+ *   ({ language }) =>
+ *     language?.name === 'TypeScript' ? language.support.language.data.of({ autocomplete: source }) : [],
+ * ]);
  * ```
  *
- * The function passed to `languageData.of` must return the same `autocomplete` value on every call. CodeMirror tells
- * sources apart by identity, so a new value is a new source, queried again on every transaction.
+ * To add completions in every language, use `EditorState.languageData.of`. The function passed to it must return the
+ * same `autocomplete` value on every call. CodeMirror tells sources apart by identity, so a new value is a new source,
+ * queried again on every transaction.
  *
  * Good:
  * ```ts
