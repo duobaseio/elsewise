@@ -38,6 +38,38 @@ export interface LanguageServer {
   readonly initializationOptions?: unknown;
 
   /**
+   * The settings sent to the server after initialization and in response to `workspace/configuration`.
+   *
+   * For `pyright`:
+   * ```ts
+   * { python: { analysis: { typeCheckingMode: 'strict' } } }
+   * ```
+   *
+   * The default implementation treats the `section` in `workspace/configuration` as a dot-separated identifier, and
+   * sends the entire settings in response to an empty section.
+   *
+   * For example, the server is sent `{ indentWidth: 2 }` for `cpp.formatterOptions`:
+   * ```ts
+   * { cpp: { formatterOptions: { indentWidth: 2 } } }
+   * ```
+   *
+   * Furthermore, the default implementation ignores `scopeUri`s.
+   *
+   * To handle `workspace/configuration`s, add a handler to {@link requestHandlers}. For example, to send
+   * `typescript-language-server` the indentation of the file at `scopeUri`:
+   * ```ts
+   * {
+   *   'workspace/configuration': (client, { items }: ConfigurationParams) =>
+   *     items.map(({ section, scopeUri }) => {
+   *       const view = scopeUri && client.workspace.getFile(scopeUri)?.getView();
+   *       return section === 'formattingOptions' && view ? { tabSize: getIndentUnit(view.state), ... } : null;
+   *     }),
+   * }
+   * ```
+   */
+  readonly settings?: Readonly<Record<string, unknown>>;
+
+  /**
    * The LSP client extensions.
    *
    * Their **notification** handlers run before Elsewise's, and their CodeMirror extensions take precedence over

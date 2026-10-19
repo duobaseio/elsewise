@@ -1,5 +1,11 @@
+import { getIndentUnit, indentUnit } from '@codemirror/language';
 import { type Application, DEFAULT_COMMANDS, type LanguageServerTransport, type PluginContext } from '@elsewise/plugin';
-import { CompletionItemKind, InsertTextFormat, type TextDocumentPositionParams } from 'vscode-languageserver-protocol';
+import {
+  CompletionItemKind,
+  type ConfigurationParams,
+  InsertTextFormat,
+  type TextDocumentPositionParams,
+} from 'vscode-languageserver-protocol';
 import { PRETTIER } from './prettier.ts';
 
 // Matches `scripts/serve.mjs`.
@@ -28,6 +34,14 @@ export function enable({ editor, commands }: Application, { subscriptions }: Plu
           JSX: 'javascriptreact',
         },
         requestHandlers: {
+          // Asked once per file for the indentation that refactors and fixes insert code with.
+          'workspace/configuration': (client, { items }: ConfigurationParams) =>
+            items.map(({ section, scopeUri }) => {
+              const state = scopeUri === undefined ? undefined : client.workspace.getFile(scopeUri)?.getView()?.state;
+              return section === 'formattingOptions' && state
+                ? { tabSize: getIndentUnit(state), insertSpaces: !state.facet(indentUnit).includes('\t') }
+                : null;
+            }),
           // Sent after a refactor that makes up a name, e.g. extracting a constant, to rename it at once.
           '_typescript.rename': (client, { textDocument, position }: TextDocumentPositionParams) => {
             const view = client.workspace.getFile(textDocument.uri)?.getView();

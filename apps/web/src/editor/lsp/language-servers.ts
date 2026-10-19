@@ -8,6 +8,8 @@ import { createContext, useCallback, useContext, useMemo, useSyncExternalStore }
 import {
   type ApplyWorkspaceEditParams,
   type Command,
+  type ConfigurationParams,
+  type DidChangeConfigurationParams,
   ErrorCodes,
   type ExecuteCommandParams,
   MessageType,
@@ -16,6 +18,7 @@ import {
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
+import { configuration, serverConfiguration } from '@/editor/lsp/configuration';
 import { serverDefinition } from '@/editor/lsp/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
@@ -165,6 +168,7 @@ export class LanguageServerInstance {
         serverActions(),
         serverDiagnostics(),
         serverEdits(),
+        serverConfiguration(),
         {
           editorExtension: commandHandlers.of(server.commandHandlers ?? {}),
           notificationHandlers: {
@@ -212,6 +216,10 @@ export class LanguageServerInstance {
       // The plugin's handlers take precedence over Elsewise's.
       const requests = new Map<string, (client: LSPClient, params: never) => unknown>([
         ...REQUESTS,
+        [
+          'workspace/configuration',
+          (_: LSPClient, params: ConfigurationParams) => configuration(this.server.settings, params),
+        ],
         ...Object.entries(this.server.requestHandlers ?? {}),
       ]);
       const handlers = new Map<(message: string) => void, Disposable>();
@@ -248,7 +256,13 @@ export class LanguageServerInstance {
         },
       });
       this.client.initializing.then(
-        () => pullAllDiagnostics(this.client),
+        () => {
+          const settings = this.server.settings;
+          if (settings !== undefined && Object.keys(settings).length > 0) {
+            this.client.notification<DidChangeConfigurationParams>('workspace/didChangeConfiguration', { settings });
+          }
+          pullAllDiagnostics(this.client);
+        },
         (error) => {
           console.error(`Language server ${this.server.name} failed to initialize`, error);
           toast.add({

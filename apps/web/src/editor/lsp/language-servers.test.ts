@@ -155,6 +155,43 @@ describe('connect', () => {
     });
   });
 
+  test('tells server it can ask for settings', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake)]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({
+      method: 'initialize',
+      params: { capabilities: { workspace: { configuration: true } } },
+    });
+  });
+
+  test('sends settings after initialize', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake, { settings: { toy: { strict: true } } })]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent).toMatchObject([
+      { method: 'initialize' },
+      { method: 'initialized' },
+      { method: 'workspace/didChangeConfiguration', params: { settings: { toy: { strict: true } } } },
+    ]);
+  });
+
+  test("doesn't send empty settings", async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake, { settings: {} })]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.methods).toEqual(['initialize', 'initialized']);
+  });
+
   test('sends client capabilities of extensions under core', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
