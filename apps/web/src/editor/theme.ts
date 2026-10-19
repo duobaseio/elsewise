@@ -183,6 +183,9 @@ const METRICS = EditorView.theme({
         '0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
       color: 'var(--popover-foreground)',
     },
+  // Keeps a gap between a tooltip and the line it points at. A margin moves the tooltip from where CodeMirror puts it.
+  '.cm-tooltip.cm-tooltip-above': { marginTop: '-2px' },
+  '.cm-tooltip.cm-tooltip-below': { marginTop: '4px' },
   '.cm-tooltip.cm-tooltip-hover, .cm-tooltip.cm-completionInfo': {
     fontFamily: 'var(--font-sans)',
     fontVariantLigatures: 'var(--font-sans-ligatures)',
