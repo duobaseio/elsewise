@@ -41,7 +41,7 @@ export const FORMAT: EditorCommand = {
   enabled: (_, view) => !view.state.readOnly && find(view).formatter !== undefined,
   shown: (_, view) => formatters(view.state).length > 0,
   run(_, view) {
-    const { ranges, formatter } = find(view);
+    const { formatter, ranges } = find(view);
     if (formatter === undefined) {
       return false;
     }
@@ -52,7 +52,6 @@ export const FORMAT: EditorCommand = {
     void (async () => {
       try {
         const result = await formatter.format(view, ranges);
-
         const edited = view.state.field(format).get(request);
         if (edited === undefined) {
           return;
@@ -96,12 +95,12 @@ export const FORMAT: EditorCommand = {
 
 // Returns the selection's ranges, and the first formatter enabled for them.
 function find(view: EditorView): {
-  ranges: readonly { from: number; to: number }[] | undefined;
   formatter: EditorFormatter | undefined;
+  ranges: readonly { from: number; to: number }[] | undefined;
 } {
   const selection = view.state.selection.ranges.filter((range) => !range.empty).map(({ from, to }) => ({ from, to }));
   const ranges = selection.length > 0 ? selection : undefined;
-  return { ranges, formatter: formatters(view.state).find((formatter) => formatter.enabled?.(view, ranges) ?? true) };
+  return { formatter: formatters(view.state).find((formatter) => formatter.enabled?.(view, ranges) ?? true), ranges };
 }
 
 function formatters(state: EditorState): readonly EditorFormatter[] {

@@ -1,4 +1,4 @@
-import { setDiagnostics } from '@codemirror/lint';
+import { type Diagnostic, linter, setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { EditorDiagnostic } from '@elsewise/plugin';
@@ -140,6 +140,28 @@ describe('hover', () => {
     await rest();
 
     expect(view.dom.querySelectorAll('.cm-tooltip-lint')).toHaveLength(1);
+  });
+
+  test('passes problems to plugin tooltip filter', async () => {
+    const filtered: (readonly Diagnostic[] | null)[] = [];
+    const view = open(
+      [PROBLEM],
+      linter(() => [PROBLEM], {
+        tooltipFilter: (diagnostics) => {
+          filtered.push(diagnostics);
+          return diagnostics.filter(() => true);
+        },
+      }),
+    );
+
+    point(view, PROBLEM.from + 1);
+    const tooltip = await opened(view);
+    await rest();
+
+    expect(tooltip.querySelectorAll('.cm-diagnosticMessage')).toHaveLength(1);
+    expect(view.dom.querySelectorAll('.cm-tooltip-lint')).toHaveLength(1);
+    expect(filtered).not.toHaveLength(0);
+    expect(filtered.every(Array.isArray)).toBe(true);
   });
 
   test("renders problem's own message", async () => {

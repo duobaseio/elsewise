@@ -1,5 +1,5 @@
 import { type Action, type Diagnostic, forEachDiagnostic, linter } from '@codemirror/lint';
-import { CharCategory, type Extension, Facet, StateEffect, StateField } from '@codemirror/state';
+import { CharCategory, type Extension, Facet, Prec, StateEffect, StateField } from '@codemirror/state';
 import {
   closeHoverTooltips,
   EditorView,
@@ -153,9 +153,10 @@ export function hover(): Extension {
         },
       },
     ]),
-    // Leaves the problems to the hover, which shows them with their fixes. Returns `null`, since the linter shows `[]`
-    // as an empty tooltip.
-    linter(null, { tooltipFilter: () => null as unknown as Diagnostic[] }),
+    // TODO: Return `[]` once the linter does not show a tooltip.
+    // Leaves the problems to the hover, which shows them with their fixes. Lowest, so that other linters' filters run
+    // first and get the problems.
+    Prec.lowest(linter(null, { tooltipFilter: () => null as unknown as Diagnostic[] })),
   ];
 }
 

@@ -21,8 +21,8 @@ function formatter(parser: 'typescript' | 'babel'): EditorFormatter {
     order: 10,
     async format(view, ranges) {
       const source = view.state.doc.toString();
-      // Prettier returns the whole document with only the range formatted, so each range's changes are the
-      // difference from the source, which the editor applies together.
+      // Prettier returns the whole document with only the range formatted, and the editor applies only the parts that
+      // differ.
       const formatted = await Promise.all(
         (ranges ?? [undefined]).map((range) =>
           format(source, {
@@ -35,19 +35,7 @@ function formatter(parser: 'typescript' | 'babel'): EditorFormatter {
           }),
         ),
       );
-      return formatted.flatMap((text) => {
-        let from = 0;
-        while (from < source.length && from < text.length && source[from] === text[from]) {
-          from++;
-        }
-        let to = source.length;
-        let end = text.length;
-        while (to > from && end > from && source[to - 1] === text[end - 1]) {
-          to--;
-          end--;
-        }
-        return from === to && from === end ? [] : [{ from, to, insert: text.slice(from, end) }];
-      });
+      return formatted.map((text) => ({ from: 0, to: source.length, insert: text }));
     },
   };
 }
