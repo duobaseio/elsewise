@@ -18,6 +18,7 @@ import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
 import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
+import { serverFormat } from '@/editor/lsp/format';
 import { serverHighlights } from '@/editor/lsp/highlights';
 import { serverHover } from '@/editor/lsp/hover';
 import { serverReferences } from '@/editor/lsp/references';
@@ -154,6 +155,7 @@ export class LanguageServerInstance {
         ...(server.extensions ?? []),
         serverCompletion(server),
         serverHover(),
+        serverFormat(),
         serverSignatureHelp(),
         serverRename(),
         serverReferences(),

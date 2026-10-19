@@ -51,13 +51,15 @@ function browserProject(
         '@codemirror/language-data',
         '@codemirror/lint',
         '@codemirror/lsp-client',
+        '@codemirror/merge',
         '@codemirror/search',
         '@codemirror/state',
         '@codemirror/view',
         '@lezer/highlight',
         'vscode-languageserver-protocol',
         'w3c-keyname',
-        // The language the tests load, which `language-data` imports on demand.
+        // The languages the tests load, which `language-data` imports on demand.
+        '@codemirror/language-data > @codemirror/lang-html',
         '@codemirror/language-data > @codemirror/lang-rust',
         // The components' own dependencies, which the app cannot resolve by name.
         '@elsewise/components > @base-ui/react/*',

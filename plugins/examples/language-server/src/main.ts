@@ -1,5 +1,6 @@
 import { type Application, DEFAULT_COMMANDS, type LanguageServerTransport, type PluginContext } from '@elsewise/plugin';
 import { CompletionItemKind, InsertTextFormat, type TextDocumentPositionParams } from 'vscode-languageserver-protocol';
+import { PRETTIER } from './prettier.ts';
 
 // Matches `scripts/serve.mjs`.
 const SERVER = 'ws://127.0.0.1:7300';
@@ -9,6 +10,13 @@ const SERVER = 'ws://127.0.0.1:7300';
  */
 export function enable({ editor, commands }: Application, { subscriptions }: PluginContext): void {
   subscriptions.push(
+    // Formats the server's languages with Prettier rather than the server.
+    editor.addExtensions([
+      ({ language }) => {
+        const formatter = language && PRETTIER[language.name];
+        return formatter ? (language?.support?.language.data.of({ formatter }) ?? []) : [];
+      },
+    ]),
     editor.addLanguageServers([
       {
         id: 'typescript',
@@ -32,8 +40,7 @@ export function enable({ editor, commands }: Application, { subscriptions }: Plu
             return null;
           },
         },
-        // Completes a function or method with its parentheses, then opens parameter info inside them, unless they
-        // follow already.
+        // Completes a function with its parentheses and opens parameter info.
         completionItems: (client, items, { textDocument, position }) => {
           const doc = client.workspace.getFile(textDocument.uri)?.doc;
           const next = doc?.line(position.line + 1).text.charAt(position.character);

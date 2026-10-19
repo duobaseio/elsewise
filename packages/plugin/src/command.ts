@@ -52,6 +52,7 @@ export const DEFAULT_COMMANDS = {
       moveLineDown: 'elsewise.editor.edit.moveLineDown',
       startNewLine: 'elsewise.editor.edit.startNewLine',
       toggleTabFocusMode: 'elsewise.editor.edit.toggleTabFocusMode',
+      format: 'elsewise.editor.edit.format',
     },
     caret: {
       addCaretAbove: 'elsewise.editor.caret.addCaretAbove',
@@ -71,7 +72,6 @@ export const DEFAULT_COMMANDS = {
       applyTopFix: 'elsewise.editor.lsp.applyTopFix',
       showContextActions: 'elsewise.editor.lsp.showContextActions',
       goToDefinition: 'elsewise.editor.lsp.goToDefinition',
-      format: 'elsewise.editor.lsp.format',
       findUsages: 'elsewise.editor.lsp.findUsages',
       rename: 'elsewise.editor.lsp.rename',
       showSignatureHelp: 'elsewise.editor.lsp.showSignatureHelp',
@@ -131,6 +131,7 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       moveLineDown: ['Shift-Alt-ArrowDown'],
       startNewLine: ['Shift-Enter'],
       toggleTabFocusMode: [{ key: 'Ctrl-m', mac: 'Shift-Alt-m' }],
+      format: ['Mod-Alt-l'],
     },
     caret: {
       addCaretAbove: ['Mod-Alt-ArrowUp'],
@@ -150,7 +151,6 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       applyTopFix: ['Shift-Alt-Enter'],
       showContextActions: ['Alt-Enter'],
       goToDefinition: ['Mod-b'],
-      format: ['Mod-Alt-l'],
       findUsages: ['Mod-Alt-F7'],
       rename: ['Shift-F6'],
       showSignatureHelp: ['Mod-p'],

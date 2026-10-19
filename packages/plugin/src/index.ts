@@ -11,12 +11,14 @@ export {
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
 export {
+  DEFAULT_FORMATTERS,
   DEFAULT_HOVER_SECTIONS,
   type Editor,
   type EditorCompletion,
   type EditorCompletionIcon,
   type EditorDiagnostic,
   type EditorDocument,
+  type EditorFormatter,
   type EditorHoverSource,
 } from './editor/editor.ts';
 export type { LanguageServer, LanguageServerTransport } from './editor/lsp.ts';

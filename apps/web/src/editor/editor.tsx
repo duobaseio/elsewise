@@ -22,6 +22,7 @@ import { editorKeymap } from '@/command/keymap';
 import { completion } from '@/editor/completion';
 import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
+import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
 import { link } from '@/editor/link.ts';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
@@ -118,6 +119,7 @@ export function Editor({ path, code, root }: EditorProps) {
         LANGUAGE_SERVER.of(languageServer),
         completion(),
         hover(),
+        format,
         closeBrackets(),
         bracketMatching(),
         // Has to be after lineNumbers to ensure the fold icon is to the right of it.

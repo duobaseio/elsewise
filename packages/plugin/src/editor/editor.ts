@@ -19,6 +19,15 @@ export const DEFAULT_HOVER_SECTIONS = {
 } as const;
 
 /**
+ * The orders of the built-in formatters, tried lowest first.
+ *
+ * See {@link EditorFormatter}.
+ */
+export const DEFAULT_FORMATTERS = {
+  lsp: 20,
+} as const;
+
+/**
  * The code editor.
  */
 export interface Editor {
@@ -171,6 +180,50 @@ export interface EditorHoverSource {
    * See {@link DEFAULT_HOVER_SECTIONS}.
    */
   readonly order?: number;
+}
+
+/**
+ * A document formatter, added as the `formatter` language data.
+ *
+ * The formatters are tried by `order`, and the first that is enabled formats the document or selection.
+ *
+ * ```ts
+ * const TRIM: EditorFormatter = { format: trim }; // Last.
+ * const PRETTIER: EditorFormatter = { order: 10, format: prettier }; // Before the language server.
+ *
+ * editor.addExtensions([
+ *   // In every document.
+ *   EditorState.languageData.of(() => [{ formatter: TRIM }]),
+ *
+ *   // In TypeScript documents only.
+ *   ({ language }) =>
+ *     language?.name === 'TypeScript' ? language.support.language.data.of({ formatter: PRETTIER }) : [],
+ * ]);
+ * ```
+ */
+export interface EditorFormatter {
+  /**
+   * The order the formatter is tried in, lowest first.
+   *
+   * Formatters without an order are tried last. Those with the same order are tried by source: plugins, then the
+   * language, then the language server.
+   *
+   * See {@link DEFAULT_FORMATTERS}.
+   */
+  readonly order?: number;
+
+  /**
+   * Returns whether it can format the document, or only `ranges` of it if given. Defaults to true.
+   */
+  enabled?(view: EditorView, ranges?: readonly { from: number; to: number }[]): boolean;
+
+  /**
+   * Returns the changes that format the document, or only `ranges` of it if given.
+   */
+  format(
+    view: EditorView,
+    ranges?: readonly { from: number; to: number }[],
+  ): Promise<readonly { from: number; to: number; insert: string }[]>;
 }
 
 /**
