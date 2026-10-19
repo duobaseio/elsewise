@@ -25,7 +25,7 @@ import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-me
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
-import { link } from '@/editor/link.ts';
+import { navigation } from '@/editor/navigation.ts';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
@@ -146,7 +146,7 @@ export function Editor({ path, code, root }: EditorProps) {
         highlightSelectionMatches(),
         highlightSpecialChars(),
         RIGHT_CLICK_CONTEXT_MENU,
-        link(),
+        navigation(),
 
         // Escape is not a command to keep it from taking precedence over the popups' own Escape.
         keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),

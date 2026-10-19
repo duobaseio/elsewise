@@ -16,6 +16,7 @@ import {
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
+import { serverDefinition } from '@/editor/lsp/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
 import { serverFormat } from '@/editor/lsp/format';
@@ -159,6 +160,7 @@ export class LanguageServerInstance {
         serverSignatureHelp(),
         serverRename(),
         serverReferences(),
+        serverDefinition(),
         serverHighlights(),
         serverActions(),
         serverDiagnostics(),

@@ -14,6 +14,7 @@ export {
   DEFAULT_ACTION_SOURCES,
   DEFAULT_FORMATTERS,
   DEFAULT_HOVER_SECTIONS,
+  DEFAULT_NAVIGATION_SOURCES,
   type Editor,
   type EditorAction,
   type EditorActionSource,
@@ -24,6 +25,8 @@ export {
   type EditorDocument,
   type EditorFormatter,
   type EditorHoverSource,
+  type EditorNavigation,
+  type EditorNavigationSource,
 } from './editor/editor.ts';
 export type { LanguageServer, LanguageServerTransport } from './editor/lsp.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';

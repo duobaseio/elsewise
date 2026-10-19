@@ -24,7 +24,7 @@ export const DEFAULT_HOVER_SECTIONS = {
  * See {@link EditorFormatter}.
  */
 export const DEFAULT_FORMATTERS = {
-  lsp: 20,
+  lsp: 10,
 } as const;
 
 /**
@@ -33,6 +33,16 @@ export const DEFAULT_FORMATTERS = {
  * See {@link EditorActionSource}.
  */
 export const DEFAULT_ACTION_SOURCES = {
+  lsp: 10,
+} as const;
+
+/**
+ * The orders of the built-in navigation sources, tried lowest first.
+ *
+ * See {@link EditorNavigationSource}.
+ */
+export const DEFAULT_NAVIGATION_SOURCES = {
+  url: 10,
   lsp: 20,
 } as const;
 
@@ -199,7 +209,7 @@ export interface EditorHoverSource {
  *
  * ```ts
  * const TRIM: EditorFormatter = { format: trim }; // Last.
- * const PRETTIER: EditorFormatter = { order: 10, format: prettier }; // Before the language server.
+ * const PRETTIER: EditorFormatter = { order: 5, format: prettier }; // Before the language server.
  *
  * editor.addExtensions([
  *   // In every document.
@@ -264,7 +274,7 @@ export interface EditorFormatter {
  *       apply: () => explain(diagnostic),
  *     })),
  * }; // Last.
- * const IMPORTS: EditorActionSource = { order: 10, actions: imports }; // Before the language server.
+ * const IMPORTS: EditorActionSource = { order: 5, actions: imports }; // Before the language server.
  *
  * editor.addExtensions([
  *   // In every document.
@@ -378,4 +388,57 @@ export interface EditorDiagnosticAction extends Action {
    * See {@link EditorActionSource} for how the actions are shown.
    */
   readonly type?: 'preferredFix' | 'fix';
+}
+
+/**
+ * A source of navigation in the code, added as the `navigation` language data.
+ *
+ * Holding ⌘/Ctrl underlines the navigation under the pointer, and clicking it navigates. Every source at the position
+ * is asked, and the navigation from the lowest `order` is used.
+ *
+ * To add `EditorNavigationSource`s:
+ * ```ts
+ * const ISSUES: EditorNavigationSource = { navigation: issue }; // Last.
+ * const IMPORTS: EditorNavigationSource = { order: 15, navigation: imported }; // Between URLs and the language server.
+ *
+ * editor.addExtensions([
+ *   // In every document.
+ *   EditorState.languageData.of(() => [{ navigation: ISSUES }]),
+ *
+ *   // In TypeScript documents only.
+ *   ({ language }) =>
+ *     language?.name === 'TypeScript' ? language.support.language.data.of({ navigation: IMPORTS }) : [],
+ * ]);
+ * ```
+ */
+export interface EditorNavigationSource {
+  /**
+   * The order the source is tried in, lowest first.
+   *
+   * Sources without an order are tried last. Those with the same order are tried by source: plugins, then the
+   * language, then the language server.
+   *
+   * See {@link DEFAULT_NAVIGATION_SOURCES}.
+   */
+  readonly order?: number;
+
+  /**
+   * Returns the navigation at `pos`, or null if there is none.
+   *
+   * `side` is -1 when the pointer is on the character before `pos`, and 1 when it is on the one at it.
+   */
+  navigation(view: EditorView, pos: number, side: -1 | 1): EditorNavigation | null | Promise<EditorNavigation | null>;
+}
+
+/**
+ * A navigation from a range of the code, such as a URL or a symbol.
+ */
+export interface EditorNavigation {
+  readonly from: number;
+  readonly to: number;
+
+  /**
+   * Navigates. The editor shows the error if it throws.
+   */
+  navigate(view: EditorView): void | Promise<void>;
 }

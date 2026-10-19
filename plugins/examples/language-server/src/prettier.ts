@@ -18,7 +18,7 @@ export const PRETTIER: Record<string, EditorFormatter> = {
 // Returns a formatter that runs Prettier's `parser`, before the language server.
 function formatter(parser: 'typescript' | 'babel'): EditorFormatter {
   return {
-    order: 10,
+    order: 5,
     async format(view, ranges) {
       const source = view.state.doc.toString();
       // Prettier returns the whole document with only the range formatted, and the editor applies only the parts that
