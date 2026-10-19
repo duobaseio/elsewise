@@ -17,6 +17,7 @@ export {
   type EditorCompletionIcon,
   type EditorDiagnostic,
   type EditorDocument,
+  type EditorHoverSource,
 } from './editor/editor.ts';
 export type { LanguageServer, LanguageServerTransport } from './editor/lsp.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';

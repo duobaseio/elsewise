@@ -1,7 +1,7 @@
 import { startCompletion } from '@codemirror/autocomplete';
 import { indentUnit, LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
-import { EditorState } from '@codemirror/state';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { DEFAULT_COMMANDS, type LanguageServer } from '@elsewise/plugin';
@@ -254,15 +254,16 @@ test("plugin's completions show without language server", async () => {
   await expect.element(page.getByRole('option').getByText('main')).toBeVisible();
 });
 
-// A plugin's hover source of a section reading `text` over the whole document.
-function blame(text: string) {
-  return {
+// A plugin's extension adding a hover section reading `text` over the whole document, in every language.
+function blame(text: string): Extension {
+  const section = {
     source: (view: EditorView) => ({
       pos: 0,
       end: view.state.doc.length,
       create: () => ({ dom: Object.assign(document.createElement('div'), { className: 'blame', textContent: text }) }),
     }),
   };
+  return EditorState.languageData.of(() => [{ hover: section }]);
 }
 
 // Moves the pointer over `pos` in `view`.
@@ -276,7 +277,7 @@ function point(view: EditorView, pos: number): void {
 
 test("plugin's hover section shows without language server", async () => {
   const editor = new EditorManager();
-  editor.addHoverTooltipSources([blame('You, yesterday')]);
+  editor.addExtensions([blame('You, yesterday')]);
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
   point(view, 4);
@@ -288,7 +289,7 @@ test("plugin's hover section shows without language server", async () => {
 
 test("plugin's hover section goes once disposed", async () => {
   const editor = new EditorManager();
-  const dispose = editor.addHoverTooltipSources([blame('You, yesterday')]);
+  const dispose = editor.addExtensions([blame('You, yesterday')]);
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
   view.dispatch({ selection: { anchor: 4 } });
   const show = () => view.state.facet(COMMANDS)?.run(DEFAULT_COMMANDS.editor.hover.show, view);
@@ -307,13 +308,50 @@ test("plugin's hover section goes once disposed", async () => {
 
 test("plugin's hover section shows on quick documentation", async () => {
   const editor = new EditorManager();
-  editor.addHoverTooltipSources([blame('You, yesterday')]);
+  editor.addExtensions([blame('You, yesterday')]);
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
   view.dispatch({ selection: { anchor: 4 } });
 
   view.state.facet(COMMANDS)?.run(DEFAULT_COMMANDS.editor.hover.show, view);
 
   await expect.poll(() => view.dom.querySelector('.cm-tooltip-hover .blame')?.textContent).toBe('You, yesterday');
+});
+
+test("plugin's hover section on language shows in its files only", async () => {
+  const editor = new EditorManager();
+  const language = StreamLanguage.define({
+    token: (stream) => {
+      stream.skipToEnd();
+      return 'comment';
+    },
+  });
+  const section = {
+    source: (view: EditorView) => ({
+      pos: 0,
+      end: view.state.doc.length,
+      create: () => ({ dom: Object.assign(document.createElement('div'), { className: 'blame' }) }),
+    }),
+  };
+  editor.addLanguages([
+    LanguageDescription.of({
+      name: 'Comment',
+      extensions: ['comment'],
+      support: new LanguageSupport(language, language.data.of({ hover: section })),
+    }),
+  ]);
+  const show = (view: EditorView) => {
+    view.dispatch({ selection: { anchor: 2 } });
+    view.state.facet(COMMANDS)?.run(DEFAULT_COMMANDS.editor.hover.show, view);
+  };
+
+  const comment = await mountEditor('hello\n', 'main.comment', editor);
+  show(comment);
+  await expect.poll(() => comment.dom.querySelector('.cm-tooltip-hover .blame')).not.toBeNull();
+
+  const rust = await mountEditor('fn main() {}\n', 'main.rs', editor);
+  show(rust);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(rust.dom.querySelector('.cm-tooltip-hover')).toBeNull();
 });
 
 test("plugin's language highlights files with extension", async () => {

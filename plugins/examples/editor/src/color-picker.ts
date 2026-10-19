@@ -1,4 +1,4 @@
-import { type Extension, StateEffect, StateField } from '@codemirror/state';
+import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -53,9 +53,14 @@ export function colorPicker(): Extension {
 }
 
 /**
- * A hover source that shows a larger swatch of the six-digit hex color under the pointer, with its RGB value.
+ * An extension that shows a larger swatch of the six-digit hex color under the pointer, with its RGB value, in the
+ * hover.
  */
-export function colorHover(view: EditorView, pos: number): Tooltip | null {
+export const colorHover = EditorState.languageData.of(() => [{ hover: COLOR }]);
+
+const COLOR = { source: hover };
+
+function hover(view: EditorView, pos: number): Tooltip | null {
   const line = view.state.doc.lineAt(pos);
   for (const match of line.text.matchAll(/#[0-9a-f]{6}\b/gi)) {
     const from = line.from + match.index;

@@ -34,7 +34,7 @@ const dotenv = StreamLanguage.define({
  */
 export function enable({ commands, editor }: Application, { id, subscriptions }: PluginContext): void {
   subscriptions.push(
-    editor.addExtensions([colorPicker, reactions]),
+    editor.addExtensions([colorPicker, colorHover, reactions]),
     editor.addLanguages([
       LanguageDescription.of({
         name: 'Dotenv',
@@ -43,7 +43,6 @@ export function enable({ commands, editor }: Application, { id, subscriptions }:
         support: new LanguageSupport(dotenv, dotenv.data.of({ autocomplete: keys })),
       }),
     ]),
-    editor.addHoverTooltipSources([{ source: colorHover }]),
     // The context menu items in `manifest.json` run these.
     commands.add([
       excuse(`${id}.leaveAnExcuse`),

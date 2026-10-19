@@ -3,7 +3,6 @@ import { CharCategory, type Extension, Facet, StateEffect, StateField } from '@c
 import {
   closeHoverTooltips,
   EditorView,
-  type HoverTooltipSource,
   hasHoverTooltips,
   hoverTooltip,
   keymap,
@@ -17,6 +16,7 @@ import {
   DEFAULT_KEYS,
   type EditorCommand,
   type EditorDiagnostic,
+  type EditorHoverSource,
 } from '@elsewise/plugin';
 import { COMMANDS } from '@/editor/editor-manager';
 import { appendCode } from '@/editor/tooltip';
@@ -38,12 +38,6 @@ export type ProblemAction = Action & { command?: string };
  */
 export const problemActionSources =
   Facet.define<(view: EditorView, diagnostic: EditorDiagnostic) => Promise<ProblemAction[]>>();
-
-/**
- * The sources of the hover's sections, shown lowest `order` first, then those without an order, each in the order
- * added when equal. The problems are at {@link DEFAULT_HOVER_SECTIONS.problems}.
- */
-export const hoverSources = Facet.define<{ source: HoverTooltipSource; order?: number }>();
 
 /**
  * Whether a click in the code closes the hovers, and keeps them closed until the mouse moves away, false unless set.
@@ -138,8 +132,8 @@ export const SHOW_HOVER: EditorCommand = {
 };
 
 /**
- * Returns the extension that shows the problems and the {@link hoverSources}' sections for the code under the pointer,
- * or under the cursor on {@link SHOW_HOVER}.
+ * Returns the extension that shows the problems and the `hover` language data's sections for the code under the
+ * pointer, or under the cursor on {@link SHOW_HOVER}. The problems are at {@link DEFAULT_HOVER_SECTIONS.problems}.
  */
 export function hover(): Extension {
   return [
@@ -184,7 +178,7 @@ async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tool
     }
   });
 
-  const sources = view.state.facet(hoverSources);
+  const sources = view.state.languageDataAt<EditorHoverSource>('hover', pos, side);
   const [fixes, tooltips] = await Promise.all([
     Promise.all(
       found.map(async ({ diagnostic }) =>

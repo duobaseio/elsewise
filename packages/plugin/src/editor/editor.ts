@@ -11,7 +11,7 @@ import type { LanguageServer } from './lsp.ts';
 /**
  * The orders of the built-in hover sections, shown lowest first.
  *
- * See {@link Editor.addHoverTooltipSources}.
+ * See {@link EditorHoverSource}.
  */
 export const DEFAULT_HOVER_SECTIONS = {
   problems: 10,
@@ -64,27 +64,6 @@ export interface Editor {
    * Returns a disposable that removes the `servers`.
    */
   addLanguageServers(servers: readonly LanguageServer[]): Disposable;
-
-  /**
-   * Adds hover sections from `sources`.
-   *
-   * Sections are shown by `order`, lowest first. Sections with the same order are shown in the order added, and sections
-   * without one are shown last.
-   *
-   * The hover opens once every source has returned
-   *
-   * ```ts
-   * editor.addHoverTooltipSources([
-   *   { source: summary, order: 15 }, // Shown between the problems and the documentation.
-   *   { source: blame }, // Shown last.
-   * ]);
-   * ```
-   *
-   * Returns a disposable that removes the `sources`.
-   *
-   * See {@link DEFAULT_HOVER_SECTIONS}.
-   */
-  addHoverTooltipSources(sources: readonly { source: HoverTooltipSource; order?: number }[]): Disposable;
 }
 
 /**
@@ -161,6 +140,38 @@ export interface EditorCompletion extends Completion {
  * * `image`: the URL of an image, drawn as it is.
  */
 export type EditorCompletionIcon = { letters: string; tag?: Tag } | { svg: string; tag?: Tag } | { image: string };
+
+/**
+ * A source of a hover section, added as the `hover` language data.
+ *
+ * It should not perform expensive/high latency operations as the hover only opens once every source has completed.
+ *
+ * ```ts
+ * const BLAME: EditorHoverSource = { source: blame }; // Last.
+ * const SUMMARY: EditorHoverSource = { source: summarize, order: 15 }; // Between the problems and the documentation.
+ *
+ * editor.addExtensions([
+ *   // In every document.
+ *   EditorState.languageData.of(() => [{ hover: BLAME }]),
+ *
+ *   // In TypeScript documents only.
+ *   ({ language }) => (language?.name === 'TypeScript' ? language.support.language.data.of({ hover: SUMMARY }) : []),
+ * ]);
+ * ```
+ */
+export interface EditorHoverSource {
+  readonly source: HoverTooltipSource;
+
+  /**
+   * The order the section is shown in, lowest first.
+   *
+   * Sections without an order are shown last. Those with the same order are shown by source: plugins, then the
+   * language, then the language server.
+   *
+   * See {@link DEFAULT_HOVER_SECTIONS}.
+   */
+  readonly order?: number;
+}
 
 /**
  * A diagnostic with what the editor shows beyond CodeMirror's {@link Diagnostic}.

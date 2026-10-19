@@ -4,7 +4,7 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { COMMANDS } from '@/editor/editor-manager';
-import { closeHoverOnClick, hover, hoverSources, SHOW_HOVER } from '@/editor/hover';
+import { closeHoverOnClick, hover, SHOW_HOVER } from '@/editor/hover';
 import { commandsExtension } from '../../test/commands';
 
 const DOC = 'let channel = attach(1);';
@@ -60,7 +60,8 @@ function section(name: string, order?: number): Extension {
     pos,
     create: () => ({ dom: Object.assign(document.createElement('div'), { className: name }) }),
   });
-  return hoverSources.of({ source, order });
+  const section = { source, order };
+  return EditorState.languageData.of(() => [{ hover: section }]);
 }
 
 // Returns the names of `tooltip`'s sections, `problems` for the problems.

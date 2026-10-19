@@ -1,11 +1,14 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
+import { EditorState } from '@codemirror/state';
 import type { EditorView, Tooltip } from '@codemirror/view';
-import { DEFAULT_HOVER_SECTIONS, type EditorDiagnostic } from '@elsewise/plugin';
+import { DEFAULT_HOVER_SECTIONS, type EditorDiagnostic, type EditorHoverSource } from '@elsewise/plugin';
 import type { Hover, HoverParams } from 'vscode-languageserver-protocol';
 import { COMMANDS } from '@/editor/editor-manager';
-import { hoverSources, type ProblemAction, problemActionSources } from '@/editor/hover';
+import { type ProblemAction, problemActionSources } from '@/editor/hover';
 import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { documentation } from '@/editor/lsp/documentation';
+
+const DOCUMENTATION: EditorHoverSource = { source: lookUp, order: DEFAULT_HOVER_SECTIONS.documentation };
 
 /**
  * Returns the client extension that adds the server's documentation for the code under the pointer, and its fixes for
@@ -14,7 +17,7 @@ import { documentation } from '@/editor/lsp/documentation';
 export function serverHover(): LSPClientExtension {
   return {
     editorExtension: [
-      hoverSources.of({ source: lookUp, order: DEFAULT_HOVER_SECTIONS.documentation }),
+      EditorState.languageData.of(() => [{ hover: DOCUMENTATION }]),
       problemActionSources.of(actionsFor),
     ],
   };
