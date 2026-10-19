@@ -438,7 +438,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
         { ...at('let (tx, rx)'), severity: 'warning', markClass: 'cm-lintRange-unnecessary', message: 'unnecessary' },
         { ...at('subscribe'), severity: 'warning', message: 'warning' },
         { ...at('Channel::new'), severity: 'hint', message: 'hint' },
-        // A problem with nothing to underline.
+        // A diagnostic with nothing to underline.
         { from: at('Ok(Channel::new(rx))').to, to: at('Ok(Channel::new(rx))').to, severity: 'info', message: 'point' },
       ]),
     );
@@ -455,20 +455,20 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
       await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-${theme}`);
     });
 
-    test('over problem', async () => {
+    test('over diagnostic', async () => {
       const view = await mount(theme, true);
       await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
       await hover(view, 'undefined_name', 1);
 
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-problem-${theme}`);
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-diagnostic-${theme}`);
     });
 
-    test('over problem with documentation', async () => {
+    test('over diagnostic with documentation', async () => {
       const view = await mount(theme, true);
       await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
       await hover(view, 'send_raw', 2);
 
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-problem-documentation-${theme}`);
+      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-diagnostic-documentation-${theme}`);
     });
   });
 
@@ -590,7 +590,7 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     view.focus();
     view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('undefined_name') + 2 } });
     await userEvent.keyboard('{Alt>}{Enter}{/Alt}');
-    await vi.waitFor(() => expect(document.querySelector('.cm-lsp-actions')).not.toBeNull());
+    await vi.waitFor(() => expect(document.querySelector('.cm-actions')).not.toBeNull());
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-context-actions-${theme}`);
   });

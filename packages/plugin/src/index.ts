@@ -11,12 +11,16 @@ export {
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
 export {
+  DEFAULT_ACTION_SOURCES,
   DEFAULT_FORMATTERS,
   DEFAULT_HOVER_SECTIONS,
   type Editor,
+  type EditorAction,
+  type EditorActionSource,
   type EditorCompletion,
   type EditorCompletionIcon,
   type EditorDiagnostic,
+  type EditorDiagnosticAction,
   type EditorDocument,
   type EditorFormatter,
   type EditorHoverSource,

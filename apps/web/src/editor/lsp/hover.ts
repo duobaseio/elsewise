@@ -1,26 +1,17 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorState } from '@codemirror/state';
 import type { EditorView, Tooltip } from '@codemirror/view';
-import { DEFAULT_HOVER_SECTIONS, type EditorDiagnostic, type EditorHoverSource } from '@elsewise/plugin';
+import { DEFAULT_HOVER_SECTIONS, type EditorHoverSource } from '@elsewise/plugin';
 import type { Hover, HoverParams } from 'vscode-languageserver-protocol';
-import { COMMANDS } from '@/editor/editor-manager';
-import { type ProblemAction, problemActionSources } from '@/editor/hover';
-import { APPLY_TOP_FIX, apply, isFix, requestActions, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { documentation } from '@/editor/lsp/documentation';
 
 const DOCUMENTATION: EditorHoverSource = { source: lookUp, order: DEFAULT_HOVER_SECTIONS.documentation };
 
 /**
- * Returns the client extension that adds the server's documentation for the code under the pointer, and its fixes for
- * the problems there, to the hover.
+ * Returns the client extension that adds the server's documentation for the code under the pointer to the hover.
  */
 export function serverHover(): LSPClientExtension {
-  return {
-    editorExtension: [
-      EditorState.languageData.of(() => [{ hover: DOCUMENTATION }]),
-      problemActionSources.of(actionsFor),
-    ],
-  };
+  return { editorExtension: EditorState.languageData.of(() => [{ hover: DOCUMENTATION }]) };
 }
 
 // Copied from `@codemirror/lsp-client`'s `lspTooltipSource`.
@@ -66,33 +57,4 @@ async function lookUp(view: EditorView, pos: number): Promise<Tooltip | null> {
     above: true,
     create: () => ({ dom }),
   };
-}
-
-// Returns the server's top fix for the problem `diagnostic`, and an action that shows the rest at it, or nothing if the
-// server has no actions for it.
-async function actionsFor(view: EditorView, diagnostic: EditorDiagnostic): Promise<ProblemAction[]> {
-  const item = diagnostic.lsp;
-  if (item === undefined) {
-    return [];
-  }
-
-  const { actions, doc } = await requestActions(view, item.range, [item]);
-  if (actions.length === 0) {
-    return [];
-  }
-
-  const fix = actions.find(isFix);
-  return [
-    ...(fix ? [{ name: fix.title, command: APPLY_TOP_FIX.id, apply: () => void apply(view, fix, doc) }] : []),
-    {
-      name: 'More actions',
-      command: SHOW_CONTEXT_ACTIONS.id,
-      // Opens the actions at the problem rather than wherever the cursor is.
-      apply: (view, from) => {
-        view.dispatch({ selection: { anchor: from } });
-        view.focus();
-        view.state.facet(COMMANDS)?.run(SHOW_CONTEXT_ACTIONS.id, view);
-      },
-    },
-  ];
 }

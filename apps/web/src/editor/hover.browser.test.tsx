@@ -1,7 +1,7 @@
 import { type Diagnostic, linter, setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import type { EditorDiagnostic } from '@elsewise/plugin';
+import type { EditorActionSource, EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { COMMANDS } from '@/editor/editor-manager';
 import { closeHoverOnClick, hover, SHOW_HOVER } from '@/editor/hover';
@@ -9,8 +9,8 @@ import { commandsExtension } from '../../test/commands';
 
 const DOC = 'let channel = attach(1);';
 
-// The problem with `attach`.
-const PROBLEM: EditorDiagnostic = {
+// The diagnostic with `attach`.
+const DIAGNOSTIC: EditorDiagnostic = {
   from: DOC.indexOf('attach'),
   to: DOC.indexOf('attach') + 'attach'.length,
   severity: 'error',
@@ -64,10 +64,10 @@ function section(name: string, order?: number): Extension {
   return EditorState.languageData.of(() => [{ hover: section }]);
 }
 
-// Returns the names of `tooltip`'s sections, `problems` for the problems.
+// Returns the names of `tooltip`'s sections, `diagnostics` for the diagnostics.
 function names(tooltip: HTMLElement): string[] {
   return [...tooltip.querySelectorAll('.cm-tooltip-section')].map((element) =>
-    element.classList.contains('cm-tooltip-lint') ? 'problems' : element.classList[0],
+    element.classList.contains('cm-tooltip-lint') ? 'diagnostics' : element.classList[0],
   );
 }
 
@@ -89,10 +89,10 @@ function opened(view: EditorView): Promise<HTMLElement> {
 }
 
 describe('hover', () => {
-  test('shows problem with source, without server', async () => {
-    const view = open([{ ...PROBLEM, source: 'lint' }]);
+  test('shows diagnostic with source, without server', async () => {
+    const view = open([{ ...DIAGNOSTIC, source: 'lint' }]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
 
     expect(tooltip.querySelector('.cm-diagnostic-error .cm-diagnosticMessage code')?.textContent).toBe('attach');
@@ -101,11 +101,11 @@ describe('hover', () => {
 
   test('shows code, linking only to web', async () => {
     const view = open([
-      { ...PROBLEM, source: 'eslint', code: 'no-var', codeHref: 'https://eslint.org/docs/latest/rules/no-var' },
-      { ...PROBLEM, code: 7, codeHref: 'javascript:alert(1)' },
+      { ...DIAGNOSTIC, source: 'eslint', code: 'no-var', codeHref: 'https://eslint.org/docs/latest/rules/no-var' },
+      { ...DIAGNOSTIC, code: 7, codeHref: 'javascript:alert(1)' },
     ]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
 
     const metas = [...tooltip.querySelectorAll('.cm-diagnosticMeta')];
@@ -114,39 +114,39 @@ describe('hover', () => {
     expect(metas[1].querySelector('a')).toBeNull();
   });
 
-  test('shows problem starting just after pointer', async () => {
-    const view = open([PROBLEM]);
+  test('shows diagnostic starting just after pointer', async () => {
+    const view = open([DIAGNOSTIC]);
 
-    point(view, PROBLEM.from, -1);
+    point(view, DIAGNOSTIC.from, -1);
     const tooltip = await opened(view);
 
     expect(tooltip.querySelector('.cm-diagnostic-error')).not.toBeNull();
   });
 
-  test('shows problem ending just before pointer', async () => {
-    const view = open([PROBLEM]);
+  test('shows diagnostic ending just before pointer', async () => {
+    const view = open([DIAGNOSTIC]);
 
-    point(view, PROBLEM.to, 1);
+    point(view, DIAGNOSTIC.to, 1);
     const tooltip = await opened(view);
 
     expect(tooltip.querySelector('.cm-diagnostic-error')).not.toBeNull();
   });
 
-  test('shows problems once', async () => {
-    const view = open([PROBLEM]);
+  test('shows diagnostics once', async () => {
+    const view = open([DIAGNOSTIC]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     await opened(view);
     await rest();
 
     expect(view.dom.querySelectorAll('.cm-tooltip-lint')).toHaveLength(1);
   });
 
-  test('passes problems to plugin tooltip filter', async () => {
+  test('passes diagnostics to plugin tooltip filter', async () => {
     const filtered: (readonly Diagnostic[] | null)[] = [];
     const view = open(
-      [PROBLEM],
-      linter(() => [PROBLEM], {
+      [DIAGNOSTIC],
+      linter(() => [DIAGNOSTIC], {
         tooltipFilter: (diagnostics) => {
           filtered.push(diagnostics);
           return diagnostics.filter(() => true);
@@ -154,7 +154,7 @@ describe('hover', () => {
       }),
     );
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
     await rest();
 
@@ -164,24 +164,25 @@ describe('hover', () => {
     expect(filtered.every(Array.isArray)).toBe(true);
   });
 
-  test("renders problem's own message", async () => {
+  test("renders diagnostic's own message", async () => {
     const view = open([
-      { ...PROBLEM, renderMessage: () => Object.assign(document.createElement('b'), { textContent: 'own' }) },
+      { ...DIAGNOSTIC, renderMessage: () => Object.assign(document.createElement('b'), { textContent: 'own' }) },
     ]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
 
     expect(tooltip.querySelector('.cm-diagnosticMessage b')?.textContent).toBe('own');
   });
 
-  test("applies problem's actions on click", async () => {
+  test('shows top fix and more actions, applies on click', async () => {
     const view = open([
       {
-        ...PROBLEM,
+        ...DIAGNOSTIC,
         actions: [
           {
             name: 'Rename to `connect`',
+            type: 'fix',
             apply: (view, from, to) => view.dispatch({ changes: { from, to, insert: 'connect' } }),
           },
           { name: 'Ignore', apply: () => {} },
@@ -189,69 +190,101 @@ describe('hover', () => {
       },
     ]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
-    const line = tooltip.querySelector('.cm-lsp-actions-hover') as HTMLElement;
+    const line = tooltip.querySelector('.cm-actions-hover') as HTMLElement;
 
-    expect(line.textContent).toBe('Rename to connect · Ignore');
+    expect([...line.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Rename to connect',
+      'More actions',
+    ]);
     line.querySelector('button')?.click();
     expect(view.state.doc.toString()).toBe('let channel = connect(1);');
   });
 
-  test('shows sections without order below problems', async () => {
-    const view = open([PROBLEM], [section('docs')]);
+  test('shows diagnostic fix past stalled source', async () => {
+    const stalled: EditorActionSource = { actions: () => new Promise(() => {}) };
+    const view = open(
+      [{ ...DIAGNOSTIC, actions: [{ name: 'Rename to `connect`', type: 'fix', apply: () => {} }] }],
+      EditorState.languageData.of(() => [{ actions: stalled }]),
+    );
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
 
-    await vi.waitFor(() => expect(names(tooltip)).toEqual(['problems', 'docs']));
+    expect(tooltip.querySelector('.cm-actions-hover button')?.textContent).toBe('Rename to connect');
+  });
+
+  test('shows fix past stalled source', async () => {
+    const stalled: EditorActionSource = { actions: () => new Promise(() => {}) };
+    const fast: EditorActionSource = {
+      actions: async () => [{ label: 'Import `attach`', type: 'fix', apply: () => {} }],
+    };
+    const view = open(
+      [DIAGNOSTIC],
+      EditorState.languageData.of(() => [{ actions: stalled }, { actions: fast }]),
+    );
+
+    point(view, DIAGNOSTIC.from + 1);
+    const tooltip = await opened(view);
+
+    expect(tooltip.querySelector('.cm-actions-hover button')?.textContent).toBe('Import attach');
+  });
+
+  test('shows sections without order below diagnostics', async () => {
+    const view = open([DIAGNOSTIC], [section('docs')]);
+
+    point(view, DIAGNOSTIC.from + 1);
+    const tooltip = await opened(view);
+
+    await vi.waitFor(() => expect(names(tooltip)).toEqual(['diagnostics', 'docs']));
   });
 
   test('shows sections lowest order first, rest last', async () => {
-    const view = open([PROBLEM], [section('last'), section('late', 30), section('early', 5)]);
+    const view = open([DIAGNOSTIC], [section('last'), section('late', 30), section('early', 5)]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
 
-    await vi.waitFor(() => expect(names(tooltip)).toEqual(['early', 'problems', 'late', 'last']));
+    await vi.waitFor(() => expect(names(tooltip)).toEqual(['early', 'diagnostics', 'late', 'last']));
   });
 
   test('keeps equal orders as added', async () => {
-    const view = open([PROBLEM], [section('first', 10), section('second', 10)]);
+    const view = open([DIAGNOSTIC], [section('first', 10), section('second', 10)]);
 
-    point(view, PROBLEM.from + 1);
+    point(view, DIAGNOSTIC.from + 1);
     const tooltip = await opened(view);
 
-    await vi.waitFor(() => expect(names(tooltip)).toEqual(['problems', 'first', 'second']));
+    await vi.waitFor(() => expect(names(tooltip)).toEqual(['diagnostics', 'first', 'second']));
   });
 
   test('closes on click, until pointer moves', async () => {
-    const view = open([PROBLEM], closeHoverOnClick.of(true));
-    point(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC], closeHoverOnClick.of(true));
+    point(view, DIAGNOSTIC.from + 1);
     await opened(view);
 
-    press(view, PROBLEM.from + 1);
+    press(view, DIAGNOSTIC.from + 1);
     await rest();
     expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
 
-    point(view, PROBLEM.from + 3);
+    point(view, DIAGNOSTIC.from + 3);
     await opened(view);
   });
 
   test('stays open on click, unless set', async () => {
-    const view = open([PROBLEM]);
-    point(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC]);
+    point(view, DIAGNOSTIC.from + 1);
     await opened(view);
 
-    press(view, PROBLEM.from + 1);
+    press(view, DIAGNOSTIC.from + 1);
     await rest();
 
     expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
   });
 
   test('closes on Escape', async () => {
-    const view = open([PROBLEM]);
-    point(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC]);
+    point(view, DIAGNOSTIC.from + 1);
     await opened(view);
 
     const close = () => runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Escape' }), 'editor');
@@ -269,17 +302,17 @@ describe('SHOW_HOVER', () => {
     return opened(view);
   }
 
-  test('shows problems of word cursor ends', async () => {
-    const view = open([PROBLEM]);
+  test('shows diagnostics of word cursor ends', async () => {
+    const view = open([DIAGNOSTIC]);
 
-    const tooltip = await show(view, PROBLEM.to);
+    const tooltip = await show(view, DIAGNOSTIC.to);
 
     expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
   });
 
   test('stays open on pointer move', async () => {
-    const view = open([PROBLEM]);
-    await show(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC]);
+    await show(view, DIAGNOSTIC.from + 1);
 
     point(view, DOC.indexOf('channel'));
     await rest();
@@ -288,8 +321,8 @@ describe('SHOW_HOVER', () => {
   });
 
   test('closes on cursor move', async () => {
-    const view = open([PROBLEM]);
-    await show(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC]);
+    await show(view, DIAGNOSTIC.from + 1);
 
     view.dispatch({ selection: { anchor: DOC.indexOf('channel') } });
 
@@ -297,8 +330,8 @@ describe('SHOW_HOVER', () => {
   });
 
   test('closes on typing', async () => {
-    const view = open([PROBLEM]);
-    await show(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC]);
+    await show(view, DIAGNOSTIC.from + 1);
 
     view.dispatch({ changes: { from: 0, insert: ' ' }, userEvent: 'input.type' });
 
@@ -306,17 +339,17 @@ describe('SHOW_HOVER', () => {
   });
 
   test('closes on Escape', async () => {
-    const view = open([PROBLEM]);
-    await show(view, PROBLEM.from + 1);
+    const view = open([DIAGNOSTIC]);
+    await show(view, DIAGNOSTIC.from + 1);
 
     expect(runScopeHandlers(view, new KeyboardEvent('keydown', { key: 'Escape' }), 'editor')).toBe(true);
     expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
   });
 
-  test('shows nothing without problems', async () => {
+  test('shows nothing without diagnostics', async () => {
     const view = open([]);
 
-    view.dispatch({ selection: { anchor: PROBLEM.from + 1 } });
+    view.dispatch({ selection: { anchor: DIAGNOSTIC.from + 1 } });
     view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view);
     await new Promise((resolve) => setTimeout(resolve, 50));
 

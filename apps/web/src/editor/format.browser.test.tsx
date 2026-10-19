@@ -94,7 +94,7 @@ describe('FORMAT', () => {
     expect(view.state.doc.toString()).toBe(DOC);
   });
 
-  test('says when formatting failed', async () => {
+  test('reports failed formatting', async () => {
     const add = vi.spyOn(toast, 'add');
     const view = open([{ format: () => Promise.reject(new Error('No formatter')) }]);
 

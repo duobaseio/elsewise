@@ -1,6 +1,6 @@
 import type { Completion } from '@codemirror/autocomplete';
 import type { LanguageDescription } from '@codemirror/language';
-import type { Diagnostic } from '@codemirror/lint';
+import type { Action, Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Tag } from '@lezer/highlight';
@@ -14,7 +14,7 @@ import type { LanguageServer } from './lsp.ts';
  * See {@link EditorHoverSource}.
  */
 export const DEFAULT_HOVER_SECTIONS = {
-  problems: 10,
+  diagnostics: 10,
   documentation: 20,
 } as const;
 
@@ -24,6 +24,15 @@ export const DEFAULT_HOVER_SECTIONS = {
  * See {@link EditorFormatter}.
  */
 export const DEFAULT_FORMATTERS = {
+  lsp: 20,
+} as const;
+
+/**
+ * The orders of the built-in action sources, shown lowest first.
+ *
+ * See {@link EditorActionSource}.
+ */
+export const DEFAULT_ACTION_SOURCES = {
   lsp: 20,
 } as const;
 
@@ -155,9 +164,10 @@ export type EditorCompletionIcon = { letters: string; tag?: Tag } | { svg: strin
  *
  * It should not perform expensive/high latency operations as the hover only opens once every source has completed.
  *
+ * To add `EditorHoverSource`s:
  * ```ts
  * const BLAME: EditorHoverSource = { source: blame }; // Last.
- * const SUMMARY: EditorHoverSource = { source: summarize, order: 15 }; // Between the problems and the documentation.
+ * const SUMMARY: EditorHoverSource = { source: summarize, order: 15 }; // Between diagnostics and documentation.
  *
  * editor.addExtensions([
  *   // In every document.
@@ -227,6 +237,89 @@ export interface EditorFormatter {
 }
 
 /**
+ * A source of context actions, added as the `actions` language data.
+ *
+ * Linters can also produce actions via {@link EditorDiagnostic.actions}. The actions are shown in groups. Within each
+ * group, the diagnostic actions are first, then the actions from `EditorActionSource`s, ordered by
+ * `EditorActionSource.order`, lowest first.
+ * ```
+ * ┌──────────────────────────────┐
+ * │ Add import from "./util"     │  preferred fixes
+ * ├──────────────────────────────┤
+ * │ Remove unused `total`        │  fixes
+ * │ Declare function `shout`     │
+ * ├──────────────────────────────┤
+ * │ Sort imports                 │  other actions
+ * │ Organize imports             │
+ * │ Explain `Cannot find shout`  │
+ * └──────────────────────────────┘
+ * ```
+ *
+ * To add `EditorActionSource`s:
+ * ```ts
+ * const EXPLAIN: EditorActionSource = {
+ *   actions: async (view, from, to, diagnostics) =>
+ *     diagnostics.map((diagnostic) => ({
+ *       label: `Explain \`${diagnostic.message}\``,
+ *       apply: () => explain(diagnostic),
+ *     })),
+ * }; // Last.
+ * const IMPORTS: EditorActionSource = { order: 10, actions: imports }; // Before the language server.
+ *
+ * editor.addExtensions([
+ *   // In every document.
+ *   EditorState.languageData.of(() => [{ actions: EXPLAIN }]),
+ *
+ *   // In TypeScript documents only.
+ *   ({ language }) => (language?.name === 'TypeScript' ? language.support.language.data.of({ actions: IMPORTS }) : []),
+ * ]);
+ * ```
+ */
+export interface EditorActionSource {
+  /**
+   * The order the source's actions are shown in, lowest first, within each group.
+   *
+   * Sources without an order are shown last. Those with the same order are shown by source: plugins, then the
+   * language, then the language server.
+   *
+   * See {@link DEFAULT_ACTION_SOURCES}.
+   */
+  readonly order?: number;
+
+  /**
+   * Returns the actions.
+   */
+  actions(
+    view: EditorView,
+    from: number,
+    to: number,
+    diagnostics: readonly EditorDiagnostic[],
+  ): Promise<readonly EditorAction[]>;
+}
+
+/**
+ * An action on the code, such as a fix for a diagnostic.
+ */
+export interface EditorAction {
+  /**
+   * Whether it fixes a diagnostic, and is preferred over the other fixes. Defaults to neither.
+   *
+   * See {@link EditorActionSource} for how the actions are shown.
+   */
+  readonly type?: 'preferredFix' | 'fix';
+
+  /**
+   * The label shown, with the parts quoted in backticks as code.
+   */
+  readonly label: string;
+
+  /**
+   * Applies the action. The editor shows the error if it throws.
+   */
+  apply(view: EditorView): void | Promise<void>;
+}
+
+/**
  * A diagnostic with what the editor shows beyond CodeMirror's {@link Diagnostic}.
  *
  * To add diagnostics:
@@ -268,4 +361,21 @@ export interface EditorDiagnostic extends Diagnostic {
    * The URL of a description of the code, which the code links to. Only `http` and `https` URLs are linked.
    */
   codeHref?: string;
+
+  /**
+   * The actions shown with the context actions, and in the hover.
+   */
+  actions?: readonly EditorDiagnosticAction[];
+}
+
+/**
+ * An action on a diagnostic, such as a fix for it.
+ */
+export interface EditorDiagnosticAction extends Action {
+  /**
+   * Whether it fixes the diagnostic, and is preferred over the other fixes. Defaults to neither.
+   *
+   * See {@link EditorActionSource} for how the actions are shown.
+   */
+  readonly type?: 'preferredFix' | 'fix';
 }

@@ -9,7 +9,7 @@ import { expect } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
-import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
+import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { builtInCommands } from './commands';
 
@@ -34,7 +34,7 @@ export async function mount(
       view.current = new EditorView({
         state: EditorState.create({
           doc: DOC,
-          extensions: [history(), foldGutter(), rightClickContextMenu, rust, extensions],
+          extensions: [history(), foldGutter(), RIGHT_CLICK_CONTEXT_MENU, rust, extensions],
         }),
         parent: host.current as HTMLDivElement,
       });

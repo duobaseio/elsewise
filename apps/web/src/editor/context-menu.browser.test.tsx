@@ -69,13 +69,13 @@ describe('EditorContextMenu', () => {
 
     dispose();
     await open(view, 0);
-    expect(labels()).toEqual(['Item', '-', 'Paste']);
+    expect(labels()).toEqual(['Item', '-', 'Show context actions', '-', 'Paste']);
     expect(menuitem('More').query()).toBeNull();
     expect(menuitem('Other').query()).toBeNull();
   });
 });
 
-describe('rightClickContextMenu', () => {
+describe('RIGHT_CLICK_CONTEXT_MENU', () => {
   test('moves caret to right-click outside selection, and keeps it inside', async () => {
     const [editor, commands] = setUp([command('Item')]);
     editor.addContextMenu(menu({ groups: { a: group() }, items: { a: [item('Item')] } }));

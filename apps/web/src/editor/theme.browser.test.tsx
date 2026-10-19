@@ -115,7 +115,7 @@ test("deprecated code is struck through at font's strikeout position", async () 
   expect(mark.textDecorationLine).toBe('none');
 });
 
-test('unnecessary code is faded without underline, unless plain problem shares it', async () => {
+test('unnecessary code is faded without underline, unless plain diagnostic shares it', async () => {
   const view = await mount('let a = 1', []);
   const unused = {
     from: 4,
@@ -169,7 +169,7 @@ test('hovered row of completions, usages and actions takes hover color, unless s
   const popup = document.createElement('div');
   popup.innerHTML =
     '<ul><li class="cm-lsp-reference" aria-selected="true">a</li><li class="cm-lsp-reference">b</li></ul>' +
-    '<ul><li class="cm-lsp-action" aria-selected="true">a</li><li class="cm-lsp-action">b</li></ul>';
+    '<ul><li class="cm-action" aria-selected="true">a</li><li class="cm-action">b</li></ul>';
   const view = await mount('', [
     autocompletion({ override: [() => ({ from: 0, options })] }),
     showTooltip.of({ pos: 0, create: () => ({ dom: popup }) }),
@@ -184,7 +184,7 @@ test('hovered row of completions, usages and actions takes hover color, unless s
   for (const [selected, other] of [
     completions,
     [...popup.querySelectorAll('.cm-lsp-reference')],
-    [...popup.querySelectorAll('.cm-lsp-action')],
+    [...popup.querySelectorAll('.cm-action')],
   ]) {
     await userEvent.hover(other);
     await vi.waitFor(() => expect(style(other).backgroundColor).toBe(rgb(EDITOR.completionHovered)));
@@ -273,11 +273,10 @@ test('usages are listed like completions, each in search match color', async () 
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
 });
 
-test("problem's fixes are links underlined only on hover", async () => {
+test("diagnostic's fixes are links underlined only on hover", async () => {
   const tooltip = document.createElement('div');
   tooltip.className = 'cm-tooltip-hover';
-  tooltip.innerHTML =
-    '<div class="cm-lsp-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
+  tooltip.innerHTML = '<div class="cm-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
   await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: tooltip }) })]);
   const button = tooltip.querySelector('button') as HTMLElement;
   const color = (name: string) => rgb(getComputedStyle(document.documentElement).getPropertyValue(name).trim());

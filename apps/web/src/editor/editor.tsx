@@ -19,8 +19,9 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
+import { actions } from '@/editor/actions';
 import { completion } from '@/editor/completion';
-import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
+import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
@@ -119,6 +120,7 @@ export function Editor({ path, code, root }: EditorProps) {
         LANGUAGE_SERVER.of(languageServer),
         completion(),
         hover(),
+        actions(),
         format,
         closeBrackets(),
         bracketMatching(),
@@ -143,7 +145,7 @@ export function Editor({ path, code, root }: EditorProps) {
         highlightActiveLineGutter(),
         highlightSelectionMatches(),
         highlightSpecialChars(),
-        rightClickContextMenu,
+        RIGHT_CLICK_CONTEXT_MENU,
         link(),
 
         // Escape is not a command to keep it from taking precedence over the popups' own Escape.

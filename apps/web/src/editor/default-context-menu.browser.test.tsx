@@ -2,6 +2,7 @@ import { EditorSelection, EditorState, type Extension } from '@codemirror/state'
 import type { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
+import { actions } from '@/editor/actions';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
@@ -13,7 +14,7 @@ import { StubTransport } from '../../test/stub-transport';
 function mountBuiltIn(extensions: Extension = []): Promise<EditorView> {
   const editor = new EditorManager();
   const commands = builtInCommands(editor);
-  return mount(editor, commands, [commandsExtension(commands), extensions]);
+  return mount(editor, commands, [commandsExtension(commands), actions(), extensions]);
 }
 
 // Returns the extension that connects the editor to a server with `capabilities` that answers with `answers`.
@@ -93,7 +94,7 @@ describe('DEFAULT_CONTEXT_MENU', () => {
     expect(labels()[0]).toBe('Show context actions');
     await userEvent.click(menuitem('Show context actions'));
 
-    await expect.poll(() => view.dom.querySelector('.cm-lsp-action')?.textContent).toBe('Organize imports');
+    await expect.poll(() => view.dom.querySelector('.cm-action')?.textContent).toBe('Organize imports');
   });
 
   test('disables context actions in read-only document', async () => {

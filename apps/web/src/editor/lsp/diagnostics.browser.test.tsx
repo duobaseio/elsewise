@@ -1,5 +1,5 @@
-import { forEachDiagnostic } from '@codemirror/lint';
-import { EditorState } from '@codemirror/state';
+import { forEachDiagnostic, type Diagnostic as LintDiagnostic, linter } from '@codemirror/lint';
+import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { EditorDiagnostic, LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -59,10 +59,15 @@ function server(start: LanguageServer['start']): LanguageServer {
 
 const views: EditorView[] = [];
 
-// Opens `uri` on `instance` in a new editor, with `doc` in it.
-function open(instance: LanguageServerInstance, uri = URI, doc = 'let bad = 1'): EditorView {
+// Opens `uri` on `instance` in a new editor, with `doc` and `extensions` in it.
+function open(
+  instance: LanguageServerInstance,
+  uri = URI,
+  doc = 'let bad = 1',
+  extensions: Extension = [],
+): EditorView {
   const view = new EditorView({
-    state: EditorState.create({ doc, extensions: instance.client.plugin(uri, 'toy') }),
+    state: EditorState.create({ doc, extensions: [instance.client.plugin(uri, 'toy'), extensions] }),
     parent: document.body,
   });
   views.push(view);
@@ -187,7 +192,7 @@ describe('serverDiagnostics', () => {
     });
   });
 
-  test('underlines word at point problem, else adjacent character', async () => {
+  test('underlines word at point diagnostic, else adjacent character', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -213,7 +218,7 @@ describe('serverDiagnostics', () => {
     });
   });
 
-  test('underlines last character before problem on empty line', async () => {
+  test('underlines last character before diagnostic on empty line', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -378,6 +383,90 @@ describe('serverDiagnostics', () => {
     const [[item, from, to]] = served(view);
     expect([from, to]).toEqual([6, 9]);
     expect(item?.range).toEqual({ start: { line: 0, character: 4 }, end: { line: 0, character: 7 } });
+  });
+});
+
+describe('serverDiagnostics with linter', () => {
+  // The plugin linter's diagnostic, on `let`.
+  const LINTED: LintDiagnostic = { from: 0, to: 3, severity: 'info', message: 'plugin' };
+
+  // The server's diagnostic on `bad`, pushed as `message`.
+  const item = (message: string) => ({
+    range: { start: { line: 0, character: 4 }, end: { line: 0, character: 7 } },
+    severity: 2,
+    message,
+  });
+
+  // Opens the file on a server that pushes diagnostics, beside a plugin linter that finds `linted`.
+  async function start(linted: { current: LintDiagnostic[] }) {
+    const fake = transport(false);
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    const view = open(
+      instance,
+      URI,
+      'let bad = 1',
+      linter(() => linted.current, { delay: 10 }),
+    );
+    await instance.start();
+    await instance.client.initializing;
+    return { fake, view };
+  }
+
+  // Returns the messages of the diagnostics shown in `view`.
+  const messages = (view: EditorView) => {
+    const result: string[] = [];
+    forEachDiagnostic(view.state, (diagnostic) => result.push(diagnostic.message));
+    return result;
+  };
+
+  test('keeps linter diagnostics on server report', async () => {
+    const { fake, view } = await start({ current: [LINTED] });
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
+
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'server']));
+  });
+
+  test('keeps server diagnostics on linter rerun', async () => {
+    const linted = { current: [] as LintDiagnostic[] };
+    const { fake, view } = await start(linted);
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
+    await vi.waitFor(() => expect(messages(view)).toEqual(['server']));
+
+    linted.current = [{ ...LINTED, from: 1, to: 4 }];
+    view.dispatch({ changes: { from: 0, insert: ' ' } });
+
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'server']));
+    expect(shown(view)).toEqual([
+      [1, 4, 'info'],
+      [5, 8, 'warning'],
+    ]);
+  });
+
+  test('replaces only server diagnostics on report', async () => {
+    const { fake, view } = await start({ current: [LINTED] });
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('first')] });
+    await vi.waitFor(() => expect(messages(view)).toContain('first'));
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('second')] });
+
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'second']));
+  });
+
+  test('clears only server diagnostics on empty report', async () => {
+    const { fake, view } = await start({ current: [LINTED] });
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
+    await vi.waitFor(() => expect(messages(view)).toContain('server'));
+
+    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [] });
+
+    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
   });
 });
 

@@ -68,9 +68,11 @@ export const DEFAULT_COMMANDS = {
     hover: {
       show: 'elsewise.editor.hover.show',
     },
+    actions: {
+      show: 'elsewise.editor.actions.show',
+      applyTopFix: 'elsewise.editor.actions.applyTopFix',
+    },
     lsp: {
-      applyTopFix: 'elsewise.editor.lsp.applyTopFix',
-      showContextActions: 'elsewise.editor.lsp.showContextActions',
       goToDefinition: 'elsewise.editor.lsp.goToDefinition',
       findUsages: 'elsewise.editor.lsp.findUsages',
       rename: 'elsewise.editor.lsp.rename',
@@ -147,9 +149,11 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     hover: {
       show: [{ windows: 'Ctrl-q', mac: 'F1' }, { mac: 'Ctrl-j' }], // Ctrl-q quits application on Linux.
     },
-    lsp: {
+    actions: {
+      show: ['Alt-Enter'],
       applyTopFix: ['Shift-Alt-Enter'],
-      showContextActions: ['Alt-Enter'],
+    },
+    lsp: {
       goToDefinition: ['Mod-b'],
       findUsages: ['Mod-Alt-F7'],
       rename: ['Shift-F6'],

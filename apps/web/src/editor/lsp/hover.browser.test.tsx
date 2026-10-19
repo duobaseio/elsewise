@@ -11,9 +11,9 @@ import { formatKey } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
+import { APPLY_TOP_FIX, actions, SHOW_ACTIONS } from '@/editor/actions';
 import { COMMANDS } from '@/editor/editor-manager';
 import { hover as editorHover, SHOW_HOVER } from '@/editor/hover';
-import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
@@ -45,8 +45,8 @@ function transport(
   );
 }
 
-// The problem with `attach`, and a fix for it.
-const PROBLEM: Diagnostic = {
+// The diagnostic with `attach`, and a fix for it.
+const DIAGNOSTIC: Diagnostic = {
   range: { start: { line: 0, character: 14 }, end: { line: 0, character: 20 } },
   severity: 1,
   message: 'cannot find `attach`',
@@ -54,11 +54,11 @@ const PROBLEM: Diagnostic = {
 const FIX = {
   title: 'Rename to `connect`',
   kind: 'quickfix',
-  edit: { changes: { [URI]: [{ range: PROBLEM.range, newText: 'connect' }] } },
+  edit: { changes: { [URI]: [{ range: DIAGNOSTIC.range, newText: 'connect' }] } },
 };
 
-// Points at `attach` and returns the hover once it shows a problem, with what it showed when it first appeared.
-async function hoverProblem(view: EditorView): Promise<{ tooltip: HTMLElement; first: Element | null }> {
+// Points at `attach` and returns the hover once it shows a diagnostic, with what it showed when it first appeared.
+async function hoverDiagnostic(view: EditorView): Promise<{ tooltip: HTMLElement; first: Element | null }> {
   await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
   let first: Element | null = null;
   const observer = new MutationObserver(() => {
@@ -107,6 +107,7 @@ async function open(
       extensions: [
         instance.client.plugin(URI, 'rust'),
         editorHover(),
+        actions(),
         commandsExtension(commands),
         rust,
         syntaxHighlighting(defaultHighlightStyle),
@@ -251,7 +252,7 @@ describe('serverHover', () => {
     expect(fake.methods).not.toContain('textDocument/hover');
   });
 
-  test('shows problems at pointer above documentation', async () => {
+  test('shows diagnostics at pointer above documentation', async () => {
     const from = DOC.indexOf('attach');
     const range = { start: { line: 0, character: from }, end: { line: 0, character: from + 6 } };
     const view = await open(
@@ -267,8 +268,8 @@ describe('serverHover', () => {
     expect(second.querySelector('.cm-lsp-definition')).not.toBeNull();
   });
 
-  test('shows problem with documentation, pointer just before it', async () => {
-    const view = await open(transport(markdown('```rust\nfn attach()\n```'), [PROBLEM]));
+  test('shows diagnostic with documentation, pointer just before it', async () => {
+    const view = await open(transport(markdown('```rust\nfn attach()\n```'), [DIAGNOSTIC]));
     await vi.waitFor(() => expect(view.contentDOM.querySelector('.cm-lintRange-error')).not.toBeNull());
 
     point(view, DOC.indexOf('attach'), {}, -1);
@@ -286,29 +287,29 @@ describe('serverHover', () => {
     expect(second?.querySelector('.cm-lsp-definition')).not.toBeNull();
   });
 
-  test('shows problems with fixes and documentation at once', async () => {
+  test('shows diagnostics with fixes and documentation at once', async () => {
     const view = await open(
       transport(
         markdown('Attaches.'),
-        [PROBLEM],
+        [DIAGNOSTIC],
         () => new Promise((resolve) => setTimeout(() => resolve([FIX]), 100)),
       ),
     );
 
-    const { first } = await hoverProblem(view);
+    const { first } = await hoverDiagnostic(view);
 
     expect(first?.querySelectorAll('.cm-tooltip-section')).toHaveLength(2);
-    expect(first?.querySelector('.cm-lsp-actions-hover')?.textContent).toContain('Rename to connect');
+    expect(first?.querySelector('.cm-actions-hover')?.textContent).toContain('Rename to connect');
   });
 
   test('names top fix and rest, applies on click', async () => {
     const view = await open(
-      transport(null, [PROBLEM], () => [{ title: 'Organize imports', kind: 'source.organizeImports' }, FIX]),
+      transport(null, [DIAGNOSTIC], () => [{ title: 'Organize imports', kind: 'source.organizeImports' }, FIX]),
     );
 
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
 
-    const line = tooltip.querySelector('.cm-lsp-actions-hover') as HTMLElement;
+    const line = tooltip.querySelector('.cm-actions-hover') as HTMLElement;
     expect([...line.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
       'Rename to connect',
       'More actions',
@@ -320,56 +321,56 @@ describe('serverHover', () => {
 
   test("hints commands' keys", async () => {
     const commands = builtInCommands();
-    commands.selected = { name: 'Test', keys: { [APPLY_TOP_FIX.id]: ['Mod-k'], [SHOW_CONTEXT_ACTIONS.id]: [] } };
+    commands.selected = { name: 'Test', keys: { [APPLY_TOP_FIX.id]: ['Mod-k'], [SHOW_ACTIONS.id]: [] } };
     const view = await open(
-      transport(null, [PROBLEM], () => [FIX]),
+      transport(null, [DIAGNOSTIC], () => [FIX]),
       [],
       commands,
     );
 
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
 
-    const line = tooltip.querySelector('.cm-lsp-actions-hover') as HTMLElement;
+    const line = tooltip.querySelector('.cm-actions-hover') as HTMLElement;
     expect([...line.querySelectorAll('kbd')].map((key) => key.textContent)).toEqual([formatKey('Mod-k')]);
     expect(line.textContent).toBe(`Rename to connect ${formatKey('Mod-k')} · More actions`);
   });
 
-  test('shows actions at problem on More actions', async () => {
-    const view = await open(transport(null, [PROBLEM], () => [FIX]));
+  test('shows actions at diagnostic on More actions', async () => {
+    const view = await open(transport(null, [DIAGNOSTIC], () => [FIX]));
 
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
     [...tooltip.querySelectorAll('button')].find((button) => button.textContent === 'More actions')?.click();
 
-    await vi.waitFor(() => expect(view.dom.querySelector('.cm-lsp-action')?.textContent).toBe('Rename to connect'));
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-action')?.textContent).toBe('Rename to connect'));
     expect(view.state.selection.main.head).toBe(DOC.indexOf('attach'));
   });
 
   test('omits fix line when server has none', async () => {
-    const view = await open(transport(null, [PROBLEM]));
+    const view = await open(transport(null, [DIAGNOSTIC]));
 
-    const { tooltip } = await hoverProblem(view);
-
-    expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
-    expect(tooltip.querySelector('.cm-lsp-actions-hover')).toBeNull();
-  });
-
-  test('shows problem without fixes when server stalls', async () => {
-    const view = await open(transport(null, [PROBLEM], () => new Promise(() => {})));
-
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
 
     expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
-    expect(tooltip.querySelector('.cm-lsp-actions-hover')).toBeNull();
+    expect(tooltip.querySelector('.cm-actions-hover')).toBeNull();
   });
 
-  test("renders problem's markdown message", async () => {
+  test('shows diagnostic without fixes when server stalls', async () => {
+    const view = await open(transport(null, [DIAGNOSTIC], () => new Promise(() => {})));
+
+    const { tooltip } = await hoverDiagnostic(view);
+
+    expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
+    expect(tooltip.querySelector('.cm-actions-hover')).toBeNull();
+  });
+
+  test("renders diagnostic's markdown message", async () => {
     const view = await open(
       transport(null, [
-        { ...PROBLEM, message: { kind: 'markdown', value: 'use `send`, see [docs](https://example.com)' } },
+        { ...DIAGNOSTIC, message: { kind: 'markdown', value: 'use `send`, see [docs](https://example.com)' } },
       ]),
     );
 
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
 
     expect(tooltip.querySelector('.cm-diagnosticMessage code')?.textContent).toBe('send');
     expect(tooltip.querySelector('.cm-diagnosticMessage a')?.getAttribute('href')).toBe('https://example.com');
@@ -377,10 +378,10 @@ describe('serverHover', () => {
 
   test('renders backticks in plain message as code, rest verbatim', async () => {
     const view = await open(
-      transport(null, [{ ...PROBLEM, message: 'expected `*const T`, found <b>_x_</b> and an odd `' }]),
+      transport(null, [{ ...DIAGNOSTIC, message: 'expected `*const T`, found <b>_x_</b> and an odd `' }]),
     );
 
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
 
     const message = tooltip.querySelector('.cm-diagnosticMessage');
     expect([...(message?.querySelectorAll('code') ?? [])].map((code) => code.textContent)).toEqual(['*const T']);
@@ -388,26 +389,26 @@ describe('serverHover', () => {
     expect(message?.textContent).toBe('expected *const T, found <b>_x_</b> and an odd `');
   });
 
-  test("shows problem's source and code, linking code to description", async () => {
+  test("shows diagnostic's source and code, linking code to description", async () => {
     const view = await open(
       transport(null, [
         {
-          ...PROBLEM,
+          ...DIAGNOSTIC,
           message: 'linked',
           source: 'rustc',
           code: 'E0425',
           codeDescription: { href: 'https://example.com/E0425' },
         },
-        { ...PROBLEM, message: 'code', code: 2322 },
-        { ...PROBLEM, message: 'unsafe', code: 'x', codeDescription: { href: 'javascript:alert(1)' } },
-        { ...PROBLEM, message: 'bare' },
+        { ...DIAGNOSTIC, message: 'code', code: 2322 },
+        { ...DIAGNOSTIC, message: 'unsafe', code: 'x', codeDescription: { href: 'javascript:alert(1)' } },
+        { ...DIAGNOSTIC, message: 'bare' },
       ]),
     );
 
-    const { tooltip } = await hoverProblem(view);
+    const { tooltip } = await hoverDiagnostic(view);
 
-    const metas = [...tooltip.querySelectorAll('.cm-diagnostic')].map((problem) =>
-      problem.querySelector('.cm-diagnosticMeta'),
+    const metas = [...tooltip.querySelectorAll('.cm-diagnostic')].map((diagnostic) =>
+      diagnostic.querySelector('.cm-diagnosticMeta'),
     );
     expect(metas.map((meta) => meta?.textContent)).toEqual(['rustc · E0425', '2322', 'x', undefined]);
     expect(metas[0]?.querySelector('a')?.getAttribute('href')).toBe('https://example.com/E0425');
@@ -480,7 +481,7 @@ describe('serverHover', () => {
       expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
     });
 
-    test("doesn't show problems either", async () => {
+    test("doesn't show diagnostics either", async () => {
       const from = DOC.indexOf('attach');
       const range = { start: { line: 0, character: from }, end: { line: 0, character: from + 6 } };
       const view = await open(transport(null, [{ range, severity: 1, message: 'cannot find `attach`' }]));
@@ -514,7 +515,7 @@ describe('serverHover', () => {
       await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull(), { timeout: 2000 });
     });
 
-    test('shows problems', async () => {
+    test('shows diagnostics', async () => {
       const from = DOC.indexOf('attach');
       const range = { start: { line: 0, character: from }, end: { line: 0, character: from + 6 } };
       const view = await open(
