@@ -13,12 +13,50 @@ import type {
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { ApplicationKeymap } from '@/command/application-keymap';
 import { ELSEWISE } from '@/command/keymap';
-import { CARET, EDIT, FOLD, HISTORY, SEARCH } from '@/editor/default-commands';
+import { APPLY_TOP_FIX, SHOW_ACTIONS } from '@/editor/actions';
+import {
+  ADD_CARET_ABOVE,
+  ADD_CARET_BELOW,
+  AUTO_INDENT,
+  DELETE_LINE,
+  DUPLICATE_LINE,
+  DUPLICATE_LINE_UP,
+  EXTEND_SELECTION,
+  FIND,
+  FIND_NEXT,
+  FIND_PREVIOUS,
+  FOLD,
+  FOLD_ALL,
+  GO_TO_LINE,
+  INDENT,
+  MOVE_LINE_DOWN,
+  MOVE_LINE_UP,
+  MOVE_TO_MATCHING_BRACKET,
+  REDO,
+  REDO_SELECTION,
+  REPLACE,
+  SELECT_ALL_OCCURRENCES,
+  SELECT_LINE,
+  SELECT_NEXT_OCCURRENCE,
+  SELECT_SYNTAX_LEFT,
+  SELECT_SYNTAX_RIGHT,
+  START_NEW_LINE,
+  SYNTAX_LEFT,
+  SYNTAX_RIGHT,
+  TOGGLE_BLOCK_COMMENT,
+  TOGGLE_LINE_COMMENT,
+  TOGGLE_TAB_FOCUS_MODE,
+  UNDO,
+  UNDO_SELECTION,
+  UNFOLD,
+  UNFOLD_ALL,
+  UNINDENT,
+} from '@/editor/codemirror-commands';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
-import { APPLY_TOP_FIX, SHOW_CONTEXT_ACTIONS } from '@/editor/lsp/actions';
+import { NEXT_DIAGNOSTIC, PREVIOUS_DIAGNOSTIC } from '@/editor/diagnostics';
+import { FORMAT } from '@/editor/format';
+import { SHOW_HOVER } from '@/editor/hover';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
-import { FORMAT } from '@/editor/lsp/format';
-import { SHOW_HOVER } from '@/editor/lsp/hover';
 import { FIND_USAGES } from '@/editor/lsp/references';
 import { RENAME } from '@/editor/lsp/rename';
 import { SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
@@ -32,19 +70,52 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   COPY,
   PASTE,
   // Editor
-  ...HISTORY,
-  ...SEARCH,
-  ...FOLD,
-  ...EDIT,
-  ...CARET,
-  // LSP
-  APPLY_TOP_FIX,
-  SHOW_CONTEXT_ACTIONS,
-  GO_TO_DEFINITION,
+  UNDO,
+  REDO,
+  UNDO_SELECTION,
+  REDO_SELECTION,
+  FIND,
+  REPLACE,
+  FIND_NEXT,
+  FIND_PREVIOUS,
+  SELECT_NEXT_OCCURRENCE,
+  SELECT_ALL_OCCURRENCES,
+  GO_TO_LINE,
+  FOLD,
+  UNFOLD,
+  FOLD_ALL,
+  UNFOLD_ALL,
+  INDENT,
+  UNINDENT,
+  AUTO_INDENT,
+  TOGGLE_LINE_COMMENT,
+  TOGGLE_BLOCK_COMMENT,
+  DUPLICATE_LINE,
+  DUPLICATE_LINE_UP,
+  DELETE_LINE,
+  MOVE_LINE_UP,
+  MOVE_LINE_DOWN,
+  START_NEW_LINE,
+  TOGGLE_TAB_FOCUS_MODE,
   FORMAT,
+  ADD_CARET_ABOVE,
+  ADD_CARET_BELOW,
+  SELECT_LINE,
+  EXTEND_SELECTION,
+  MOVE_TO_MATCHING_BRACKET,
+  SYNTAX_LEFT,
+  SYNTAX_RIGHT,
+  SELECT_SYNTAX_LEFT,
+  SELECT_SYNTAX_RIGHT,
+  SHOW_HOVER,
+  SHOW_ACTIONS,
+  APPLY_TOP_FIX,
+  NEXT_DIAGNOSTIC,
+  PREVIOUS_DIAGNOSTIC,
+  // LSP
+  GO_TO_DEFINITION,
   FIND_USAGES,
   RENAME,
-  SHOW_HOVER,
   SHOW_SIGNATURE_HELP,
 ];
 
@@ -168,7 +239,9 @@ export class CommandManager implements Commands {
 
   subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   private notify() {

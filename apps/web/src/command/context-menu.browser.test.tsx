@@ -49,7 +49,7 @@ describe('CommandContextMenu', () => {
     const commands = setUp(['Top', 'First', 'Second', 'Apple', 'Zebra', 'Last'].map((id) => command(id)));
     await mount(
       menu({
-        groups: { c: group(30), b: group(30), top: group() },
+        groups: { c: group(30), b: group(30), top: group(0) },
         items: {
           c: [item('Last')],
           b: [item('Second', 20), item('First', 10), item('Zebra', 30), item('Apple', 30)],
@@ -61,6 +61,20 @@ describe('CommandContextMenu', () => {
 
     await open();
     expect(labels()).toEqual(['Top', '-', 'First', 'Second', 'Apple', 'Zebra', '-', 'Last']);
+  });
+
+  test('shows groups and items without order last', async () => {
+    const commands = setUp(['First', 'Apple', 'Zebra', 'Last'].map((id) => command(id)));
+    await mount(
+      menu({
+        groups: { a: group(), b: group(30) },
+        items: { a: [item('Last')], b: [item('Zebra'), item('Apple'), item('First', 10)] },
+      }),
+      commands,
+    );
+
+    await open();
+    expect(labels()).toEqual(['First', 'Apple', 'Zebra', '-', 'Last']);
   });
 
   test("shows command's label and first key", async () => {
@@ -145,7 +159,7 @@ describe('CommandContextMenu', () => {
     await mount(
       menu({
         submenus: { more: 'More' },
-        groups: { a: group(), b: group(10), inner: group(0, 'more') },
+        groups: { a: group(0), b: group(10), inner: group(0, 'more') },
         items: {
           a: [item('Item'), item('Other'), item('Item', 5), submenu('more'), submenu('more', 5)],
           b: [item('Item')],

@@ -52,6 +52,7 @@ export const DEFAULT_COMMANDS = {
       moveLineDown: 'elsewise.editor.edit.moveLineDown',
       startNewLine: 'elsewise.editor.edit.startNewLine',
       toggleTabFocusMode: 'elsewise.editor.edit.toggleTabFocusMode',
+      format: 'elsewise.editor.edit.format',
     },
     caret: {
       addCaretAbove: 'elsewise.editor.caret.addCaretAbove',
@@ -64,14 +65,21 @@ export const DEFAULT_COMMANDS = {
       selectSyntaxLeft: 'elsewise.editor.caret.selectSyntaxLeft',
       selectSyntaxRight: 'elsewise.editor.caret.selectSyntaxRight',
     },
+    hover: {
+      show: 'elsewise.editor.hover.show',
+    },
+    actions: {
+      show: 'elsewise.editor.actions.show',
+      applyTopFix: 'elsewise.editor.actions.applyTopFix',
+    },
+    diagnostics: {
+      next: 'elsewise.editor.diagnostics.next',
+      previous: 'elsewise.editor.diagnostics.previous',
+    },
     lsp: {
-      applyTopFix: 'elsewise.editor.lsp.applyTopFix',
-      showContextActions: 'elsewise.editor.lsp.showContextActions',
       goToDefinition: 'elsewise.editor.lsp.goToDefinition',
-      format: 'elsewise.editor.lsp.format',
       findUsages: 'elsewise.editor.lsp.findUsages',
       rename: 'elsewise.editor.lsp.rename',
-      showHover: 'elsewise.editor.lsp.showHover',
       showSignatureHelp: 'elsewise.editor.lsp.showSignatureHelp',
     },
   },
@@ -129,6 +137,7 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       moveLineDown: ['Shift-Alt-ArrowDown'],
       startNewLine: ['Shift-Enter'],
       toggleTabFocusMode: [{ key: 'Ctrl-m', mac: 'Shift-Alt-m' }],
+      format: ['Mod-Alt-l'],
     },
     caret: {
       addCaretAbove: ['Mod-Alt-ArrowUp'],
@@ -141,14 +150,21 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       selectSyntaxLeft: [{ key: 'Shift-Alt-ArrowLeft', mac: 'Shift-Ctrl-ArrowLeft' }],
       selectSyntaxRight: [{ key: 'Shift-Alt-ArrowRight', mac: 'Shift-Ctrl-ArrowRight' }],
     },
-    lsp: {
+    hover: {
+      show: [{ windows: 'Ctrl-q', mac: 'F1' }, { mac: 'Ctrl-j' }], // Ctrl-q quits application on Linux.
+    },
+    actions: {
+      show: ['Alt-Enter'],
       applyTopFix: ['Shift-Alt-Enter'],
-      showContextActions: ['Alt-Enter'],
+    },
+    diagnostics: {
+      next: ['F2'],
+      previous: ['Shift-F2'],
+    },
+    lsp: {
       goToDefinition: ['Mod-b'],
-      format: ['Mod-Alt-l'],
       findUsages: ['Mod-Alt-F7'],
       rename: ['Shift-F6'],
-      showHover: [{ windows: 'Ctrl-q', mac: 'F1' }, { mac: 'Ctrl-j' }], // Ctrl-q quits application on Linux.
       showSignatureHelp: ['Mod-p'],
     },
   },
@@ -164,13 +180,6 @@ export interface Commands {
    * The active keymap.
    */
   readonly keymap: ActiveKeymap;
-
-  /**
-   * Registers a `listener` that is called with the new keymap when it changes.
-   *
-   * Returns a disposable that unregisters the `listener`.
-   */
-  onKeymapChange(listener: (keymap: ActiveKeymap) => void): Disposable;
 
   /**
    * Adds `commands`.

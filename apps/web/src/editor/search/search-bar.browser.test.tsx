@@ -4,11 +4,12 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { useEffect, useRef } from 'react';
-import { afterEach, expect, test } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
 import { useSearchExtension } from '@/editor/search/search-bar';
+import { stripe } from '@/editor/stripe/stripe';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
@@ -97,6 +98,17 @@ test('live search, Enter walks matches', async () => {
   await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
   await expect.element(count()).toHaveTextContent('2/4');
   expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
+});
+
+test('marks matches on stripe while open', async () => {
+  const view = await mount([stripe()]);
+  openSearchPanel(view);
+  await userEvent.fill(find(), 'let');
+
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-searchMatch')).toHaveLength(4));
+
+  await userEvent.keyboard('{Escape}');
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-searchMatch')).toHaveLength(0));
 });
 
 test('typing selects first match from cursor on', async () => {

@@ -155,6 +155,61 @@ describe('connect', () => {
     });
   });
 
+  test('tells server it can ask to refresh diagnostics', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake)]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({
+      method: 'initialize',
+      params: { capabilities: { workspace: { diagnostics: { refreshSupport: true } } } },
+    });
+  });
+
+  test('tells server it can ask for settings when handled', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake, { requestHandlers: { 'workspace/configuration': () => [] } })]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({
+      method: 'initialize',
+      params: { capabilities: { workspace: { configuration: true } } },
+    });
+  });
+
+  test("doesn't tell server it can ask for settings when unhandled", async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake)]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({ method: 'initialize' });
+    expect(fake.sent[0]).not.toMatchObject({ params: { capabilities: { workspace: { configuration: true } } } });
+  });
+
+  test('calls connect after initialized', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([
+      server(() => fake, {
+        connect: (client) => client.notification('workspace/didChangeConfiguration', { settings: { toy: true } }),
+      }),
+    ]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent).toMatchObject([
+      { method: 'initialize' },
+      { method: 'initialized' },
+      { method: 'workspace/didChangeConfiguration', params: { settings: { toy: true } } },
+    ]);
+  });
+
   test('sends client capabilities of extensions under core', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
@@ -341,7 +396,7 @@ describe('LanguageServerInstance.start', () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
-        handlers: {
+        requestHandlers: {
           'toy/increment': (_, { n }: { n: number }) => n + 1,
           'toy/decrement': async (_, { n }: { n: number }) => n - 1,
           'toy/ignore': () => {},
@@ -360,7 +415,7 @@ describe('LanguageServerInstance.start', () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
-        handlers: {
+        requestHandlers: {
           'toy/throw': () => {
             throw new Error('Thrown');
           },
@@ -378,7 +433,7 @@ describe('LanguageServerInstance.start', () => {
   test('answers requests with request handlers ahead of core', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
-      server(() => fake, { handlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),
+      server(() => fake, { requestHandlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),
       ROOT,
     );
     await instance.start();

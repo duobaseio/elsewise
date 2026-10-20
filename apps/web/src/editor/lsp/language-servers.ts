@@ -1,20 +1,25 @@
-import { LSPClient } from '@codemirror/lsp-client';
-import type { Extension } from '@codemirror/state';
+import { LSPClient, type LSPPlugin } from '@codemirror/lsp-client';
+import { type Extension, Facet } from '@codemirror/state';
+import type { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 import {
   type ApplyWorkspaceEditParams,
+  type Command,
   ErrorCodes,
+  type ExecuteCommandParams,
   MessageType,
   type ShowMessageParams,
 } from 'vscode-languageserver-protocol';
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
+import { serverDefinition } from '@/editor/lsp/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
+import { serverFormat } from '@/editor/lsp/format';
 import { serverHighlights } from '@/editor/lsp/highlights';
 import { serverHover } from '@/editor/lsp/hover';
 import { serverReferences } from '@/editor/lsp/references';
@@ -113,9 +118,15 @@ const MESSAGE_TYPES = new Map([
 /**
  * The responses to the server's requests that lsp-client would refuse, by method.
  */
-const REQUESTS = new Map([
+const REQUESTS = new Map<string, (client: LSPClient, params: never) => unknown>([
   ['workspace/applyEdit', (client: LSPClient, { edit }: ApplyWorkspaceEditParams) => applyWorkspaceEdit(client, edit)],
+  ['workspace/diagnostic/refresh', (client: LSPClient) => pullAllDiagnostics(client)],
 ]);
+
+const commandHandlers = Facet.define<
+  NonNullable<LanguageServer['commandHandlers']>,
+  NonNullable<LanguageServer['commandHandlers']>
+>({ combine: (values) => values[0] ?? {} });
 
 /**
  * A language server instance.
@@ -144,19 +155,23 @@ export class LanguageServerInstance {
         // precedence over Elsewise's, while its client capabilities, which lsp-client merges in order, give way to
         // them.
         ...(server.extensions ?? []),
-        serverCompletion(),
+        serverCompletion(server),
         serverHover(),
+        serverFormat(),
         serverSignatureHelp(),
         serverRename(),
         serverReferences(),
+        serverDefinition(),
         serverHighlights(),
         serverActions(),
         serverDiagnostics(),
         serverEdits(),
         {
+          clientCapabilities: {
+            workspace: { configuration: server.requestHandlers?.['workspace/configuration'] !== undefined },
+          },
+          editorExtension: commandHandlers.of(server.commandHandlers ?? {}),
           notificationHandlers: {
-            // Shows the server's messages in toasts rather than lsp-client's bar, and drops its logs as lsp-client
-            // does.
             'window/showMessage': (_, { type, message }: ShowMessageParams) => {
               const kind = MESSAGE_TYPES.get(type);
               if (kind !== undefined) {
@@ -199,7 +214,7 @@ export class LanguageServerInstance {
       // The plugin's handlers take precedence over Elsewise's.
       const requests = new Map<string, (client: LSPClient, params: never) => unknown>([
         ...REQUESTS,
-        ...Object.entries(this.server.handlers ?? {}),
+        ...Object.entries(this.server.requestHandlers ?? {}),
       ]);
       const handlers = new Map<(message: string) => void, Disposable>();
       this.client.connect({
@@ -235,7 +250,10 @@ export class LanguageServerInstance {
         },
       });
       this.client.initializing.then(
-        () => pullAllDiagnostics(this.client),
+        () => {
+          this.server.connect?.(this.client);
+          pullAllDiagnostics(this.client);
+        },
         (error) => {
           console.error(`Language server ${this.server.name} failed to initialize`, error);
           toast.add({
@@ -277,6 +295,18 @@ export function serverUri(url: URL): string {
       encodeURIComponent(character).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`),
     );
   return `${url.protocol}//${url.host}${path}`;
+}
+
+export async function run(view: EditorView, plugin: LSPPlugin, { command, arguments: args }: Command): Promise<void> {
+  // Some implementations have non-compliant client commands.
+  const handlers = view.state.facet(commandHandlers);
+  if (Object.hasOwn(handlers, command)) {
+    await handlers[command](plugin.client, view, (args ?? []) as never[]);
+    return;
+  }
+
+  plugin.client.sync();
+  await plugin.client.request<ExecuteCommandParams, unknown>('workspace/executeCommand', { command, arguments: args });
 }
 
 export const LanguageServersContext = createContext<LanguageServers | null>(null);

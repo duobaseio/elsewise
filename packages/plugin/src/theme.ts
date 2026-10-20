@@ -130,6 +130,40 @@ export const ThemeVariant = z.lazy(() =>
         unnecessary: Color,
 
         /**
+         * The stripe marks drawn over the scrollbar.
+         *
+         * Each defaults to one of the current theme's colors instead of Elsewise's default theme.
+         */
+        stripe: z
+          .object({
+            /**
+             * Defaults to the interface's `error`.
+             */
+            error: Color,
+            /**
+             * Defaults to the interface's `warning-fill`.
+             */
+            warning: Color,
+            /**
+             * Defaults to the interface's `info`.
+             */
+            info: Color,
+            /**
+             * Defaults to the interface's `disabled`.
+             */
+            hint: Color,
+            /**
+             * Defaults to the editor's `searchMatch`.
+             */
+            searchMatch: Color,
+            /**
+             * The usages of the symbol at the caret. Defaults to the interface's `info-line`.
+             */
+            usage: Color,
+          })
+          .partial(),
+
+        /**
          * The syntax highlighting tokens.
          */
         tokens: z

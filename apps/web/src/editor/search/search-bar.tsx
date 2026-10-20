@@ -33,7 +33,8 @@ import { createPortal } from 'react-dom';
 import { useCommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keys';
 import { scroll } from '@/editor/scroll';
-import { describe, replaceRow, toggleReplaceRow, useSearchBarQuery } from '@/editor/search/search-bar-query';
+import { describe, matches, replaceRow, toggleReplaceRow, useSearchBarQuery } from '@/editor/search/search-bar-query';
+import { stripeMarks } from '@/editor/stripe/stripe';
 
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
@@ -85,6 +86,11 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
 
     return [
       search({ top: true, createPanel, scrollToMatch: scroll }),
+      matches,
+      stripeMarks.of({
+        update: (update) => update.state.field(matches) !== update.startState.field(matches),
+        marks: (view) => view.state.field(matches).ranges.map(({ from, to }) => ({ from, to, kind: 'searchMatch' })),
+      }),
       replaceRow,
       keymap.of([{ key: CLOSE, scope: 'editor search-panel', run: closeSearchPanel }]),
     ];

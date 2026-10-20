@@ -1,7 +1,8 @@
-import { type Diagnostic, linter, setDiagnostics } from '@codemirror/lint';
+import { type Diagnostic, forEachDiagnostic, setDiagnostics, setDiagnosticsEffect } from '@codemirror/lint';
 import { type LSPClient, type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
-import { StateEffect, StateField } from '@codemirror/state';
+import { Annotation, EditorState } from '@codemirror/state';
 import { type EditorView, type PluginValue, ViewPlugin, type ViewUpdate } from '@codemirror/view';
+import type { EditorDiagnostic } from '@elsewise/plugin';
 import {
   DiagnosticSeverity,
   DiagnosticTag,
@@ -23,7 +24,7 @@ const TAGS = {
   [DiagnosticTag.Deprecated]: 'cm-lintRange-deprecated',
 } as const satisfies Record<DiagnosticTag, string>;
 
-export const SEVERITIES = {
+const SEVERITIES = {
   [DiagnosticSeverity.Error]: 'error',
   [DiagnosticSeverity.Warning]: 'warning',
   [DiagnosticSeverity.Information]: 'info',
@@ -36,26 +37,27 @@ const CANCELLED = new Set<number>([
   LSPErrorCodes.ServerCancelled,
 ]);
 
-/**
- * The server's diagnostics for the editor's document, with their ranges mapped through edits since.
- */
-export const problems = StateField.define<readonly { item: LSPDiagnostic; from: number; to: number }[]>({
-  create: () => [],
-  update(value, tr) {
-    for (const effect of tr.effects) {
-      if (effect.is(setProblems)) {
-        return effect.value;
-      }
-    }
-    return tr.docChanged
-      ? value.map((entry) => ({ ...entry, from: tr.changes.mapPos(entry.from), to: tr.changes.mapPos(entry.to) }))
-      : value;
-  },
-});
-
-const setProblems = StateEffect.define<readonly { item: LSPDiagnostic; from: number; to: number }[]>();
-
 const syncer = ViewPlugin.define((view) => new DiagnosticsSyncer(view));
+
+const server = Annotation.define<boolean>();
+
+// TODO: This implementation is ass. We need to implement proper key-ed diagnostic collections when we have the time to.
+// Keeps the linters' diagnostics when the server reports and vice versa since setting diagnostics replaces all of them.
+const merge = EditorState.transactionExtender.of((tr) => {
+  const set = tr.effects.findLast((effect) => effect.is(setDiagnosticsEffect));
+  if (!set?.is(setDiagnosticsEffect)) {
+    return null;
+  }
+
+  const annotated = tr.annotation(server) === true;
+  const others: Diagnostic[] = [];
+  forEachDiagnostic(tr.startState, (diagnostic: EditorDiagnostic, from, to) => {
+    if ((diagnostic.lsp !== undefined) !== annotated) {
+      others.push({ ...diagnostic, from: tr.changes.mapPos(from, 1), to: tr.changes.mapPos(to, -1) });
+    }
+  });
+  return others.length === 0 ? null : { effects: setDiagnosticsEffect.of([...set.value, ...others]) };
+});
 
 /**
  * Returns the client extension that shows the server's diagnostics, whether it pushes them or waits to be asked.
@@ -75,6 +77,7 @@ export function serverDiagnostics(): LSPClientExtension {
           markupMessageSupport: true,
         },
       },
+      workspace: { diagnostics: { refreshSupport: true } },
     },
     notificationHandlers: {
       // Based on `@codemirror/lsp-client`'s `serverDiagnostics`.
@@ -90,18 +93,11 @@ export function serverDiagnostics(): LSPClientExtension {
           return false;
         }
 
-        replaceProblems(view, plugin, params.diagnostics);
+        replaceDiagnostics(view, plugin, params.diagnostics);
         return true;
       },
     },
-    // Adds the linter at a higher precedence since a problem would otherwise be shown below the documentation.
-    editorExtension: [
-      problems,
-      syncer,
-      // Leaves the problems to `serverHover`, which shows them with their fixes. Returns `null`, since the linter shows
-      // `[]` as an empty tooltip.
-      linter(null, { tooltipFilter: () => null as unknown as Diagnostic[] }),
-    ],
+    editorExtension: [syncer, merge],
   };
 }
 
@@ -123,6 +119,7 @@ export function pullAllDiagnostics(client: LSPClient): void {
 class DiagnosticsSyncer implements PluginValue {
   private timeout: ReturnType<typeof setTimeout> | undefined;
   private pending: DocumentDiagnosticParams | undefined;
+  private resultId: string | undefined;
 
   constructor(private readonly view: EditorView) {
     void this.pull();
@@ -153,8 +150,10 @@ class DiagnosticsSyncer implements PluginValue {
       plugin.client.cancelRequest(this.pending);
     }
 
-    // TODO: Send the previous result id, so the server can answer "unchanged", once multiple files are supported.
-    const parameters: DocumentDiagnosticParams = { textDocument: { uri: plugin.uri } };
+    const parameters: DocumentDiagnosticParams = {
+      textDocument: { uri: plugin.uri },
+      previousResultId: this.resultId,
+    };
     const version = file.version;
     this.pending = parameters;
     try {
@@ -169,11 +168,14 @@ class DiagnosticsSyncer implements PluginValue {
       this.pending = undefined;
 
       // New file version will sync & pull instead.
-      if (report.kind !== 'full' || file.version !== version) {
+      if (file.version !== version) {
         return;
       }
 
-      replaceProblems(this.view, plugin, report.items);
+      this.resultId = report.resultId;
+      if (report.kind === 'full') {
+        replaceDiagnostics(this.view, plugin, report.items);
+      }
     } catch (error) {
       if (this.pending === parameters) {
         this.pending = undefined;
@@ -193,22 +195,23 @@ class DiagnosticsSyncer implements PluginValue {
 }
 
 /**
- * Replaces the editor's problems with the server's diagnostics `items`.
+ * Replaces the editor's diagnostics with the server's `items`.
  */
-function replaceProblems(view: EditorView, plugin: LSPPlugin, items: LSPDiagnostic[]): void {
-  const diagnostics = items.map((item) => convert(plugin, item));
-  view.dispatch(setDiagnostics(view.state, diagnostics), {
-    effects: setProblems.of(items.map((item, i) => ({ item, from: diagnostics[i].from, to: diagnostics[i].to }))),
+function replaceDiagnostics(view: EditorView, plugin: LSPPlugin, items: LSPDiagnostic[]): void {
+  view.dispatch({
+    ...setDiagnostics(
+      view.state,
+      items.map((item) => convert(plugin, item)),
+    ),
+    annotations: server.of(true),
   });
 }
 
 // Based on `@codemirror/lsp-client`'s `serverDiagnostics`.
-//
-// Widens a problem at a point, and tags it as unnecessary or deprecated.
-function convert(plugin: LSPPlugin, item: LSPDiagnostic): Diagnostic {
+function convert(plugin: LSPPlugin, item: LSPDiagnostic): EditorDiagnostic {
   let from = plugin.unsyncedChanges.mapPos(plugin.fromPosition(item.range.start, plugin.syncedDoc));
   let to = plugin.unsyncedChanges.mapPos(plugin.fromPosition(item.range.end, plugin.syncedDoc));
-  // Widens a problem at a point, which the linter would mark with a triangle, to the word there, or else a character
+  // Widens a diagnostic at a point, which the linter would mark with a triangle, to the word there, or else a character
   // beside it, or the last one before its empty line.
   if (from === to) {
     const { state } = plugin.view;
@@ -233,11 +236,23 @@ function convert(plugin: LSPPlugin, item: LSPDiagnostic): Diagnostic {
     }
   }
 
+  const { source, severity, tags, code, codeDescription, message } = item;
   return {
+    lsp: item,
     from,
     to,
-    severity: SEVERITIES[item.severity ?? DiagnosticSeverity.Error],
-    markClass: item.tags?.map((tag) => TAGS[tag]).join(' ') || 'cm-lintRange-plain',
-    message: typeof item.message === 'string' ? item.message : item.message.value,
+    severity: SEVERITIES[severity ?? DiagnosticSeverity.Error],
+    markClass: tags?.map((tag) => TAGS[tag]).join(' ') || 'cm-lintRange-plain',
+    source: source,
+    code: code,
+    codeHref: codeDescription?.href,
+    message: typeof message === 'string' ? message : message.value,
+    ...(typeof message === 'object' && {
+      renderMessage: () => {
+        const template = document.createElement('template');
+        template.innerHTML = plugin.docToHTML(message);
+        return template.content;
+      },
+    }),
   };
 }

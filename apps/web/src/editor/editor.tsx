@@ -1,7 +1,6 @@
 import { closeBrackets } from '@codemirror/autocomplete';
 import { history, simplifySelection, standardKeymap } from '@codemirror/commands';
 import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
-import { highlightSelectionMatches } from '@codemirror/search';
 import { Compartment, EditorState, type Extension, Prec } from '@codemirror/state';
 import {
   crosshairCursor,
@@ -16,15 +15,22 @@ import {
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { type CSSProperties, useEffect, useMemo, useRef } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
-import { EditorContextMenu, rightClickContextMenu } from '@/editor/context-menu';
+import { actions } from '@/editor/actions';
+import { completion } from '@/editor/completion';
+import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
-import { link } from '@/editor/link.ts';
+import { format } from '@/editor/format';
+import { hover } from '@/editor/hover';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
+import { navigation } from '@/editor/navigation.ts';
+import { scrollbarsKeepFocus } from '@/editor/scroll';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
+import { useDiagnosticsSummary } from '@/editor/stripe/diagnostics-summary';
+import { selectionMatches } from '@/editor/stripe/selection-matches';
 import { useThemeExtension } from '@/editor/theme';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
@@ -34,6 +40,7 @@ const THEME = new Compartment();
 const LANGUAGE = new Compartment();
 const LANGUAGE_SERVER = new Compartment();
 const SETTINGS = new Compartment();
+const DIAGNOSTICS_SUMMARY = new Compartment();
 
 export interface EditorProps {
   /**
@@ -54,12 +61,22 @@ export function Editor({ path, code, root }: EditorProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView>(null);
 
-  const plugins = usePluginsExtension(path);
   const editorManager = useEditorManager();
   const theme = useThemeExtension();
   const languages = useEditorManager((editor) => editor.languages);
   const description = LanguageDescription.matchFilename(languages, path);
+  const [settled, setSettled] = useState<LanguageDescription | null>(null);
+  const language =
+    description === null
+      ? undefined
+      : description.support !== undefined
+        ? description
+        : description === settled
+          ? undefined
+          : null;
+  const plugins = usePluginsExtension(path, language);
   const { search, portal } = useSearchExtension();
+  const { summary, portal: summaryPortal } = useDiagnosticsSummary();
   const settings = useSettingsExtension(description?.name);
   const languageServer = useLanguageServerExtension(root, description?.name, path);
   const icons = useIcons();
@@ -99,12 +116,17 @@ export function Editor({ path, code, root }: EditorProps) {
         search,
 
         SETTINGS.of(settings),
+        DIAGNOSTICS_SUMMARY.of(summary),
         // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
         // Has the precedence for the same reason as the settings' facets.
         Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
 
         LANGUAGE.of(description?.support ?? []),
         LANGUAGE_SERVER.of(languageServer),
+        completion(),
+        hover(),
+        actions(),
+        format,
         closeBrackets(),
         bracketMatching(),
         // Has to be after lineNumbers to ensure the fold icon is to the right of it.
@@ -126,10 +148,11 @@ export function Editor({ path, code, root }: EditorProps) {
 
         highlightActiveLine(),
         highlightActiveLineGutter(),
-        highlightSelectionMatches(),
+        selectionMatches(),
         highlightSpecialChars(),
-        rightClickContextMenu,
-        link(),
+        RIGHT_CLICK_CONTEXT_MENU,
+        navigation(),
+        scrollbarsKeepFocus(),
 
         // Escape is not a command to keep it from taking precedence over the popups' own Escape.
         keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
@@ -164,10 +187,14 @@ export function Editor({ path, code, root }: EditorProps) {
       (support) => {
         if (live) {
           view.current?.dispatch({ effects: LANGUAGE.reconfigure(support) });
+          setSettled(description);
         }
       },
       (error) => {
         console.error(`Language ${description.name} failed to load`, error);
+        if (live) {
+          setSettled(description);
+        }
       },
     );
 
@@ -196,6 +223,10 @@ export function Editor({ path, code, root }: EditorProps) {
   useEffect(() => {
     view.current?.dispatch({ effects: SETTINGS.reconfigure(settings) });
   }, [settings]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: DIAGNOSTICS_SUMMARY.reconfigure(summary) });
+  }, [summary]);
 
   useEffect(() => {
     view.current?.dispatch({ effects: LANGUAGE_SERVER.reconfigure(languageServer) });
@@ -232,19 +263,24 @@ export function Editor({ path, code, root }: EditorProps) {
         />
       </EditorContextMenu>
       {portal}
+      {summaryPortal}
     </>
   );
 }
 
-function usePluginsExtension(path: string): Extension {
+// Returns the plugins' extensions for the file, without those from functions while its `language` loads (null), so
+// that they see its `support`.
+function usePluginsExtension(path: string, language: LanguageDescription | null | undefined): Extension {
   const extensions = useEditorManager((editor) => editor.extensions);
 
   return useMemo(() => {
     try {
-      return extensions.map((extension) => (typeof extension === 'function' ? extension({ path }) : extension));
+      return extensions.flatMap((extension) =>
+        typeof extension === 'function' ? (language === null ? [] : extension({ path, language })) : extension,
+      );
     } catch (error) {
       console.error('Plugin extension failed', error);
       return [];
     }
-  }, [extensions, path]);
+  }, [extensions, path, language]);
 }

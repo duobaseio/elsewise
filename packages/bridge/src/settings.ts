@@ -98,6 +98,10 @@ export const Settings = z.lazy(() =>
              */
             highlightUsages: z.boolean().catch(true),
             /**
+             * Whether the stripe over the scrollbar marks the diagnostics, search matches and usages.
+             */
+            stripe: z.boolean().catch(true),
+            /**
              * Overrides by language, keyed by CodeMirror's name for it, e.g. `TypeScript`.
              *
              * An override keeps the leaves it got right and drops the rest, rather than falling back to a default.

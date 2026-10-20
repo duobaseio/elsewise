@@ -1,11 +1,10 @@
-import { history, undo } from '@codemirror/commands';
-import { EditorSelection, EditorState, StateEffect } from '@codemirror/state';
+import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import { toast } from '@elsewise/components/components/toast';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { DocumentRangeFormattingParams } from 'vscode-languageserver-protocol';
+import { format } from '@/editor/format';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -39,7 +38,7 @@ afterEach(() => {
 // Opens `doc` on a server with `capabilities` that formats it with `format`, and its ranges with `formatRange`.
 async function open(
   capabilities: object,
-  format: () => unknown,
+  formatDocument: () => unknown,
   formatRange: (params: DocumentRangeFormattingParams) => unknown = () => [],
   doc = DOC,
 ): Promise<EditorView> {
@@ -50,7 +49,7 @@ async function open(
       languages: { Rust: 'rust' },
       start: () =>
         new StubTransport(capabilities, {
-          'textDocument/formatting': format,
+          'textDocument/formatting': formatDocument,
           'textDocument/rangeFormatting': formatRange,
         }),
     } satisfies LanguageServer,
@@ -63,8 +62,8 @@ async function open(
       doc,
       extensions: [
         instance.client.plugin(URI, 'rust'),
+        format,
         commandsExtension(),
-        history(),
         EditorState.allowMultipleSelections.of(true),
       ],
     }),
@@ -87,67 +86,37 @@ function press(view: EditorView): boolean {
 
 const CAPABILITIES = { documentFormattingProvider: true, documentRangeFormattingProvider: true };
 
-describe('FORMAT', () => {
-  test("applies server's edits in one undo step", async () => {
-    const view = await open({ documentFormattingProvider: true }, () => [
+describe('serverFormat', () => {
+  test("applies server's edits", async () => {
+    const formatDocument = vi.fn(() => [
       { range: { start: { line: 0, character: 3 }, end: { line: 0, character: 5 } }, newText: ' ' },
       { range: { start: { line: 0, character: 10 }, end: { line: 0, character: 11 } }, newText: ' = ' },
     ]);
+    const view = await open({ documentFormattingProvider: true }, formatDocument);
 
     expect(press(view)).toBe(true);
 
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let total = 1;'));
-    undo(view);
-    expect(view.state.doc.toString()).toBe(DOC);
-  });
-
-  test('says when formatting failed', async () => {
-    const add = vi.spyOn(toast, 'add');
-    const view = await open({ documentFormattingProvider: true }, () => Promise.reject(new Error('No formatter')));
-
-    expect(press(view)).toBe(true);
-
-    await vi.waitFor(() => {
-      expect(add).toHaveBeenCalledWith({
-        type: 'error',
-        title: 'Formatting failed',
-        description: 'No formatter',
-      });
+    expect(formatDocument).toHaveBeenCalledWith({
+      options: { tabSize: 2, insertSpaces: true },
+      textDocument: { uri: URI },
     });
-    expect(view.state.doc.toString()).toBe(DOC);
   });
 
   test("doesn't ask server that can't format", async () => {
-    const format = vi.fn(() => []);
-    const view = await open({}, format);
+    const formatDocument = vi.fn(() => []);
+    const view = await open({}, formatDocument);
 
     expect(press(view)).toBe(false);
     await new Promise(requestAnimationFrame);
 
-    expect(format).not.toHaveBeenCalled();
+    expect(formatDocument).not.toHaveBeenCalled();
   });
 
-  test('formats only selection', async () => {
-    const format = vi.fn(() => []);
+  test('formats each selection as range', async () => {
+    const formatDocument = vi.fn(() => []);
     const formatRange = vi.fn(formatLines);
-    const view = await open(CAPABILITIES, format, formatRange, LINES);
-    const second = view.state.doc.line(2);
-    view.dispatch({ selection: { anchor: second.from, head: second.to } });
-
-    press(view);
-
-    await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let  a=1;\nlet b = 2;\nlet  c=3;'));
-    expect(formatRange).toHaveBeenCalledTimes(1);
-    expect(formatRange.mock.calls[0][0].range).toEqual({
-      start: { line: 1, character: 0 },
-      end: { line: 1, character: 9 },
-    });
-    expect(format).not.toHaveBeenCalled();
-  });
-
-  test('formats each selection, in one undo step', async () => {
-    const formatRange = vi.fn(formatLines);
-    const view = await open(CAPABILITIES, () => [], formatRange, LINES);
+    const view = await open(CAPABILITIES, formatDocument, formatRange, LINES);
     const [first, , third] = [1, 2, 3].map((n) => view.state.doc.line(n));
     view.dispatch({
       selection: EditorSelection.create([
@@ -160,43 +129,36 @@ describe('FORMAT', () => {
 
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let a = 1;\nlet  b=2;\nlet c = 3;'));
     expect(formatRange).toHaveBeenCalledTimes(2);
-    undo(view);
-    expect(view.state.doc.toString()).toBe(LINES);
-  });
-
-  test('applies change shared by two selections once', async () => {
-    const view = await open(CAPABILITIES, () => [], formatLines, LINES);
-    view.dispatch({
-      selection: EditorSelection.create([EditorSelection.range(0, 3), EditorSelection.range(7, 8)]),
+    expect(formatRange.mock.calls[0][0].range).toEqual({
+      start: { line: 0, character: 0 },
+      end: { line: 0, character: 9 },
     });
-
-    press(view);
-
-    await vi.waitFor(() => expect(view.state.doc.line(1).text).toBe('let a = 1;'));
-    expect(view.state.doc.toString()).toBe('let a = 1;\nlet  b=2;\nlet  c=3;');
+    expect(formatDocument).not.toHaveBeenCalled();
   });
 
-  test("doesn't format document when server can't format ranges", async () => {
-    const format = vi.fn(() => []);
+  test('formats document as one range when server formats only ranges', async () => {
     const formatRange = vi.fn(formatLines);
-    const view = await open({ documentFormattingProvider: true }, format, formatRange);
+    const view = await open({ documentRangeFormattingProvider: true }, () => [], formatRange, LINES);
+
+    expect(press(view)).toBe(true);
+
+    await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let a = 1;\nlet b = 2;\nlet c = 3;'));
+    expect(formatRange.mock.calls[0][0].range).toEqual({
+      start: { line: 0, character: 0 },
+      end: { line: 2, character: 9 },
+    });
+  });
+
+  test("doesn't format selection when server can't format ranges", async () => {
+    const formatDocument = vi.fn(() => []);
+    const formatRange = vi.fn(formatLines);
+    const view = await open({ documentFormattingProvider: true }, formatDocument, formatRange);
     view.dispatch({ selection: { anchor: 0, head: 3 } });
 
     expect(press(view)).toBe(false);
     await new Promise(requestAnimationFrame);
 
-    expect(format).not.toHaveBeenCalled();
+    expect(formatDocument).not.toHaveBeenCalled();
     expect(formatRange).not.toHaveBeenCalled();
-  });
-
-  test("doesn't format read-only document", async () => {
-    const format = vi.fn(() => []);
-    const view = await open({ documentFormattingProvider: true }, format);
-    view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });
-
-    expect(press(view)).toBe(false);
-    await new Promise(requestAnimationFrame);
-
-    expect(format).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,8 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
-import type { Application, EditorCommand, PluginContext } from '@elsewise/plugin';
-import { colorPicker } from './color-picker.ts';
+import type { EditorCommand, Plugin, PluginInfo } from '@elsewise/plugin';
+import { colorHover, colorPicker } from './color-picker.ts';
+import { keys, reactions } from './completions.ts';
 
 const EXCUSES = [
   'It worked on my machine.',
@@ -11,51 +12,82 @@ const EXCUSES = [
   'Temporary fix, 2019.',
 ];
 
-/**
- * Called when Elsewise enables the plugin.
- */
-export function enable({ commands, editor }: Application, { id, subscriptions }: PluginContext): void {
-  subscriptions.push(
-    editor.addExtensions([colorPicker]),
-    editor.addLanguages([
-      LanguageDescription.of({
-        name: 'Dotenv',
-        filename: /(^|[\\/])\.env(\.\w+)?$/,
-        support: new LanguageSupport(
-          StreamLanguage.define({
-            token(stream) {
-              if (stream.sol() && stream.match(/^\s*#.*/)) {
-                return 'comment';
-              }
-              if (stream.sol() && stream.match(/^\w+(?==)/)) {
-                return 'propertyName';
-              }
-              if (stream.eat('=')) {
-                return 'operator';
-              }
+const dotenv = StreamLanguage.define({
+  token(stream) {
+    if (stream.sol() && stream.match(/^\s*#.*/)) {
+      return 'comment';
+    }
+    if (stream.sol() && stream.match(/^\w+(?==)/)) {
+      return 'propertyName';
+    }
+    if (stream.eat('=')) {
+      return 'operator';
+    }
 
-              stream.skipToEnd();
-              return 'string';
-            },
+    stream.skipToEnd();
+    return 'string';
+  },
+});
+
+/**
+ * Returns the plugin.
+ */
+export default function ({ id }: PluginInfo): Plugin {
+  return {
+    onEnable({ commands, editor }) {
+      return [
+        editor.addExtensions([colorPicker, colorHover, reactions]),
+        editor.addLanguages([
+          LanguageDescription.of({
+            name: 'Dotenv',
+            filename: /(^|[\\/])\.env(\.\w+)?$/,
+            // Completes keys in Dotenv documents only.
+            support: new LanguageSupport(dotenv, dotenv.data.of({ autocomplete: keys })),
           }),
-        ),
-      }),
-    ]),
-    // The context menu items in `manifest.json` run these.
-    commands.add([
-      excuse(`${id}.leaveAnExcuse`),
-      reaction(`${id}.shrug`, 'Shrug', () => '¯\\_(ツ)_/¯'),
-      reaction(`${id}.flipTheTable`, 'Flip the table', () => '(╯°□°)╯︵ ┻━┻'),
-      reaction(`${id}.rollAD20`, 'Roll a d20', () => String(1 + Math.floor(Math.random() * 20))),
-      tone(`${id}.uwu`, 'uwu', (text) => text.replace(/[rl]/g, 'w').replace(/[RL]/g, 'W')),
-      tone(`${id}.vaporwave`, 'ｖａｐｏｒｗａｖｅ', (text) =>
-        text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)),
-      ),
-      tone(`${id}.mocking`, 'mOcKiNg', (text) =>
-        [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
-      ),
-    ]),
-  );
+        ]),
+        // The context menu items below run these.
+        commands.add([
+          excuse(`${id}.leaveAnExcuse`),
+          reaction(`${id}.shrug`, 'Shrug', () => '¯\\_(ツ)_/¯'),
+          reaction(`${id}.flipTheTable`, 'Flip the table', () => '(╯°□°)╯︵ ┻━┻'),
+          reaction(`${id}.rollAD20`, 'Roll a d20', () => String(1 + Math.floor(Math.random() * 20))),
+          tone(`${id}.uwu`, 'uwu', (text) => text.replace(/[rl]/g, 'w').replace(/[RL]/g, 'W')),
+          tone(`${id}.vaporwave`, 'ｖａｐｏｒｗａｖｅ', (text) =>
+            text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)),
+          ),
+          tone(`${id}.mocking`, 'mOcKiNg', (text) =>
+            [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
+          ),
+        ]),
+        editor.addContextMenus([
+          {
+            submenus: { [`${id}.tone`]: 'Tone of voice' },
+            groups: {
+              [`${id}.reactions`]: { order: 30 },
+              [`${id}.tone`]: { order: 40 },
+              [`${id}.tones`]: { menu: `${id}.tone` },
+            },
+            items: {
+              'io.duobase.elsewise.editor.contextmenu.refactor': [
+                { type: 'item', order: 20, command: `${id}.leaveAnExcuse` },
+              ],
+              [`${id}.reactions`]: [
+                { type: 'item', order: 10, command: `${id}.shrug` },
+                { type: 'item', order: 20, command: `${id}.flipTheTable` },
+                { type: 'item', order: 30, command: `${id}.rollAD20` },
+              ],
+              [`${id}.tone`]: [{ type: 'submenu', submenu: `${id}.tone` }],
+              [`${id}.tones`]: [
+                { type: 'item', order: 10, command: `${id}.uwu` },
+                { type: 'item', order: 20, command: `${id}.vaporwave` },
+                { type: 'item', order: 30, command: `${id}.mocking` },
+              ],
+            },
+          },
+        ]),
+      ];
+    },
+  };
 }
 
 function excuse(id: string): EditorCommand {

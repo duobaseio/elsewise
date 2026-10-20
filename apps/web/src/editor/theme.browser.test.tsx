@@ -8,6 +8,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { stripe, stripeMarks } from '@/editor/stripe/stripe';
 import { useThemeExtension } from '@/editor/theme';
 import { visualGuides } from '@/editor/visual-guides';
 import { settingsQuery } from '@/settings/settings';
@@ -26,6 +27,7 @@ const { EDITOR } = vi.hoisted(() => ({
     searchMatchSelectedBorder: '#D0E0F0',
     completionHovered: '#F0A0E0',
     completionSelected: '#E0F0A0',
+    stripe: { error: '#F0B0A0', searchMatch: '#A0F0B0' },
     tokens: {
       keyword: { color: '#A0B0C0', bold: true, strikethrough: true },
       comment: { color: '#D0E0F0', italic: true, underline: true },
@@ -94,6 +96,18 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+test('stripe marks take theme colors', async () => {
+  const source = { update: () => false, marks: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
+  const view = await mount('x', [stripe(), stripeMarks.of(source)]);
+  view.dispatch(setDiagnostics(view.state, [{ from: 0, to: 1, severity: 'error', message: 'x' }]));
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark')).toHaveLength(2));
+
+  const painted = (kind: string) =>
+    getComputedStyle(view.dom.querySelector(`.cm-stripe-mark-${kind}`) as Element, '::before').backgroundColor;
+  expect(painted('error')).toBe(rgb('#F0B0A0'));
+  expect(painted('searchMatch')).toBe(rgb('#A0F0B0'));
+});
+
 test("visual guide takes theme's color", async () => {
   const view = await mount('x', [visualGuides([1])]);
   await new Promise(requestAnimationFrame);
@@ -115,7 +129,7 @@ test("deprecated code is struck through at font's strikeout position", async () 
   expect(mark.textDecorationLine).toBe('none');
 });
 
-test('unnecessary code is faded without underline, unless plain problem shares it', async () => {
+test('unnecessary code is faded without underline, unless plain diagnostic shares it', async () => {
   const view = await mount('let a = 1', []);
   const unused = {
     from: 4,
@@ -169,7 +183,7 @@ test('hovered row of completions, usages and actions takes hover color, unless s
   const popup = document.createElement('div');
   popup.innerHTML =
     '<ul><li class="cm-lsp-reference" aria-selected="true">a</li><li class="cm-lsp-reference">b</li></ul>' +
-    '<ul><li class="cm-lsp-action" aria-selected="true">a</li><li class="cm-lsp-action">b</li></ul>';
+    '<ul><li class="cm-action" aria-selected="true">a</li><li class="cm-action">b</li></ul>';
   const view = await mount('', [
     autocompletion({ override: [() => ({ from: 0, options })] }),
     showTooltip.of({ pos: 0, create: () => ({ dom: popup }) }),
@@ -184,7 +198,7 @@ test('hovered row of completions, usages and actions takes hover color, unless s
   for (const [selected, other] of [
     completions,
     [...popup.querySelectorAll('.cm-lsp-reference')],
-    [...popup.querySelectorAll('.cm-lsp-action')],
+    [...popup.querySelectorAll('.cm-action')],
   ]) {
     await userEvent.hover(other);
     await vi.waitFor(() => expect(style(other).backgroundColor).toBe(rgb(EDITOR.completionHovered)));
@@ -273,11 +287,10 @@ test('usages are listed like completions, each in search match color', async () 
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
 });
 
-test("problem's fixes are links underlined only on hover", async () => {
+test("diagnostic's fixes are links underlined only on hover", async () => {
   const tooltip = document.createElement('div');
   tooltip.className = 'cm-tooltip-hover';
-  tooltip.innerHTML =
-    '<div class="cm-lsp-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
+  tooltip.innerHTML = '<div class="cm-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
   await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: tooltip }) })]);
   const button = tooltip.querySelector('button') as HTMLElement;
   const color = (name: string) => rgb(getComputedStyle(document.documentElement).getPropertyValue(name).trim());

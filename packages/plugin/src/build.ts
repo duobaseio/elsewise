@@ -12,9 +12,11 @@ export const PEER_MODULES = [
   '@codemirror/commands',
   '@codemirror/language',
   '@codemirror/lint',
+  '@codemirror/lsp-client',
   '@codemirror/search',
   '@codemirror/state',
   '@codemirror/view',
   '@lezer/common',
   '@lezer/highlight',
+  'vscode-languageserver-protocol',
 ] as const;

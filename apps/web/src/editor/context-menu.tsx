@@ -20,7 +20,7 @@ export function EditorContextMenu({ view, children }: { view: RefObject<EditorVi
  *
  * Necessary to show correct items in context menu.
  */
-export const rightClickContextMenu = EditorView.domEventHandlers({
+export const RIGHT_CLICK_CONTEXT_MENU = EditorView.domEventHandlers({
   contextmenu(event, view) {
     const position = view.posAtCoords({ x: event.clientX, y: event.clientY });
     if (

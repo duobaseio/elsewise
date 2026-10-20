@@ -1,4 +1,3 @@
-import { Manifest } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
@@ -6,22 +5,15 @@ import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { PluginLoader } from './loader';
 
-const APPEARANCE = new AppearanceManager(
-  'dark',
-  resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
-);
-const EDITOR = new EditorManager();
-const APPLICATION = commands(EDITOR).application;
-const EMPTY = Manifest.parse({ id: 'a', name: 'A', version: '1.0.0' });
-
-// Returns commands with their own application, for `editor`.
-function commands(editor = new EditorManager()): CommandManager {
-  return new CommandManager({ appearance: APPEARANCE, editor });
-}
-
-// Returns a loader for `commands` and its editor.
-function loader(current: CommandManager = commands()): PluginLoader {
-  return new PluginLoader(current.application, current.application.editor as EditorManager);
+// Returns a loader over its own managers.
+function setUp() {
+  const appearance = new AppearanceManager(
+    'dark',
+    resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+  );
+  const editor = new EditorManager();
+  const commands = new CommandManager({ appearance, editor });
+  return { appearance, editor, commands, loader: new PluginLoader(appearance, commands) };
 }
 
 // What the plugins below did, in order. They reach it as the global `events`.
@@ -37,6 +29,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 // Returns the url of a plugin whose main module is `source`.
@@ -45,100 +38,187 @@ function plugin(source: string): string {
 }
 
 const RECORDING = plugin(`
-  export function enable(application, context) {
-    events.push('enable ' + context.id);
-    context.subscriptions.push(
-      () => events.push('dispose first'),
-      () => events.push('dispose second'),
-    );
+  export default function ({ id }) {
+    return {
+      onEnable() {
+        events.push('enable ' + id);
+        return [() => events.push('dispose first'), () => events.push('dispose second')];
+      },
+    };
   }
 `);
 
 // Waits for the global `gate` before it finishes enabling.
 const SLOW = plugin(`
-  export async function enable(application, context) {
-    events.push('enable started');
-    await gate;
-    context.subscriptions.push(() => events.push('dispose'));
-    events.push('enable finished');
+  export default function () {
+    return {
+      async onEnable() {
+        events.push('enable started');
+        await gate;
+        events.push('enable finished');
+        return [() => events.push('dispose')];
+      },
+    };
   }
 `);
 
 describe('load', () => {
   test('enables plugin with id', async () => {
-    await new PluginLoader(APPLICATION, EDITOR).load('a', RECORDING, EMPTY);
+    await setUp().loader.load('a', RECORDING);
 
     expect(events).toEqual(['enable a']);
   });
 
-  test("adds manifest's context menu until unloaded", async () => {
-    const current = commands();
-    const editor = current.application.editor as EditorManager;
-    const menu = {
-      submenus: {},
-      groups: { 'a.group': { order: 0 } },
-      items: { 'a.group': [{ type: 'item' as const, order: 0, command: 'a.run' }] },
-    };
-    const subject = loader(current);
-    await subject.load('a', RECORDING, { ...EMPTY, contextMenus: { editor: menu } });
+  test('adds context menus until unloaded', async () => {
+    const { editor, loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return {
+            onEnable(app) {
+              return [app.editor.addContextMenus([{ groups: { 'a.group': { order: 0 } } }])];
+            },
+          };
+        }
+      `),
+    );
 
     expect(editor.contextMenu.groups['a.group']).toEqual({ order: 0 });
 
-    await subject.unload('a');
+    await loader.unload('a');
 
     expect(editor.contextMenu.groups['a.group']).toBeUndefined();
   });
 
   test('adds commands', async () => {
-    const current = commands();
-    await loader(current).load(
+    const { commands, loader } = setUp();
+    await loader.load(
       'a',
       plugin(`
-        export function enable(application, context) {
-          context.subscriptions.push(
-            application.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', run() {} }]),
-          );
+        export default function () {
+          return {
+            onEnable(app) {
+              return [app.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', run() {} }])];
+            },
+          };
         }
       `),
-      EMPTY,
     );
 
-    expect(current.commands.get('a.rename')?.label).toBe('Rename');
+    expect(commands.commands.get('a.rename')?.label).toBe('Rename');
   });
 
   test('runs commands with application', async () => {
-    const current = commands();
-    await loader(current).load(
+    await setUp().loader.load(
       'a',
       plugin(`
-        export async function enable(application) {
-          application.commands.add([
-            {
-              id: 'a.run',
-              label: 'Run',
-              scope: 'application',
-              run: (received) => events.push(received === application ? 'run with application' : 'run'),
+        export default function () {
+          return {
+            onEnable(app) {
+              app.commands.add([
+                {
+                  id: 'a.run',
+                  label: 'Run',
+                  scope: 'application',
+                  run: (received) => events.push(received === app ? 'run with application' : 'run'),
+                },
+              ]);
+              app.commands.run('a.run');
             },
-          ]);
-          application.commands.run('a.run');
+          };
         }
       `),
-      EMPTY,
     );
 
     expect(events).toEqual(['run with application']);
   });
 
+  test('calls hooks while enabled', async () => {
+    const { appearance, loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return {
+            onBrightnessChange: (brightness) => events.push('brightness ' + brightness),
+            onThemeChange: () => events.push('theme'),
+          };
+        }
+      `),
+    );
+    appearance.brightness = 'light';
+    appearance.theme = { ...appearance.theme };
+    await loader.unload('a');
+    appearance.brightness = 'dark';
+
+    expect(events).toEqual(['brightness light', 'theme']);
+  });
+
+  test('calls keymap hook while enabled', async () => {
+    const { commands, loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return { onKeymapChange: (keymap) => events.push('keymap ' + keymap.commands.size) };
+        }
+      `),
+    );
+    commands.add([{ id: 'a.run', label: 'Run', scope: 'application', run: () => true }]);
+    await loader.unload('a');
+    commands.add([{ id: 'a.other', label: 'Other', scope: 'application', run: () => true }]);
+
+    expect(events).toEqual([`keymap ${commands.keymap.commands.size - 1}`]);
+  });
+
+  test('logs throwing hook', async () => {
+    const { appearance, loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return { onBrightnessChange() { throw new Error('failed'); } };
+        }
+      `),
+    );
+    appearance.brightness = 'light';
+
+    expect(error).toHaveBeenCalledOnce();
+    expect(error.mock.calls[0]?.[0]).toContain('Plugin a');
+  });
+
+  test('logs rejecting hook', async () => {
+    const { appearance, loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return {
+            async onBrightnessChange() {
+              await Promise.resolve();
+              throw new Error('failed');
+            },
+          };
+        }
+      `),
+    );
+    appearance.brightness = 'light';
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalledOnce());
+    expect(error.mock.calls[0]?.[0]).toContain('Plugin a');
+  });
+
   test('ignores loaded plugin', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.load('a', RECORDING, EMPTY);
-    await loader.load('a', RECORDING, EMPTY);
+    const { loader } = setUp();
+    await loader.load('a', RECORDING);
+    await loader.load('a', RECORDING);
 
     expect(events).toEqual(['enable a']);
   });
 
   test('logs failed import', async () => {
-    await new PluginLoader(APPLICATION, EDITOR).load('a', plugin('this is not javascript'), EMPTY);
+    await setUp().loader.load('a', plugin('this is not javascript'));
 
     expect(events).toEqual([]);
     expect(error).toHaveBeenCalledOnce();
@@ -147,50 +227,55 @@ describe('load', () => {
   test('reimports module that failed to evaluate', async () => {
     const url = plugin(`
       if (broken) throw new Error('broken');
-      export function enable(application, context) {
-        events.push('enable ' + context.id);
+      export default function ({ id }) {
+        return {
+          onEnable() {
+            events.push('enable ' + id);
+          },
+        };
       }
     `);
-    const loader = new PluginLoader(APPLICATION, EDITOR);
+    const { loader } = setUp();
     vi.stubGlobal('broken', true);
-    await loader.load('a', url, EMPTY);
+    await loader.load('a', url);
     vi.stubGlobal('broken', false);
-    await loader.load('a', url, EMPTY);
+    await loader.load('a', url);
 
     expect(events).toEqual(['enable a']);
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('logs module without enable', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.load('a', plugin('export const enable = 1;'), EMPTY);
+  test('logs module without default function', async () => {
+    await setUp().loader.load('a', plugin('export default 1;'));
 
     expect(error).toHaveBeenCalledOnce();
-    expect(error.mock.calls[0]?.[0]).toContain("has no 'enable' function");
+    expect(error.mock.calls[0]?.[0]).toContain('has no default function');
   });
 
-  test('disposes subscriptions when enable throws', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.load(
+  test('logs default function that throws', async () => {
+    await setUp().loader.load('a', plugin("export default function () { throw new Error('failed'); }"));
+
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  test('logs onEnable that throws', async () => {
+    await setUp().loader.load(
       'a',
       plugin(`
-        export function enable(application, context) {
-          context.subscriptions.push(() => events.push('dispose'));
-          throw new Error('failed');
+        export default function () {
+          return { onEnable() { throw new Error('failed'); } };
         }
       `),
-      EMPTY,
     );
 
-    expect(events).toEqual(['dispose']);
     expect(error).toHaveBeenCalledOnce();
   });
 
   test('re-enables unloaded plugin', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.load('a', RECORDING, EMPTY);
+    const { loader } = setUp();
+    await loader.load('a', RECORDING);
     await loader.unload('a');
-    await loader.load('a', RECORDING, EMPTY);
+    await loader.load('a', RECORDING);
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first', 'enable a']);
   });
@@ -198,61 +283,125 @@ describe('load', () => {
   test('re-evaluates module of unloaded plugin', async () => {
     const url = plugin(`
       events.push('evaluate');
-      export function enable() {}
+      export default function () { return {}; }
     `);
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.load('a', url, EMPTY);
+    const { loader } = setUp();
+    await loader.load('a', url);
     await loader.unload('a');
-    await loader.load('a', url, EMPTY);
+    await loader.load('a', url);
 
     expect(events).toEqual(['evaluate', 'evaluate']);
   });
 
   test('does not wait for another plugin', async () => {
     vi.stubGlobal('gate', Promise.withResolvers<void>().promise);
-    const loader = new PluginLoader(APPLICATION, EDITOR);
+    const { loader } = setUp();
 
-    void loader.load('a', SLOW, EMPTY);
+    void loader.load('a', SLOW);
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
-    await loader.load('b', RECORDING, EMPTY);
+    await loader.load('b', RECORDING);
 
     expect(events).toEqual(['enable started', 'enable b']);
   });
 });
 
 describe('unload', () => {
-  test('disposes subscriptions in reverse order', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.load('a', RECORDING, EMPTY);
+  test('disposes in reverse order', async () => {
+    const { loader } = setUp();
+    await loader.load('a', RECORDING);
     await loader.unload('a');
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 
-  test('ignores plugin not loaded', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
-    await loader.unload('a');
-    await loader.load('a', RECORDING, EMPTY);
-    await loader.unload('a');
-    await loader.unload('a');
-
-    expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
-  });
-
-  test('continues past throwing disposable', async () => {
-    const loader = new PluginLoader(APPLICATION, EDITOR);
+  test('calls onDisable before disposing', async () => {
+    const { loader } = setUp();
     await loader.load(
       'a',
       plugin(`
-        export function enable(application, context) {
-          context.subscriptions.push(
-            () => events.push('dispose first'),
-            () => { throw new Error('failed'); },
-            () => events.push('dispose third'),
-          );
+        export default function () {
+          return {
+            onEnable: () => [() => events.push('dispose')],
+            async onDisable() {
+              await Promise.resolve();
+              events.push('disable');
+            },
+          };
         }
       `),
-      EMPTY,
+    );
+    await loader.unload('a');
+
+    expect(events).toEqual(['disable', 'dispose']);
+  });
+
+  test('disposes when onDisable throws', async () => {
+    const { loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return {
+            onEnable: () => [() => events.push('dispose')],
+            onDisable() { throw new Error('failed'); },
+          };
+        }
+      `),
+    );
+    await loader.unload('a');
+
+    expect(events).toEqual(['dispose']);
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  test('ignores plugin not loaded', async () => {
+    const { loader } = setUp();
+    await loader.unload('a');
+    await loader.load('a', RECORDING);
+    await loader.unload('a');
+    await loader.unload('a');
+
+    expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
+  });
+
+  test('awaits async disposable', async () => {
+    const { loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return {
+            onEnable: () => [
+              () => events.push('dispose first'),
+              async () => {
+                await Promise.resolve();
+                events.push('dispose second');
+              },
+            ],
+          };
+        }
+      `),
+    );
+    await loader.unload('a');
+
+    expect(events).toEqual(['dispose second', 'dispose first']);
+  });
+
+  test('continues past throwing disposable', async () => {
+    const { loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return {
+            onEnable: () => [
+              () => events.push('dispose first'),
+              () => { throw new Error('failed'); },
+              () => events.push('dispose third'),
+            ],
+          };
+        }
+      `),
     );
     await loader.unload('a');
 
@@ -260,12 +409,54 @@ describe('unload', () => {
     expect(error).toHaveBeenCalledOnce();
   });
 
+  test('skips disposable that times out', async () => {
+    const { loader } = setUp();
+    await loader.load(
+      'a',
+      plugin(`
+        export default function () {
+          return { onEnable: () => [() => events.push('dispose first'), () => new Promise(() => {})] };
+        }
+      `),
+    );
+    vi.useFakeTimers();
+    const unloaded = loader.unload('a');
+    await vi.advanceTimersByTimeAsync(15_000);
+    await unloaded;
+
+    expect(events).toEqual(['dispose first']);
+    expect(error).toHaveBeenCalledOnce();
+    expect(error.mock.calls[0]?.[0]).toContain('Plugin a failed to dispose');
+  });
+
+  test('loads again after failed unload', async () => {
+    const url = plugin(`
+      export default function ({ id }) {
+        return {
+          onEnable() {
+            events.push('enable ' + id);
+          },
+          get onDisable() {
+            throw new Error('failed');
+          },
+        };
+      }
+    `);
+    const { loader } = setUp();
+    await loader.load('a', url);
+    await loader.unload('a');
+    await loader.load('a', url);
+
+    expect(events).toEqual(['enable a', 'enable a']);
+    expect(error).toHaveBeenCalledOnce();
+  });
+
   test('waits for pending load', async () => {
     const gate = Promise.withResolvers<void>();
     vi.stubGlobal('gate', gate.promise);
-    const loader = new PluginLoader(APPLICATION, EDITOR);
+    const { loader } = setUp();
 
-    void loader.load('a', SLOW, EMPTY);
+    void loader.load('a', SLOW);
     const unloaded = loader.unload('a');
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
     gate.resolve();

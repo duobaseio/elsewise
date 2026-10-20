@@ -1,7 +1,7 @@
 import { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
-import type { ContextMenu, ContextMenuGroup, ContextMenuItem, LanguageServer } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
 import { EditorManager } from './editor-manager';
@@ -18,17 +18,12 @@ function server(id: string): LanguageServer {
 
 // Returns an item that runs the command with `id`.
 function item(id: string): ContextMenuItem {
-  return { type: 'item', order: 0, command: id };
+  return { type: 'item', command: id };
 }
 
 // Returns a group in the submenu with id `menu`, or in the menu itself.
 function group(menu?: string): ContextMenuGroup {
-  return menu === undefined ? { order: 0 } : { menu, order: 0 };
-}
-
-// Returns a menu that adds `submenus`, `groups` and `items`.
-function menu({ submenus = {}, groups = {}, items = {} }: Partial<ContextMenu>): ContextMenu {
-  return { submenus, groups, items };
+  return menu === undefined ? {} : { menu };
 }
 
 // Returns a view that stands in for an editor, named `name`.
@@ -157,15 +152,15 @@ describe('addLanguageServers', () => {
   });
 });
 
-describe('addContextMenu', () => {
+describe('addContextMenus', () => {
   test('adds submenus, groups and items until disposed', () => {
     const editor = new EditorManager();
-    const added = menu({
+    const added = {
       submenus: { menu: 'Menu' },
       groups: { a: group(), b: group('menu') },
       items: { a: [item('first')], b: [item('second')] },
-    });
-    const dispose = editor.addContextMenu(added);
+    };
+    const dispose = editor.addContextMenus([added]);
 
     expect(editor.contextMenu.submenus.menu).toBe('Menu');
     expect(editor.contextMenu.groups.a).toEqual(group());
@@ -188,16 +183,16 @@ describe('addContextMenu', () => {
 
   test('appends items of group in order of addition', () => {
     const editor = new EditorManager();
-    editor.addContextMenu(menu({ groups: { a: group() }, items: { a: [item('first')] } }));
-    editor.addContextMenu(menu({ items: { a: [item('second')] } }));
+    editor.addContextMenus([{ groups: { a: group() }, items: { a: [item('first')] } }]);
+    editor.addContextMenus([{ items: { a: [item('second')] } }]);
 
     expect(editor.contextMenu.items.a).toEqual([item('first'), item('second')]);
   });
 
   test('removes only disposed items from group', () => {
     const editor = new EditorManager();
-    const dispose = editor.addContextMenu(menu({ groups: { a: group() }, items: { a: [item('first')] } }));
-    editor.addContextMenu(menu({ items: { a: [item('second')] } }));
+    const dispose = editor.addContextMenus([{ groups: { a: group() }, items: { a: [item('first')] } }]);
+    editor.addContextMenus([{ items: { a: [item('second')] } }]);
     dispose();
 
     expect(editor.contextMenu.items.a).toEqual([item('second')]);
@@ -205,9 +200,9 @@ describe('addContextMenu', () => {
 
   test('removes only disposed addition when added twice', () => {
     const editor = new EditorManager();
-    const added = menu({ items: { a: [item('first')] } });
-    const dispose = editor.addContextMenu(added);
-    editor.addContextMenu(added);
+    const added = { items: { a: [item('first')] } };
+    const dispose = editor.addContextMenus([added]);
+    editor.addContextMenus([added]);
     dispose();
 
     expect(editor.contextMenu.items.a).toEqual([item('first')]);
@@ -216,8 +211,8 @@ describe('addContextMenu', () => {
   test('keeps first submenu with id and warns', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const editor = new EditorManager();
-    editor.addContextMenu(menu({ submenus: { same: 'Original' } }));
-    editor.addContextMenu(menu({ submenus: { same: 'Other' } }));
+    editor.addContextMenus([{ submenus: { same: 'Original' } }]);
+    editor.addContextMenus([{ submenus: { same: 'Other' } }]);
 
     expect(editor.contextMenu.submenus.same).toBe('Original');
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('same'));
@@ -226,8 +221,8 @@ describe('addContextMenu', () => {
   test('keeps first group with id and warns', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const editor = new EditorManager();
-    editor.addContextMenu(menu({ groups: { same: { order: 1 } } }));
-    editor.addContextMenu(menu({ groups: { same: { order: 2 } } }));
+    editor.addContextMenus([{ groups: { same: { order: 1 } } }]);
+    editor.addContextMenus([{ groups: { same: { order: 2 } } }]);
 
     expect(editor.contextMenu.groups.same).toEqual({ order: 1 });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('same'));
@@ -235,8 +230,8 @@ describe('addContextMenu', () => {
 
   test('keeps later submenu when first is disposed', () => {
     const editor = new EditorManager();
-    const dispose = editor.addContextMenu(menu({ submenus: { menu: 'Original' } }));
-    editor.addContextMenu(menu({ submenus: { menu: 'Other' } }));
+    const dispose = editor.addContextMenus([{ submenus: { menu: 'Original' } }]);
+    editor.addContextMenus([{ submenus: { menu: 'Other' } }]);
     dispose();
 
     expect(editor.contextMenu.submenus.menu).toBe('Other');
@@ -244,8 +239,8 @@ describe('addContextMenu', () => {
 
   test('keeps items added before their group', () => {
     const editor = new EditorManager();
-    editor.addContextMenu(menu({ items: { a: [item('first')] } }));
-    editor.addContextMenu(menu({ groups: { a: group() } }));
+    editor.addContextMenus([{ items: { a: [item('first')] } }]);
+    editor.addContextMenus([{ groups: { a: group() } }]);
 
     expect(editor.contextMenu.groups.a).toEqual(group());
     expect(editor.contextMenu.items.a).toEqual([item('first')]);
@@ -253,7 +248,7 @@ describe('addContextMenu', () => {
 
   test('keeps group named after property of every object', () => {
     const editor = new EditorManager();
-    editor.addContextMenu(menu({ groups: { constructor: group() }, items: { constructor: [item('first')] } }));
+    editor.addContextMenus([{ groups: { constructor: group() }, items: { constructor: [item('first')] } }]);
 
     expect(editor.contextMenu.groups.constructor).toEqual(group());
     expect(editor.contextMenu.items.constructor).toEqual([item('first')]);

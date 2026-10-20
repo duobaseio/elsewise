@@ -19,7 +19,7 @@ export const DEFAULT_CONTEXT_MENU: ContextMenu = {
     [refactor.id]: { order: refactor.order },
   },
   items: {
-    [actions.id]: [{ type: 'item', order: actions.items.show, command: lsp.showContextActions }],
+    [actions.id]: [{ type: 'item', order: actions.items.show, command: DEFAULT_COMMANDS.editor.actions.show }],
     [clipboard.id]: [
       { type: 'item', order: clipboard.items.cut, command: DEFAULT_COMMANDS.editor.clipboard.cut },
       { type: 'item', order: clipboard.items.copy, command: DEFAULT_COMMANDS.editor.clipboard.copy },

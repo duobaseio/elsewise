@@ -17,6 +17,13 @@
     "lint": "biome lint",
     "check": "biome check"
   },
+  "dependencies": {
+    "prettier": "^3.9.9"
+  },
+  "peerDependencies": {
+    "@codemirror/language": "^6.12.4",
+    "vscode-languageserver-protocol": "^3.18.4"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@elsewise/plugin": "workspace:*",

@@ -171,9 +171,10 @@ async function facade(specifier: string, file: string): Promise<string> {
     return `export * from ${quoted};${hasDefault ? ` export { default } from ${quoted};` : ''}\n`;
   }
 
-  // CommonJS, e.g. React: list the names `export *` can't find.
+  // CommonJS, e.g. React: list the names `export *` can't find. Re-exported by name since the default import is
+  // `exports.default` rather than `exports` when `__esModule` is set.
   const names = Object.keys(createRequire(file)(file)).filter(
     (name) => name !== 'default' && /^[A-Za-z_$][\w$]*$/.test(name),
   );
-  return `import cjs from ${quoted};\nexport default cjs;\nexport const { ${names.join(', ')} } = cjs;\n`;
+  return `export { default } from ${quoted};\nexport { ${names.join(', ')} } from ${quoted};\n`;
 }

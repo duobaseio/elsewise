@@ -2,7 +2,7 @@ import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { BundledKeymap, type KeymapId } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { type Disposable, Keymap } from '@elsewise/plugin';
+import { Keymap } from '@elsewise/plugin';
 import { useMemo } from 'react';
 import type { CommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keys';
@@ -50,7 +50,7 @@ export function resolveKeymap(keymaps: readonly LoadedKeymap[], id: KeymapId): K
  *
  * Returns a disposable that stops it.
  */
-export function installApplicationKeys(window: Window, commands: CommandManager): Disposable {
+export function installApplicationKeys(window: Window, commands: CommandManager): () => void {
   const listener = (event: KeyboardEvent) => {
     if (event.defaultPrevented || event.isComposing) {
       return;

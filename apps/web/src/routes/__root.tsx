@@ -47,7 +47,7 @@ function RootComponent() {
       commands,
       editor,
       languageServers: new LanguageServers(editor),
-      loader: new PluginLoader(commands.application, editor),
+      loader: new PluginLoader(appearance, commands),
     };
   });
 
@@ -60,18 +60,19 @@ function RootComponent() {
 
   useEffect(() => installApplicationKeys(window, commands), [commands]);
 
-  // TODO: Replace with lazy loading.
   useEffect(() => {
-    for (const plugin of installed) {
-      if (!plugin.enabled) {
-        continue;
+    void (async () => {
+      const id = (plugin: (typeof installed)[number]) => ('error' in plugin ? plugin.id : plugin.manifest.id);
+      for (const plugin of installed
+        .filter((plugin) => plugin.enabled)
+        .toSorted((a, b) => id(a).localeCompare(id(b)))) {
+        if ('error' in plugin) {
+          console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
+        } else {
+          await loader.load(plugin.manifest.id, plugin.url);
+        }
       }
-      if ('error' in plugin) {
-        console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
-      } else {
-        void loader.load(plugin.manifest.id, plugin.url, plugin.manifest);
-      }
-    }
+    })();
   }, [loader, installed]);
 
   return (

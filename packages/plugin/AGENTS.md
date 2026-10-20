@@ -9,8 +9,7 @@ This is a **source package**: `exports` points straight at `src/` and there is n
 
 ## Rules
 
-- **Contract only.** No implementation. Zod is the only runtime dependency, used for the contract's schemas, e.g.
-  `Theme`. React and CodeMirror are a peer dependencies, imported type-only.
+- **Zod is the only dependency**, for the contract's schemas, e.g. `Theme`. React and CodeMirror are peer dependencies.
 - **Relative imports only**, with `.ts` extensions. No aliases. Node loads this source as-is when
   `apps/web/vite.config.ts` imports it, and Node doesn't map `.js` to `.ts`.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.

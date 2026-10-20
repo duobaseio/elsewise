@@ -2,7 +2,17 @@ import type { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { Commands, ContextMenu, Disposable, Editor, EditorDocument, LanguageServer } from '@elsewise/plugin';
+import type {
+  Commands,
+  ContextMenu,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSubmenuItem,
+  Disposable,
+  Editor,
+  EditorDocument,
+  LanguageServer,
+} from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
 
@@ -23,8 +33,8 @@ export class EditorManager implements Editor {
   private currentLanguages: readonly LanguageDescription[] = DEFAULT_LANGUAGES;
   private addedLanguageServers: readonly (readonly LanguageServer[])[] = [];
   private currentLanguageServers: readonly LanguageServer[] = [];
-  private addedContextMenus: readonly ContextMenu[] = [DEFAULT_CONTEXT_MENU];
-  private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus);
+  private addedContextMenus: readonly (readonly Partial<ContextMenu>[])[] = [[DEFAULT_CONTEXT_MENU]];
+  private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus.flat());
 
   get active(): EditorView | null {
     return this.current;
@@ -111,30 +121,25 @@ export class EditorManager implements Editor {
     return this.currentContextMenu;
   }
 
-  /**
-   * Adds a plugin's `menu` to the context menu.
-   *
-   * Returns a disposable that removes it.
-   */
-  addContextMenu(menu: ContextMenu): Disposable {
-    const added = { ...menu };
+  addContextMenus(menus: readonly Partial<ContextMenu>[]): Disposable {
+    const added = [...menus];
     this.addedContextMenus = [...this.addedContextMenus, added];
-    this.currentContextMenu = this.merge(this.addedContextMenus);
+    this.currentContextMenu = this.merge(this.addedContextMenus.flat());
     this.notify();
     return () => {
       this.addedContextMenus = this.addedContextMenus.filter((other) => other !== added);
-      this.currentContextMenu = this.merge(this.addedContextMenus);
+      this.currentContextMenu = this.merge(this.addedContextMenus.flat());
       this.notify();
     };
   }
 
   // Returns `menus` as one: the first submenu or group added with an id wins, and the items are in order of addition.
-  private merge(menus: readonly ContextMenu[]): ContextMenu {
-    const submenus: ContextMenu['submenus'] = {};
-    const groups: ContextMenu['groups'] = {};
-    const items: ContextMenu['items'] = {};
+  private merge(menus: readonly Partial<ContextMenu>[]): ContextMenu {
+    const submenus: Record<string, string> = {};
+    const groups: Record<string, ContextMenuGroup> = {};
+    const items: Record<string, (ContextMenuItem | ContextMenuSubmenuItem)[]> = {};
     for (const menu of menus) {
-      for (const [id, submenu] of Object.entries(menu.submenus)) {
+      for (const [id, submenu] of Object.entries(menu.submenus ?? {})) {
         if (Object.hasOwn(submenus, id)) {
           console.warn(`Context submenu ${id} was already added`);
           continue;
@@ -143,7 +148,7 @@ export class EditorManager implements Editor {
         submenus[id] = submenu;
       }
 
-      for (const [id, group] of Object.entries(menu.groups)) {
+      for (const [id, group] of Object.entries(menu.groups ?? {})) {
         if (Object.hasOwn(groups, id)) {
           console.warn(`Context menu group ${id} was already added`);
           continue;
@@ -152,7 +157,7 @@ export class EditorManager implements Editor {
         groups[id] = group;
       }
 
-      for (const [id, added] of Object.entries(menu.items)) {
+      for (const [id, added] of Object.entries(menu.items ?? {})) {
         if (Object.hasOwn(items, id)) {
           items[id].push(...added);
         } else {
@@ -171,7 +176,9 @@ export class EditorManager implements Editor {
    */
   subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   private notify() {

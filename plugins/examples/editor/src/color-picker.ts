@@ -1,4 +1,4 @@
-import { type Extension, StateEffect, StateField } from '@codemirror/state';
+import { EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
 import {
   Decoration,
   type DecorationSet,
@@ -50,6 +50,36 @@ export function colorPicker(): Extension {
     ]),
     THEME,
   ];
+}
+
+/**
+ * An extension that shows a larger swatch of the six-digit hex color under the pointer, with its RGB value, in the
+ * hover.
+ */
+export const colorHover = EditorState.languageData.of(() => [{ hover: COLOR }]);
+
+const COLOR = { source: hover };
+
+function hover(view: EditorView, pos: number): Tooltip | null {
+  const line = view.state.doc.lineAt(pos);
+  for (const match of line.text.matchAll(/#[0-9a-f]{6}\b/gi)) {
+    const from = line.from + match.index;
+    if (pos < from || pos > from + 7) {
+      continue;
+    }
+
+    const color = match[0];
+    const [r, g, b] = [1, 3, 5].map((index) => Number.parseInt(color.slice(index, index + 2), 16));
+    const dom = document.createElement('div');
+    dom.className = 'cm-color-hover';
+    const swatch = dom.appendChild(document.createElement('span'));
+    swatch.className = 'cm-color-hover-swatch';
+    swatch.style.backgroundColor = color;
+    dom.append(`${color} · rgb(${r} ${g} ${b})`);
+    return { pos: from, end: from + 7, above: true, create: () => ({ dom }) };
+  }
+
+  return null;
 }
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -265,6 +295,20 @@ const THEME = EditorView.baseTheme({
     outline: 'none',
   },
   '.cm-color-swatch:focus-visible': RING,
+  '.cm-color-hover': {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '6px 8px',
+    fontFamily: 'var(--font-mono)',
+  },
+  '.cm-color-hover-swatch': {
+    boxSizing: 'border-box',
+    width: '2em',
+    height: '2em',
+    border: '1px solid var(--input)',
+    borderRadius: 'var(--radius)',
+  },
   '.cm-tooltip.cm-color-picker': {
     display: 'flex',
     flexDirection: 'column',
