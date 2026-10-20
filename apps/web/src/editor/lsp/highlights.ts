@@ -10,6 +10,7 @@ import {
 } from 'vscode-languageserver-protocol';
 import { closeHoverOnClick } from '@/editor/hover';
 import { symbol } from '@/editor/lsp/symbol';
+import { type StripeMark, stripeMarks } from '@/editor/stripe/stripe';
 
 const READ = Decoration.mark({ class: 'cm-lsp-highlight' });
 const WRITE = Decoration.mark({ class: 'cm-lsp-highlight cm-lsp-highlight-write' });
@@ -30,6 +31,21 @@ export function serverHighlights(): LSPClientExtension {
     editorExtension: [
       highlights,
       closeHoverOnClick.compute([highlightUsages], (state) => state.facet(highlightUsages)),
+      stripeMarks.of({
+        // Whatever may change the highlights, since they are dropped without an effect.
+        update: (update) =>
+          update.docChanged ||
+          update.selectionSet ||
+          update.focusChanged ||
+          update.transactions.some((tr) => tr.effects.some((effect) => effect.is(showHighlights))),
+        marks(view) {
+          const marks: StripeMark[] = [];
+          view.plugin(highlights)?.decorations.between(0, view.state.doc.length, (from, to) => {
+            marks.push({ from, to, kind: 'usage' });
+          });
+          return marks;
+        },
+      }),
     ],
   };
 }

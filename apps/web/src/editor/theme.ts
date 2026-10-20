@@ -42,7 +42,7 @@ const CHROME = {
   ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
-  Exclude<keyof ActiveTheme['editor'], 'tokens' | Diagnostic['severity']>,
+  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'stripe' | Diagnostic['severity']>,
   readonly [selector: string, property: string]
 >;
 
@@ -104,9 +104,24 @@ const STRIKEOUTS: Partial<Record<string, { ascent: number; position: number; siz
 };
 
 /**
+ * The stripe's width in pixels, which the vertical scrollbar's track matches.
+ */
+export const STRIPE_WIDTH = 10;
+
+/**
+ * The height of a mark on one line, in pixels, and the least of one spanning lines.
+ */
+export const STRIPE_MIN_HEIGHT = 2;
+
+/**
+ * The pixels above and below a mark that still count as pointing at it.
+ */
+export const STRIPE_TOLERANCE = 2 * STRIPE_MIN_HEIGHT;
+
+/**
  * The styles that don't depend on the theme.
  */
-const METRICS = EditorView.theme({
+export const METRICS = EditorView.theme({
   '&': { height: '100%' },
   '&.cm-focused': { outline: 'none' },
 
@@ -122,14 +137,44 @@ const METRICS = EditorView.theme({
     fontSize: 'var(--text-code)',
     lineHeight: 'var(--text-code--line-height)',
   },
-  '.cm-scroller::-webkit-scrollbar': { width: '6px', height: '6px' },
+  // The vertical track is as wide as the stripe's marks, with the thumb kept as wide as the horizontal one.
+  '.cm-scroller::-webkit-scrollbar': { width: `${STRIPE_WIDTH}px`, height: '6px' },
   '.cm-scroller::-webkit-scrollbar-track, .cm-scroller::-webkit-scrollbar-corner': { background: 'none' },
   '.cm-scroller::-webkit-scrollbar-thumb': {
     backgroundColor: 'var(--border)',
-    borderRadius: '3px',
+    borderRadius: '5px',
     backgroundClip: 'content-box',
     border: '1px solid transparent',
   },
+  '.cm-scroller::-webkit-scrollbar-thumb:vertical': { borderWidth: `1px ${(STRIPE_WIDTH - 4) / 2}px` },
+
+  '.cm-stripe': {
+    position: 'absolute',
+    right: '0',
+    width: `${STRIPE_WIDTH}px`,
+    pointerEvents: 'none',
+    overflow: 'hidden',
+  },
+  // The padding is the tolerance, outside the painted mark but inside the pointer's target.
+  '.cm-stripe-mark': {
+    position: 'absolute',
+    left: '0',
+    right: '0',
+    boxSizing: 'border-box',
+    padding: `${STRIPE_TOLERANCE}px 0`,
+    pointerEvents: 'auto',
+    cursor: 'pointer',
+  },
+  // Painted apart from the target, so the corners round.
+  '.cm-stripe-mark::before': {
+    content: '""',
+    position: 'absolute',
+    inset: `${STRIPE_TOLERANCE}px 0`,
+    borderRadius: '2px',
+  },
+  '.cm-stripe-tooltip': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px` },
+  '.cm-diagnostics-summary': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px`, marginTop: '4px' },
+
   '.cm-scroller::-webkit-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
   '.cm-scroller::-webkit-scrollbar-thumb:active': { backgroundColor: 'var(--disabled)' },
   '.cm-gutters': {
@@ -484,6 +529,10 @@ export function useThemeExtension(): Extension {
       spec[`.cm-lintRange-${severity}, .cm-lintPoint-${severity}::after`] = {
         backgroundImage: `url("data:image/svg+xml,${encodeURIComponent(svg)}")`,
       };
+    }
+
+    for (const [kind, color] of Object.entries(editor.stripe)) {
+      spec[`.cm-stripe-mark-${kind}::before`] = { backgroundColor: color };
     }
 
     const dots = `<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><circle cx="1.5" cy="1.5" r=".8" fill="${editor.hint}"/></svg>`;

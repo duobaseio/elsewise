@@ -4,6 +4,7 @@ import { EditorView, lineNumbers } from '@codemirror/view';
 import { useMemo } from 'react';
 import { completionDocumentation } from '@/editor/completion';
 import { highlightUsages } from '@/editor/lsp/highlights';
+import { stripe } from '@/editor/stripe/stripe';
 import { visualGuides } from '@/editor/visual-guides';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
@@ -20,6 +21,7 @@ export function useSettingsExtension(language: string | undefined): Extension {
   const guides = useEditorSettings(language, 'visualGuides');
   const documentation = useSettings((settings) => settings.appearance.editor.completionDocumentation);
   const usages = useSettings((settings) => settings.appearance.editor.highlightUsages);
+  const showStripe = useSettings((settings) => settings.appearance.editor.stripe);
 
   return useMemo(
     () => [
@@ -32,7 +34,8 @@ export function useSettingsExtension(language: string | undefined): Extension {
       visualGuides(guides),
       completionDocumentation.of(documentation),
       highlightUsages.of(usages),
+      showStripe ? stripe() : [],
     ],
-    [tabSize, indent, showLineNumbers, lineWrapping, guides, documentation, usages],
+    [tabSize, indent, showLineNumbers, lineWrapping, guides, documentation, usages, showStripe],
   );
 }

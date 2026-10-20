@@ -1,7 +1,7 @@
-import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorSelection, EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, test } from 'vitest';
-import { scroll } from '@/editor/scroll';
+import { scroll, scrollbarsKeepFocus } from '@/editor/scroll';
 
 const DOC = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
 
@@ -13,10 +13,10 @@ afterEach(() => {
   }
 });
 
-// Opens `DOC` in an editor 200px high.
-function open(): EditorView {
+// Opens `DOC` in an editor 200px high, with `extensions`.
+function open(extensions: Extension = []): EditorView {
   const view = new EditorView({
-    state: EditorState.create({ doc: DOC, extensions: EditorView.theme({ '&': { height: '200px' } }) }),
+    state: EditorState.create({ doc: DOC, extensions: [EditorView.theme({ '&': { height: '200px' } }), extensions] }),
     parent: document.body,
   });
   views.push(view);
@@ -73,5 +73,35 @@ describe('scroll', () => {
     view.dispatch({ effects: scroll(range('line 3'), view) });
 
     expect(view.scrollDOM.scrollTop).toBe(0);
+  });
+});
+
+describe('scrollbarsKeepFocus', () => {
+  // Presses `view`'s scroller at `x` and `y` from its top left, and returns whether the press kept its default.
+  function press(view: EditorView, x: number, y: number): boolean {
+    const { left, top } = view.scrollDOM.getBoundingClientRect();
+    return view.scrollDOM.dispatchEvent(
+      new MouseEvent('mousedown', { clientX: left + x, clientY: top + y, bubbles: true, cancelable: true }),
+    );
+  }
+
+  test('prevents press on vertical scrollbar', () => {
+    const view = open(scrollbarsKeepFocus());
+    const { scrollDOM } = view;
+
+    expect(press(view, scrollDOM.clientWidth, 10)).toBe(false);
+  });
+
+  test('prevents press on horizontal scrollbar', () => {
+    const view = open(scrollbarsKeepFocus());
+    const { scrollDOM } = view;
+
+    expect(press(view, 10, scrollDOM.clientHeight)).toBe(false);
+  });
+
+  test('lets press on scroller through', () => {
+    const view = open(scrollbarsKeepFocus());
+
+    expect(press(view, 10, 10)).toBe(true);
   });
 });

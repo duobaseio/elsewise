@@ -8,6 +8,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { stripe, stripeMarks } from '@/editor/stripe/stripe';
 import { useThemeExtension } from '@/editor/theme';
 import { visualGuides } from '@/editor/visual-guides';
 import { settingsQuery } from '@/settings/settings';
@@ -26,6 +27,7 @@ const { EDITOR } = vi.hoisted(() => ({
     searchMatchSelectedBorder: '#D0E0F0',
     completionHovered: '#F0A0E0',
     completionSelected: '#E0F0A0',
+    stripe: { error: '#F0B0A0', searchMatch: '#A0F0B0' },
     tokens: {
       keyword: { color: '#A0B0C0', bold: true, strikethrough: true },
       comment: { color: '#D0E0F0', italic: true, underline: true },
@@ -93,6 +95,18 @@ function rgb(hex: string): string {
   const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16));
   return `rgb(${r}, ${g}, ${b})`;
 }
+
+test('stripe marks take theme colors', async () => {
+  const source = { update: () => false, marks: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
+  const view = await mount('x', [stripe(), stripeMarks.of(source)]);
+  view.dispatch(setDiagnostics(view.state, [{ from: 0, to: 1, severity: 'error', message: 'x' }]));
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark')).toHaveLength(2));
+
+  const painted = (kind: string) =>
+    getComputedStyle(view.dom.querySelector(`.cm-stripe-mark-${kind}`) as Element, '::before').backgroundColor;
+  expect(painted('error')).toBe(rgb('#F0B0A0'));
+  expect(painted('searchMatch')).toBe(rgb('#A0F0B0'));
+});
 
 test("visual guide takes theme's color", async () => {
   const view = await mount('x', [visualGuides([1])]);

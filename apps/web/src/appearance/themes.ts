@@ -53,11 +53,21 @@ export function resolveActiveTheme(
       (other.source !== 'plugin' || (id.source === 'plugin' && other.plugin === id.plugin)),
   )?.theme[brightness];
 
+  const colors = { ...elsewise?.interface, ...variant?.interface };
+  const editor = { ...elsewise?.editor, ...variant?.editor };
   return {
-    interface: { ...elsewise?.interface, ...variant?.interface },
+    interface: colors,
     editor: {
-      ...elsewise?.editor,
-      ...variant?.editor,
+      ...editor,
+      stripe: {
+        error: colors.error,
+        warning: colors['warning-fill'],
+        info: colors.info,
+        hint: colors.disabled,
+        searchMatch: editor.searchMatch,
+        usage: colors['info-line'],
+        ...variant?.editor.stripe,
+      },
       tokens: { ...elsewise?.editor.tokens, ...variant?.editor.tokens },
     },
     terminal: { ...elsewise?.terminal, ...variant?.terminal },

@@ -310,6 +310,13 @@ describe('SHOW_HOVER', () => {
     expect(tooltip.querySelector('.cm-diagnosticMessage')?.textContent).toBe('cannot find attach');
   });
 
+  test('opens after click closed hover', async () => {
+    const view = open([DIAGNOSTIC], closeHoverOnClick.of(true));
+    press(view, DIAGNOSTIC.from + 1);
+
+    await show(view, DIAGNOSTIC.from + 1);
+  });
+
   test('stays open on pointer move', async () => {
     const view = open([DIAGNOSTIC]);
     await show(view, DIAGNOSTIC.from + 1);

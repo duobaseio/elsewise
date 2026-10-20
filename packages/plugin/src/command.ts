@@ -72,6 +72,10 @@ export const DEFAULT_COMMANDS = {
       show: 'elsewise.editor.actions.show',
       applyTopFix: 'elsewise.editor.actions.applyTopFix',
     },
+    diagnostics: {
+      next: 'elsewise.editor.diagnostics.next',
+      previous: 'elsewise.editor.diagnostics.previous',
+    },
     lsp: {
       goToDefinition: 'elsewise.editor.lsp.goToDefinition',
       findUsages: 'elsewise.editor.lsp.findUsages',
@@ -152,6 +156,10 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     actions: {
       show: ['Alt-Enter'],
       applyTopFix: ['Shift-Alt-Enter'],
+    },
+    diagnostics: {
+      next: ['F2'],
+      previous: ['Shift-F2'],
     },
     lsp: {
       goToDefinition: ['Mod-b'],

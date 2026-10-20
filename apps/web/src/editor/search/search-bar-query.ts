@@ -1,4 +1,4 @@
-import { getSearchQuery, type SearchQuery } from '@codemirror/search';
+import { getSearchQuery, type SearchQuery, searchPanelOpen } from '@codemirror/search';
 import { type EditorState, StateEffect, StateField } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { useMemo, useSyncExternalStore } from 'react';
@@ -7,6 +7,35 @@ import { useMemo, useSyncExternalStore } from 'react';
  * The maximum number of matches that are counted.
  */
 export const LIMIT = 1000;
+
+export const matches = StateField.define<{ ranges: readonly { from: number; to: number }[]; limited: boolean }>({
+  create: find,
+  update(value, transaction) {
+    const { state, startState } = transaction;
+    return transaction.docChanged ||
+      getSearchQuery(state) !== getSearchQuery(startState) ||
+      searchPanelOpen(state) !== searchPanelOpen(startState)
+      ? find(state)
+      : value;
+  },
+});
+
+function find(state: EditorState): { ranges: readonly { from: number; to: number }[]; limited: boolean } {
+  const query = getSearchQuery(state);
+  if (!searchPanelOpen(state) || !query.valid) {
+    return { ranges: [], limited: false };
+  }
+
+  const ranges: { from: number; to: number }[] = [];
+  const cursor = query.getCursor(state);
+  for (let next = cursor.next(); !next.done; next = cursor.next()) {
+    if (ranges.length === LIMIT) {
+      return { ranges, limited: true };
+    }
+    ranges.push({ from: next.value.from, to: next.value.to });
+  }
+  return { ranges, limited: false };
+}
 
 /**
  * A search query's matches.
@@ -53,31 +82,14 @@ export function useSearchBarQuery({
   const state = useSyncExternalStore(subscribe, () => view.state);
   const replace = state.field(replaceRow, false) ?? false;
   const query = getSearchQuery(state);
-  const matches = useMemo((): Matches => {
-    if (!query.valid) {
-      return { total: 0, current: null, limited: false };
-    }
+  const found = state.field(matches);
+  const { from, to } = state.selection.main;
+  const counted = useMemo((): Matches => {
+    const index = found.ranges.findIndex((range) => range.from === from && range.to === to);
+    return { total: found.ranges.length, current: index === -1 ? null : index + 1, limited: found.limited };
+  }, [found, from, to]);
 
-    const cursor = query.getCursor(state);
-    const { from, to } = state.selection.main;
-
-    let total = 0;
-    let current: number | null = null;
-    for (let next = cursor.next(); !next.done; next = cursor.next()) {
-      if (total === LIMIT) {
-        return { total, current, limited: true };
-      }
-
-      total += 1;
-      if (next.value.from === from && next.value.to === to) {
-        current = total;
-      }
-    }
-
-    return { total, current, limited: false };
-  }, [state, query]);
-
-  return { state, replace, query, matches };
+  return { state, replace, query, matches: counted };
 }
 
 /**

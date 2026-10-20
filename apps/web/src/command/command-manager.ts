@@ -53,6 +53,7 @@ import {
   UNINDENT,
 } from '@/editor/codemirror-commands';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
+import { NEXT_DIAGNOSTIC, PREVIOUS_DIAGNOSTIC } from '@/editor/diagnostics';
 import { FORMAT } from '@/editor/format';
 import { SHOW_HOVER } from '@/editor/hover';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
@@ -109,6 +110,8 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   SHOW_HOVER,
   SHOW_ACTIONS,
   APPLY_TOP_FIX,
+  NEXT_DIAGNOSTIC,
+  PREVIOUS_DIAGNOSTIC,
   // LSP
   GO_TO_DEFINITION,
   FIND_USAGES,

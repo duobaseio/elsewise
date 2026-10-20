@@ -126,7 +126,9 @@ export const SHOW_HOVER: EditorCommand = {
  */
 export function hover(): Extension {
   return [
-    hoverTooltip(lookUp, { hideOn: (tr) => tr.docChanged }),
+    hoverTooltip((view, pos, side) => (view.state.field(click) ? null : lookUp(view, pos, side)), {
+      hideOn: (tr) => tr.docChanged,
+    }),
     cursorHover,
     click,
     clicks,
@@ -156,10 +158,6 @@ export function hover(): Extension {
  * arrive.
  */
 async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tooltip[] | null> {
-  if (view.state.field(click)) {
-    return null;
-  }
-
   const found: EditorDiagnostic[] = [];
   // Includes the diagnostics that only touch `pos`, whichever `side` the pointer is on, as servers' documentation does.
   forEachDiagnostic(view.state, (diagnostic, from, to) => {
@@ -169,88 +167,13 @@ async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tool
   });
 
   const sources = view.state.languageDataAt<EditorHoverSource>('hover', pos, side);
-  const [fixes, tooltips] = await Promise.all([
-    Promise.all(found.map((diagnostic) => actionsAt(view, diagnostic.from, diagnostic.to, [diagnostic], FIXES_DELAY))),
+  const [dom, tooltips] = await Promise.all([
+    diagnosticsSection(view, found),
     Promise.all(sources.map(({ source }) => Promise.try(source, view, pos, side).catch(() => null))),
   ]);
 
   const sections: { order: number; tooltips: readonly Tooltip[] }[] = [];
-  // Based on `@codemirror/lint`'s `lintTooltip`.
-  //
-  // Adds each diagnostic's code, and a line for its top fix and the rest of its actions.
-  if (found.length > 0) {
-    // Returns the command's first key, after a space, or nothing if it has none.
-    const commands = view.state.facet(COMMANDS);
-    const key = (id: string) => {
-      const binding = commands?.keymap.commands.get(id)?.[0];
-      return binding === undefined
-        ? []
-        : [' ', Object.assign(document.createElement('kbd'), { textContent: formatKey(binding) })];
-    };
-
-    const dom = document.createElement('ul');
-    dom.className = 'cm-tooltip-lint';
-    for (const [i, diagnostic] of found.entries()) {
-      // Message.
-      const item = dom.appendChild(document.createElement('li'));
-      item.className = `cm-diagnostic cm-diagnostic-${diagnostic.severity}`;
-      const text = item.appendChild(document.createElement('span'));
-      text.className = 'cm-diagnosticText';
-
-      const message = text.appendChild(document.createElement('div'));
-      message.className = 'cm-diagnosticMessage';
-      if (diagnostic.renderMessage) {
-        message.append(diagnostic.renderMessage(view));
-      } else {
-        // Plain messages still quote code in backticks, e.g. "cannot find value `x` in this scope".
-        appendCode(message, diagnostic.message);
-      }
-
-      // Source of diagnostic/meta information.
-      const { source, code, codeHref } = diagnostic;
-      if (source !== undefined || code !== undefined) {
-        const meta = text.appendChild(document.createElement('div'));
-        meta.className = 'cm-diagnosticMeta';
-        if (source !== undefined) {
-          meta.append(source);
-        }
-        if (code !== undefined) {
-          if (source !== undefined) {
-            meta.append(' · ');
-          }
-          // Links only to the web, since a server or plugin can give any URI.
-          meta.appendChild(
-            codeHref !== undefined && /^https?:/i.test(codeHref)
-              ? Object.assign(document.createElement('a'), { href: codeHref })
-              : document.createElement('span'),
-          ).textContent = String(code);
-        }
-      }
-
-      // Fixes
-      if (fixes[i].length > 0) {
-        const line = text.appendChild(document.createElement('div'));
-        line.className = 'cm-actions-hover';
-        const append = (label: string, command: string, run: () => void) => {
-          const button = Object.assign(document.createElement('button'), { type: 'button' });
-          appendCode(button, label);
-          button.addEventListener('click', run);
-          line.append(line.childNodes.length === 0 ? '' : ' · ', button, ...key(command));
-        };
-
-        const fix = fixes[i].find((action) => action.type !== undefined);
-        if (fix) {
-          append(fix.label, APPLY_TOP_FIX.id, () => void apply(view, fix));
-        }
-        // Shows the actions at the diagnostic rather than wherever the cursor is.
-        append('More actions', SHOW_ACTIONS.id, () => {
-          view.dispatch({ selection: { anchor: diagnostic.from } });
-          view.focus();
-          view.state.facet(COMMANDS)?.run(SHOW_ACTIONS.id, view);
-        });
-      }
-    }
-
+  if (dom !== null) {
     sections.push({
       order: DEFAULT_HOVER_SECTIONS.diagnostics,
       tooltips: [
@@ -273,4 +196,91 @@ async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tool
 
   const shown = sections.toSorted((a, b) => a.order - b.order || 0).flatMap((section) => section.tooltips);
   return shown.length > 0 ? shown : null;
+}
+
+export async function diagnosticsSection(
+  view: EditorView,
+  diagnostics: readonly EditorDiagnostic[],
+): Promise<HTMLElement | null> {
+  if (diagnostics.length === 0) {
+    return null;
+  }
+  const fixes = await Promise.all(
+    diagnostics.map((diagnostic) => actionsAt(view, diagnostic.from, diagnostic.to, [diagnostic], FIXES_DELAY)),
+  );
+
+  // Based on `@codemirror/lint`'s `lintTooltip`.
+  //
+  // Returns the command's first key, after a space, or nothing if it has none.
+  const commands = view.state.facet(COMMANDS);
+  const key = (id: string) => {
+    const binding = commands?.keymap.commands.get(id)?.[0];
+    return binding === undefined
+      ? []
+      : [' ', Object.assign(document.createElement('kbd'), { textContent: formatKey(binding) })];
+  };
+
+  const dom = document.createElement('ul');
+  dom.className = 'cm-tooltip-lint';
+  for (const [i, diagnostic] of diagnostics.entries()) {
+    // Message.
+    const item = dom.appendChild(document.createElement('li'));
+    item.className = `cm-diagnostic cm-diagnostic-${diagnostic.severity}`;
+    const text = item.appendChild(document.createElement('span'));
+    text.className = 'cm-diagnosticText';
+
+    const message = text.appendChild(document.createElement('div'));
+    message.className = 'cm-diagnosticMessage';
+    if (diagnostic.renderMessage) {
+      message.append(diagnostic.renderMessage(view));
+    } else {
+      // Plain messages still quote code in backticks, e.g. "cannot find value `x` in this scope".
+      appendCode(message, diagnostic.message);
+    }
+
+    // Source of diagnostic/meta information.
+    const { source, code, codeHref } = diagnostic;
+    if (source !== undefined || code !== undefined) {
+      const meta = text.appendChild(document.createElement('div'));
+      meta.className = 'cm-diagnosticMeta';
+      if (source !== undefined) {
+        meta.append(source);
+      }
+      if (code !== undefined) {
+        if (source !== undefined) {
+          meta.append(' · ');
+        }
+        // Links only to the web, since a server or plugin can give any URI.
+        meta.appendChild(
+          codeHref !== undefined && /^https?:/i.test(codeHref)
+            ? Object.assign(document.createElement('a'), { href: codeHref })
+            : document.createElement('span'),
+        ).textContent = String(code);
+      }
+    }
+
+    // Fixes
+    if (fixes[i].length > 0) {
+      const line = text.appendChild(document.createElement('div'));
+      line.className = 'cm-actions-hover';
+      const append = (label: string, command: string, run: () => void) => {
+        const button = Object.assign(document.createElement('button'), { type: 'button' });
+        appendCode(button, label);
+        button.addEventListener('click', run);
+        line.append(line.childNodes.length === 0 ? '' : ' · ', button, ...key(command));
+      };
+
+      const fix = fixes[i].find((action) => action.type !== undefined);
+      if (fix) {
+        append(fix.label, APPLY_TOP_FIX.id, () => void apply(view, fix));
+      }
+      // Shows the actions at the diagnostic rather than wherever the cursor is.
+      append('More actions', SHOW_ACTIONS.id, () => {
+        view.dispatch({ selection: { anchor: diagnostic.from } });
+        view.focus();
+        view.state.facet(COMMANDS)?.run(SHOW_ACTIONS.id, view);
+      });
+    }
+  }
+  return dom;
 }

@@ -1,7 +1,6 @@
 import { closeBrackets } from '@codemirror/autocomplete';
 import { history, simplifySelection, standardKeymap } from '@codemirror/commands';
 import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
-import { highlightSelectionMatches } from '@codemirror/search';
 import { Compartment, EditorState, type Extension, Prec } from '@codemirror/state';
 import {
   crosshairCursor,
@@ -25,10 +24,13 @@ import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-me
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
-import { navigation } from '@/editor/navigation.ts';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
+import { navigation } from '@/editor/navigation.ts';
+import { scrollbarsKeepFocus } from '@/editor/scroll';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
+import { useDiagnosticsSummary } from '@/editor/stripe/diagnostics-summary';
+import { selectionMatches } from '@/editor/stripe/selection-matches';
 import { useThemeExtension } from '@/editor/theme';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
@@ -38,6 +40,7 @@ const THEME = new Compartment();
 const LANGUAGE = new Compartment();
 const LANGUAGE_SERVER = new Compartment();
 const SETTINGS = new Compartment();
+const DIAGNOSTICS_SUMMARY = new Compartment();
 
 export interface EditorProps {
   /**
@@ -73,6 +76,7 @@ export function Editor({ path, code, root }: EditorProps) {
           : null;
   const plugins = usePluginsExtension(path, language);
   const { search, portal } = useSearchExtension();
+  const { summary, portal: summaryPortal } = useDiagnosticsSummary();
   const settings = useSettingsExtension(description?.name);
   const languageServer = useLanguageServerExtension(root, description?.name, path);
   const icons = useIcons();
@@ -112,6 +116,7 @@ export function Editor({ path, code, root }: EditorProps) {
         search,
 
         SETTINGS.of(settings),
+        DIAGNOSTICS_SUMMARY.of(summary),
         // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
         // Has the precedence for the same reason as the settings' facets.
         Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
@@ -143,10 +148,11 @@ export function Editor({ path, code, root }: EditorProps) {
 
         highlightActiveLine(),
         highlightActiveLineGutter(),
-        highlightSelectionMatches(),
+        selectionMatches(),
         highlightSpecialChars(),
         RIGHT_CLICK_CONTEXT_MENU,
         navigation(),
+        scrollbarsKeepFocus(),
 
         // Escape is not a command to keep it from taking precedence over the popups' own Escape.
         keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
@@ -219,6 +225,10 @@ export function Editor({ path, code, root }: EditorProps) {
   }, [settings]);
 
   useEffect(() => {
+    view.current?.dispatch({ effects: DIAGNOSTICS_SUMMARY.reconfigure(summary) });
+  }, [summary]);
+
+  useEffect(() => {
     view.current?.dispatch({ effects: LANGUAGE_SERVER.reconfigure(languageServer) });
   }, [languageServer]);
 
@@ -253,6 +263,7 @@ export function Editor({ path, code, root }: EditorProps) {
         />
       </EditorContextMenu>
       {portal}
+      {summaryPortal}
     </>
   );
 }
