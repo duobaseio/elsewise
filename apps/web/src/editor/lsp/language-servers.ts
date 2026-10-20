@@ -118,8 +118,9 @@ const MESSAGE_TYPES = new Map([
 /**
  * The responses to the server's requests that lsp-client would refuse, by method.
  */
-const REQUESTS = new Map([
+const REQUESTS = new Map<string, (client: LSPClient, params: never) => unknown>([
   ['workspace/applyEdit', (client: LSPClient, { edit }: ApplyWorkspaceEditParams) => applyWorkspaceEdit(client, edit)],
+  ['workspace/diagnostic/refresh', (client: LSPClient) => pullAllDiagnostics(client)],
 ]);
 
 const commandHandlers = Facet.define<

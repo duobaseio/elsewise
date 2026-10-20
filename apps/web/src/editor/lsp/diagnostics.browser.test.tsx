@@ -510,4 +510,25 @@ describe('LanguageServerInstance.start', () => {
 
     await vi.waitFor(() => expect(fakes[1]?.requests).toHaveLength(1));
   });
+
+  test('re-requests diagnostics for open files on refresh', async () => {
+    const fake = transport();
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    await instance.start();
+    await instance.client.initializing;
+    open(instance, 'file:///worktree/first.toy');
+    open(instance, 'file:///worktree/second.toy');
+    await vi.waitFor(() => expect(fake.requests).toHaveLength(2));
+
+    expect(await fake.request('workspace/diagnostic/refresh', null)).toEqual({ result: null });
+
+    await vi.waitFor(() => expect(fake.requests).toHaveLength(4));
+    expect(fake.requests.slice(2).map((request) => request.uri)).toEqual([
+      'file:///worktree/first.toy',
+      'file:///worktree/second.toy',
+    ]);
+  });
 });

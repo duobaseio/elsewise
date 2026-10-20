@@ -155,6 +155,19 @@ describe('connect', () => {
     });
   });
 
+  test('tells server it can ask to refresh diagnostics', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([server(() => fake)]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({
+      method: 'initialize',
+      params: { capabilities: { workspace: { diagnostics: { refreshSupport: true } } } },
+    });
+  });
+
   test('tells server it can ask for settings when handled', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();

@@ -77,6 +77,7 @@ export function serverDiagnostics(): LSPClientExtension {
           markupMessageSupport: true,
         },
       },
+      workspace: { diagnostics: { refreshSupport: true } },
     },
     notificationHandlers: {
       // Based on `@codemirror/lsp-client`'s `serverDiagnostics`.
