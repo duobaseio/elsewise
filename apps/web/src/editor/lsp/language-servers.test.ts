@@ -155,10 +155,10 @@ describe('connect', () => {
     });
   });
 
-  test('tells server it can ask for settings', async () => {
+  test('tells server it can ask for settings when handled', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake)]);
+    editor.addLanguageServers([server(() => fake, { requestHandlers: { 'workspace/configuration': () => [] } })]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
@@ -168,28 +168,33 @@ describe('connect', () => {
     });
   });
 
-  test('sends settings after initialize', async () => {
+  test("doesn't tell server it can ask for settings when unhandled", async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake, { settings: { toy: { strict: true } } })]);
+    editor.addLanguageServers([server(() => fake)]);
+    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
+    await started();
+
+    expect(fake.sent[0]).toMatchObject({ method: 'initialize' });
+    expect(fake.sent[0]).not.toMatchObject({ params: { capabilities: { workspace: { configuration: true } } } });
+  });
+
+  test('calls connect after initialized', async () => {
+    const editor = new EditorManager();
+    const fake = new StubTransport();
+    editor.addLanguageServers([
+      server(() => fake, {
+        connect: (client) => client.notification('workspace/didChangeConfiguration', { settings: { toy: true } }),
+      }),
+    ]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
     expect(fake.sent).toMatchObject([
       { method: 'initialize' },
       { method: 'initialized' },
-      { method: 'workspace/didChangeConfiguration', params: { settings: { toy: { strict: true } } } },
+      { method: 'workspace/didChangeConfiguration', params: { settings: { toy: true } } },
     ]);
-  });
-
-  test("doesn't send empty settings", async () => {
-    const editor = new EditorManager();
-    const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake, { settings: {} })]);
-    new LanguageServers(editor).connect(ROOT, 'Toy', URI);
-    await started();
-
-    expect(fake.methods).toEqual(['initialize', 'initialized']);
   });
 
   test('sends client capabilities of extensions under core', async () => {

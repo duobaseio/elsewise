@@ -8,8 +8,6 @@ import { createContext, useCallback, useContext, useMemo, useSyncExternalStore }
 import {
   type ApplyWorkspaceEditParams,
   type Command,
-  type ConfigurationParams,
-  type DidChangeConfigurationParams,
   ErrorCodes,
   type ExecuteCommandParams,
   MessageType,
@@ -18,7 +16,6 @@ import {
 import type { EditorManager } from '@/editor/editor-manager';
 import { serverActions } from '@/editor/lsp/actions';
 import { serverCompletion } from '@/editor/lsp/completion';
-import { configuration, serverConfiguration } from '@/editor/lsp/configuration';
 import { serverDefinition } from '@/editor/lsp/definition';
 import { pullAllDiagnostics, serverDiagnostics } from '@/editor/lsp/diagnostics';
 import { applyWorkspaceEdit, serverEdits } from '@/editor/lsp/edits';
@@ -168,12 +165,12 @@ export class LanguageServerInstance {
         serverActions(),
         serverDiagnostics(),
         serverEdits(),
-        serverConfiguration(),
         {
+          clientCapabilities: {
+            workspace: { configuration: server.requestHandlers?.['workspace/configuration'] !== undefined },
+          },
           editorExtension: commandHandlers.of(server.commandHandlers ?? {}),
           notificationHandlers: {
-            // Shows the server's messages in toasts rather than lsp-client's bar, and drops its logs as lsp-client
-            // does.
             'window/showMessage': (_, { type, message }: ShowMessageParams) => {
               const kind = MESSAGE_TYPES.get(type);
               if (kind !== undefined) {
@@ -216,10 +213,6 @@ export class LanguageServerInstance {
       // The plugin's handlers take precedence over Elsewise's.
       const requests = new Map<string, (client: LSPClient, params: never) => unknown>([
         ...REQUESTS,
-        [
-          'workspace/configuration',
-          (_: LSPClient, params: ConfigurationParams) => configuration(this.server.settings, params),
-        ],
         ...Object.entries(this.server.requestHandlers ?? {}),
       ]);
       const handlers = new Map<(message: string) => void, Disposable>();
@@ -257,10 +250,7 @@ export class LanguageServerInstance {
       });
       this.client.initializing.then(
         () => {
-          const settings = this.server.settings;
-          if (settings !== undefined && Object.keys(settings).length > 0) {
-            this.client.notification<DidChangeConfigurationParams>('workspace/didChangeConfiguration', { settings });
-          }
+          this.server.connect?.(this.client);
           pullAllDiagnostics(this.client);
         },
         (error) => {

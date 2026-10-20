@@ -29,8 +29,6 @@ const URL_SOURCE: EditorNavigationSource = {
   navigation: (view, pos, side) => view.plugin(URLS)?.linkAt(side < 0 ? pos - 1 : pos) ?? null,
 };
 
-const a = 1;
-
 /**
  * Returns the extension that underlines URLs and navigates from the code under the pointer on ⌘-click, or Ctrl-click
  * off a Mac. The navigation comes from the `navigation` language data, with the URLs at

@@ -1,7 +1,7 @@
 import type { LSPClient, LSPClientExtension } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import type { CompletionItem, CompletionParams } from 'vscode-languageserver-protocol';
+import type { CompletionItem, CompletionParams, ConfigurationParams } from 'vscode-languageserver-protocol';
 import type { Disposable } from '../plugin.ts';
 
 /**
@@ -38,38 +38,6 @@ export interface LanguageServer {
   readonly initializationOptions?: unknown;
 
   /**
-   * The settings sent to the server after initialization and in response to `workspace/configuration`.
-   *
-   * For `pyright`:
-   * ```ts
-   * { python: { analysis: { typeCheckingMode: 'strict' } } }
-   * ```
-   *
-   * The default implementation treats the `section` in `workspace/configuration` as a dot-separated identifier, and
-   * sends the entire settings in response to an empty section.
-   *
-   * For example, the server is sent `{ indentWidth: 2 }` for `cpp.formatterOptions`:
-   * ```ts
-   * { cpp: { formatterOptions: { indentWidth: 2 } } }
-   * ```
-   *
-   * Furthermore, the default implementation ignores `scopeUri`s.
-   *
-   * To handle `workspace/configuration`s, add a handler to {@link requestHandlers}. For example, to send
-   * `typescript-language-server` the indentation of the file at `scopeUri`:
-   * ```ts
-   * {
-   *   'workspace/configuration': (client, { items }: ConfigurationParams) =>
-   *     items.map(({ section, scopeUri }) => {
-   *       const view = scopeUri && client.workspace.getFile(scopeUri)?.getView();
-   *       return section === 'formattingOptions' && view ? { tabSize: getIndentUnit(view.state), ... } : null;
-   *     }),
-   * }
-   * ```
-   */
-  readonly settings?: Readonly<Record<string, unknown>>;
-
-  /**
    * The LSP client extensions.
    *
    * Their **notification** handlers run before Elsewise's, and their CodeMirror extensions take precedence over
@@ -93,6 +61,8 @@ export interface LanguageServer {
    *   },
    * }
    * ```
+   *
+   * See {@link workspaceConfiguration} for the default `workspace/configuration` handler.
    */
   readonly requestHandlers?: Readonly<Record<string, (client: LSPClient, params: never) => unknown>>;
 
@@ -114,8 +84,25 @@ export interface LanguageServer {
 
   /**
    * Starts the server for the worktree at `root` and returns a transport to it.
+   *
+   * Called before {@link connect}.
    */
   start(root: URL): LanguageServerTransport | Promise<LanguageServerTransport>;
+
+  /**
+   * Called once the started server is initialized, before any other request is sent to it.
+   *
+   * Called after {@link start}.
+   *
+   * For example, to send `pyright` its settings:
+   * ```ts
+   * connect: (client) =>
+   *   client.notification('workspace/didChangeConfiguration', {
+   *     settings: { python: { analysis: { typeCheckingMode: 'strict' } } },
+   *   }),
+   * ```
+   */
+  connect?(client: LSPClient): void;
 
   /**
    * Modifies and returns the completion items to be shown.
@@ -159,4 +146,33 @@ export interface LanguageServerTransport {
    * Closes the connection.
    */
   close(): void;
+}
+
+/**
+ * A default handler implementation for `workspace/configuration` that treats a `section` as a dot-separated identifier
+ * and sends the entire settings in response to an empty section.
+ *
+ * For example, the server is sent `{ indentWidth: 2 }` for `cpp.formatterOptions`:
+ * ```ts
+ * requestHandlers: { 'workspace/configuration': workspaceConfiguration({ cpp: { formatterOptions: { indentWidth: 2 } } }) }
+ * ```
+ *
+ * Furthermore, the default implementation ignores `scopeUri`s.
+ *
+ * See {@link LanguageServer.requestHandlers}.
+ */
+export function workspaceConfiguration(
+  settings: Readonly<Record<string, unknown>>,
+): (client: LSPClient, params: ConfigurationParams) => unknown[] {
+  return (_, { items }) =>
+    items.map(({ section }) => {
+      let value: unknown = settings;
+      for (const key of section ? section.split('.') : []) {
+        value =
+          typeof value === 'object' && value !== null && Object.hasOwn(value, key)
+            ? Reflect.get(value, key)
+            : undefined;
+      }
+      return value ?? null;
+    });
 }

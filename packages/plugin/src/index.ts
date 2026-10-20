@@ -28,7 +28,7 @@ export {
   type EditorNavigation,
   type EditorNavigationSource,
 } from './editor/editor.ts';
-export type { LanguageServer, LanguageServerTransport } from './editor/lsp.ts';
+export { type LanguageServer, type LanguageServerTransport, workspaceConfiguration } from './editor/lsp.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
 export { Manifest, PluginId } from './manifest.ts';
 export type { ActiveTheme, Appearance, Application, Disposable, Plugin, PluginContext } from './plugin.ts';
