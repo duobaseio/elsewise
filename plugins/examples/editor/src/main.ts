@@ -43,7 +43,7 @@ export function enable({ commands, editor }: Application, { id, subscriptions }:
         support: new LanguageSupport(dotenv, dotenv.data.of({ autocomplete: keys })),
       }),
     ]),
-    // The context menu items in `manifest.json` run these.
+    // The context menu items below run these.
     commands.add([
       excuse(`${id}.leaveAnExcuse`),
       reaction(`${id}.shrug`, 'Shrug', () => '¯\\_(ツ)_/¯'),
@@ -56,6 +56,32 @@ export function enable({ commands, editor }: Application, { id, subscriptions }:
       tone(`${id}.mocking`, 'mOcKiNg', (text) =>
         [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
       ),
+    ]),
+    editor.addContextMenus([
+      {
+        submenus: { [`${id}.tone`]: 'Tone of voice' },
+        groups: {
+          [`${id}.reactions`]: { order: 30 },
+          [`${id}.tone`]: { order: 40 },
+          [`${id}.tones`]: { menu: `${id}.tone` },
+        },
+        items: {
+          'io.duobase.elsewise.editor.contextmenu.refactor': [
+            { type: 'item', order: 20, command: `${id}.leaveAnExcuse` },
+          ],
+          [`${id}.reactions`]: [
+            { type: 'item', order: 10, command: `${id}.shrug` },
+            { type: 'item', order: 20, command: `${id}.flipTheTable` },
+            { type: 'item', order: 30, command: `${id}.rollAD20` },
+          ],
+          [`${id}.tone`]: [{ type: 'submenu', submenu: `${id}.tone` }],
+          [`${id}.tones`]: [
+            { type: 'item', order: 10, command: `${id}.uwu` },
+            { type: 'item', order: 20, command: `${id}.vaporwave` },
+            { type: 'item', order: 30, command: `${id}.mocking` },
+          ],
+        },
+      },
     ]),
   );
 }

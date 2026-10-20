@@ -1,7 +1,6 @@
 import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
-import type { Application, Manifest, Plugin, PluginContext } from '@elsewise/plugin';
+import type { Application, Plugin, PluginContext } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
-import type { EditorManager } from '@/editor/editor-manager';
 
 /**
  * Every installed plugin, and every invalid one.
@@ -30,15 +29,12 @@ export class PluginLoader {
 
   private readonly plugins = new Map<string, Promise<PluginContext | undefined>>();
 
-  constructor(
-    private readonly application: Application,
-    private readonly editor: EditorManager,
-  ) {}
+  constructor(private readonly application: Application) {}
 
   /**
-   * Adds what `manifest` declares, then loads and enables the plugin with `id`.
+   * Loads and enables the plugin with `id`.
    */
-  load(id: string, url: string, manifest: Manifest): Promise<void> {
+  load(id: string, url: string): Promise<void> {
     return this.enqueue(id, async (loaded) => {
       if (loaded) {
         return loaded;
@@ -46,10 +42,6 @@ export class PluginLoader {
 
       const context: PluginContext = { id, subscriptions: [] };
       try {
-        if (manifest.contextMenus.editor !== undefined) {
-          context.subscriptions.push(this.editor.addContextMenu(manifest.contextMenus.editor));
-        }
-
         // As modules are cached by URLs, using a counter makes a reload import the plugin's current code.
         // Unlike a query, a fragment never reaches the server.
         //

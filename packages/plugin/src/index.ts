@@ -1,13 +1,10 @@
 export type { ActiveKeymap, ApplicationCommand, Command, Commands, EditorCommand } from './command.ts';
 export { DEFAULT_COMMANDS, DEFAULT_KEYS } from './command.ts';
 export {
-  ContextMenu,
-  ContextMenuGroup,
-  ContextMenuGroupId,
-  ContextMenuItem,
-  ContextMenuSubmenuItem,
-  ContextMenus,
-  ContextSubmenuId,
+  type ContextMenu,
+  type ContextMenuGroup,
+  type ContextMenuItem,
+  type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
 export {

@@ -1,5 +1,4 @@
 import * as z from 'zod';
-import { ContextMenus } from './context-menu.ts';
 
 export type Manifest = z.infer<typeof Manifest>;
 
@@ -15,9 +14,8 @@ const SEMVER = new RegExp(
 export const PluginId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
 
 /**
- * A plugin's `manifest.json`: who the plugin is, and what it adds to Elsewise that Elsewise reads without running it.
+ * A plugin's `manifest.json`.
  */
-// TODO: Move the commands' data, keymaps and themes here.
 export const Manifest = z.lazy(() =>
   z.object({
     /**
@@ -38,6 +36,5 @@ export const Manifest = z.lazy(() =>
      * The path of the plugin's main module in its `bundle` folder. Cannot be blank. Defaults to `main.js`.
      */
     main: z.string().regex(/\S/).default('main.js'),
-    contextMenus: ContextMenus.default({}),
   }),
 );

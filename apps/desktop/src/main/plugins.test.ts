@@ -18,13 +18,8 @@ vi.mock('@elsewise/core', async (importOriginal) => {
 const ENTRIES_FILE = path.join(dataLocalDir(), 'plugins.json');
 const PLUGINS_FOLDER = path.join(dataLocalDir(), 'plugins');
 const ENTRY = { id: 'hello', enabled: true };
-const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', main: 'main.js', contextMenus: {} };
+const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', main: 'main.js' };
 const URL = 'app://elsewise/plugins/hello/bundle/main.js';
-const MENU = {
-  submenus: { 'hello.tone': 'Tone of voice' },
-  groups: { 'hello.reactions': { order: 30 } },
-  items: { 'hello.reactions': [{ type: 'item', order: 0, command: 'hello.shrug' }] },
-};
 
 // Each list `validate` rejects, with the error it rejects it with.
 const MALFORMED: [string, unknown, RegExp][] = [
@@ -89,17 +84,9 @@ describe('plugins:load', () => {
 
   test("reads plugin's manifest without unknown properties", () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', {
-      id: 'hello',
-      name: 'Hello',
-      version: '1.0.0',
-      contextMenus: { editor: MENU },
-      extra: 'ignored',
-    });
+    install('hello', { id: 'hello', name: 'Hello', version: '1.0.0', extra: 'ignored' });
 
-    expect(handler('plugins:load')()).toEqual([
-      { manifest: { ...MANIFEST, contextMenus: { editor: MENU } }, url: URL, enabled: true },
-    ]);
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, url: URL, enabled: true }]);
   });
 
   test("resolves url from manifest's main", () => {
