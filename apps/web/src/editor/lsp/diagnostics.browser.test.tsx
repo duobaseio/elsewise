@@ -18,10 +18,13 @@ interface DiagnosticsTransport extends StubTransport {
 
 interface DiagnosticRequest {
   readonly uri: string;
-  /** Answers with diagnostics on the first line, each from `[from, to)` with a severity and tags. */
-  answer(items: [from: number, to: number, severity: number, tags?: number[]][]): void;
+  readonly previousResultId: string | undefined;
+  /** Answers with diagnostics on the first line, each from `[from, to)` with a severity and tags, under `resultId`. */
+  answer(items: [from: number, to: number, severity: number, tags?: number[]][], resultId?: string): void;
   /** Answers with `items` as they are. */
   reply(items: Diagnostic[]): void;
+  /** Answers that nothing changed since `resultId`. */
+  unchanged(resultId: string): void;
 }
 
 // Returns a transport to a server that offers diagnostics, unless `diagnostics` is false.
@@ -30,13 +33,15 @@ function transport(diagnostics = true): DiagnosticsTransport {
   const stub = new StubTransport(
     { textDocumentSync: 2, ...(diagnostics && { diagnosticProvider: {} }) },
     {
-      'textDocument/diagnostic': ({ textDocument }: DocumentDiagnosticParams) =>
+      'textDocument/diagnostic': ({ textDocument, previousResultId }: DocumentDiagnosticParams) =>
         new Promise((resolve) =>
           requests.push({
             uri: textDocument.uri,
-            answer: (items) =>
+            previousResultId,
+            answer: (items, resultId) =>
               resolve({
                 kind: 'full',
+                resultId,
                 items: items.map(([from, to, severity, tags]) => ({
                   range: { start: { line: 0, character: from }, end: { line: 0, character: to } },
                   severity,
@@ -45,6 +50,7 @@ function transport(diagnostics = true): DiagnosticsTransport {
                 })),
               }),
             reply: (items) => resolve({ kind: 'full', items }),
+            unchanged: (resultId) => resolve({ kind: 'unchanged', resultId }),
           }),
         ),
     },
@@ -309,6 +315,29 @@ describe('serverDiagnostics', () => {
     fake.requests[1].answer([[0, 2, 2]]);
 
     await vi.waitFor(() => expect(shown(view)).toEqual([[0, 2, 'warning']]));
+  });
+
+  test('sends last result id, and keeps diagnostics on unchanged', async () => {
+    const fake = transport();
+    const instance = new LanguageServerInstance(
+      server(() => fake),
+      ROOT,
+    );
+    const view = open(instance);
+    await instance.start();
+    await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
+    expect(fake.requests[0].previousResultId).toBeUndefined();
+    fake.requests[0].answer([[4, 7, 1]], 'first');
+    await vi.waitFor(() => expect(shown(view)).toEqual([[4, 7, 'error']]));
+    view.dispatch({ changes: { from: 0, insert: 'xx' } });
+    await vi.waitFor(() => expect(fake.requests).toHaveLength(2));
+
+    expect(fake.requests[1].previousResultId).toBe('first');
+
+    fake.requests[1].unchanged('first');
+    await settled();
+
+    expect(shown(view)).toEqual([[6, 9, 'error']]);
   });
 
   test('never requests diagnostics from server without them', async () => {

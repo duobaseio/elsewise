@@ -119,6 +119,7 @@ export function pullAllDiagnostics(client: LSPClient): void {
 class DiagnosticsSyncer implements PluginValue {
   private timeout: ReturnType<typeof setTimeout> | undefined;
   private pending: DocumentDiagnosticParams | undefined;
+  private resultId: string | undefined;
 
   constructor(private readonly view: EditorView) {
     void this.pull();
@@ -149,8 +150,10 @@ class DiagnosticsSyncer implements PluginValue {
       plugin.client.cancelRequest(this.pending);
     }
 
-    // TODO: Send the previous result id, so the server can answer "unchanged", once multiple files are supported.
-    const parameters: DocumentDiagnosticParams = { textDocument: { uri: plugin.uri } };
+    const parameters: DocumentDiagnosticParams = {
+      textDocument: { uri: plugin.uri },
+      previousResultId: this.resultId,
+    };
     const version = file.version;
     this.pending = parameters;
     try {
@@ -165,11 +168,14 @@ class DiagnosticsSyncer implements PluginValue {
       this.pending = undefined;
 
       // New file version will sync & pull instead.
-      if (report.kind !== 'full' || file.version !== version) {
+      if (file.version !== version) {
         return;
       }
 
-      replaceDiagnostics(this.view, plugin, report.items);
+      this.resultId = report.resultId;
+      if (report.kind === 'full') {
+        replaceDiagnostics(this.view, plugin, report.items);
+      }
     } catch (error) {
       if (this.pending === parameters) {
         this.pending = undefined;
