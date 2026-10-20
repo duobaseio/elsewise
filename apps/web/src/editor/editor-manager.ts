@@ -176,7 +176,9 @@ export class EditorManager implements Editor {
    */
   subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
-    return () => this.listeners.delete(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
   }
 
   private notify() {

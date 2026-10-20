@@ -33,7 +33,9 @@ export class AppearanceManager implements Appearance {
 
   onBrightnessChange(listener: (brightness: 'light' | 'dark') => void): Disposable {
     this.brightnessListeners.add(listener);
-    return () => this.brightnessListeners.delete(listener);
+    return () => {
+      this.brightnessListeners.delete(listener);
+    };
   }
 
   get theme(): ActiveTheme {
@@ -60,6 +62,8 @@ export class AppearanceManager implements Appearance {
 
   onThemeChange(listener: (theme: ActiveTheme) => void): Disposable {
     this.themeListeners.add(listener);
-    return () => this.themeListeners.delete(listener);
+    return () => {
+      this.themeListeners.delete(listener);
+    };
   }
 }

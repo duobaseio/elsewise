@@ -174,13 +174,6 @@ export interface Commands {
   readonly keymap: ActiveKeymap;
 
   /**
-   * Registers a `listener` that is called with the new keymap when it changes.
-   *
-   * Returns a disposable that unregisters the `listener`.
-   */
-  onKeymapChange(listener: (keymap: ActiveKeymap) => void): Disposable;
-
-  /**
    * Adds `commands`.
    *
    * A command with an already existing id is rejected. Commands that share a key are tried from the last added to the

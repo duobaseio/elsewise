@@ -1,15 +1,67 @@
-import type { Commands } from './command.ts';
+import type { ActiveKeymap, Commands } from './command.ts';
 import type { Editor } from './editor/editor.ts';
 import type { ThemeVariant } from './theme.ts';
 
 /**
- * Represents an Elsewise plugin.
+ * A `Plugin`.
+ *
+ * To create a plugin, declare the following default function in your project's main module:
+ * ```ts
+ * export default function ({ id }: PluginInfo): Plugin {
+ *   return {
+ *     async onEnable(app) {
+ *       const index = await buildIndex();
+ *       return [
+ *         app.commands.add([...]),
+ *         app.editor.addContextMenus([...]),
+ *         () => index.close(),
+ *       ];
+ *     },
+ *   };
+ * }
+ * ```
  */
 export interface Plugin {
   /**
-   * Called when Elsewise enables the plugin.
+   * Called when the plugin is enabled.
+   *
+   * The disposables it returns are disposed in reverse order when the plugin is disabled. It is recommended to avoid
+   * computationally expensive and high latency operations in this function since it may affect start-up time.
+   *
+   * Throwing an error causes the plugin to be disabled (without calling `onDisable`). It is the plugin's responsibility
+   * to safely dispose of any added items in such cases.
    */
-  enable(application: Application, context: PluginContext): void | Promise<void>;
+  onEnable?(app: Application): Disposable[] | undefined | Promise<Disposable[] | undefined>;
+
+  /**
+   * Called when the plugin is disabled, before the disposables `onEnable` returned are disposed.
+   */
+  onDisable?(app: Application): void | Promise<void>;
+
+  /**
+   * Called with the new brightness when it changes, while the plugin is enabled.
+   */
+  onBrightnessChange?(brightness: 'light' | 'dark'): void;
+
+  /**
+   * Called with the new theme when it changes, while the plugin is enabled.
+   */
+  onThemeChange?(theme: ActiveTheme): void;
+
+  /**
+   * Called with the new keymap when it changes, while the plugin is enabled.
+   */
+  onKeymapChange?(keymap: ActiveKeymap): void;
+}
+
+/**
+ * The plugin's information which is passed to a plugin main module's default export function.
+ *
+ * See {@link Plugin}.
+ */
+export interface PluginInfo {
+  /** The plugin's id. */
+  readonly id: string;
 }
 
 /**
@@ -33,19 +85,6 @@ export interface Application {
 }
 
 /**
- * A plugin's unique state.
- */
-export interface PluginContext {
-  /** The plugin's id. */
-  readonly id: string;
-
-  /**
-   * A plugin's subscriptions that are automatically disposed when the plugin is disabled.
-   */
-  readonly subscriptions: Disposable[];
-}
-
-/**
  * The interface's appearance.
  */
 export interface Appearance {
@@ -55,23 +94,9 @@ export interface Appearance {
   readonly brightness: 'light' | 'dark';
 
   /**
-   * Registers a `listener` that is called with the new brightness when it changes.
-   *
-   * Returns a disposable that unregisters the `listener`.
-   */
-  onBrightnessChange(listener: (brightness: 'light' | 'dark') => void): Disposable;
-
-  /**
    * The colors of the interface, editor and terminal.
    */
   readonly theme: ActiveTheme;
-
-  /**
-   * Registers a `listener` that is called with the new theme when it changes.
-   *
-   * Returns a disposable that unregisters the `listener`.
-   */
-  onThemeChange(listener: (theme: ActiveTheme) => void): Disposable;
 }
 
 /**
@@ -96,5 +121,7 @@ export interface ActiveTheme {
 
 /**
  * A function that releases a resource when called.
+ *
+ * Elsewise waits for it if it returns a promise.
  */
-export type Disposable = () => void;
+export type Disposable = () => void | Promise<void>;
