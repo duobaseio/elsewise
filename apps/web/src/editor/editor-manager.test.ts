@@ -1,7 +1,7 @@
 import { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
-import type { ContextMenuGroup, ContextMenuItem, LanguageServer } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, EditorToolbarItem, LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
 import { EditorManager } from './editor-manager';
@@ -252,5 +252,31 @@ describe('addContextMenus', () => {
 
     expect(editor.contextMenu.groups.constructor).toEqual(group());
     expect(editor.contextMenu.items.constructor).toEqual([item('first')]);
+  });
+});
+
+describe('addToolbarItems', () => {
+  test('appends items until disposed', () => {
+    const editor = new EditorManager();
+    const first: EditorToolbarItem[] = [{ type: 'command', command: 'a', icon: () => null }];
+    const second: EditorToolbarItem[] = [{ type: 'component', id: 'b', component: () => null }];
+    const dispose = editor.addToolbarItems(first);
+    editor.addToolbarItems(second);
+
+    expect(editor.toolbarItems).toEqual([...first, ...second]);
+
+    dispose();
+
+    expect(editor.toolbarItems).toEqual(second);
+  });
+
+  test('removes only disposed addition when added twice', () => {
+    const editor = new EditorManager();
+    const items: EditorToolbarItem[] = [{ type: 'command', command: 'a', icon: () => null }];
+    const dispose = editor.addToolbarItems(items);
+    editor.addToolbarItems(items);
+    dispose();
+
+    expect(editor.toolbarItems).toEqual(items);
   });
 });

@@ -173,7 +173,7 @@ export const METRICS = EditorView.theme({
     borderRadius: '2px',
   },
   '.cm-stripe-tooltip': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px` },
-  '.cm-diagnostics-summary': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px`, marginTop: '4px' },
+  '.cm-toolbar': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px`, marginTop: '4px' },
 
   '.cm-scroller::-webkit-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
   '.cm-scroller::-webkit-scrollbar-thumb:active': { backgroundColor: 'var(--disabled)' },

@@ -26,6 +26,13 @@ export {
   type EditorNavigationSource,
 } from './editor/editor.ts';
 export { type LanguageServer, type LanguageServerTransport, workspaceConfiguration } from './editor/lsp.ts';
+export {
+  DEFAULT_EDITOR_TOOLBAR,
+  type EditorToolbarCommandItem,
+  type EditorToolbarComponentItem,
+  type EditorToolbarItem,
+  type EditorToolbarProps,
+} from './editor/toolbar.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
 export { Manifest, PluginId } from './manifest.ts';
 export type { ActiveTheme, Appearance, Application, Disposable, Plugin, PluginInfo } from './plugin.ts';

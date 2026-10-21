@@ -43,6 +43,7 @@
     "@tanstack/react-router": "^1.170.38",
     "dockview-react": "^8.4.0",
     "dompurify": "^3.4.16",
+    "motion": "^14.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "vscode-languageserver-protocol": "^3.18.4",

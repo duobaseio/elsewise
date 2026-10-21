@@ -29,9 +29,9 @@ import { navigation } from '@/editor/navigation.ts';
 import { scrollbarsKeepFocus } from '@/editor/scroll';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
-import { useDiagnosticsSummary } from '@/editor/stripe/diagnostics-summary';
 import { selectionMatches } from '@/editor/stripe/selection-matches';
 import { useThemeExtension } from '@/editor/theme';
+import { useToolbar } from '@/editor/toolbar';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 const PLUGINS = new Compartment();
@@ -40,7 +40,6 @@ const THEME = new Compartment();
 const LANGUAGE = new Compartment();
 const LANGUAGE_SERVER = new Compartment();
 const SETTINGS = new Compartment();
-const DIAGNOSTICS_SUMMARY = new Compartment();
 
 export interface EditorProps {
   /**
@@ -75,8 +74,8 @@ export function Editor({ path, code, root }: EditorProps) {
           ? undefined
           : null;
   const plugins = usePluginsExtension(path, language);
-  const { search, portal } = useSearchExtension();
-  const { summary, portal: summaryPortal } = useDiagnosticsSummary();
+  const { search, portal: searchPortal } = useSearchExtension();
+  const { toolbar, portal: toolbarPortal } = useToolbar();
   const settings = useSettingsExtension(description?.name);
   const languageServer = useLanguageServerExtension(root, description?.name, path);
   const icons = useIcons();
@@ -116,7 +115,7 @@ export function Editor({ path, code, root }: EditorProps) {
         search,
 
         SETTINGS.of(settings),
-        DIAGNOSTICS_SUMMARY.of(summary),
+        toolbar,
         // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
         // Has the precedence for the same reason as the settings' facets.
         Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
@@ -225,10 +224,6 @@ export function Editor({ path, code, root }: EditorProps) {
   }, [settings]);
 
   useEffect(() => {
-    view.current?.dispatch({ effects: DIAGNOSTICS_SUMMARY.reconfigure(summary) });
-  }, [summary]);
-
-  useEffect(() => {
     view.current?.dispatch({ effects: LANGUAGE_SERVER.reconfigure(languageServer) });
   }, [languageServer]);
 
@@ -262,8 +257,8 @@ export function Editor({ path, code, root }: EditorProps) {
           }
         />
       </EditorContextMenu>
-      {portal}
-      {summaryPortal}
+      {searchPortal}
+      {toolbarPortal}
     </>
   );
 }

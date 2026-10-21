@@ -11,6 +11,7 @@ import type {
   Disposable,
   Editor,
   EditorDocument,
+  EditorToolbarItem,
   LanguageServer,
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
@@ -35,6 +36,8 @@ export class EditorManager implements Editor {
   private currentLanguageServers: readonly LanguageServer[] = [];
   private addedContextMenus: readonly (readonly Partial<ContextMenu>[])[] = [[DEFAULT_CONTEXT_MENU]];
   private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus.flat());
+  private addedToolbarItems: readonly (readonly EditorToolbarItem[])[] = [];
+  private currentToolbarItems: readonly EditorToolbarItem[] = [];
 
   get active(): EditorView | null {
     return this.current;
@@ -129,6 +132,25 @@ export class EditorManager implements Editor {
     return () => {
       this.addedContextMenus = this.addedContextMenus.filter((other) => other !== added);
       this.currentContextMenu = this.merge(this.addedContextMenus.flat());
+      this.notify();
+    };
+  }
+
+  /**
+   * The toolbar items that plugins added, in order of addition.
+   */
+  get toolbarItems(): readonly EditorToolbarItem[] {
+    return this.currentToolbarItems;
+  }
+
+  addToolbarItems(items: readonly EditorToolbarItem[]): Disposable {
+    const added = [...items];
+    this.addedToolbarItems = [...this.addedToolbarItems, added];
+    this.currentToolbarItems = this.addedToolbarItems.flat();
+    this.notify();
+    return () => {
+      this.addedToolbarItems = this.addedToolbarItems.filter((other) => other !== added);
+      this.currentToolbarItems = this.addedToolbarItems.flat();
       this.notify();
     };
   }

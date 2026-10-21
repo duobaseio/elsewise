@@ -8,6 +8,7 @@ import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol
 import type { ContextMenu } from '../context-menu.ts';
 import type { Disposable } from '../plugin.ts';
 import type { LanguageServer } from './lsp.ts';
+import type { EditorToolbarItem } from './toolbar.ts';
 
 /**
  * The orders of the built-in hover sections, shown lowest first.
@@ -93,6 +94,20 @@ export interface Editor {
    * Returns a disposable that removes the `servers`.
    */
   addLanguageServers(servers: readonly LanguageServer[]): Disposable;
+
+  /**
+   * Adds `items` to the floating toolbar in the editor's top right corner.
+   *
+   * ```ts
+   * editor.addToolbarItems([
+   *   { type: 'command', order: 20, command: 'example.shrug', icon: ShrugIcon }, // Left of the diagnostics summary.
+   *   { type: 'component', id: 'example.words', component: Words }, // On the left.
+   * ]);
+   * ```
+   *
+   * Returns a disposable that removes the `items`.
+   */
+  addToolbarItems(items: readonly EditorToolbarItem[]): Disposable;
 
   /**
    * Adds `menus` to the context menu.

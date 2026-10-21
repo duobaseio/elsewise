@@ -42,8 +42,8 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
  */
 export interface ContextMenu {
   /**
-   * The labels of the submenus this menu declares, by id. A submenu is ignored if its id is already declared. its
-   * label cannot be blank.
+   * The labels of the submenus this menu declares, by id. A submenu is omitted if its id already exists. Its label
+   * cannot be blank.
    *
    * See {@link ContextMenuGroup.menu} for adding a group to a submenu, and {@link ContextMenuSubmenuItem.submenu} for
    * opening it.
@@ -51,7 +51,7 @@ export interface ContextMenu {
   // TODO: This might need to change to support localization in the future.
   readonly submenus: Readonly<Record<string, string>>;
   /**
-   * The groups this menu declares, by id. A group is ignored if its id is already declared.
+   * The groups this menu declares, by id. A group is omitted if its id already exists.
    *
    * See {@link ContextMenuGroup}.
    */
@@ -94,7 +94,8 @@ export interface ContextMenuItem {
    */
   readonly order?: number;
   /**
-   * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Omitted if the id is invalid or missing.
+   * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Omitted if the id is invalid, missing or
+   * already exists in the group.
    *
    * See {@link DEFAULT_COMMANDS} for the built-in commands.
    */
@@ -111,7 +112,7 @@ export interface ContextMenuSubmenuItem {
    */
   readonly order?: number;
   /**
-   * The id of the submenu it opens. Omitted if the id is invalid or missing.
+   * The id of the submenu it opens. Omitted if the id is invalid, missing or already exists in the group..
    *
    * See {@link ContextMenu} for declaring a submenu.
    */
