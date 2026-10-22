@@ -76,6 +76,16 @@ export const DEFAULT_COMMANDS = {
       next: 'elsewise.editor.diagnostics.next',
       previous: 'elsewise.editor.diagnostics.previous',
     },
+    diff: {
+      unstaged: 'elsewise.editor.diff.unstaged',
+      uncommitted: 'elsewise.editor.diff.uncommitted',
+      branch: 'elsewise.editor.diff.branch',
+      close: 'elsewise.editor.diff.close',
+      next: 'elsewise.editor.diff.next',
+      previous: 'elsewise.editor.diff.previous',
+      unified: 'elsewise.editor.diff.unified',
+      split: 'elsewise.editor.diff.split',
+    },
     lsp: {
       goToDefinition: 'elsewise.editor.lsp.goToDefinition',
       findUsages: 'elsewise.editor.lsp.findUsages',
@@ -160,6 +170,16 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     diagnostics: {
       next: ['F2'],
       previous: ['Shift-F2'],
+    },
+    diff: {
+      unstaged: [],
+      uncommitted: [],
+      branch: [],
+      close: [],
+      next: ['F7'],
+      previous: ['Shift-F7'],
+      unified: [],
+      split: [],
     },
     lsp: {
       goToDefinition: ['Mod-b'],

@@ -4,7 +4,7 @@ import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemir
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import { DEFAULT_COMMANDS, type LanguageServer } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, EDITOR_DOCUMENT, type LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
@@ -205,6 +205,19 @@ test("plugin's extension function receives file", async () => {
   expect(view.contentDOM.dataset.path).toBe('main.rs');
 });
 
+test("plugin's extension reads file from state", async () => {
+  const editor = new EditorManager();
+  editor.addExtensions([
+    EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
+      const document = state.facet(EDITOR_DOCUMENT);
+      return { 'data-file': document === null ? 'loading' : `${document.path} ${document.view.type}` };
+    }),
+  ]);
+  const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
+
+  await expect.poll(() => view.contentDOM.dataset.file).toBe('main.rs editor');
+});
+
 test("plugin's extension function receives loaded language", async () => {
   const editor = new EditorManager();
   editor.addExtensions([
@@ -332,7 +345,7 @@ test("plugin's hover section on language shows in its files only", async () => {
       create: () => ({ dom: Object.assign(document.createElement('div'), { className: 'blame' }) }),
     }),
   };
-  editor.addLanguages([
+  editor.languages.add([
     LanguageDescription.of({
       name: 'Comment',
       extensions: ['comment'],
@@ -356,7 +369,7 @@ test("plugin's hover section on language shows in its files only", async () => {
 
 test("plugin's language highlights files with extension", async () => {
   const editor = new EditorManager();
-  editor.addLanguages([commentLanguage(['comment'])]);
+  editor.languages.add([commentLanguage(['comment'])]);
   const view = await mountEditor('hello\n', 'main.comment', editor);
 
   await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.comment.color));
@@ -364,7 +377,7 @@ test("plugin's language highlights files with extension", async () => {
 
 test("plugin's language beats built-in until disposed", async () => {
   const editor = new EditorManager();
-  const dispose = editor.addLanguages([commentLanguage(['rs'])]);
+  const dispose = editor.languages.add([commentLanguage(['rs'])]);
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
   await expect.poll(() => firstTokenColor(view)).toBe(rgb(EDITOR.tokens.comment.color));
 
@@ -375,7 +388,7 @@ test("plugin's language beats built-in until disposed", async () => {
 test("plugin's language server opens files in language", async () => {
   const editor = new EditorManager();
   const { server, sent } = rustServer();
-  editor.addLanguageServers([server]);
+  editor.languages.addServers([server]);
   await mountEditor('fn main() {}\n', 'src/main.rs', editor, new URL('file:///worktree/'));
 
   await expect
@@ -390,7 +403,7 @@ test("plugin's language server opens files opened before it", async () => {
   const editor = new EditorManager();
   const { server, sent } = rustServer();
   await mountEditor('fn main() {}\n', 'src/main.rs', editor, new URL('file:///worktree/'));
-  editor.addLanguageServers([server]);
+  editor.languages.addServers([server]);
 
   await expect
     .poll(() => sent.find((message) => message.method === 'textDocument/didOpen'))
@@ -400,11 +413,11 @@ test("plugin's language server opens files opened before it", async () => {
 test("plugin's language server keeps file open when another language's server is added", async () => {
   const editor = new EditorManager();
   const { server, sent } = rustServer();
-  editor.addLanguageServers([server]);
+  editor.languages.addServers([server]);
   await mountEditor('fn main() {}\n', 'src/main.rs', editor, new URL('file:///worktree/'));
   await expect.poll(() => sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
 
-  editor.addLanguageServers([{ ...rustServer().server, id: 'toy', languages: { Toy: 'toy' } }]);
+  editor.languages.addServers([{ ...rustServer().server, id: 'toy', languages: { Toy: 'toy' } }]);
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   expect(sent.filter((message) => message.method === 'textDocument/didOpen')).toHaveLength(1);
@@ -413,7 +426,7 @@ test("plugin's language server keeps file open when another language's server is
 test('file without root has no language server', async () => {
   const editor = new EditorManager();
   const { server, sent } = rustServer();
-  editor.addLanguageServers([server]);
+  editor.languages.addServers([server]);
   await mountEditor('fn main() {}\n', 'src/main.rs', editor);
   await new Promise((resolve) => setTimeout(resolve));
 

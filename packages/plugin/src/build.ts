@@ -16,6 +16,7 @@ export const PEER_MODULES = [
   '@codemirror/search',
   '@codemirror/state',
   '@codemirror/view',
+  '@elsewise/plugin',
   '@lezer/common',
   '@lezer/highlight',
   'vscode-languageserver-protocol',

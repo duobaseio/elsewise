@@ -7,11 +7,13 @@ export {
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
+export { DEFAULT_DIFF_SOURCES, type EditorDiffSource, type EditorDiffs } from './editor/diff.ts';
 export {
   DEFAULT_ACTION_SOURCES,
   DEFAULT_FORMATTERS,
   DEFAULT_HOVER_SECTIONS,
   DEFAULT_NAVIGATION_SOURCES,
+  EDITOR_DOCUMENT,
   type Editor,
   type EditorAction,
   type EditorActionSource,
@@ -20,12 +22,18 @@ export {
   type EditorDiagnostic,
   type EditorDiagnosticAction,
   type EditorDocument,
+  type EditorDocumentView,
   type EditorFormatter,
   type EditorHoverSource,
   type EditorNavigation,
   type EditorNavigationSource,
 } from './editor/editor.ts';
-export { type LanguageServer, type LanguageServerTransport, workspaceConfiguration } from './editor/lsp.ts';
+export {
+  type EditorLanguages,
+  type LanguageServer,
+  type LanguageServerTransport,
+  workspaceConfiguration,
+} from './editor/language.ts';
 export {
   DEFAULT_EDITOR_TOOLBAR,
   type EditorToolbarCommandItem,

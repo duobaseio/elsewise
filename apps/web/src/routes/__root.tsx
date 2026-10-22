@@ -6,6 +6,7 @@ import { useActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { installApplicationKeys, useKeymap } from '@/command/keymap';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/fake-diff';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
 import { useBrightness, useSettings } from '@/settings/settings';
@@ -42,6 +43,10 @@ function RootComponent() {
     const appearance = new AppearanceManager(brightness, theme);
     const editor = new EditorManager();
     const commands = new CommandManager({ appearance, editor });
+
+    // TODO: Replace with actual diffs once git daemon is ready
+    editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
+
     return {
       appearance,
       commands,

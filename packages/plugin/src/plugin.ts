@@ -60,7 +60,9 @@ export interface Plugin {
  * See {@link Plugin}.
  */
 export interface PluginInfo {
-  /** The plugin's id. */
+  /**
+   * The plugin's id.
+   */
   readonly id: string;
 }
 

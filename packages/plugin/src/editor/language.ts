@@ -1,8 +1,28 @@
+import type { LanguageDescription } from '@codemirror/language';
 import type { LSPClient, LSPClientExtension } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type { CompletionItem, CompletionParams, ConfigurationParams } from 'vscode-languageserver-protocol';
 import type { Disposable } from '../plugin.ts';
+
+/**
+ * The languages and their language servers.
+ */
+export interface EditorLanguages {
+  /**
+   * Adds `languages`, which take precedence over the built-in languages for the same files.
+   *
+   * Returns a disposable that removes the `languages`.
+   */
+  add(languages: readonly LanguageDescription[]): Disposable;
+
+  /**
+   * Adds language servers, which take precedence over the servers added earlier for the same languages.
+   *
+   * Returns a disposable that removes the `servers`.
+   */
+  addServers(servers: readonly LanguageServer[]): Disposable;
+}
 
 /**
  * A language server.

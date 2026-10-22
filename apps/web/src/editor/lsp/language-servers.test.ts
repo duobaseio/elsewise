@@ -28,7 +28,7 @@ describe('constructor', () => {
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
     const fake = new StubTransport();
-    const remove = editor.addLanguageServers([server(() => fake)]);
+    const remove = editor.languages.addServers([server(() => fake)]);
     servers.connect(ROOT, 'Toy', URI);
     await started();
     remove();
@@ -41,7 +41,7 @@ describe('constructor', () => {
     const servers = new LanguageServers(editor);
     const fake = new StubTransport();
     let open: (transport: LanguageServerTransport) => void = () => {};
-    const remove = editor.addLanguageServers([server(() => new Promise((resolve) => (open = resolve)))]);
+    const remove = editor.languages.addServers([server(() => new Promise((resolve) => (open = resolve)))]);
     servers.connect(ROOT, 'Toy', URI);
     remove();
     open(fake);
@@ -57,15 +57,15 @@ describe('find', () => {
     const editor = new EditorManager();
     const earlier = server(() => new StubTransport());
     const later = server(() => new StubTransport());
-    editor.addLanguageServers([earlier]);
-    editor.addLanguageServers([later, server(() => new StubTransport(), { languages: { Other: 'other' } })]);
+    editor.languages.addServers([earlier]);
+    editor.languages.addServers([later, server(() => new StubTransport(), { languages: { Other: 'other' } })]);
 
     expect(new LanguageServers(editor).find('Toy')).toBe(later);
   });
 
   test('returns nothing without server for language', () => {
     const editor = new EditorManager();
-    editor.addLanguageServers([server(() => new StubTransport())]);
+    editor.languages.addServers([server(() => new StubTransport())]);
 
     expect(new LanguageServers(editor).find('Other')).toBeUndefined();
   });
@@ -76,13 +76,13 @@ describe('subscribe', () => {
     const editor = new EditorManager();
     const listener = vi.fn();
     const unsubscribe = new LanguageServers(editor).subscribe(listener);
-    const remove = editor.addLanguageServers([server(() => new StubTransport())]);
+    const remove = editor.languages.addServers([server(() => new StubTransport())]);
     remove();
 
     expect(listener).toHaveBeenCalledTimes(2);
 
     unsubscribe();
-    editor.addLanguageServers([server(() => new StubTransport())]);
+    editor.languages.addServers([server(() => new StubTransport())]);
 
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -92,7 +92,7 @@ describe('connect', () => {
   test('returns nothing without server for language', async () => {
     const editor = new EditorManager();
     const start = vi.fn(() => new StubTransport());
-    editor.addLanguageServers([server(start)]);
+    editor.languages.addServers([server(start)]);
 
     expect(new LanguageServers(editor).connect(ROOT, 'Other', URI)).toBeUndefined();
 
@@ -105,8 +105,8 @@ describe('connect', () => {
     const editor = new EditorManager();
     const earlier = vi.fn(() => new StubTransport());
     const later = vi.fn(() => new StubTransport());
-    editor.addLanguageServers([server(earlier)]);
-    editor.addLanguageServers([server(later)]);
+    editor.languages.addServers([server(earlier)]);
+    editor.languages.addServers([server(later)]);
 
     expect(new LanguageServers(editor).connect(ROOT, 'Toy', URI)).toBeDefined();
 
@@ -119,7 +119,7 @@ describe('connect', () => {
   test('initializes server with root as servers write it', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake)]);
+    editor.languages.addServers([server(() => fake)]);
     new LanguageServers(editor).connect(new URL('file:///$worktree/'), 'Toy', URI);
     await started();
 
@@ -132,7 +132,7 @@ describe('connect', () => {
   test('initializes server with root and options', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake, { initializationOptions: { strict: true } })]);
+    editor.languages.addServers([server(() => fake, { initializationOptions: { strict: true } })]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
@@ -145,7 +145,7 @@ describe('connect', () => {
   test('tells server it can apply edits', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake)]);
+    editor.languages.addServers([server(() => fake)]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
@@ -158,7 +158,7 @@ describe('connect', () => {
   test('tells server it can ask to refresh diagnostics', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake)]);
+    editor.languages.addServers([server(() => fake)]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
@@ -171,7 +171,7 @@ describe('connect', () => {
   test('tells server it can ask for settings when handled', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake, { requestHandlers: { 'workspace/configuration': () => [] } })]);
+    editor.languages.addServers([server(() => fake, { requestHandlers: { 'workspace/configuration': () => [] } })]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
@@ -184,7 +184,7 @@ describe('connect', () => {
   test("doesn't tell server it can ask for settings when unhandled", async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([server(() => fake)]);
+    editor.languages.addServers([server(() => fake)]);
     new LanguageServers(editor).connect(ROOT, 'Toy', URI);
     await started();
 
@@ -195,7 +195,7 @@ describe('connect', () => {
   test('calls connect after initialized', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([
+    editor.languages.addServers([
       server(() => fake, {
         connect: (client) => client.notification('workspace/didChangeConfiguration', { settings: { toy: true } }),
       }),
@@ -213,7 +213,7 @@ describe('connect', () => {
   test('sends client capabilities of extensions under core', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
-    editor.addLanguageServers([
+    editor.languages.addServers([
       server(() => fake, {
         extensions: [
           { clientCapabilities: { textDocument: { rename: { prepareSupport: false } }, experimental: { toy: 1 } } },
@@ -232,7 +232,7 @@ describe('connect', () => {
   test('adds extensions to documents', () => {
     const editor = new EditorManager();
     const toy = Facet.define<number>();
-    editor.addLanguageServers([
+    editor.languages.addServers([
       server(() => new StubTransport(), { extensions: [toy.of(1), { editorExtension: toy.of(2) }] }),
     ]);
     const state = EditorState.create({ extensions: new LanguageServers(editor).connect(ROOT, 'Toy', URI) });
@@ -244,7 +244,7 @@ describe('connect', () => {
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
     const start = vi.fn(() => new StubTransport());
-    editor.addLanguageServers([server(start)]);
+    editor.languages.addServers([server(start)]);
     servers.connect(ROOT, 'Toy', URI);
     servers.connect(ROOT, 'Toy', new URL('file:///worktree/other.toy'));
     await started();
@@ -258,7 +258,7 @@ describe('connect', () => {
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
     const fakes: StubTransport[] = [];
-    editor.addLanguageServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
+    editor.languages.addServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
     servers.connect(new URL('file:///first'), 'Toy', new URL('file:///first/main.toy'));
     servers.connect(new URL('file:///second'), 'Toy', new URL('file:///second/main.toy'));
     await started();
@@ -274,7 +274,7 @@ describe('connect', () => {
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
     const fakes: StubTransport[] = [];
-    editor.addLanguageServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
+    editor.languages.addServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
     servers.connect(ROOT, 'Toy', URI);
     await started();
     fakes[0].crash();
@@ -293,7 +293,7 @@ describe('connect', () => {
     const servers = new LanguageServers(editor);
     const fake = new StubTransport();
     const failure = new Error('No such server');
-    editor.addLanguageServers([server(vi.fn(() => fake).mockRejectedValueOnce(failure))]);
+    editor.languages.addServers([server(vi.fn(() => fake).mockRejectedValueOnce(failure))]);
     servers.connect(ROOT, 'Toy', URI);
     await started();
 
@@ -328,7 +328,7 @@ describe('dispose', () => {
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
     const fakes: StubTransport[] = [];
-    editor.addLanguageServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
+    editor.languages.addServers([server(() => fakes[fakes.push(new StubTransport()) - 1])]);
     servers.connect(new URL('file:///first'), 'Toy', new URL('file:///first/main.toy'));
     servers.connect(new URL('file:///second'), 'Toy', new URL('file:///second/main.toy'));
     await started();

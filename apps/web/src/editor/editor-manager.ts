@@ -1,5 +1,3 @@
-import type { LanguageDescription } from '@codemirror/language';
-import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type {
@@ -12,10 +10,11 @@ import type {
   Editor,
   EditorDocument,
   EditorToolbarItem,
-  LanguageServer,
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
+import { DiffManager } from '@/editor/diff-manager';
+import { LanguageManager } from '@/editor/language-manager';
 
 /**
  * The commands that an editor runs.
@@ -26,14 +25,12 @@ export const COMMANDS = Facet.define<Commands, Commands | null>({ combine: (valu
  * The code editor as plugins see it.
  */
 export class EditorManager implements Editor {
+  readonly diffs = new DiffManager(() => this.notify());
+  readonly languages = new LanguageManager(() => this.notify());
   private readonly listeners = new Set<() => void>();
   private current: EditorView | null = null;
   private addedExtensions: readonly (readonly (Extension | ((document: EditorDocument) => Extension))[])[] = [];
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
-  private addedLanguages: readonly (readonly LanguageDescription[])[] = [DEFAULT_LANGUAGES];
-  private currentLanguages: readonly LanguageDescription[] = DEFAULT_LANGUAGES;
-  private addedLanguageServers: readonly (readonly LanguageServer[])[] = [];
-  private currentLanguageServers: readonly LanguageServer[] = [];
   private addedContextMenus: readonly (readonly Partial<ContextMenu>[])[] = [[DEFAULT_CONTEXT_MENU]];
   private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus.flat());
   private addedToolbarItems: readonly (readonly EditorToolbarItem[])[] = [];
@@ -75,44 +72,6 @@ export class EditorManager implements Editor {
     return () => {
       this.addedExtensions = this.addedExtensions.filter((other) => other !== added);
       this.currentExtensions = this.addedExtensions.flat();
-      this.notify();
-    };
-  }
-
-  /**
-   * The languages, sorted by most recently added, then the built-in ones.
-   */
-  get languages(): readonly LanguageDescription[] {
-    return this.currentLanguages;
-  }
-
-  addLanguages(languages: readonly LanguageDescription[]): Disposable {
-    const added = [...languages];
-    this.addedLanguages = [added, ...this.addedLanguages];
-    this.currentLanguages = this.addedLanguages.flat();
-    this.notify();
-    return () => {
-      this.addedLanguages = this.addedLanguages.filter((other) => other !== added);
-      this.currentLanguages = this.addedLanguages.flat();
-      this.notify();
-    };
-  }
-
-  /**
-   * The language servers, sorted by most recently added.
-   */
-  get languageServers(): readonly LanguageServer[] {
-    return this.currentLanguageServers;
-  }
-
-  addLanguageServers(servers: readonly LanguageServer[]): Disposable {
-    const added = [...servers];
-    this.addedLanguageServers = [added, ...this.addedLanguageServers];
-    this.currentLanguageServers = this.addedLanguageServers.flat();
-    this.notify();
-    return () => {
-      this.addedLanguageServers = this.addedLanguageServers.filter((other) => other !== added);
-      this.currentLanguageServers = this.addedLanguageServers.flat();
       this.notify();
     };
   }

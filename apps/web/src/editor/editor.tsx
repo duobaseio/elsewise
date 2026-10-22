@@ -15,6 +15,7 @@ import {
 import type { LineSeparator } from '@elsewise/bridge';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { type EditorDocument, EDITOR_DOCUMENT } from '@elsewise/plugin';
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
@@ -35,6 +36,7 @@ import { useToolbar } from '@/editor/toolbar';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 const PLUGINS = new Compartment();
+const DOCUMENT = new Compartment();
 const KEYS = new Compartment();
 const THEME = new Compartment();
 const LANGUAGE = new Compartment();
@@ -62,7 +64,7 @@ export function Editor({ path, code, root }: EditorProps) {
 
   const editorManager = useEditorManager();
   const theme = useThemeExtension();
-  const languages = useEditorManager((editor) => editor.languages);
+  const languages = useEditorManager((editor) => editor.languages.languages);
   const description = LanguageDescription.matchFilename(languages, path);
   const [settled, setSettled] = useState<LanguageDescription | null>(null);
   const language =
@@ -73,7 +75,12 @@ export function Editor({ path, code, root }: EditorProps) {
         : description === settled
           ? undefined
           : null;
-  const plugins = usePluginsExtension(path, language);
+  // Null while its `language` loads.
+  const file = useMemo<EditorDocument | null>(
+    () => (language === null ? null : { path, view: { type: 'editor' }, language }),
+    [path, language],
+  );
+  const plugins = usePluginsExtension(file);
   const { search, portal: searchPortal } = useSearchExtension();
   const { toolbar, portal: toolbarPortal } = useToolbar();
   const settings = useSettingsExtension(description?.name);
@@ -102,6 +109,7 @@ export function Editor({ path, code, root }: EditorProps) {
       extensions: [
         // Has to be first to let a plugin's theme and keymap take precedence over Elsewise's.
         PLUGINS.of([]),
+        DOCUMENT.of(file === null ? [] : EDITOR_DOCUMENT.of(file)),
         // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
         KEYS.of(keys),
         COMMANDS.of(commands),
@@ -203,6 +211,10 @@ export function Editor({ path, code, root }: EditorProps) {
   }, [description]);
 
   useEffect(() => {
+    view.current?.dispatch({ effects: DOCUMENT.reconfigure(file === null ? [] : EDITOR_DOCUMENT.of(file)) });
+  }, [file]);
+
+  useEffect(() => {
     try {
       view.current?.dispatch({ effects: PLUGINS.reconfigure(plugins) });
     } catch (error) {
@@ -263,19 +275,19 @@ export function Editor({ path, code, root }: EditorProps) {
   );
 }
 
-// Returns the plugins' extensions for the file, without those from functions while its `language` loads (null), so
+// Returns the plugins' extensions for the `file`, without those from functions while its language loads (null), so
 // that they see its `support`.
-function usePluginsExtension(path: string, language: LanguageDescription | null | undefined): Extension {
+function usePluginsExtension(file: EditorDocument | null): Extension {
   const extensions = useEditorManager((editor) => editor.extensions);
 
   return useMemo(() => {
     try {
       return extensions.flatMap((extension) =>
-        typeof extension === 'function' ? (language === null ? [] : extension({ path, language })) : extension,
+        typeof extension === 'function' ? (file === null ? [] : extension(file)) : extension,
       );
     } catch (error) {
       console.error('Plugin extension failed', error);
       return [];
     }
-  }, [extensions, path, language]);
+  }, [extensions, file]);
 }

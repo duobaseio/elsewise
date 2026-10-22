@@ -42,9 +42,18 @@ const CHROME = {
   ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
-  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'stripe' | Diagnostic['severity']>,
+  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'stripe' | 'diff' | Diagnostic['severity']>,
   readonly [selector: string, property: string]
 >;
+
+const DIFF = {
+  addedLine: ['&.cm-merge-b .cm-changedLine', 'backgroundColor'],
+  addedText: ['&.cm-merge-b .cm-changedText', 'background'],
+  addedGutter: ['&.cm-merge-b .cm-changedLineGutter', 'background'],
+  deletedLine: ['&.cm-merge-a .cm-changedLine, .cm-deletedChunk', 'backgroundColor'],
+  deletedText: ['&.cm-merge-a .cm-changedText, .cm-deletedChunk .cm-deletedText', 'background'],
+  deletedGutter: ['&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter', 'background'],
+} as const satisfies Record<keyof ActiveTheme['editor']['diff'], readonly [selector: string, property: string]>;
 
 /**
  * The Lezer tags that each syntax highlighting token is applied to.
@@ -523,6 +532,17 @@ export function useThemeExtension(): Extension {
       spec[selector][property] = editor[role];
     }
 
+    for (const [role, [selector, property]] of Object.entries(DIFF) as [
+      keyof typeof DIFF,
+      readonly [string, string],
+    ][]) {
+      const color = editor.diff[role];
+      if (color !== undefined) {
+        spec[selector] ??= {};
+        spec[selector][property] = color;
+      }
+    }
+
     // Draws the squiggles like CodeMirror does, in the editor's colors.
     for (const severity of ['error', 'warning', 'info'] as const) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="6" height="3"><path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="${editor[severity]}" fill="none" stroke-width=".7"/></svg>`;
@@ -549,16 +569,16 @@ export function useThemeExtension(): Extension {
       .replace(/^['"]|['"]$/g, '');
     const strikeout = STRIKEOUTS[family];
     if (strikeout) {
-      const propeerties = {
+      const properties = {
         backgroundImage: 'linear-gradient(currentColor, currentColor)',
         backgroundPosition: `0 calc(round(${strikeout.ascent}em, 1px) - ${strikeout.position}em)`,
         backgroundSize: `100% ${strikeout.size}em`,
         textDecoration: 'none',
       };
 
-      spec['.cm-lintRange.cm-lintRange-deprecated'] = propeerties;
+      spec['.cm-lintRange.cm-lintRange-deprecated'] = properties;
       spec['.cm-completion-deprecated .cm-completionLabel, .cm-completion-deprecated .cm-completionTail'] = {
-        ...propeerties,
+        ...properties,
         backgroundRepeat: 'no-repeat',
         lineHeight: 'normal',
       };

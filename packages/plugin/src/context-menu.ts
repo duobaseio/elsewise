@@ -1,19 +1,33 @@
 /**
- * The editor context menu's built-in groups.
+ * The editor context menu's built-in groups, and the items and submenus in them.
  */
 export const DEFAULT_EDITOR_CONTEXT_MENU = {
-  actions: { id: 'io.duobase.elsewise.editor.contextmenu.actions', order: 5, items: { show: 10 } },
+  actions: { id: 'io.duobase.elsewise.editor.contextMenu.actions', order: 5, items: { show: 10 } },
   clipboard: {
-    id: 'io.duobase.elsewise.editor.contextmenu.clipboard',
+    id: 'io.duobase.elsewise.editor.contextMenu.clipboard',
     order: 10,
     items: { cut: 10, copy: 20, paste: 30 },
   },
   navigate: {
-    id: 'io.duobase.elsewise.editor.contextmenu.navigate',
-    order: 13,
+    id: 'io.duobase.elsewise.editor.contextMenu.navigate',
+    order: 20,
     items: { usages: 10, definition: 20 },
   },
-  refactor: { id: 'io.duobase.elsewise.editor.contextmenu.refactor', order: 16, items: { rename: 10 } },
+  diff: {
+    id: 'io.duobase.elsewise.editor.contextMenu.diff',
+    order: 30,
+    items: {
+      compare: {
+        id: 'io.duobase.elsewise.editor.contextMenu.diff.submenu',
+        items: {
+          unstaged: 10,
+          uncommitted: 20,
+          branch: 30,
+        },
+      },
+    },
+  },
+  refactor: { id: 'io.duobase.elsewise.editor.contextMenu.refactor', order: 40, items: { rename: 10 } },
 } as const;
 
 /**
@@ -26,8 +40,8 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
  *   {
  *     submenus: { 'example.tone': 'Tone of voice' },
  *     groups: {
- *       'example.reactions': { order: 30 }, // In the menu, after the built-in groups.
- *       'example.tone': { order: 40 },
+ *       'example.reactions': { order: 50 }, // In the menu, after the built-in groups.
+ *       'example.tone': { order: 60 },
  *       'example.tones': { menu: 'example.tone' }, // In the submenu.
  *     },
  *     items: {
@@ -50,12 +64,14 @@ export interface ContextMenu {
    */
   // TODO: This might need to change to support localization in the future.
   readonly submenus: Readonly<Record<string, string>>;
+
   /**
    * The groups this menu declares, by id. A group is omitted if its id already exists.
    *
    * See {@link ContextMenuGroup}.
    */
   readonly groups: Readonly<Record<string, ContextMenuGroup>>;
+
   /**
    * The items this menu adds to groups, by the group's id. The items of a group whose id is invalid or missing are
    * omitted.
@@ -78,6 +94,7 @@ export interface ContextMenuGroup {
    * See {@link ContextMenu} for declaring a submenu.
    */
   readonly menu?: string;
+
   /**
    * The order of this group in its menu, shown lowest first and by id when equal. Groups without one are shown last.
    */
@@ -89,10 +106,12 @@ export interface ContextMenuGroup {
  */
 export interface ContextMenuItem {
   readonly type: 'item';
+
   /**
    * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
   readonly order?: number;
+
   /**
    * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Omitted if the id is invalid, missing or
    * already exists in the group.
@@ -107,12 +126,14 @@ export interface ContextMenuItem {
  */
 export interface ContextMenuSubmenuItem {
   readonly type: 'submenu';
+
   /**
    * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
   readonly order?: number;
+
   /**
-   * The id of the submenu it opens. Omitted if the id is invalid, missing or already exists in the group..
+   * The id of the submenu it opens. Omitted if the id is invalid, missing or already exists in the group.
    *
    * See {@link ContextMenu} for declaring a submenu.
    */

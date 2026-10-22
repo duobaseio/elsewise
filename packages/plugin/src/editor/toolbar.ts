@@ -8,6 +8,7 @@ import type { ComponentProps, ComponentType } from 'react';
  */
 export const DEFAULT_EDITOR_TOOLBAR = {
   diagnostics: 10,
+  diff: 20,
 } as const;
 
 /**
@@ -27,16 +28,20 @@ export type EditorToolbarItem = EditorToolbarCommandItem | EditorToolbarComponen
  */
 export interface EditorToolbarCommandItem {
   readonly type: 'command';
+
   /**
-   * The order of this item in the toolbar, shown from right to left and by id when equal. Items without one are leftmost.
+   * The order of this item in the toolbar, shown from right to left and by id when equal. Items without one are
+   * leftmost.
    *
    * See {@link DEFAULT_EDITOR_TOOLBAR} for the built-in items' orders.
    */
   readonly order?: number;
+
   /**
    * The icon it shows, an SVG drawn in the button's color and size, e.g. a Phosphor icon.
    */
   readonly icon: ComponentType<ComponentProps<'svg'>>;
+
   /**
    * The id of the command it runs, which is also the item's id. Omitted if the id is invalid, missing or already
    * exists.
@@ -53,16 +58,23 @@ export interface EditorToolbarCommandItem {
  */
 export interface EditorToolbarComponentItem {
   readonly type: 'component';
+
   /**
-   * The order of this item in the toolbar, shown from right to left and by id when equal. Items without one are leftmost.
+   * The order of this item in the toolbar, shown from right to left and by id when equal. Items without one are
+   * leftmost.
    *
    * See {@link DEFAULT_EDITOR_TOOLBAR} for the built-in items' orders.
    */
   readonly order?: number;
+
   /**
    * The item's id, namespaced by the plugin's, e.g. `io.example.words`. Omitted if the id already exists.
    */
   readonly id: string;
+
+  /**
+   * The component it renders.
+   */
   readonly component: ComponentType<EditorToolbarProps>;
 }
 
@@ -74,6 +86,7 @@ export interface EditorToolbarProps {
    * The editor the toolbar is in.
    */
   readonly view: EditorView;
+
   /**
    * Registers a `listener` that is called on each of the editor's updates.
    *

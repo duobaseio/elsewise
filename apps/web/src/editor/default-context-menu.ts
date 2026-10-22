@@ -7,15 +7,17 @@ import {
   type EditorCommand,
 } from '@elsewise/plugin';
 
-const { actions, clipboard, navigate, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
+const { actions, clipboard, navigate, diff, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
 const { lsp } = DEFAULT_COMMANDS.editor;
 
 export const DEFAULT_CONTEXT_MENU: ContextMenu = {
-  submenus: {},
+  submenus: { [diff.items.compare.id]: 'Compare with…' },
   groups: {
     [actions.id]: { order: actions.order },
     [clipboard.id]: { order: clipboard.order },
     [navigate.id]: { order: navigate.order },
+    [diff.id]: { order: diff.order },
+    [diff.items.compare.id]: { menu: diff.items.compare.id },
     [refactor.id]: { order: refactor.order },
   },
   items: {
@@ -28,6 +30,12 @@ export const DEFAULT_CONTEXT_MENU: ContextMenu = {
     [navigate.id]: [
       { type: 'item', order: navigate.items.usages, command: lsp.findUsages },
       { type: 'item', order: navigate.items.definition, command: lsp.goToDefinition },
+    ],
+    [diff.id]: [{ type: 'submenu', submenu: diff.items.compare.id }],
+    [diff.items.compare.id]: [
+      { type: 'item', order: diff.items.compare.items.unstaged, command: DEFAULT_COMMANDS.editor.diff.unstaged },
+      { type: 'item', order: diff.items.compare.items.uncommitted, command: DEFAULT_COMMANDS.editor.diff.uncommitted },
+      { type: 'item', order: diff.items.compare.items.branch, command: DEFAULT_COMMANDS.editor.diff.branch },
     ],
     [refactor.id]: [{ type: 'item', order: refactor.items.rename, command: lsp.rename }],
   },

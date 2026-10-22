@@ -73,13 +73,16 @@ export async function open(view: EditorView, pos: number): Promise<void> {
 export const menuitem = (name: string) => page.getByRole('menuitem', { name: new RegExp(`^${name}`) });
 
 /**
- * Returns the labels of the items in `root`, and `-` for each separator. An item's label is its first node, ahead of
- * its shortcut.
+ * Returns the labels of the items and submenus in `root`, and `-` for each separator. An item's label is its first
+ * node, ahead of its shortcut.
  */
 export function labels(root: ParentNode = document): (string | null | undefined)[] {
-  return [...root.querySelectorAll('[data-slot="context-menu-item"], [data-slot="context-menu-separator"]')].map(
-    (element) =>
-      element.getAttribute('data-slot') === 'context-menu-separator' ? '-' : element.firstChild?.textContent,
+  return [
+    ...root.querySelectorAll(
+      '[data-slot="context-menu-item"], [data-slot="context-menu-sub-trigger"], [data-slot="context-menu-separator"]',
+    ),
+  ].map((element) =>
+    element.getAttribute('data-slot') === 'context-menu-separator' ? '-' : element.firstChild?.textContent,
   );
 }
 

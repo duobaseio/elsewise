@@ -170,7 +170,7 @@ describe('CommandContextMenu', () => {
     );
 
     await open();
-    expect(labels()).toEqual(['Item', 'Other', '-', 'Item']);
+    expect(labels()).toEqual(['Item', 'More', 'Other', '-', 'Item']);
     expect(menuitem('More').elements()).toHaveLength(1);
   });
 
@@ -226,7 +226,7 @@ describe('CommandContextMenu', () => {
     );
 
     await open();
-    expect(labels()).toEqual(['Item']);
+    expect(labels()).toEqual(['Item', 'Loop']);
     expect(menuitem('Empty').query()).toBeNull();
     await userEvent.click(menuitem('Loop'));
     await expect.element(menuitem('Item').nth(1)).toBeVisible();

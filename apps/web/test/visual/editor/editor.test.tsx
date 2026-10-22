@@ -4,7 +4,7 @@ import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type DiffLayout } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
 import { tags } from '@lezer/highlight';
@@ -42,6 +42,11 @@ pub async fn attach(&self, id: SessionId) -> Result<Channel> {
     Ok(Channel::new(rx))
 }
 `;
+
+// `CODE` before its last edits: a smaller channel, no subscription and a log line.
+const BASE = CODE.replace('bounded(64)', 'bounded(32)')
+  .replace('    session.subscribe(tx).await?;\n', '')
+  .replace('    Ok(Channel::new(rx))', '    log::debug!("attached");\n    Ok(Channel::new(rx))');
 
 const LINKED = `/// Connects to the relay. See https://example.com/relay for the protocol.
 pub fn connect() -> Result<Channel> {
@@ -292,12 +297,13 @@ const ICONS: EditorCompletion[] = [
 ];
 
 // Mounts the editor, on `HOVERED` with a Rust language server if `hovered`, else on `code`, with a plugin's
-// `extensions`.
+// `extensions`, and diffed against `BASE` in `diff` if given.
 async function mount(
   theme: 'light' | 'dark',
   hovered = false,
   code = CODE,
   extensions: readonly Extension[] = [],
+  diff?: DiffLayout,
 ): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
@@ -309,9 +315,10 @@ async function mount(
   });
   const editor = new EditorManager();
   if (hovered) {
-    editor.addLanguageServers([RUST]);
+    editor.languages.addServers([RUST]);
   }
   editor.addExtensions(extensions);
+  editor.diffs.add([{ id: 'test.base', label: 'Base', base: async () => BASE }]);
   const commands = new CommandManager({
     appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
     editor,
@@ -330,7 +337,7 @@ async function mount(
               {hovered ? (
                 <Editor code={HOVERED} path="src/main.rs" root={new URL('file:///worktree/')} />
               ) : (
-                <Editor code={code} path="transport.rs" />
+                <Editor code={code} path="transport.rs" diff={diff === undefined ? null : 'test.base'} layout={diff} />
               )}
             </div>
           </LanguageServersContext>
@@ -416,6 +423,20 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-search-${theme}`);
+  });
+
+  test('unified diff', async () => {
+    await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-${theme}`);
+  });
+
+  test('split diff', async () => {
+    await mount(theme, false, CODE, [], 'split');
+    await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-${theme}`);
   });
 
   test('folded', async () => {
