@@ -3,8 +3,8 @@ import { indentUnit, LanguageDescription, LanguageSupport, StreamLanguage } from
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import { DEFAULT_COMMANDS, EDITOR_DOCUMENT, type LanguageServer } from '@elsewise/plugin';
+import { DEFAULT_SETTINGS, type DiffLayout, type Settings } from '@elsewise/bridge';
+import { DEFAULT_COMMANDS, EDITOR_DOCUMENT, type EditorDiffSource, type LanguageServer } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
@@ -13,6 +13,7 @@ import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { DiffState } from '@/editor/diff';
 import { Editor } from '@/editor/editor';
 import { COMMANDS, EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -34,13 +35,10 @@ const { EDITOR } = vi.hoisted(() => ({
 // Replaces the editor's colors with test colors, since a test cannot add a theme to the bundled ones.
 vi.mock('@/appearance/themes', async (original) => {
   const actual = await original<typeof import('@/appearance/themes')>();
-  return {
-    ...actual,
-    useActiveTheme: () => {
-      const elsewise = actual.resolveActiveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
-      return { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
-    },
-  };
+  const elsewise = actual.resolveActiveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
+  // The same object on every call, as the real hook returns while the theme stays the same.
+  const theme = { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
+  return { ...actual, useActiveTheme: () => theme };
 });
 
 const SETTINGS: Settings = {
@@ -77,7 +75,7 @@ async function mountEditor(
         <CommandManagerContext value={commands}>
           <LanguageServersContext value={new LanguageServers(editor)}>
             <div style={{ height: 300 }}>
-              <Editor code={code} path={path} root={root} />
+              <Editor code={code} relativePath={path} root={root} diff={new DiffState(null, 'unified')} />
             </div>
           </LanguageServersContext>
         </CommandManagerContext>
@@ -199,7 +197,7 @@ test('file line separator beats plugin facet', async () => {
 
 test("plugin's extension function receives file", async () => {
   const editor = new EditorManager();
-  editor.addExtensions([(document) => EditorView.contentAttributes.of({ 'data-path': document.path })]);
+  editor.addExtensions([(document) => EditorView.contentAttributes.of({ 'data-path': document.relativePath })]);
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
   expect(view.contentDOM.dataset.path).toBe('main.rs');
@@ -210,7 +208,7 @@ test("plugin's extension reads file from state", async () => {
   editor.addExtensions([
     EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
       const document = state.facet(EDITOR_DOCUMENT);
-      return { 'data-file': document === null ? 'loading' : `${document.path} ${document.view.type}` };
+      return { 'data-file': document === null ? 'loading' : `${document.relativePath} ${document.layout.type}` };
     }),
   ]);
   const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
@@ -431,4 +429,261 @@ test('file without root has no language server', async () => {
   await new Promise((resolve) => setTimeout(resolve));
 
   expect(sent).toEqual([]);
+});
+
+const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
+// Changes `beta` on line 2 and deletes `delta`.
+const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
+
+// Returns a source with `id` whose base is `base`.
+function diffSourceOf(id: string, base: string | Promise<string>): EditorDiffSource {
+  return { id, label: id, base: () => Promise.resolve(base) };
+}
+
+// Mounts `CODE` diffed against the source with `source` in `layout`, and returns the diff state, the editor of the file
+// and the base side's editor.
+async function mountDiff(source: string | null, layout: DiffLayout, editor = new EditorManager()) {
+  const diff = new DiffState(source, layout);
+  const commands = new CommandManager({
+    appearance: new AppearanceManager(
+      'light',
+      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
+    ),
+    editor,
+  });
+  const screen = await render(
+    shell(
+      <EditorManagerContext value={editor}>
+        <CommandManagerContext value={commands}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <div style={{ height: 300 }}>
+              <Editor code={CODE} relativePath="main.txt" diff={diff} />
+            </div>
+          </LanguageServersContext>
+        </CommandManagerContext>
+      </EditorManagerContext>,
+    ),
+  );
+  await expect.element(screen.getByText('alpha').first()).toBeVisible();
+  const find = (selector: string) => {
+    const element = screen.container.querySelector(selector);
+    return element instanceof HTMLElement ? EditorView.findFromDOM(element) : null;
+  };
+  return {
+    diff,
+    commands,
+    file: () => find('.cm-mergeView .cm-merge-b') ?? find('.cm-editor'),
+    base: () => find('.cm-mergeView .cm-merge-a'),
+  };
+}
+
+test('diff shows chunks once base arrives', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE)]);
+  const { file } = await mountDiff('test.source', 'unified', editor);
+
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
+  expect(file()?.dom.querySelector('.cm-deletedChunk .cm-deletedLine')?.textContent).toBe('beta');
+});
+
+test('stopping diff clears source and removes chunks', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE)]);
+  const { diff, file, commands } = await mountDiff('test.source', 'unified', editor);
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
+
+  commands.run(DEFAULT_COMMANDS.editor.diff.close, file() ?? undefined);
+
+  expect(diff.source).toBeNull();
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+});
+
+test('changed source fetches base', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE), diffSourceOf('test.other', CODE)]);
+  const { diff, file } = await mountDiff('test.source', 'unified', editor);
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
+
+  diff.source = 'test.other';
+
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+});
+
+test('base that arrives after source changed is dropped', async () => {
+  const editor = new EditorManager();
+  let resolveLate!: (base: string) => void;
+  const late = new Promise<string>((resolve) => {
+    resolveLate = resolve;
+  });
+  editor.diffs.add([diffSourceOf('test.late', late), diffSourceOf('test.other', CODE)]);
+  const { diff, file } = await mountDiff('test.late', 'unified', editor);
+
+  diff.source = 'test.other';
+  await expect.poll(() => file()?.dom.querySelector('.cm-deletedChunk')).toBeNull();
+  resolveLate(BASE);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+});
+
+test('split shows read-only base beside file', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE)]);
+  const { file, base } = await mountDiff('test.source', 'split', editor);
+
+  await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
+  expect(base()?.state.readOnly).toBe(true);
+  expect(file()?.state.doc.toString()).toBe(CODE);
+  expect(file()?.state.readOnly).toBe(false);
+});
+
+test('switching layouts keeps document, selection and undo history', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE)]);
+  const { diff, file, base, commands } = await mountDiff('test.source', 'unified', editor);
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
+  file()?.dispatch({ changes: { from: 0, insert: 'x' }, selection: { anchor: 3 }, userEvent: 'input' });
+
+  commands.run(DEFAULT_COMMANDS.editor.diff.split, file() ?? undefined);
+
+  expect(diff.layout).toBe('split');
+  await expect.poll(() => base()).not.toBeNull();
+  expect(file()?.state.doc.toString()).toBe(`x${CODE}`);
+  expect(file()?.state.selection.main.head).toBe(3);
+  commands.run(DEFAULT_COMMANDS.editor.history.undo, file() ?? undefined);
+  expect(file()?.state.doc.toString()).toBe(CODE);
+
+  commands.run(DEFAULT_COMMANDS.editor.diff.unified, file() ?? undefined);
+
+  await expect.poll(() => base()).toBeNull();
+  commands.run(DEFAULT_COMMANDS.editor.history.redo, file() ?? undefined);
+  expect(file()?.state.doc.toString()).toBe(`x${CODE}`);
+});
+
+test('changed source replaces base in split', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE), diffSourceOf('test.other', CODE)]);
+  const { diff, base } = await mountDiff('test.source', 'split', editor);
+  await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
+
+  diff.source = 'test.other';
+
+  await expect.poll(() => base()?.state.doc.toString()).toBe(CODE);
+});
+
+test('plugin extension function receives side layout', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([diffSourceOf('test.source', BASE)]);
+  editor.addExtensions([
+    (document) =>
+      EditorView.contentAttributes.of({
+        'data-layout': document.layout.type === 'split' ? `split ${document.layout.side}` : document.layout.type,
+      }),
+  ]);
+  const { file, base, commands } = await mountDiff('test.source', 'unified', editor);
+
+  await expect.poll(() => file()?.contentDOM.dataset.layout).toBe('unified');
+  commands.run(DEFAULT_COMMANDS.editor.diff.split, file() ?? undefined);
+
+  await expect.poll(() => file()?.contentDOM.dataset.layout).toBe('split target');
+  expect(base()?.contentDOM.dataset.layout).toBe('split base');
+});
+
+// Returns a source with `id` whose base resolves or rejects when the returned functions are called.
+function pendingSourceOf(id: string) {
+  let resolve = (_: string) => {};
+  let reject = (_: Error) => {};
+  const source: EditorDiffSource = {
+    id,
+    label: id,
+    base: () =>
+      new Promise<string>((onResolve, onReject) => {
+        resolve = onResolve;
+        reject = onReject;
+      }),
+  };
+  return { source, resolve: (base: string) => resolve(base), reject: (error: Error) => reject(error) };
+}
+
+test('split stays while new base loads', async () => {
+  const editor = new EditorManager();
+  const other = pendingSourceOf('test.other');
+  editor.diffs.add([diffSourceOf('test.source', BASE), other.source]);
+  const { diff, file, base } = await mountDiff('test.source', 'split', editor);
+  await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
+  const shown = file();
+
+  diff.source = 'test.other';
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(base()?.state.doc.toString()).toBe(BASE);
+  expect(file()).toBe(shown);
+  other.resolve(CODE);
+  await expect.poll(() => base()?.state.doc.toString()).toBe(CODE);
+  expect(file()).toBe(shown);
+});
+
+test('inline diff stays while new base loads', async () => {
+  const editor = new EditorManager();
+  const other = pendingSourceOf('test.other');
+  editor.diffs.add([diffSourceOf('test.source', BASE), other.source]);
+  const { diff, file } = await mountDiff('test.source', 'unified', editor);
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
+
+  diff.source = 'test.other';
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
+  expect(file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
+  other.resolve(CODE);
+  await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+});
+
+test('failed base stops showing diff', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const editor = new EditorManager();
+  const other = pendingSourceOf('test.other');
+  editor.diffs.add([diffSourceOf('test.source', BASE), other.source]);
+  const { diff, file, base } = await mountDiff('test.source', 'split', editor);
+  await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
+
+  diff.source = 'test.other';
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  other.reject(new Error('unreadable'));
+
+  await expect.poll(() => base()).toBeNull();
+  expect(file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+});
+
+test('removed source stops showing diff', async () => {
+  const editor = new EditorManager();
+  const remove = editor.diffs.add([diffSourceOf('test.source', BASE)]);
+  const { file, base } = await mountDiff('test.source', 'split', editor);
+  await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
+
+  remove();
+
+  await expect.poll(() => base()).toBeNull();
+  expect(file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+});
+
+test('toolbar command updates while base loads', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add([pendingSourceOf('test.source').source]);
+  editor.addToolbarItems([
+    {
+      type: 'command',
+      command: DEFAULT_COMMANDS.editor.diff.split,
+      icon: (props) => <svg {...props} data-testid="split" />,
+    },
+  ]);
+  const { diff } = await mountDiff('test.source', 'unified', editor);
+  const split = page.getByTestId('split');
+  await expect.element(split).toBeInTheDocument();
+  expect(split.element().closest('button')?.disabled).toBe(false);
+  // Waits for the updates of the view's first measurements.
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  diff.layout = 'split';
+
+  await expect.poll(() => split.element().closest('button')?.disabled).toBe(true);
 });

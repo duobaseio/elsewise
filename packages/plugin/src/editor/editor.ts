@@ -62,12 +62,12 @@ export const EDITOR_DOCUMENT = Facet.define<EditorDocument, EditorDocument | nul
  * How an editor shows its document:
  * * `editor`: the default view.
  * * `unified`: diffed, with the base's deleted lines inline.
- * * `split`: as one side of a side-by-side diff.
+ * * `split`: as one side of a side-by-side diff, the `base` on the left or the `target` on the right.
  */
-export type EditorDocumentView =
+export type EditorDocumentLayout =
   | { readonly type: 'editor' }
   | { readonly type: 'unified' }
-  | { readonly type: 'split'; readonly side: 'base' | 'file' };
+  | { readonly type: 'split'; readonly side: 'base' | 'target' };
 
 /**
  * The code editor.
@@ -107,7 +107,7 @@ export interface Editor {
    *     language?.name === 'TypeScript' ? language.support.language.data.of({ autocomplete: imports }) : [],
    *
    *   // Except on the base side of a split diff.
-   *   ({ view }) => (view.type === 'split' && view.side === 'base' ? [] : blame()),
+   *   ({ layout }) => (layout.type === 'split' && layout.side === 'base' ? [] : blame()),
    * ]);
    * ```
    *
@@ -142,14 +142,14 @@ export interface Editor {
  */
 export interface EditorDocument {
   /**
-   * The document's path.
+   * The document's path, relative to the worktree's root, e.g. `src/main.ts`.
    */
-  readonly path: string;
+  readonly relativePath: string;
 
   /**
-   * How the editor shows the document.
+   * The document's layout.
    */
-  readonly view: EditorDocumentView;
+  readonly layout: EditorDocumentLayout;
 
   /**
    * The document's language, with its `support` loaded, or undefined if none matches the path.

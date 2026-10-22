@@ -22,7 +22,7 @@ export {
   type EditorDiagnostic,
   type EditorDiagnosticAction,
   type EditorDocument,
-  type EditorDocumentView,
+  type EditorDocumentLayout,
   type EditorFormatter,
   type EditorHoverSource,
   type EditorNavigation,

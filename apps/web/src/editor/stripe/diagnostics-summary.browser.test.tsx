@@ -12,7 +12,7 @@ import { CommandManagerContext } from '@/command/command-manager';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { hover } from '@/editor/hover';
 import { METRICS } from '@/editor/theme';
-import { useToolbar } from '@/editor/toolbar';
+import { useToolbarExtension } from '@/editor/toolbar';
 import { settingsQuery } from '@/settings/settings';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
 
@@ -32,7 +32,7 @@ function mount(
   const commands = builtInCommands(editor);
   client.setQueryData(settingsQuery.queryKey, settings);
   function Probe() {
-    const { toolbar, portal } = useToolbar();
+    const { toolbar, portal } = useToolbarExtension();
     const host = useRef<HTMLDivElement>(null);
     useEffect(() => {
       const created = new EditorView({

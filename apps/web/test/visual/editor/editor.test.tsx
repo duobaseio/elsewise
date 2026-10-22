@@ -25,6 +25,7 @@ import type {
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { DiffState } from '@/editor/diff';
 import { Editor } from '@/editor/editor';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -335,9 +336,18 @@ async function mount(
               style={{ width: 1040, height: hovered ? 420 : 300 }}
             >
               {hovered ? (
-                <Editor code={HOVERED} path="src/main.rs" root={new URL('file:///worktree/')} />
+                <Editor
+                  code={HOVERED}
+                  relativePath="src/main.rs"
+                  root={new URL('file:///worktree/')}
+                  diff={new DiffState(null, 'unified')}
+                />
               ) : (
-                <Editor code={code} path="transport.rs" diff={diff === undefined ? null : 'test.base'} layout={diff} />
+                <Editor
+                  code={code}
+                  relativePath="transport.rs"
+                  diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
+                />
               )}
             </div>
           </LanguageServersContext>

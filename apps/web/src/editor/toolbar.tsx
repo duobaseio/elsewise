@@ -59,7 +59,7 @@ const BUILT_IN: readonly EditorToolbarItem[] = [
  *
  * The toolbar shows the built-in items and the plugins' items.
  */
-export function useToolbar(): { toolbar: Extension; portal: ReactNode } {
+export function useToolbarExtension(): { toolbar: Extension; portal: ReactNode } {
   const [mounted, setMounted] = useState<Mounted | null>(null);
   const toolbar = useMemo(
     () =>

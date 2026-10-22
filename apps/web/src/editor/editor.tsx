@@ -1,47 +1,9 @@
-import { closeBrackets } from '@codemirror/autocomplete';
-import { history, simplifySelection, standardKeymap } from '@codemirror/commands';
-import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
-import { Compartment, EditorState, type Extension, Prec } from '@codemirror/state';
-import {
-  crosshairCursor,
-  drawSelection,
-  EditorView,
-  highlightActiveLine,
-  highlightActiveLineGutter,
-  highlightSpecialChars,
-  keymap,
-  rectangularSelection,
-} from '@codemirror/view';
-import type { LineSeparator } from '@elsewise/bridge';
-import { iconUrl, useIcons } from '@elsewise/components/components/icon';
-import { PLATFORM } from '@elsewise/components/lib/platform';
-import { type EditorDocument, EDITOR_DOCUMENT } from '@elsewise/plugin';
-import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
-import { useCommandManager } from '@/command/command-manager';
-import { editorKeymap } from '@/command/keymap';
-import { actions } from '@/editor/actions';
-import { completion } from '@/editor/completion';
-import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
-import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
-import { format } from '@/editor/format';
-import { hover } from '@/editor/hover';
-import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
-import { navigation } from '@/editor/navigation.ts';
-import { scrollbarsKeepFocus } from '@/editor/scroll';
-import { useSearchExtension } from '@/editor/search/search-bar';
-import { useSettingsExtension } from '@/editor/settings';
-import { selectionMatches } from '@/editor/stripe/selection-matches';
-import { useThemeExtension } from '@/editor/theme';
-import { useToolbar } from '@/editor/toolbar';
-import { useEditorSettings, useSettings } from '@/settings/settings';
-
-const PLUGINS = new Compartment();
-const DOCUMENT = new Compartment();
-const KEYS = new Compartment();
-const THEME = new Compartment();
-const LANGUAGE = new Compartment();
-const LANGUAGE_SERVER = new Compartment();
-const SETTINGS = new Compartment();
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import type { DiffState } from '@/editor/diff';
+import { useEditorManager } from '@/editor/editor-manager';
+import type { EditorSession } from '@/editor/layouts/layout';
+import { SplitLayout } from '@/editor/layouts/split-layout';
+import { UnifiedLayout } from '@/editor/layouts/unified-layout';
 
 export interface EditorProps {
   /**
@@ -49,158 +11,50 @@ export interface EditorProps {
    */
   root?: URL;
   /**
-   * The file's path. Used to detect its language.
+   * The file's path, relative to the worktree's root, e.g. `src/main.ts`.
    */
-  path: string;
+  relativePath: string;
   code: string;
+  /**
+   * Which source the file is diffed against, and in which layout.
+   */
+  diff: DiffState;
 }
 
 /**
  * A code editor.
  */
-export function Editor({ path, code, root }: EditorProps) {
-  const host = useRef<HTMLDivElement>(null);
-  const view = useRef<EditorView>(null);
+export function Editor({ root, relativePath, code, diff }: EditorProps) {
+  const subscribe = useCallback((listener: () => void) => diff.subscribe(listener), [diff]);
+  const source = useSyncExternalStore(subscribe, () => diff.source);
+  const layout = useSyncExternalStore(subscribe, () => diff.layout);
+  const sources = useEditorManager((editor) => editor.diffs.sources);
 
-  const editorManager = useEditorManager();
-  const theme = useThemeExtension();
-  const languages = useEditorManager((editor) => editor.languages.languages);
-  const description = LanguageDescription.matchFilename(languages, path);
-  const [settled, setSettled] = useState<LanguageDescription | null>(null);
-  const language =
-    description === null
-      ? undefined
-      : description.support !== undefined
-        ? description
-        : description === settled
-          ? undefined
-          : null;
-  // Null while its `language` loads.
-  const file = useMemo<EditorDocument | null>(
-    () => (language === null ? null : { path, view: { type: 'editor' }, language }),
-    [path, language],
-  );
-  const plugins = usePluginsExtension(file);
-  const { search, portal: searchPortal } = useSearchExtension();
-  const { toolbar, portal: toolbarPortal } = useToolbar();
-  const settings = useSettingsExtension(description?.name);
-  const languageServer = useLanguageServerExtension(root, description?.name, path);
-  const icons = useIcons();
-  const commands = useCommandManager();
-  const bindings = useCommandManager((commands) => commands.keymap.keys.editor);
-  const keys = useMemo(() => editorKeymap(commands, bindings), [commands, bindings]);
+  // The base of the source once it has been fetched, or the previous source's while it is fetched, so that the layout
+  // stays the same in the meantime.
+  const [base, setBase] = useState<string | null>(null);
+  const session = useRef<EditorSession>(null);
 
-  const font = useSettings((settings) => settings.appearance.editor.font);
-  const previousFont = useRef(font);
-
-  // Defaults to the line separator the file already uses, or the platform's if the file has none.
-  const lineSeparator: LineSeparator =
-    useEditorSettings(description?.name, 'lineSeparator') ??
-    (code.includes('\r\n') || (!code.includes('\n') && PLATFORM === 'windows') ? '\r\n' : '\n');
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
+  // Fetches the base of the source. Keeps a base that arrives late from being applied to another source.
   useEffect(() => {
-    if (host.current == null) {
+    const found = source === null ? undefined : sources.find((other) => other.id === source);
+    if (found === undefined) {
+      setBase(null);
       return;
     }
 
-    let state = EditorState.create({
-      doc: code,
-      extensions: [
-        // Has to be first to let a plugin's theme and keymap take precedence over Elsewise's.
-        PLUGINS.of([]),
-        DOCUMENT.of(file === null ? [] : EDITOR_DOCUMENT.of(file)),
-        // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
-        KEYS.of(keys),
-        COMMANDS.of(commands),
-        EditorView.updateListener.of((update) => {
-          if (update.focusChanged && update.view.hasFocus) {
-            editorManager.activate(update.view);
-          }
-        }),
-        THEME.of(theme),
-        history(),
-        search,
-
-        SETTINGS.of(settings),
-        toolbar,
-        // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be reparsed.
-        // Has the precedence for the same reason as the settings' facets.
-        Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
-
-        LANGUAGE.of(description?.support ?? []),
-        LANGUAGE_SERVER.of(languageServer),
-        completion(),
-        hover(),
-        actions(),
-        format,
-        closeBrackets(),
-        bracketMatching(),
-        // Has to be after lineNumbers to ensure the fold icon is to the right of it.
-        foldGutter({
-          markerDOM: (open) => {
-            const marker = document.createElement('span');
-            marker.className = 'cm-fold-marker';
-            if (open) {
-              marker.dataset.open = '';
-            }
-            return marker;
-          },
-        }),
-
-        EditorState.allowMultipleSelections.of(true),
-        drawSelection(),
-        crosshairCursor(),
-        rectangularSelection(),
-
-        highlightActiveLine(),
-        highlightActiveLineGutter(),
-        selectionMatches(),
-        highlightSpecialChars(),
-        RIGHT_CLICK_CONTEXT_MENU,
-        navigation(),
-        scrollbarsKeepFocus(),
-
-        // Escape is not a command to keep it from taking precedence over the popups' own Escape.
-        keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
-      ],
-    });
-    // Applies the plugins' extensions separately to keep a broken plugin from leaving the file without an editor.
-    try {
-      state = state.update({ effects: PLUGINS.reconfigure(plugins) }).state;
-    } catch (error) {
-      console.error('Plugin extension failed', error);
-    }
-
-    const editor = new EditorView({ state, parent: host.current });
-    view.current = editor;
-
-    return () => {
-      editorManager.deactivate(editor);
-      editor.destroy();
-      view.current = null;
-    };
-  }, [code, lineSeparator]);
-
-  useEffect(() => {
-    view.current?.dispatch({ effects: LANGUAGE.reconfigure(description?.support ?? []) });
-    if (description === null || description.support !== undefined) {
-      return;
-    }
-
-    // Keeps a grammar that loads late from being applied to another file's language.
     let live = true;
-    description.load().then(
-      (support) => {
+    found.base().then(
+      (text) => {
         if (live) {
-          view.current?.dispatch({ effects: LANGUAGE.reconfigure(support) });
-          setSettled(description);
+          // A null base means the file did not exist in the source, so all of it is added.
+          setBase(text ?? '');
         }
       },
       (error) => {
-        console.error(`Language ${description.name} failed to load`, error);
+        console.error(`Diff source ${source} failed`, error);
         if (live) {
-          setSettled(description);
+          setBase(null);
         }
       },
     );
@@ -208,86 +62,25 @@ export function Editor({ path, code, root }: EditorProps) {
     return () => {
       live = false;
     };
-  }, [description]);
+  }, [source, sources]);
 
-  useEffect(() => {
-    view.current?.dispatch({ effects: DOCUMENT.reconfigure(file === null ? [] : EDITOR_DOCUMENT.of(file)) });
-  }, [file]);
-
-  useEffect(() => {
-    try {
-      view.current?.dispatch({ effects: PLUGINS.reconfigure(plugins) });
-    } catch (error) {
-      console.error('Plugin extension failed', error);
-      view.current?.dispatch({ effects: PLUGINS.reconfigure([]) });
-    }
-  }, [plugins]);
-
-  useEffect(() => {
-    view.current?.dispatch({ effects: KEYS.reconfigure(keys) });
-  }, [keys]);
-
-  useEffect(() => {
-    view.current?.dispatch({ effects: THEME.reconfigure(theme) });
-  }, [theme]);
-
-  useEffect(() => {
-    view.current?.dispatch({ effects: SETTINGS.reconfigure(settings) });
-  }, [settings]);
-
-  useEffect(() => {
-    view.current?.dispatch({ effects: LANGUAGE_SERVER.reconfigure(languageServer) });
-  }, [languageServer]);
-
-  // Rebuilds the editor when its font changes. CodeMirror caches measurements such as the character width, and does
-  // not notice a font that changes through a CSS variable.
-  useEffect(() => {
-    const editor = view.current;
-    if (editor === null || previousFont.current === font) {
-      return;
-    }
-
-    previousFont.current = font;
-    const top = editor.lineBlockAtHeight(editor.scrollDOM.scrollTop).from;
-
-    editor.setState(editor.state);
-    editor.dispatch({ effects: EditorView.scrollIntoView(top, { y: 'start' }) });
-  }, [font]);
-
-  return (
-    <>
-      <EditorContextMenu view={view}>
-        <div
-          className="h-full"
-          ref={host}
-          // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
-          style={
-            {
-              '--fold-marker': `url("${iconUrl(icons.expand)}")`,
-              '--external-link': `url("${iconUrl(icons.external)}")`,
-            } as CSSProperties
-          }
-        />
-      </EditorContextMenu>
-      {searchPortal}
-      {toolbarPortal}
-    </>
+  const fetched = source === null ? null : base;
+  return fetched !== null && layout === 'split' ? (
+    <SplitLayout
+      relativePath={relativePath}
+      base={{ source: { type: 'blob' }, code: fetched }}
+      target={{ source: { type: 'workingTree', root }, code }}
+      extensions={diff.extension}
+      session={session}
+    />
+  ) : (
+    <UnifiedLayout
+      source={{ type: 'workingTree', root }}
+      relativePath={relativePath}
+      code={code}
+      base={fetched}
+      extensions={diff.extension}
+      session={session}
+    />
   );
-}
-
-// Returns the plugins' extensions for the `file`, without those from functions while its language loads (null), so
-// that they see its `support`.
-function usePluginsExtension(file: EditorDocument | null): Extension {
-  const extensions = useEditorManager((editor) => editor.extensions);
-
-  return useMemo(() => {
-    try {
-      return extensions.flatMap((extension) =>
-        typeof extension === 'function' ? (file === null ? [] : extension(file)) : extension,
-      );
-    } catch (error) {
-      console.error('Plugin extension failed', error);
-      return [];
-    }
-  }, [extensions, file]);
 }

@@ -1,60 +1,112 @@
-import {
-  getChunks,
-  getOriginalDoc,
-  goToNextChunk,
-  goToPreviousChunk,
-  unifiedMergeView,
-  updateOriginalDoc,
-} from '@codemirror/merge';
-import { ChangeSet, EditorState, type Extension, StateEffect, StateField } from '@codemirror/state';
-import type { EditorView } from '@codemirror/view';
+import { getChunks, goToNextChunk, goToPreviousChunk, unifiedMergeView } from '@codemirror/merge';
+import { type Extension, Facet } from '@codemirror/state';
+import { type EditorView, ViewPlugin } from '@codemirror/view';
 import type { DiffLayout } from '@elsewise/bridge';
-import { DEFAULT_COMMANDS, DEFAULT_DIFF_SOURCES, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMANDS,
+  DEFAULT_DIFF_SOURCES,
+  DEFAULT_KEYS,
+  type Disposable,
+  type EditorCommand,
+} from '@elsewise/plugin';
 
-export const diffSource = StateField.define<string | null>({
-  create: () => null,
-  update(value, tr) {
-    for (const effect of tr.effects) {
-      if (effect.is(setDiffSource)) {
-        value = effect.value;
+/**
+ * The editor's diff state, or null in a view outside an editor.
+ */
+export const EDITOR_DIFF = Facet.define<DiffState, DiffState | null>({ combine: (values) => values[0] ?? null });
+
+/**
+ * Which source an editor's file is diffed against, and in which layout.
+ *
+ * One per editor, shared by its views, since a change of layout replaces them. Commands and plugins read and change it
+ * through {@link EDITOR_DIFF}, and the editor renders from it.
+ *
+ * A change updates the views, so that what they show from it, e.g. whether a toolbar's command is enabled, is
+ * evaluated again.
+ */
+export class DiffState {
+  /**
+   * The extension that gives a view this state.
+   */
+  readonly extension: Extension;
+  private readonly listeners = new Set<() => void>();
+  private readonly views = new Set<EditorView>();
+  private currentSource: string | null;
+  private currentLayout: DiffLayout;
+
+  constructor(source: string | null, layout: DiffLayout) {
+    this.currentSource = source;
+    this.currentLayout = layout;
+    this.extension = [
+      EDITOR_DIFF.of(this),
+      ViewPlugin.define((view) => {
+        this.views.add(view);
+        return { destroy: () => this.views.delete(view) };
+      }),
+    ];
+  }
+
+  /**
+   * The id of the source that the file is diffed against, or null if it is not diffed.
+   */
+  get source(): string | null {
+    return this.currentSource;
+  }
+
+  set source(source: string | null) {
+    if (this.currentSource !== source) {
+      this.currentSource = source;
+      this.notify();
+    }
+  }
+
+  /**
+   * The layout that the diff is shown in.
+   */
+  get layout(): DiffLayout {
+    return this.currentLayout;
+  }
+
+  set layout(layout: DiffLayout) {
+    if (this.currentLayout !== layout) {
+      this.currentLayout = layout;
+      this.notify();
+    }
+  }
+
+  /**
+   * Registers a `listener` that is called when the source or layout changes.
+   *
+   * Returns a disposable that unregisters the `listener`.
+   */
+  subscribe(listener: () => void): Disposable {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify() {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error('Diff listener failed', error);
       }
     }
-    return value;
-  },
-});
 
-export const setDiffSource = StateEffect.define<string | null>();
-
-export const diffLayout = StateField.define<DiffLayout>({
-  create: () => 'unified',
-  update(value, tr) {
-    for (const effect of tr.effects) {
-      if (effect.is(setDiffLayout)) {
-        value = effect.value;
+    // Later, since the state may change during a view update, when dispatching is not allowed.
+    queueMicrotask(() => {
+      for (const view of this.views) {
+        view.dispatch({});
       }
-    }
-    return value;
-  },
-});
-
-export const setDiffLayout = StateEffect.define<DiffLayout>();
+    });
+  }
+}
 
 // TODO: Fine-tuning of appearance and behavior.
 export function unifiedDiff(base: string): Extension {
   return unifiedMergeView({ original: base, mergeControls: false });
-}
-
-/**
- * Replaces the base of the diff in `view` with `base`.
- */
-export function setBase(view: EditorView, base: string): void {
-  const original = getOriginalDoc(view.state);
-  const changes = ChangeSet.of(
-    { from: 0, to: original.length, insert: base },
-    original.length,
-    view.state.facet(EditorState.lineSeparator),
-  );
-  view.dispatch({ effects: updateOriginalDoc.of({ doc: changes.apply(original), changes }) });
 }
 
 export const UNSTAGED_DIFF: EditorCommand = {
@@ -95,9 +147,14 @@ export const CLOSE_DIFF: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.diff.close,
   label: 'Stop comparing',
   defaultKeys: DEFAULT_KEYS.editor.diff.close,
-  shown: (_, view) => view.state.field(diffSource, false) != null,
+  shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
   run: (_, view) => {
-    view.dispatch({ effects: setDiffSource.of(null) });
+    const diff = view.state.facet(EDITOR_DIFF);
+    if (diff === null) {
+      return false;
+    }
+
+    diff.source = null;
     return true;
   },
 };
@@ -125,10 +182,15 @@ export const UNIFIED_DIFF: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.diff.unified,
   label: 'Unified',
   defaultKeys: DEFAULT_KEYS.editor.diff.unified,
-  shown: (_, view) => view.state.field(diffSource, false) != null,
-  enabled: (_, view) => view.state.field(diffLayout, false) !== 'unified',
+  shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
+  enabled: (_, view) => view.state.facet(EDITOR_DIFF)?.layout !== 'unified',
   run: (_, view) => {
-    view.dispatch({ effects: setDiffLayout.of('unified') });
+    const diff = view.state.facet(EDITOR_DIFF);
+    if (diff === null) {
+      return false;
+    }
+
+    diff.layout = 'unified';
     return true;
   },
 };
@@ -136,12 +198,17 @@ export const UNIFIED_DIFF: EditorCommand = {
 export const SPLIT_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.split,
-  label: 'Side by side',
+  label: 'Split',
   defaultKeys: DEFAULT_KEYS.editor.diff.split,
-  shown: (_, view) => view.state.field(diffSource, false) != null,
-  enabled: (_, view) => view.state.field(diffLayout, false) !== 'split',
+  shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
+  enabled: (_, view) => view.state.facet(EDITOR_DIFF)?.layout !== 'split',
   run: (_, view) => {
-    view.dispatch({ effects: setDiffLayout.of('split') });
+    const diff = view.state.facet(EDITOR_DIFF);
+    if (diff === null) {
+      return false;
+    }
+
+    diff.layout = 'split';
     return true;
   },
 };

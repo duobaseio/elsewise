@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable, EditorDiffSource, EditorDiffs } from '@elsewise/plugin';
-import { diffSource, setDiffSource } from '@/editor/diff';
+import { EDITOR_DIFF } from '@/editor/diff';
 
 /**
  * The diffs of documents against sources as plugins see them.
@@ -40,12 +40,13 @@ export class DiffManager implements EditorDiffs {
   }
 
   get(view: EditorView): string | null {
-    return view.state.field(diffSource, false) ?? null;
+    return view.state.facet(EDITOR_DIFF)?.source ?? null;
   }
 
   set(view: EditorView, id: string | null): void {
-    if (id === null || this.currentSources.some((source) => source.id === id)) {
-      view.dispatch({ effects: setDiffSource.of(id) });
+    const diff = view.state.facet(EDITOR_DIFF);
+    if (diff !== null && (id === null || this.currentSources.some((source) => source.id === id))) {
+      diff.source = id;
     }
   }
 }

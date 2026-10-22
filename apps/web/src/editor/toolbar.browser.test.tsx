@@ -11,7 +11,7 @@ import { render } from 'vitest-browser-react';
 import { type CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { METRICS } from '@/editor/theme';
-import { useToolbar } from '@/editor/toolbar';
+import { useToolbarExtension } from '@/editor/toolbar';
 import { settingsQuery } from '@/settings/settings';
 import { builtInCommands, commandsExtension } from '../../test/commands';
 
@@ -39,7 +39,7 @@ function mount(
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
   function Probe() {
-    const { toolbar, portal } = useToolbar();
+    const { toolbar, portal } = useToolbarExtension();
     const host = useRef<HTMLDivElement>(null);
     useEffect(() => {
       const created = new EditorView({

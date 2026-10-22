@@ -105,7 +105,7 @@ export const Settings = z.lazy(() =>
             /**
              * The default layout when viewing a diff.
              */
-            diffLayout: DiffLayout.catch('unified'),
+            diffLayout: DiffLayout.catch('split'),
             /**
              * Overrides by language, keyed by CodeMirror's name for it, e.g. `TypeScript`.
              *

@@ -1,10 +1,9 @@
-import { getChunks } from '@codemirror/merge';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { DiffLayout } from '@elsewise/bridge';
 import { DEFAULT_COMMANDS } from '@elsewise/plugin';
-import { afterEach, describe, expect, test } from 'vitest';
-import { CLOSE_DIFF, diffLayout, diffSource, SPLIT_DIFF, setBase, UNIFIED_DIFF, unifiedDiff } from '@/editor/diff';
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { CLOSE_DIFF, DiffState, SPLIT_DIFF, UNIFIED_DIFF, unifiedDiff } from '@/editor/diff';
 import { builtInCommands, commandsExtension } from '../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta', 'eta'].join('\n');
@@ -19,24 +18,20 @@ afterEach(() => {
   }
 });
 
-// Opens `DOC` diffed against `BASE`, against the source with `source` in `layout`, and returns it with the built-in
-// commands.
+// Opens `DOC` diffed against `BASE`, against the source with `source` in `layout`, and returns it with its diff state
+// and the built-in commands.
 function open(source: string | null = 'test.source', layout: DiffLayout = 'unified') {
   const commands = builtInCommands();
+  const diff = new DiffState(source, layout);
   const view = new EditorView({
     state: EditorState.create({
       doc: DOC,
-      extensions: [
-        unifiedDiff(BASE),
-        diffSource.init(() => source),
-        diffLayout.init(() => layout),
-        commandsExtension(commands),
-      ],
+      extensions: [unifiedDiff(BASE), diff.extension, commandsExtension(commands)],
     }),
     parent: document.body,
   });
   views.push(view);
-  return { view, commands };
+  return { view, diff, commands };
 }
 
 // Returns the line number of the cursor, from 1.
@@ -55,15 +50,6 @@ describe('unifiedDiff', () => {
     expect(
       [...view.dom.querySelectorAll('.cm-deletedChunk .cm-deletedLine')].map((element) => element.textContent),
     ).toEqual(['beta', 'delta']);
-  });
-});
-
-describe('setBase', () => {
-  test('replaces chunks', () => {
-    const { view } = open();
-    setBase(view, DOC);
-
-    expect(getChunks(view.state)?.chunks).toEqual([]);
   });
 });
 
@@ -101,19 +87,19 @@ describe('CLOSE_DIFF', () => {
   });
 
   test('clears source', () => {
-    const { view, commands } = open();
+    const { view, diff, commands } = open();
     commands.run(DEFAULT_COMMANDS.editor.diff.close, view);
 
-    expect(view.state.field(diffSource)).toBeNull();
+    expect(diff.source).toBeNull();
   });
 });
 
 describe('SPLIT_DIFF', () => {
   test('sets layout', () => {
-    const { view, commands } = open();
+    const { view, diff, commands } = open();
     commands.run(DEFAULT_COMMANDS.editor.diff.split, view);
 
-    expect(view.state.field(diffLayout)).toBe('split');
+    expect(diff.layout).toBe('split');
   });
 
   test('is disabled in split layout', () => {
@@ -125,15 +111,46 @@ describe('SPLIT_DIFF', () => {
 
 describe('UNIFIED_DIFF', () => {
   test('sets layout', () => {
-    const { view, commands } = open('test.source', 'split');
+    const { view, diff, commands } = open('test.source', 'split');
     commands.run(DEFAULT_COMMANDS.editor.diff.unified, view);
 
-    expect(view.state.field(diffLayout)).toBe('unified');
+    expect(diff.layout).toBe('unified');
   });
 
   test('is disabled in unified layout', () => {
     const { view, commands } = open();
 
     expect(UNIFIED_DIFF.enabled?.(commands.application, view, null)).toBe(false);
+  });
+});
+
+describe('DiffState', () => {
+  test('notifies on change', () => {
+    const diff = new DiffState(null, 'unified');
+    const listener = vi.fn();
+    diff.subscribe(listener);
+
+    diff.source = 'test.source';
+    diff.source = 'test.source';
+    diff.layout = 'split';
+
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+
+  test('updates views after change', async () => {
+    const diff = new DiffState(null, 'unified');
+    const update = vi.fn();
+    const view = new EditorView({
+      state: EditorState.create({ extensions: [diff.extension, EditorView.updateListener.of(update)] }),
+      parent: document.body,
+    });
+    views.push(view);
+    // Waits for the updates of the view's first measurements.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    update.mockClear();
+
+    diff.layout = 'split';
+
+    await expect.poll(() => update.mock.calls.length).toBe(1);
   });
 });
