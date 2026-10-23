@@ -71,6 +71,14 @@
       "info": "#179299",
       "hint": "#6C6F85",
       "unnecessary": "#6C6F85",
+      "diff": {
+        "addedLine": "#40A02B26",
+        "addedText": "#40A02B33",
+        "addedGutter": "#40A02B",
+        "deletedLine": "#D20F3926",
+        "deletedText": "#D20F3933",
+        "deletedGutter": "#D20F39"
+      },
       "tokens": {
         "comment": {
           "color": "#7C7F93",

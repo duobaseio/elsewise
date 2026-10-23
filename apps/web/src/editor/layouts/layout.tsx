@@ -122,7 +122,7 @@ export function useEditorExtensions(
   const theme = useThemeExtension();
   const { name, language } = useLanguage(relativePath);
   const support = useMemo<Extension>(() => language?.support ?? [], [language]);
-  const settings = useSettingsExtension(name);
+  const settings = useSettingsExtension(name, !(layout.type === 'split' && layout.side === 'base'));
   const languageServer = useLanguageServerExtension(
     source.type === 'workingTree' ? source.root : undefined, // Blobs do not have LSP server support.
     name,

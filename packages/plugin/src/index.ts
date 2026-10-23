@@ -7,7 +7,12 @@ export {
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
 } from './context-menu.ts';
-export { DEFAULT_DIFF_SOURCES, type EditorDiffSource, type EditorDiffs } from './editor/diff.ts';
+export {
+  DEFAULT_DIFF_SOURCES,
+  type EditorDiffContent,
+  type EditorDiffSource,
+  type EditorDiffs,
+} from './editor/diff.ts';
 export {
   DEFAULT_ACTION_SOURCES,
   DEFAULT_FORMATTERS,

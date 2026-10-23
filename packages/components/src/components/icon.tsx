@@ -10,12 +10,15 @@ import {
   FolderIcon,
   FolderOpenIcon,
   GearIcon,
+  GitDiffIcon,
   InfoIcon,
   MagnifyingGlassIcon,
   MinusIcon,
   PlusIcon,
+  RowsIcon,
   SidebarIcon,
   SpinnerIcon,
+  SquareSplitHorizontalIcon,
   TreeViewIcon,
   WarningIcon,
   XCircleIcon,
@@ -56,6 +59,9 @@ const DEFAULT_ICONS = {
   add: PlusIcon,
   files: TreeViewIcon,
   settings: GearIcon,
+  compare: GitDiffIcon,
+  unified: RowsIcon,
+  split: SquareSplitHorizontalIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

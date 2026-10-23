@@ -11,9 +11,10 @@ import { useEditorSettings, useSettings } from '@/settings/settings';
 /**
  * Returns the CodeMirror extension that applies the editor's settings, with `language`'s overrides.
  *
- * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
+ * `language` is CodeMirror's name for the language, e.g. `TypeScript`. Without `scrollbar`, the view has no vertical
+ * scrollbar for the stripe to mark, so the stripe is left out.
  */
-export function useSettingsExtension(language: string | undefined): Extension {
+export function useSettingsExtension(language: string | undefined, scrollbar: boolean): Extension {
   const tabSize = useEditorSettings(language, 'tabSize');
   const indent = useEditorSettings(language, 'indentUnit');
   const showLineNumbers = useSettings((settings) => settings.appearance.editor.lineNumbers);
@@ -21,7 +22,7 @@ export function useSettingsExtension(language: string | undefined): Extension {
   const guides = useEditorSettings(language, 'visualGuides');
   const documentation = useSettings((settings) => settings.appearance.editor.completionDocumentation);
   const usages = useSettings((settings) => settings.appearance.editor.highlightUsages);
-  const showStripe = useSettings((settings) => settings.appearance.editor.stripe);
+  const showStripe = useSettings((settings) => settings.appearance.editor.stripe) && scrollbar;
 
   return useMemo(
     () => [

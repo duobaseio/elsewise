@@ -63,7 +63,7 @@ import {
   UNCOMMITTED_DIFF,
   UNIFIED_DIFF,
   UNSTAGED_DIFF,
-} from '@/editor/diff';
+} from '@/editor/diff/diff';
 import { FORMAT } from '@/editor/format';
 import { SHOW_HOVER } from '@/editor/hover';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';

@@ -3,7 +3,7 @@ import type { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import type { EditorDocumentLayout } from '@elsewise/plugin';
-import { type CSSProperties, type RefObject, useEffect, useRef } from 'react';
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef } from 'react';
 import { EditorContextMenu } from '@/editor/context-menu';
 import { useEditorManager } from '@/editor/editor-manager';
 import {
@@ -19,6 +19,7 @@ const BASE: EditorDocumentLayout = { type: 'split', side: 'base' };
 const TARGET: EditorDocumentLayout = { type: 'split', side: 'target' };
 
 export interface SplitLayoutProps {
+  readonly header?: (view: RefObject<EditorView | null>) => ReactNode;
   /**
    * The file's path, relative to the worktree's root, e.g. `src/main.ts`.
    */
@@ -41,7 +42,7 @@ export interface SplitLayoutProps {
   readonly session: RefObject<EditorSession | null>;
 }
 
-export function SplitLayout({ relativePath, base, target, extensions, session }: SplitLayoutProps) {
+export function SplitLayout({ relativePath, base, target, extensions, session, header }: SplitLayoutProps) {
   const host = useRef<HTMLDivElement>(null);
   const baseView = useRef<EditorView>(null);
   const targetView = useRef<EditorView>(null);
@@ -127,23 +128,26 @@ export function SplitLayout({ relativePath, base, target, extensions, session }:
   }, [base.code]);
 
   return (
-    <>
-      <EditorContextMenu view={clicked}>
-        <div
-          // The merge view scrolls as a whole by default. Instead, it fills the host and each side scrolls itself.
-          className="h-full [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-hidden [&_.cm-mergeViewEditor]:h-full [&_.cm-mergeViewEditors]:h-full [&_.cm-mergeView_.cm-editor]:h-full! [&_.cm-mergeView_.cm-editor_.cm-scroller]:overflow-y-auto!"
-          ref={host}
-          // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
-          style={
-            {
-              '--fold-marker': `url("${iconUrl(icons.expand)}")`,
-              '--external-link': `url("${iconUrl(icons.external)}")`,
-            } as CSSProperties
-          }
-        />
-      </EditorContextMenu>
+    <div className="flex h-full flex-col">
+      {header?.(targetView)}
+      <div className="min-h-0 flex-1">
+        <EditorContextMenu view={clicked}>
+          <div
+            // The merge view scrolls as a whole by default. Instead, it fills the host and each side scrolls itself.
+            className="h-full [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-hidden [&_.cm-mergeViewEditor]:h-full [&_.cm-mergeViewEditors]:h-full [&_.cm-mergeView_.cm-editor]:h-full! [&_.cm-mergeView_.cm-editor_.cm-scroller]:overflow-y-auto! [&_.cm-mergeViewEditor:first-child]:border-r"
+            ref={host}
+            // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
+            style={
+              {
+                '--fold-marker': `url("${iconUrl(icons.expand)}")`,
+                '--external-link': `url("${iconUrl(icons.external)}")`,
+              } as CSSProperties
+            }
+          />
+        </EditorContextMenu>
+      </div>
       {baseExtensions.portal}
       {targetExtensions.portal}
-    </>
+    </div>
   );
 }

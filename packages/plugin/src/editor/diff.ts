@@ -21,7 +21,7 @@ export interface EditorDiffs {
    *
    * ```ts
    * editor.diffs.add([
-   *   { id: 'example.turn', label: 'This Turn', base: () => snapshot.read() },
+   *   { id: 'example.turn', label: 'This Turn', base: async () => ({ label: 'Turn 3', code: await snapshot.read() }) },
    * ]);
    * ```
    *
@@ -54,7 +54,7 @@ export interface EditorDiffSource {
   readonly id: string;
 
   /**
-   * The label shown to the user, e.g. `Uncommitted`.
+   * The label of the comparison, shown in menus, e.g. `Uncommitted`.
    */
   readonly label: string;
 
@@ -68,5 +68,20 @@ export interface EditorDiffSource {
    * Returns the base to diff against.
    */
   // TODO: Figure out how to implement this once git daemon is done.
-  base(): Promise<string | null>;
+  base(): Promise<EditorDiffContent>;
+}
+
+/**
+ * One side of a comparison.
+ */
+export interface EditorDiffContent {
+  /**
+   * The side's label, e.g. `HEAD (a1b2c3d)` or `Turn 3`. Defaults label.
+   */
+  readonly label?: string;
+
+  /**
+   * The document's content, or null if it did not exist.
+   */
+  readonly code: string | null;
 }

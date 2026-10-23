@@ -55,6 +55,8 @@ export function resolveActiveTheme(
 
   const colors = { ...elsewise?.interface, ...variant?.interface };
   const editor = { ...elsewise?.editor, ...variant?.editor };
+  // Elsewise's own diff colors apply only when its variant is the one in use, e.g. for an unknown theme.
+  const diff = (variant ?? elsewise)?.editor.diff;
   return {
     interface: colors,
     editor: {
@@ -71,11 +73,11 @@ export function resolveActiveTheme(
       diff: {
         addedLine: colors['success-wash'],
         addedText: colors['success-line'],
-        addedGutter: colors.success,
+        addedGutter: colors['success-line'],
         deletedLine: colors['error-wash'],
         deletedText: colors['error-line'],
-        deletedGutter: colors.error,
-        ...variant?.editor.diff,
+        deletedGutter: colors['error-line'],
+        ...diff,
       },
       tokens: { ...elsewise?.editor.tokens, ...variant?.editor.tokens },
     },

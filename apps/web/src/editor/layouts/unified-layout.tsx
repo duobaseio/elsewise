@@ -3,9 +3,9 @@ import { ChangeSet, EditorState, type Extension, Text } from '@codemirror/state'
 import { EditorView } from '@codemirror/view';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import type { EditorDocumentLayout } from '@elsewise/plugin';
-import { type CSSProperties, type RefObject, useEffect, useRef } from 'react';
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef } from 'react';
 import { EditorContextMenu } from '@/editor/context-menu';
-import { unifiedDiff } from '@/editor/diff';
+import { unifiedDiff } from '@/editor/diff/diff';
 import { useEditorManager } from '@/editor/editor-manager';
 import {
   applyPlugins,
@@ -21,6 +21,7 @@ const EDITOR: EditorDocumentLayout = { type: 'editor' };
 const UNIFIED: EditorDocumentLayout = { type: 'unified' };
 
 export interface UnifiedLayoutProps {
+  readonly header?: (view: RefObject<EditorView | null>) => ReactNode;
   readonly source: EditorSource;
   /**
    * The file's path, relative to the worktree's root, e.g. `src/main.ts`.
@@ -41,7 +42,7 @@ export interface UnifiedLayoutProps {
   readonly session: RefObject<EditorSession | null>;
 }
 
-export function UnifiedLayout({ source, relativePath, code, base, extensions, session }: UnifiedLayoutProps) {
+export function UnifiedLayout({ source, relativePath, code, base, extensions, session, header }: UnifiedLayoutProps) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView>(null);
   const editorManager = useEditorManager();
@@ -109,21 +110,24 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
   }, [diff]);
 
   return (
-    <>
-      <EditorContextMenu view={view}>
-        <div
-          className="h-full"
-          ref={host}
-          // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
-          style={
-            {
-              '--fold-marker': `url("${iconUrl(icons.expand)}")`,
-              '--external-link': `url("${iconUrl(icons.external)}")`,
-            } as CSSProperties
-          }
-        />
-      </EditorContextMenu>
+    <div className="flex h-full flex-col">
+      {header?.(view)}
+      <div className="min-h-0 flex-1">
+        <EditorContextMenu view={view}>
+          <div
+            className="h-full"
+            ref={host}
+            // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
+            style={
+              {
+                '--fold-marker': `url("${iconUrl(icons.expand)}")`,
+                '--external-link': `url("${iconUrl(icons.external)}")`,
+              } as CSSProperties
+            }
+          />
+        </EditorContextMenu>
+      </div>
       {portal}
-    </>
+    </div>
   );
 }

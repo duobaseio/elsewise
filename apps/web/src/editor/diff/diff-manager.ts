@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable, EditorDiffSource, EditorDiffs } from '@elsewise/plugin';
-import { EDITOR_DIFF } from '@/editor/diff';
+import { EDITOR_DIFF } from '@/editor/diff/diff';
 
 /**
  * The diffs of documents against sources as plugins see them.

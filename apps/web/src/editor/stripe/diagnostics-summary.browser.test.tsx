@@ -195,6 +195,13 @@ describe('DiagnosticsSummary', () => {
     expect(document.querySelector('[data-slot=diagnostics-summary]')).toBeNull();
   });
 
+  test('hidden when read-only', async () => {
+    await mount(DEFAULT_SETTINGS, EditorState.readOnly.of(true));
+
+    await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
+    expect(document.querySelector('[data-slot=diagnostics-summary]')).toBeNull();
+  });
+
   test('recounts when shown again', async () => {
     const hidden = {
       ...DEFAULT_SETTINGS,

@@ -17,7 +17,8 @@ export const DEFAULT_CONTEXT_MENU: ContextMenu = {
     [clipboard.id]: { order: clipboard.order },
     [navigate.id]: { order: navigate.order },
     [diff.id]: { order: diff.order },
-    [diff.items.compare.id]: { menu: diff.items.compare.id },
+    [diff.items.compare.id]: { menu: diff.items.compare.id, order: diff.items.compare.order },
+    [diff.items.compare.none.id]: { menu: diff.items.compare.id, order: diff.items.compare.none.order },
     [refactor.id]: { order: refactor.order },
   },
   items: {
@@ -36,6 +37,14 @@ export const DEFAULT_CONTEXT_MENU: ContextMenu = {
       { type: 'item', order: diff.items.compare.items.unstaged, command: DEFAULT_COMMANDS.editor.diff.unstaged },
       { type: 'item', order: diff.items.compare.items.uncommitted, command: DEFAULT_COMMANDS.editor.diff.uncommitted },
       { type: 'item', order: diff.items.compare.items.branch, command: DEFAULT_COMMANDS.editor.diff.branch },
+    ],
+    [diff.items.compare.none.id]: [
+      {
+        type: 'item',
+        order: diff.items.compare.none.items.none,
+        command: DEFAULT_COMMANDS.editor.diff.close,
+        label: 'None',
+      },
     ],
     [refactor.id]: [{ type: 'item', order: refactor.items.rename, command: lsp.rename }],
   },

@@ -70,7 +70,10 @@ export async function open(view: EditorView, pos: number): Promise<void> {
 }
 
 /** Returns the menu item named `name`. The accessible name carries the shortcut too. */
-export const menuitem = (name: string) => page.getByRole('menuitem', { name: new RegExp(`^${name}`) });
+export const menuitem = (name: string) =>
+  page
+    .getByRole('menuitem', { name: new RegExp(`^${name}`) })
+    .or(page.getByRole('menuitemcheckbox', { name: new RegExp(`^${name}`) }));
 
 /**
  * Returns the labels of the items and submenus in `root`, and `-` for each separator. An item's label is its first
@@ -79,11 +82,19 @@ export const menuitem = (name: string) => page.getByRole('menuitem', { name: new
 export function labels(root: ParentNode = document): (string | null | undefined)[] {
   return [
     ...root.querySelectorAll(
-      '[data-slot="context-menu-item"], [data-slot="context-menu-sub-trigger"], [data-slot="context-menu-separator"]',
+      ['item', 'checkbox-item', 'sub-trigger', 'separator']
+        .map((part) => `[data-slot="context-menu-${part}"]`)
+        .join(', '),
     ),
-  ].map((element) =>
-    element.getAttribute('data-slot') === 'context-menu-separator' ? '-' : element.firstChild?.textContent,
-  );
+  ].map((element) => {
+    const slot = element.getAttribute('data-slot') ?? '';
+    // A checkbox item's check comes ahead of its label.
+    return slot.endsWith('-separator')
+      ? '-'
+      : slot.endsWith('-checkbox-item')
+        ? element.childNodes[1]?.textContent
+        : element.firstChild?.textContent;
+  });
 }
 
 /** Returns a menu with `submenus`, `groups` and `items`. */

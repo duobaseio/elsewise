@@ -154,12 +154,22 @@ A color is tuned within its pigment — darker, lighter or more saturated — ne
 #### Highlights
 
 - **Selection:** iron gall, as the application's Selection
-- **Matched bracket — verdigris:** `#7AD2B6` / `#00614C`, opaque. No other editor highlight is verdigris, and it is as
-  saturated as its lightness allows: one character, shown only beside the cursor, and something you are looking for
+- **Matched bracket — verdigris:** `#7AD2B6` / `#00614C`, opaque. No other editor highlight is verdigris but the diff,
+  and it is as saturated as its lightness allows: one character, shown only beside the cursor, and something you are
+  looking for
 - **Search match — gold:** `#F0D186` / `#5E4A14`, opaque. The current match keeps the fill and takes a 1px outline in
   the warning ink (`#8F6A24` / `#D9B36A`), drawn outside the text so it never crosses a glyph. The fill stays light so
   syntax colors stay legible on it; the current match is told apart by its edge, never a darker fill
 - **Selected-word match, current line:** the Selected and Hover state layers
+- **Diff — verdigris / madder:** added is green, deleted is red, each opaque in two steps: a line fill across the
+  changed lines and a text fill over the changed text within them. Light takes the success ink `#2E7A54` and the error
+  ink `#B3362B` on the page, at 10% for the line and 25% for the text — the ink, not the wash pigment, whose tints turn
+  grey-teal. Dark matches lightness and chroma across the pair at the inks' hues, since a mix pulls toward the blue of
+  the page. Both fills stay light enough that syntax colors keep about the search match's contrast. The gutter marks
+  take the success and error lines (`#A9C6BB` / `#3E5A50`, `#E0A49E` / `#7C463F`). Dark's error line is lifted within
+  madder to the success line's contrast on the page (2.4:1), since `#6E3A33` reads too faint beside it
+    - Added: line `#EAF2EE` / `#17291E`, text `#CBDED4` / `#214632`
+    - Deleted: line `#F7EBEA` / `#35221F`, text `#ECCDCA` / `#57322C`
 
 #### Diagnostics
 

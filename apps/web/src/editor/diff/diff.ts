@@ -7,6 +7,7 @@ import {
   DEFAULT_DIFF_SOURCES,
   DEFAULT_KEYS,
   type Disposable,
+  EDITOR_DOCUMENT,
   type EditorCommand,
 } from '@elsewise/plugin';
 
@@ -41,7 +42,16 @@ export class DiffState {
       EDITOR_DIFF.of(this),
       ViewPlugin.define((view) => {
         this.views.add(view);
-        return { destroy: () => this.views.delete(view) };
+        // Later, since the view is not yet built.
+        queueMicrotask(() => this.notifyListeners());
+        return {
+          update: (update) => {
+            if (getChunks(update.state)?.chunks !== getChunks(update.startState)?.chunks) {
+              this.notifyListeners();
+            }
+          },
+          destroy: () => this.views.delete(view),
+        };
       }),
     ];
   }
@@ -75,7 +85,8 @@ export class DiffState {
   }
 
   /**
-   * Registers a `listener` that is called when the source or layout changes.
+   * Registers a `listener` that is called when the source or layout changes, a view is added, or a view's chunks
+   * change.
    *
    * Returns a disposable that unregisters the `listener`.
    */
@@ -87,13 +98,7 @@ export class DiffState {
   }
 
   private notify() {
-    for (const listener of this.listeners) {
-      try {
-        listener();
-      } catch (error) {
-        console.error('Diff listener failed', error);
-      }
-    }
+    this.notifyListeners();
 
     // Later, since the state may change during a view update, when dispatching is not allowed.
     queueMicrotask(() => {
@@ -101,6 +106,16 @@ export class DiffState {
         view.dispatch({});
       }
     });
+  }
+
+  private notifyListeners() {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error('Diff listener failed', error);
+      }
+    }
   }
 }
 
@@ -114,6 +129,9 @@ export const UNSTAGED_DIFF: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.diff.unstaged,
   label: 'Unstaged',
   defaultKeys: DEFAULT_KEYS.editor.diff.unstaged,
+  shown: (_, view) => !base(view),
+  enabled: (_, view) => !base(view),
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCES.unstaged,
   run: (application, view) => {
     application.editor.diffs.set(view, DEFAULT_DIFF_SOURCES.unstaged);
     return true;
@@ -125,6 +143,9 @@ export const UNCOMMITTED_DIFF: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.diff.uncommitted,
   label: 'Uncommitted',
   defaultKeys: DEFAULT_KEYS.editor.diff.uncommitted,
+  shown: (_, view) => !base(view),
+  enabled: (_, view) => !base(view),
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCES.uncommitted,
   run: (application, view) => {
     application.editor.diffs.set(view, DEFAULT_DIFF_SOURCES.uncommitted);
     return true;
@@ -136,6 +157,9 @@ export const BRANCH_DIFF: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.diff.branch,
   label: 'Branch',
   defaultKeys: DEFAULT_KEYS.editor.diff.branch,
+  shown: (_, view) => !base(view),
+  enabled: (_, view) => !base(view),
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCES.branch,
   run: (application, view) => {
     application.editor.diffs.set(view, DEFAULT_DIFF_SOURCES.branch);
     return true;
@@ -145,9 +169,10 @@ export const BRANCH_DIFF: EditorCommand = {
 export const CLOSE_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.close,
-  label: 'Stop comparing',
+  label: 'Close comparison',
   defaultKeys: DEFAULT_KEYS.editor.diff.close,
-  shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
+  shown: (_, view) => !base(view) && view.state.facet(EDITOR_DIFF)?.source != null,
+  enabled: (_, view) => !base(view),
   run: (_, view) => {
     const diff = view.state.facet(EDITOR_DIFF);
     if (diff === null) {
@@ -165,6 +190,7 @@ export const NEXT_CHUNK: EditorCommand = {
   label: 'Next change',
   defaultKeys: DEFAULT_KEYS.editor.diff.next,
   shown: (_, view) => getChunks(view.state) !== null,
+  enabled: (_, view) => (getChunks(view.state)?.chunks.length ?? 0) > 0,
   run: (_, view) => goToNextChunk(view),
 };
 
@@ -174,6 +200,7 @@ export const PREVIOUS_CHUNK: EditorCommand = {
   label: 'Previous change',
   defaultKeys: DEFAULT_KEYS.editor.diff.previous,
   shown: (_, view) => getChunks(view.state) !== null,
+  enabled: (_, view) => (getChunks(view.state)?.chunks.length ?? 0) > 0,
   run: (_, view) => goToPreviousChunk(view),
 };
 
@@ -183,7 +210,7 @@ export const UNIFIED_DIFF: EditorCommand = {
   label: 'Unified',
   defaultKeys: DEFAULT_KEYS.editor.diff.unified,
   shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
-  enabled: (_, view) => view.state.facet(EDITOR_DIFF)?.layout !== 'unified',
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.layout === 'unified',
   run: (_, view) => {
     const diff = view.state.facet(EDITOR_DIFF);
     if (diff === null) {
@@ -201,7 +228,7 @@ export const SPLIT_DIFF: EditorCommand = {
   label: 'Split',
   defaultKeys: DEFAULT_KEYS.editor.diff.split,
   shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
-  enabled: (_, view) => view.state.facet(EDITOR_DIFF)?.layout !== 'split',
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.layout === 'split',
   run: (_, view) => {
     const diff = view.state.facet(EDITOR_DIFF);
     if (diff === null) {
@@ -212,3 +239,8 @@ export const SPLIT_DIFF: EditorCommand = {
     return true;
   },
 };
+
+function base(view: EditorView): boolean {
+  const layout = view.state.facet(EDITOR_DOCUMENT)?.layout;
+  return layout?.type === 'split' && layout.side === 'base';
+}

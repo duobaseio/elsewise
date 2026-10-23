@@ -179,7 +179,7 @@ export const ThemeVariant = z.lazy(() =>
              */
             addedText: Color,
             /**
-             * The gutter marker of added and changed lines. Defaults to the interface's `success`.
+             * The gutter marker of added and changed lines. Defaults to the interface's `success-line`.
              */
             addedGutter: Color,
             /**
@@ -191,7 +191,7 @@ export const ThemeVariant = z.lazy(() =>
              */
             deletedText: Color,
             /**
-             * The gutter marker of deleted lines. Defaults to the interface's `error`.
+             * The gutter marker of deleted lines. Defaults to the interface's `error-line`.
              */
             deletedGutter: Color,
           })

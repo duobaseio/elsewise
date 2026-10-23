@@ -71,6 +71,14 @@
       "info": "#268BD2",
       "hint": "#93A1A1",
       "unnecessary": "#93A1A1",
+      "diff": {
+        "addedLine": "#85990014",
+        "addedText": "#8599001F",
+        "addedGutter": "#859900",
+        "deletedLine": "#DC322F0F",
+        "deletedText": "#DC322F1A",
+        "deletedGutter": "#DC322F"
+      },
       "tokens": {
         "comment": {
           "color": "#93A1A1",
@@ -234,6 +242,14 @@
       "info": "#268BD2",
       "hint": "#586E75",
       "unnecessary": "#586E75",
+      "diff": {
+        "addedLine": "#85990014",
+        "addedText": "#8599001F",
+        "addedGutter": "#859900",
+        "deletedLine": "#DC322F14",
+        "deletedText": "#DC322F1F",
+        "deletedGutter": "#DC322F"
+      },
       "tokens": {
         "comment": {
           "color": "#586E75",

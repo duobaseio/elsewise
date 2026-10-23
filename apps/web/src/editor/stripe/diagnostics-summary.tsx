@@ -28,7 +28,7 @@ const PRESENCE = {
  * previous and next diagnostic commands. The `stripe` setting turns it off along with the stripe.
  */
 export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
-  const shown = useSettings((settings) => settings.appearance.editor.stripe);
+  const shown = useSettings((settings) => settings.appearance.editor.stripe) && !view.state.readOnly;
   const [counts, setCounts] = useState(() => count(view));
   const commands = useCommandManager();
   const keys = {
@@ -90,7 +90,7 @@ export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
             <AnimatePresence initial={false} mode="popLayout" anchorX="right">
               {total === 0 ? (
                 <motion.span key="tick" {...PRESENCE} className="flex" data-slot="diagnostics-tick">
-                  <Icon name="check" className="size-3.5 text-success" />
+                  <Icon name="check" className="size-3 text-success" />
                 </motion.span>
               ) : (
                 <motion.span
@@ -101,7 +101,7 @@ export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
                 >
                   {COUNTED.filter((severity) => counts[severity] > 0).map((severity) => (
                     <span key={severity} className={`flex items-center gap-0.5 ${COLORS[severity]}`}>
-                      <Icon name={severity} className="size-3.5" />
+                      <Icon name={severity} className="size-3" />
                       {counts[severity]}
                     </span>
                   ))}
@@ -133,7 +133,7 @@ export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
                 />
               }
             >
-              <Icon name={icon} className="size-3.5" />
+              <Icon name={icon} />
             </TooltipTrigger>
             <TooltipContent side="bottom">
               {label}

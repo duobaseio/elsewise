@@ -141,6 +141,29 @@ describe('SplitLayout', () => {
     await expect.poll(() => base().scrollDOM.scrollTop).toBe(500);
   });
 
+  test('hides stripe of base', async () => {
+    const { base, target } = await mount({});
+
+    expect(base().dom.querySelector('.cm-stripe')).toBeNull();
+    expect(target().dom.querySelector('.cm-stripe')).not.toBeNull();
+  });
+
+  test('keeps rows level with search bar on one side', async () => {
+    const long = Array.from({ length: 200 }, (_, line) => `line ${line}`).join('\n');
+    const { base, target } = await mount({
+      base: { source: { type: 'blob' }, code: long },
+      target: { source: { type: 'workingTree' }, code: long },
+    });
+    openSearchPanel(base());
+    await expect.poll(() => base().dom.querySelector('.cm-panels-top')?.childElementCount ?? 0).toBeGreaterThan(0);
+
+    target().scrollDOM.scrollTop = 500;
+
+    const line = target().state.doc.lineAt(target().lineBlockAtHeight(560).from).number;
+    const top = (view: EditorView) => view.coordsAtPos(view.state.doc.line(line).from)?.top;
+    await expect.poll(() => top(base())).toBe(top(target()));
+  });
+
   test('opens search bar on one side', async () => {
     const { base, target } = await mount({});
 

@@ -25,7 +25,7 @@ import type {
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { DiffState } from '@/editor/diff';
+import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -319,7 +319,7 @@ async function mount(
     editor.languages.addServers([RUST]);
   }
   editor.addExtensions(extensions);
-  editor.diffs.add([{ id: 'test.base', label: 'Base', base: async () => BASE }]);
+  editor.diffs.add([{ id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) }]);
   const commands = new CommandManager({
     appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
     editor,
@@ -337,14 +337,14 @@ async function mount(
             >
               {hovered ? (
                 <Editor
-                  code={HOVERED}
+                  content={{ label: 'Current', code: HOVERED }}
                   relativePath="src/main.rs"
                   root={new URL('file:///worktree/')}
                   diff={new DiffState(null, 'unified')}
                 />
               ) : (
                 <Editor
-                  code={code}
+                  content={{ label: 'Current', code }}
                   relativePath="transport.rs"
                   diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
                 />

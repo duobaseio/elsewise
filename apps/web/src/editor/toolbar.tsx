@@ -22,6 +22,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useCommandManager } from '@/command/command-manager';
+import { CompareToolbarItem } from '@/editor/diff/compare';
 import { useEditorManager } from '@/editor/editor-manager';
 import { DiagnosticsSummary } from '@/editor/stripe/diagnostics-summary';
 
@@ -51,6 +52,12 @@ const BUILT_IN: readonly EditorToolbarItem[] = [
     order: DEFAULT_EDITOR_TOOLBAR.diagnostics,
     id: 'io.duobase.elsewise.editor.toolbar.diagnostics',
     component: DiagnosticsSummary,
+  },
+  {
+    type: 'component',
+    order: DEFAULT_EDITOR_TOOLBAR.diff,
+    id: 'io.duobase.elsewise.editor.toolbar.compare',
+    component: CompareToolbarItem,
   },
 ];
 
@@ -206,6 +213,7 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
                     <Button
                       variant="ghost"
                       size="icon-xs"
+                      // Sizes the icon like the diagnostics summary's, unless it has its own size.
                       className="size-5 text-muted-foreground hover:text-foreground"
                       aria-label={command.label}
                       disabled={disabled.get(command.id)}

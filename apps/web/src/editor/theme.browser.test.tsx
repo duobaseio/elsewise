@@ -8,7 +8,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { unifiedDiff } from '@/editor/diff';
+import { unifiedDiff } from '@/editor/diff/diff';
 import { stripe, stripeMarks } from '@/editor/stripe/stripe';
 import { useThemeExtension } from '@/editor/theme';
 import { visualGuides } from '@/editor/visual-guides';

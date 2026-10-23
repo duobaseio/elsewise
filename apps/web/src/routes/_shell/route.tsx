@@ -1,12 +1,15 @@
+import { BundledTheme } from '@elsewise/bridge';
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Kbd } from '@elsewise/components/components/kbd';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { type ISplitviewPanelProps, Orientation, SplitviewReact, type SplitviewReadyEvent } from 'dockview-react';
+import { THEMES } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
 import { Header } from '@/components/header';
-import { OPEN_SETTINGS } from '@/settings/settings';
+import { OPEN_SETTINGS, useBrightness, useSettings, useUpdateSettings } from '@/settings/settings';
 
 import 'dockview-react/dist/styles/dockview.css';
 import './dockview.css';
@@ -43,10 +46,59 @@ function SidebarPanel(_props: ISplitviewPanelProps) {
   const commands = useCommandManager();
   const key = useCommandManager((commands) => commands.keymap.commands.get(OPEN_SETTINGS.id)?.[0]);
 
+  // TODO: Temporary, switches the theme and brightness to look through them.
+  const theme = useSettings((settings) => settings.appearance.general.theme);
+  const brightness = useBrightness();
+  const update = useUpdateSettings();
+  const themes = Object.fromEntries(THEMES.map(({ id, theme }) => [id.name, theme.name]));
+
   // TODO: Add actual sidebar content.
   return (
     <div className="flex h-full flex-col">
       <Header trafficLights />
+      <div className="flex gap-2 p-2">
+        <Select
+          items={themes}
+          value={theme.name}
+          onValueChange={(name) =>
+            update((settings) => ({
+              ...settings,
+              appearance: {
+                ...settings.appearance,
+                general: {
+                  ...settings.appearance.general,
+                  theme: { source: 'elsewise', name: BundledTheme.parse(name) },
+                },
+              },
+            }))
+          }
+        >
+          <SelectTrigger className="flex-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(themes).map(([name, label]) => (
+              <SelectItem key={name} value={name}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={() =>
+            update((settings) => ({
+              ...settings,
+              appearance: {
+                ...settings.appearance,
+                general: { ...settings.appearance.general, brightness: brightness === 'dark' ? 'light' : 'dark' },
+              },
+            }))
+          }
+          variant="outline"
+        >
+          {brightness === 'dark' ? 'Dark' : 'Light'}
+        </Button>
+      </div>
       <Tooltip>
         <TooltipTrigger
           render={

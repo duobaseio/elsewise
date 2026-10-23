@@ -13,7 +13,7 @@ import type {
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
-import { DiffManager } from '@/editor/diff-manager';
+import { DiffManager } from '@/editor/diff/diff-manager';
 import { LanguageManager } from '@/editor/language-manager';
 
 /**

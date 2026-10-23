@@ -4,7 +4,7 @@ import { DiffManager } from './diff-manager';
 
 // Returns a source with `id` whose base is empty.
 function source(id: string): EditorDiffSource {
-  return { id, label: id, base: async () => '' };
+  return { id, label: id, base: async () => ({ code: '' }) };
 }
 
 afterEach(() => {

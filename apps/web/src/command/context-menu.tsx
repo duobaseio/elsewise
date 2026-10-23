@@ -2,6 +2,7 @@ import { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import {
   ContextMenu,
+  ContextMenuCheckboxItem,
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
@@ -40,6 +41,7 @@ type Entry =
       readonly label: string;
       readonly key?: string;
       readonly disabled: boolean;
+      readonly active?: boolean;
       readonly run: () => void;
     }
   | {
@@ -145,12 +147,15 @@ function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, 
       try {
         let shown: boolean | undefined;
         let enabled: boolean | undefined;
+        let active: boolean | undefined;
         if (command.scope === 'application') {
           shown = command.shown?.(commands.application);
           enabled = command.enabled?.(commands.application);
+          active = command.active?.(commands.application);
         } else if (view !== null) {
           shown = command.shown?.(commands.application, view, lsp);
           enabled = command.enabled?.(commands.application, view, lsp);
+          active = command.active?.(commands.application, view, lsp);
         } else {
           continue;
         }
@@ -162,9 +167,10 @@ function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, 
         entries.push({
           type: 'item',
           id: command.id,
-          label: command.label,
+          label: item.label ?? command.label,
           key: commands.keymap.commands.get(command.id)?.[0],
           disabled: enabled === false,
+          active,
           order: item.order ?? Number.POSITIVE_INFINITY,
           run: () => commands.run(command.id, view ?? undefined),
         });
@@ -188,10 +194,23 @@ function Groups({ groups, onClick }: { groups: readonly Group[]; onClick: (run: 
       {i > 0 && <ContextMenuSeparator />}
       {group.entries.map((entry) =>
         entry.type === 'item' ? (
-          <ContextMenuItem key={`item:${entry.id}`} disabled={entry.disabled} onClick={() => onClick(entry.run)}>
-            {entry.label}
-            {entry.key !== undefined && <ContextMenuShortcut>{formatKey(entry.key)}</ContextMenuShortcut>}
-          </ContextMenuItem>
+          entry.active === undefined ? (
+            <ContextMenuItem key={`item:${entry.id}`} disabled={entry.disabled} onClick={() => onClick(entry.run)}>
+              {entry.label}
+              {entry.key !== undefined && <ContextMenuShortcut>{formatKey(entry.key)}</ContextMenuShortcut>}
+            </ContextMenuItem>
+          ) : (
+            <ContextMenuCheckboxItem
+              key={`item:${entry.id}`}
+              checked={entry.active}
+              closeOnClick
+              disabled={entry.disabled}
+              onClick={() => onClick(entry.run)}
+            >
+              {entry.label}
+              {entry.key !== undefined && <ContextMenuShortcut>{formatKey(entry.key)}</ContextMenuShortcut>}
+            </ContextMenuCheckboxItem>
+          )
         ) : (
           <ContextMenuSub key={`submenu:${entry.id}`}>
             <ContextMenuSubTrigger>{entry.label}</ContextMenuSubTrigger>

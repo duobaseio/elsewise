@@ -19,11 +19,13 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
     items: {
       compare: {
         id: 'io.duobase.elsewise.editor.contextMenu.diff.submenu',
+        order: 10,
         items: {
           unstaged: 10,
           uncommitted: 20,
           branch: 30,
         },
+        none: { id: 'io.duobase.elsewise.editor.contextMenu.diff.none', order: 20, items: { none: 10 } },
       },
     },
   },
@@ -111,6 +113,11 @@ export interface ContextMenuItem {
    * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
   readonly order?: number;
+
+  /**
+   * The label shown instead of the command's, where the menu gives it context, e.g. `None` in `Compare with…`.
+   */
+  readonly label?: string;
 
   /**
    * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Omitted if the id is invalid, missing or

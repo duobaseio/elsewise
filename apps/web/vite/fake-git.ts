@@ -9,7 +9,8 @@ const run = promisify(execFile);
  * A Vite plugin that serves the files of the repository at `root` as they are in git, for the editor's diffs.
  *
  * `GET /@elsewise/git/show?base=index|head|branch&path=<path>` returns the file at `path` in the index, at `HEAD`, or
- * where `HEAD` branched off the default branch. It returns 404 if the file does not exist there.
+ * where `HEAD` branched off the default branch. It returns 404 if the file does not exist there. For `branch`, the
+ * `X-Elsewise-Branch` header names the default branch, even with 404.
  */
 // TODO: Remove once the daemon's git service reads files at a revision.
 export function fakeGit(root: string): Plugin {
@@ -34,7 +35,12 @@ export function fakeGit(root: string): Plugin {
         }
 
         try {
-          const revision = base === 'index' ? '' : base === 'head' ? 'HEAD' : await branchedOff(root);
+          let revision = base === 'index' ? '' : 'HEAD';
+          if (base === 'branch') {
+            const branch = await defaultBranch(root);
+            response.setHeader('X-Elsewise-Branch', branch);
+            revision = (await run('git', ['merge-base', 'HEAD', branch], { cwd: root })).stdout.trim();
+          }
           const { stdout } = await run('git', ['show', `${revision}:${file}`], {
             cwd: root,
             maxBuffer: 64 * 1024 * 1024,
@@ -50,12 +56,10 @@ export function fakeGit(root: string): Plugin {
   };
 }
 
-// Returns the commit where `HEAD` branched off the default branch, which is `origin`'s if known, else `main`.
-async function branchedOff(root: string): Promise<string> {
-  const branch = await run('git', ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], { cwd: root }).then(
+// Returns the default branch, which is `origin`'s if known, else `main`.
+async function defaultBranch(root: string): Promise<string> {
+  return run('git', ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], { cwd: root }).then(
     ({ stdout }) => stdout.trim(),
     () => 'main',
   );
-  const { stdout } = await run('git', ['merge-base', 'HEAD', branch], { cwd: root });
-  return stdout.trim();
 }
