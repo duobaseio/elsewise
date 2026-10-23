@@ -9,7 +9,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
 import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import type {
@@ -319,7 +319,10 @@ async function mount(
     editor.languages.addServers([RUST]);
   }
   editor.addExtensions(extensions);
-  editor.diffs.add([{ id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) }]);
+  editor.diffs.add([
+    { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
+    { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
+  ]);
   const commands = new CommandManager({
     appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
     editor,
@@ -447,6 +450,66 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-${theme}`);
+  });
+
+  // Selects from the middle of the line before the deleted ones to the middle of the added line, so the selection crosses
+  // deleted, changed and added lines, and the active line shows on the added line's unselected part.
+  const select = (view: EditorView) =>
+    view.dispatch({ selection: { anchor: CODE.indexOf('self.sessions'), head: CODE.indexOf('.await') } });
+
+  test('unified diff with selection', async () => {
+    const view = await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
+    select(view);
+    await expect.poll(() => document.querySelector('.cm-selectionBackground')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-selection-${theme}`);
+  });
+
+  test('split diff with selection', async () => {
+    await mount(theme, false, CODE, [], 'split');
+    await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+    select(EditorView.findFromDOM(document.querySelector('.cm-merge-b') as HTMLElement) as EditorView);
+    await expect.poll(() => document.querySelector('.cm-merge-b .cm-selectionBackground')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-selection-${theme}`);
+  });
+
+  test('unified diff with cursor below deleted lines', async () => {
+    const view = await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
+    view.dispatch({ selection: { anchor: CODE.indexOf('let (tx') } });
+    await expect.poll(() => document.querySelector('.cm-activeLine')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-active-line-${theme}`);
+  });
+
+  test('compare menu', async () => {
+    // The menu is portalled to the body, outside the editor's brightness, so the page takes it as the app does.
+    document.documentElement.dataset.brightness = theme;
+    onTestFinished(() => {
+      delete document.documentElement.dataset.brightness;
+    });
+    await mount(theme);
+    await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
+    await expect.element(page.getByRole('menuitemradio', { name: 'Branch main' })).toBeVisible();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-compare-menu-${theme}`);
+  });
+
+  test('diff source menu', async () => {
+    document.documentElement.dataset.brightness = theme;
+    // The click leaves the pointer on the button, which later tests would show hovered, so it moves right of the editor.
+    onTestFinished(async () => {
+      delete document.documentElement.dataset.brightness;
+      await userEvent.hover(page.elementLocator(document.documentElement), { position: { x: 1300, y: 20 } });
+    });
+    await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+    await userEvent.click(page.getByRole('button', { name: 'Compared with Base' }));
+    await expect.element(page.getByRole('menuitemradio', { name: 'Base' })).toHaveAttribute('aria-checked', 'true');
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-source-menu-${theme}`);
   });
 
   test('folded', async () => {

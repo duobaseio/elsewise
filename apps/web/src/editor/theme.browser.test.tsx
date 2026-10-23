@@ -8,7 +8,8 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { unifiedDiff } from '@/editor/diff/diff';
+import { drawActiveLine } from '@/editor/active-line';
+import { unifiedDiff } from '@/editor/layouts/unified-layout';
 import { stripe, stripeMarks } from '@/editor/stripe/stripe';
 import { useThemeExtension } from '@/editor/theme';
 import { visualGuides } from '@/editor/visual-guides';
@@ -119,13 +120,23 @@ test('stripe marks take theme colors', async () => {
 
 test('diff lines, text and gutters take theme colors', async () => {
   const view = await mount(['one', 'TWO', 'three'].join('\n'), [unifiedDiff(['one', 'two', 'three'].join('\n'))]);
+  await vi.waitFor(() => expect(view.dom.querySelector('.cm-diffDeletedText')).not.toBeNull());
 
-  expect(style(view.dom.querySelector('.cm-changedLine')).backgroundColor).toBe(rgb('#B0F0A0'));
-  expect(style(view.dom.querySelector('.cm-changedLine .cm-changedText')).backgroundColor).toBe(rgb('#A0E0B0'));
+  expect(style(view.dom.querySelector('.cm-changedLine')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(style(view.dom.querySelector('.cm-deletedChunk')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+  expect(style(view.dom.querySelector('.cm-diffAddedLine')).backgroundColor).toBe(rgb('#B0F0A0'));
+  expect(style(view.dom.querySelector('.cm-diffAddedText')).backgroundColor).toBe(rgb('#A0E0B0'));
   expect(style(view.dom.querySelector('.cm-changedLineGutter')).backgroundColor).toBe(rgb('#90D0A0'));
-  expect(style(view.dom.querySelector('.cm-deletedChunk')).backgroundColor).toBe(rgb('#F0A0B0'));
-  expect(style(view.dom.querySelector('.cm-deletedChunk .cm-deletedText')).backgroundColor).toBe(rgb('#E0B0A0'));
+  expect(style(view.dom.querySelector('.cm-diffDeletedLine')).backgroundColor).toBe(rgb('#F0A0B0'));
+  expect(style(view.dom.querySelector('.cm-diffDeletedText')).backgroundColor).toBe(rgb('#E0B0A0'));
   expect(style(view.dom.querySelector('.cm-deletedLineGutter')).backgroundColor).toBe(rgb('#D0A090'));
+});
+
+test("active line takes theme's color", async () => {
+  const view = await mount('one', [drawActiveLine()]);
+  await vi.waitFor(() => expect(view.dom.querySelector('.cm-activeLine')).not.toBeNull());
+
+  expect(style(view.dom.querySelector('.cm-activeLine')).backgroundColor).toBe(rgb(EDITOR.activeLine));
 });
 
 test("visual guide takes theme's color", async () => {

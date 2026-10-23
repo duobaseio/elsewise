@@ -3,6 +3,7 @@ import type { Extension } from '@codemirror/state';
 import { ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Kbd } from '@elsewise/components/components/kbd';
+import { Toggle } from '@elsewise/components/components/toggle';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import {
   type ApplicationCommand,
@@ -126,7 +127,7 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
   const commands = useCommandManager();
   const registered = useCommandManager((commands) => commands.commands);
   const keys = useCommandManager((commands) => commands.keymap.commands);
-  const [disabled, setDisabled] = useState<ReadonlyMap<string, boolean>>(new Map());
+  const [states, setStates] = useState<ReadonlyMap<string, { enabled: boolean; active?: boolean }>>(new Map());
 
   const entries = useMemo(() => {
     const entries: Entry[] = [];
@@ -159,7 +160,7 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
   useEffect(() => {
     const evaluate = () => {
       const lsp = LSPPlugin.get(view);
-      const next = new Map<string, boolean>();
+      const next = new Map<string, { enabled: boolean; active?: boolean }>();
       for (const entry of entries) {
         if (entry.type !== 'command') {
           continue;
@@ -175,15 +176,24 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
             command.scope === 'application'
               ? command.enabled?.(commands.application)
               : command.enabled?.(commands.application, view, lsp);
+          const active =
+            command.scope === 'application'
+              ? command.active?.(commands.application)
+              : command.active?.(commands.application, view, lsp);
           if (shown !== false) {
-            next.set(command.id, enabled === false);
+            next.set(command.id, { enabled: enabled !== false, active });
           }
         } catch (error) {
           console.error(`Command ${command.label} failed`, error);
         }
       }
-      setDisabled((previous) =>
-        previous.size === next.size && [...next].every(([id, value]) => previous.get(id) === value) ? previous : next,
+      setStates((previous) =>
+        previous.size === next.size &&
+        [...next].every(
+          ([id, state]) => previous.get(id)?.enabled === state.enabled && previous.get(id)?.active === state.active,
+        )
+          ? previous
+          : next,
       );
     };
 
@@ -205,22 +215,35 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
 
           const { command, icon: Glyph } = entry;
           const key = keys.get(command.id)?.[0];
+          const state = states.get(command.id);
           return (
-            disabled.has(command.id) && (
+            state !== undefined && (
               <Tooltip key={`command:${command.id}`}>
                 <TooltipTrigger
                   render={
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      // Sizes the icon like the diagnostics summary's, unless it has its own size.
-                      className="size-5 text-muted-foreground hover:text-foreground"
-                      aria-label={command.label}
-                      disabled={disabled.get(command.id)}
-                      // Keeps focus in the editor, so the command runs from its selection.
-                      onMouseDown={(event) => event.preventDefault()}
-                      onClick={() => commands.run(command.id, view)}
-                    />
+                    state.active === undefined ? (
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        // Sizes the icon like the diagnostics summary's, unless it has its own size.
+                        className="size-5 text-muted-foreground hover:text-foreground"
+                        aria-label={command.label}
+                        disabled={!state.enabled}
+                        // Keeps focus in the editor, so the command runs from its selection.
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => commands.run(command.id, view)}
+                      />
+                    ) : (
+                      <Toggle
+                        size="xs"
+                        className="size-5 min-w-5 px-0"
+                        aria-label={command.label}
+                        pressed={state.active}
+                        disabled={!state.enabled}
+                        onMouseDown={(event) => event.preventDefault()}
+                        onPressedChange={() => commands.run(command.id, view)}
+                      />
+                    )
                   }
                 >
                   <Glyph />

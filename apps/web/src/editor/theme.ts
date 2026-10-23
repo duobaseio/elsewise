@@ -47,11 +47,11 @@ const CHROME = {
 >;
 
 const DIFF = {
-  addedLine: ['&.cm-merge-b .cm-changedLine', 'backgroundColor'],
-  addedText: ['&.cm-merge-b .cm-changedText', 'background'],
+  addedLine: ['.cm-diffAddedLine', 'backgroundColor'],
+  addedText: ['.cm-diffAddedText', 'background'],
   addedGutter: ['&.cm-merge-b .cm-changedLineGutter', 'background'],
-  deletedLine: ['&.cm-merge-a .cm-changedLine, .cm-deletedChunk', 'backgroundColor'],
-  deletedText: ['&.cm-merge-a .cm-changedText, .cm-deletedChunk .cm-deletedText', 'background'],
+  deletedLine: ['.cm-diffDeletedLine', 'backgroundColor'],
+  deletedText: ['.cm-diffDeletedText', 'background'],
   deletedGutter: ['&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter', 'background'],
 } as const satisfies Record<keyof ActiveTheme['editor']['diff'], readonly [selector: string, property: string]>;
 
@@ -156,6 +156,18 @@ export const METRICS = EditorView.theme({
     border: '1px solid transparent',
   },
   '.cm-scroller::-webkit-scrollbar-thumb:vertical': { borderWidth: `1px ${(STRIPE_WIDTH - 4) / 2}px` },
+
+  // The scrollbar that the editor draws itself, as wide as the stripe that marks it, with a thumb like a native one.
+  '.cm-scrollbar': { position: 'absolute', right: '0', width: `${STRIPE_WIDTH}px` },
+  '.cm-scrollbar-thumb': {
+    position: 'absolute',
+    left: `${(STRIPE_WIDTH - 4) / 2}px`,
+    right: `${(STRIPE_WIDTH - 4) / 2}px`,
+    borderRadius: '2px',
+    backgroundColor: 'var(--border)',
+  },
+  '.cm-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
+  '.cm-scrollbar-thumb[data-active]': { backgroundColor: 'var(--disabled)' },
 
   '.cm-stripe': {
     position: 'absolute',

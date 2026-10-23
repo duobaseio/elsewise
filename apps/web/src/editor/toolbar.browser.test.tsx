@@ -153,6 +153,35 @@ describe('useToolbar', () => {
     await expect.element(page.getByRole('button', { name: 'a' })).toBeDisabled();
   });
 
+  test('presses command that is active', async () => {
+    const editor = new EditorManager();
+    const commands = builtInCommands(editor);
+    command(commands, 'a', { active: () => true });
+    command(commands, 'b', { active: () => false });
+    command(commands, 'c');
+    editor.addToolbarItems(['a', 'b', 'c'].map((id) => ({ type: 'command' as const, command: id, icon: Dot })));
+    await mount(editor, commands);
+
+    await expect.element(page.getByRole('button', { name: 'a' })).toHaveAttribute('aria-pressed', 'true');
+    await expect.element(page.getByRole('button', { name: 'b' })).toHaveAttribute('aria-pressed', 'false');
+    await expect.element(page.getByRole('button', { name: 'c' })).not.toHaveAttribute('aria-pressed');
+  });
+
+  test('runs active command, keeping editor focused', async () => {
+    const editor = new EditorManager();
+    const commands = builtInCommands(editor);
+    const run = vi.fn(() => true);
+    command(commands, 'a', { run, active: () => false });
+    editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
+    const view = await mount(editor, commands);
+    view.focus();
+
+    await userEvent.click(page.getByRole('button', { name: 'a' }));
+
+    expect(run).toHaveBeenCalledWith(commands.application, view, null);
+    expect(view.hasFocus).toBe(true);
+  });
+
   test('runs command, keeping editor focused', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);

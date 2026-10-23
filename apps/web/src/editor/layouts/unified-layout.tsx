@@ -1,11 +1,12 @@
-import { getChunks, getOriginalDoc, updateOriginalDoc } from '@codemirror/merge';
+import { getChunks, getOriginalDoc, unifiedMergeView, updateOriginalDoc } from '@codemirror/merge';
 import { ChangeSet, EditorState, type Extension, Text } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import type { EditorDocumentLayout } from '@elsewise/plugin';
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef } from 'react';
 import { EditorContextMenu } from '@/editor/context-menu';
-import { unifiedDiff } from '@/editor/diff/diff';
+import { drawDiffs, revertGutter } from '@/editor/diff/diff';
+import { type RevertButtons, useRevertButtons } from '@/editor/diff/revert-buttons';
 import { useEditorManager } from '@/editor/editor-manager';
 import {
   applyPlugins,
@@ -55,6 +56,8 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
     layout: base === null ? EDITOR : UNIFIED,
   });
   const diff = document === null ? null : base;
+  const revert = useRevertButtons('revert');
+  const revertable = source.type === 'workingTree' ? revert.buttons : undefined;
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the extensions, `diff` and session are only read on build.
   useEffect(() => {
@@ -68,7 +71,12 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
     const state = EditorState.create({
       doc: previous?.doc ?? code,
       selection: previous?.selection,
-      extensions: [core, extensions, DIFF.of(diff === null ? [] : unifiedDiff(diff)), sessionHistory(previous)],
+      extensions: [
+        core,
+        extensions,
+        DIFF.of(diff === null ? [] : unifiedDiff(diff, revertable)),
+        sessionHistory(previous),
+      ],
     });
     const editor = new EditorView({ state, parent: host.current });
     applyPlugins(editor, plugins);
@@ -97,7 +105,7 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
     if (diff === null) {
       editor.dispatch({ effects: DIFF.reconfigure([]) });
     } else if (getChunks(editor.state) === null) {
-      editor.dispatch({ effects: DIFF.reconfigure(unifiedDiff(diff)) });
+      editor.dispatch({ effects: DIFF.reconfigure(unifiedDiff(diff, revertable)) });
     } else {
       // Split as the merge view splits a base, so that a base with other line endings than the file's is equal.
       const original = getOriginalDoc(editor.state);
@@ -107,7 +115,7 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
         editor.dispatch({ effects: updateOriginalDoc.of({ doc: next, changes }) });
       }
     }
-  }, [diff]);
+  }, [diff, revertable]);
 
   return (
     <div className="flex h-full flex-col">
@@ -128,6 +136,16 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
         </EditorContextMenu>
       </div>
       {portal}
+      {revert.portal}
     </div>
   );
+}
+
+export function unifiedDiff(base: string, revert?: RevertButtons): Extension {
+  return [
+    // Before merge view so that it is between the line numbers and the diff bars.
+    revert === undefined ? [] : revertGutter(revert),
+    unifiedMergeView({ original: base, mergeControls: false }),
+    drawDiffs(),
+  ];
 }

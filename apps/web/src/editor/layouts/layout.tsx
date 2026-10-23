@@ -6,7 +6,6 @@ import {
   crosshairCursor,
   drawSelection,
   EditorView,
-  highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
@@ -19,6 +18,7 @@ import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } 
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
 import { actions } from '@/editor/actions';
+import { drawActiveLine } from '@/editor/active-line';
 import { completion } from '@/editor/completion';
 import { RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
@@ -42,6 +42,7 @@ export const LANGUAGE = new Compartment();
 export const LANGUAGE_SERVER = new Compartment();
 export const SETTINGS = new Compartment();
 export const DIFF = new Compartment();
+export const FOLDING = new Compartment();
 
 /**
  * The state of a view, which the next view continues when the layout changes.
@@ -122,12 +123,13 @@ export function useEditorExtensions(
   const theme = useThemeExtension();
   const { name, language } = useLanguage(relativePath);
   const support = useMemo<Extension>(() => language?.support ?? [], [language]);
-  const settings = useSettingsExtension(name, !(layout.type === 'split' && layout.side === 'base'));
   const languageServer = useLanguageServerExtension(
     source.type === 'workingTree' ? source.root : undefined, // Blobs do not have LSP server support.
     name,
     relativePath,
   );
+  const folding = useMemo<Extension>(() => (layout.type === 'split' ? [] : foldMarkers()), [layout.type]);
+  const settings = useSettingsExtension(name);
   const { search, portal: searchPortal } = useSearchExtension();
   const { toolbar, portal: toolbarPortal } = useToolbarExtension();
 
@@ -147,6 +149,7 @@ export function useEditorExtensions(
 
   useCompartment(view, KEYS, keys);
   useCompartment(view, THEME, theme);
+  useCompartment(view, FOLDING, folding);
   useCompartment(view, SETTINGS, settings);
   useCompartment(view, LANGUAGE, support);
   useCompartment(view, LANGUAGE_SERVER, languageServer);
@@ -193,14 +196,14 @@ export function useEditorExtensions(
             closeBrackets(),
             bracketMatching(),
             // Has to be after lineNumbers to ensure the fold icon is to the right of it.
-            foldMarkers(),
+            FOLDING.of(folding),
 
             EditorState.allowMultipleSelections.of(true),
             drawSelection(),
             crosshairCursor(),
             rectangularSelection(),
 
-            highlightActiveLine(),
+            drawActiveLine(),
             highlightActiveLineGutter(),
             selectionMatches(),
             highlightSpecialChars(),
@@ -239,14 +242,14 @@ export function useEditorExtensions(
             hover(),
             bracketMatching(),
             // Has to be after lineNumbers to ensure the fold icon is to the right of it.
-            foldMarkers(),
+            FOLDING.of(folding),
 
             EditorState.allowMultipleSelections.of(true),
             drawSelection(),
             crosshairCursor(),
             rectangularSelection(),
 
-            highlightActiveLine(),
+            drawActiveLine(),
             highlightActiveLineGutter(),
             selectionMatches(),
             highlightSpecialChars(),

@@ -34,7 +34,7 @@ import {
   selectNextOccurrence,
   selectSelectionMatches,
 } from '@codemirror/search';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, EDITOR_DOCUMENT, type EditorCommand } from '@elsewise/plugin';
 import { toggleReplaceRow } from '@/editor/search/search-bar-query';
 
 const { caret, edit, fold, history, search } = DEFAULT_COMMANDS.editor;
@@ -141,14 +141,16 @@ export const GO_TO_LINE: EditorCommand = {
 };
 
 // Fold
-// Folding always returns true since its default keys would otherwise zoom the window.
+// Folding always returns true since its default keys would otherwise zoom the window. Does nothing in a split diff view.
 export const FOLD: EditorCommand = {
   scope: 'editor',
   id: fold.fold,
   label: 'Fold',
   defaultKeys: keys.fold.fold,
   run: (_, view) => {
-    foldCode(view);
+    if (view.state.facet(EDITOR_DOCUMENT)?.layout.type !== 'split') {
+      foldCode(view);
+    }
     return true;
   },
 };
@@ -159,7 +161,9 @@ export const UNFOLD: EditorCommand = {
   label: 'Unfold',
   defaultKeys: keys.fold.unfold,
   run: (_, view) => {
-    unfoldCode(view);
+    if (view.state.facet(EDITOR_DOCUMENT)?.layout.type !== 'split') {
+      unfoldCode(view);
+    }
     return true;
   },
 };
@@ -170,7 +174,9 @@ export const FOLD_ALL: EditorCommand = {
   label: 'Fold all',
   defaultKeys: keys.fold.foldAll,
   run: (_, view) => {
-    foldAll(view);
+    if (view.state.facet(EDITOR_DOCUMENT)?.layout.type !== 'split') {
+      foldAll(view);
+    }
     return true;
   },
 };
@@ -181,7 +187,9 @@ export const UNFOLD_ALL: EditorCommand = {
   label: 'Unfold all',
   defaultKeys: keys.fold.unfoldAll,
   run: (_, view) => {
-    unfoldAll(view);
+    if (view.state.facet(EDITOR_DOCUMENT)?.layout.type !== 'split') {
+      unfoldAll(view);
+    }
     return true;
   },
 };

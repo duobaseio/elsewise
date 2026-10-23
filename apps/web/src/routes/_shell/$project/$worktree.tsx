@@ -15,7 +15,7 @@ import {
   type IDockviewPanelProps,
 } from 'dockview-react';
 import { useEffect, useRef, useState } from 'react';
-import { DiffState } from '@/editor/diff';
+import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { useSettings } from '@/settings/settings';
 // TODO: Back this with the daemon.
@@ -304,7 +304,9 @@ function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | 
     };
   }, [diff, props.api]);
 
-  return <Editor code={FAKE_CODE} relativePath={props.params.path} root={root} diff={diff} />;
+  return (
+    <Editor content={{ label: 'Current', code: FAKE_CODE }} relativePath={props.params.path} root={root} diff={diff} />
+  );
 }
 
 // TODO: Replace with the terminal once it is migrated.

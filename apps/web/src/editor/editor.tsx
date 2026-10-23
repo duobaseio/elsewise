@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view';
+import { Button } from '@elsewise/components/components/button';
 import { type RefObject, useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { DiffState } from '@/editor/diff/diff';
 import { DiffHeader } from '@/editor/diff/diff-header';
@@ -43,8 +44,9 @@ export function Editor({ root, relativePath, content, diff }: EditorProps) {
 
   // The base of the source once it has been fetched, or the previous source's while it is fetched, so that the layout
   // stays the same in the meantime.
-  const [base, setBase] = useState<EditorContent | null>(null);
+  const [base, setBase] = useState<EditorContent | { readonly label: string; readonly error: string } | null>(null);
   const session = useRef<EditorSession>(null);
+  const ratio = useRef(0.5);
 
   // Fetches the base of the source. Keeps a base that arrives late from being applied to another source.
   useEffect(() => {
@@ -65,7 +67,7 @@ export function Editor({ root, relativePath, content, diff }: EditorProps) {
       (error) => {
         console.error(`Diff source ${source} failed`, error);
         if (live) {
-          setBase(null);
+          setBase({ label: found.label, error: error instanceof Error ? error.message : String(error) });
         }
       },
     );
@@ -76,6 +78,24 @@ export function Editor({ root, relativePath, content, diff }: EditorProps) {
   }, [source, sources]);
 
   const fetched = source === null ? null : base;
+  if (fetched !== null && 'error' in fetched) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2 font-sans text-sm">
+        <p>Could not show the diff</p>
+        <p className="text-muted-foreground">{fetched.error}</p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            diff.source = null;
+          }}
+        >
+          Stop comparing
+        </Button>
+      </div>
+    );
+  }
+
   const header =
     fetched === null
       ? undefined
@@ -90,6 +110,7 @@ export function Editor({ root, relativePath, content, diff }: EditorProps) {
       target={{ source: { type: 'workingTree', root }, code: content.code }}
       extensions={diff.extension}
       session={session}
+      ratio={ratio}
     />
   ) : (
     <UnifiedLayout

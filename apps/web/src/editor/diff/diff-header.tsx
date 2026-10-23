@@ -159,8 +159,8 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
     <div className="flex shrink-0 items-stretch border-b bg-surface font-sans text-sm" data-slot="diff-header">
       {layout === 'split' ? (
         <>
-          <div className="flex flex-1 basis-0 items-center border-r px-1.5 py-1">{picker}</div>
-          <div className="flex flex-1 basis-0 items-center gap-1 px-1.5 py-1">
+          <div className="flex shrink-0 basis-(--split) items-center border-r px-1.5 py-1">{picker}</div>
+          <div className="flex min-w-0 flex-1 basis-0 items-center gap-1 px-1.5 py-1">
             <span className="border border-transparent px-2">{target}</span>
             {buttons}
           </div>

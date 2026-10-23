@@ -2,6 +2,8 @@
 
 import {
   ArrowSquareOutIcon,
+  ArrowUUpLeftIcon,
+  CaretDoubleRightIcon,
   CaretDownIcon,
   CaretRightIcon,
   CaretUpIcon,
@@ -62,6 +64,8 @@ const DEFAULT_ICONS = {
   compare: GitDiffIcon,
   unified: RowsIcon,
   split: SquareSplitHorizontalIcon,
+  revert: ArrowUUpLeftIcon,
+  'revert-chunk': CaretDoubleRightIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

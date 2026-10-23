@@ -650,20 +650,39 @@ test('inline diff stays while new base loads', async () => {
   await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
 });
 
-test('failed base stops showing diff', async () => {
+test('failed base replaces editor with why', async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
   const editor = new EditorManager();
-  const other = pendingSourceOf('test.other');
-  editor.diffs.add([diffSourceOf('test.source', BASE), other.source]);
-  const { diff, file, base } = await mountDiff('test.source', 'split', editor);
-  await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
+  const failing = pendingSourceOf('test.failing');
+  editor.diffs.add([diffSourceOf('test.source', BASE), failing.source]);
+  const { diff, file } = await mountDiff('test.source', 'split', editor);
+  await expect.poll(() => file()).not.toBeNull();
 
-  diff.source = 'test.other';
+  diff.source = 'test.failing';
+  // Waits for the editor to ask for the base.
   await new Promise((resolve) => setTimeout(resolve, 50));
-  other.reject(new Error('unreadable'));
+  failing.reject(new Error('unreadable'));
 
-  await expect.poll(() => base()).toBeNull();
-  expect(file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(0);
+  await expect.element(page.getByText("Couldn't load the base for test.failing")).toBeVisible();
+  await expect.element(page.getByText('unreadable')).toBeVisible();
+  expect(file()).toBeNull();
+  expect(header()).toBeNull();
+});
+
+test('failed base closes back to editor', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const editor = new EditorManager();
+  const failing = pendingSourceOf('test.failing');
+  editor.diffs.add([failing.source]);
+  const { diff, file } = await mountDiff('test.failing', 'unified', editor);
+  failing.reject(new Error('unreadable'));
+  await expect.element(page.getByText('unreadable')).toBeVisible();
+
+  await userEvent.click(page.getByRole('button', { name: 'Close' }));
+
+  await expect.poll(() => diff.source).toBeNull();
+  await expect.poll(() => file()).not.toBeNull();
+  await expect.element(page.getByRole('button', { name: 'Compare with…' })).toBeVisible();
 });
 
 test('removed source stops showing diff', async () => {
@@ -844,6 +863,24 @@ test('diff header stops comparing', async () => {
   await expect.poll(() => diff.source).toBeNull();
   await expect.poll(() => header()).toBeNull();
   await expect.element(page.getByRole('button', { name: 'Compare with…' })).toBeVisible();
+});
+
+test('split diff header follows resized sides', async () => {
+  const editor = new EditorManager();
+  editor.diffs.add(builtInSources());
+  const { base } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'split', editor);
+  await expect.poll(() => base()).not.toBeNull();
+  const handle = document.querySelector('[data-slot="split-handle"]') as HTMLElement;
+  const left = base()?.dom.getBoundingClientRect().left ?? 0;
+
+  handle.dispatchEvent(new PointerEvent('pointerdown', { clientX: left + 300, button: 0, bubbles: true }));
+  window.dispatchEvent(new PointerEvent('pointermove', { clientX: left + 250 }));
+  window.dispatchEvent(new PointerEvent('pointerup', { clientX: left + 250 }));
+
+  const half = () => header()?.firstElementChild?.getBoundingClientRect().width;
+  const side = () => base()?.dom.closest('.cm-mergeViewEditor')?.getBoundingClientRect().width;
+  await expect.poll(side).toBeCloseTo(250, -1);
+  expect(half()).toBeCloseTo(side() ?? 0, 0);
 });
 
 test('split diff header lines up with sides', async () => {

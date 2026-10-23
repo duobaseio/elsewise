@@ -5,6 +5,7 @@ import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { DEFAULT_COMMANDS, EDITOR_DOCUMENT } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
@@ -90,6 +91,11 @@ async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorMana
   return { view, commands, rerender: (next: Partial<UnifiedLayoutProps>) => screen.rerender(tree(next)) };
 }
 
+// Returns the revert buttons in `view`'s gutter, which CodeMirror hides from accessibility queries.
+function reverts(view: EditorView): Element[] {
+  return [...view.dom.querySelectorAll('.cm-revertGutter [aria-label="Revert change"]')];
+}
+
 // Returns the number of changed lines that `view` shows.
 function changedLines(view: EditorView): number {
   return view.dom.querySelectorAll('.cm-changedLine').length;
@@ -115,6 +121,45 @@ describe('UnifiedLayout', () => {
     expect(
       [...view().dom.querySelectorAll('.cm-deletedChunk .cm-deletedLine')].map((line) => line.textContent),
     ).toEqual(['beta', 'delta']);
+  });
+
+  test('reverts change into working tree', async () => {
+    const { view } = await mount({ base: BASE });
+    await expect.poll(() => changedLines(view())).toBe(1);
+
+    await expect.poll(() => reverts(view())).toHaveLength(2);
+    await userEvent.click(reverts(view())[0] as Element);
+
+    expect(view().state.doc.line(2).text).toBe('beta');
+  });
+
+  test('offers revert in gutter beside each change', async () => {
+    const { view } = await mount({ base: BASE });
+    await expect.poll(() => changedLines(view())).toBe(1);
+
+    await expect.poll(() => reverts(view())).toHaveLength(2);
+    const content = view().contentDOM.getBoundingClientRect().left;
+    for (const button of reverts(view())) {
+      expect(button.getBoundingClientRect().right).toBeLessThanOrEqual(content);
+    }
+    expect(view().dom.querySelector('.cm-chunkButtons')).toBeNull();
+  });
+
+  test('names revert in tooltip', async () => {
+    const { view } = await mount({ base: BASE });
+    await expect.poll(() => changedLines(view())).toBe(1);
+
+    await expect.poll(() => reverts(view())).toHaveLength(2);
+    await userEvent.hover(reverts(view())[0] as Element);
+
+    await expect.element(page.getByText('Revert change')).toBeVisible();
+  });
+
+  test('offers no revert into blob', async () => {
+    const { view } = await mount({ source: { type: 'blob' }, base: BASE });
+    await expect.poll(() => changedLines(view())).toBe(1);
+
+    expect(view().dom.querySelector('.cm-revert')).toBeNull();
   });
 
   test('waits for language before diffing', async () => {
