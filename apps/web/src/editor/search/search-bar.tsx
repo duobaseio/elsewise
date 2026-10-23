@@ -186,6 +186,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
           label="Toggle replace"
           hint={openReplace}
           aria-expanded={replace}
+          className="text-muted-foreground hover:text-foreground aria-expanded:bg-transparent aria-expanded:text-muted-foreground aria-expanded:hover:text-foreground"
           onClick={() => view.dispatch({ effects: toggleReplaceRow.of(!replace) })}
         >
           <Icon className={cn('transition-transform', !replace && '-rotate-90')} name="expand" />
@@ -195,7 +196,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
         <Input
           ref={field}
           main-field="true"
-          className="w-full field-sizing-content pr-22 text-sm"
+          className="h-7 w-full field-sizing-content pr-22 text-sm"
           placeholder="Find"
           aria-label="Find"
           aria-invalid={!query.valid && query.search !== '' ? true : undefined}
@@ -221,7 +222,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
           </Option>
         </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
         <span
           className={cn(
             'min-w-20 pl-4 pr-2 text-xs tabular-nums',
@@ -231,13 +232,28 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
         >
           {describe(matches, query)}
         </span>
-        <Action label="Previous match" hint={PREVIOUS} onClick={() => findPrevious(view)}>
+        <Action
+          label="Previous match"
+          hint={PREVIOUS}
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => findPrevious(view)}
+        >
           <Icon name="previous" />
         </Action>
-        <Action label="Next match" hint={NEXT} onClick={() => findNext(view)}>
+        <Action
+          label="Next match"
+          hint={NEXT}
+          className="text-muted-foreground hover:text-foreground"
+          onClick={() => findNext(view)}
+        >
           <Icon name="next" />
         </Action>
-        <Action label="Close" hint={CLOSE} className="ml-auto" onClick={() => closeSearchPanel(view)}>
+        <Action
+          label="Close"
+          hint={CLOSE}
+          className="ml-auto text-muted-foreground hover:text-foreground"
+          onClick={() => closeSearchPanel(view)}
+        >
           <Icon name="close" />
         </Action>
       </div>
@@ -245,7 +261,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
         <>
           <Input
             id={replaceId}
-            className="col-start-2 w-full field-sizing-content text-sm"
+            className="col-start-2 h-7 w-full field-sizing-content text-sm"
             placeholder="Replace"
             aria-label="Replace"
             value={query.replace}

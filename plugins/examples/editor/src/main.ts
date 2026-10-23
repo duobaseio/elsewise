@@ -1,6 +1,6 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
-import type { EditorCommand, Plugin, PluginInfo } from '@elsewise/plugin';
+import { DEFAULT_EDITOR_CONTEXT_MENU, type EditorCommand, type Plugin, type PluginInfo } from '@elsewise/plugin';
 import { colorHover, colorPicker } from './color-picker.ts';
 import { keys, reactions } from './completions.ts';
 
@@ -37,7 +37,7 @@ export default function ({ id }: PluginInfo): Plugin {
     onEnable({ commands, editor }) {
       return [
         editor.addExtensions([colorPicker, colorHover, reactions]),
-        editor.addLanguages([
+        editor.languages.add([
           LanguageDescription.of({
             name: 'Dotenv',
             filename: /(^|[\\/])\.env(\.\w+)?$/,
@@ -63,14 +63,12 @@ export default function ({ id }: PluginInfo): Plugin {
           {
             submenus: { [`${id}.tone`]: 'Tone of voice' },
             groups: {
-              [`${id}.reactions`]: { order: 30 },
-              [`${id}.tone`]: { order: 40 },
+              [`${id}.reactions`]: { order: 50 },
+              [`${id}.tone`]: { order: 60 },
               [`${id}.tones`]: { menu: `${id}.tone` },
             },
             items: {
-              'io.duobase.elsewise.editor.contextmenu.refactor': [
-                { type: 'item', order: 20, command: `${id}.leaveAnExcuse` },
-              ],
+              [DEFAULT_EDITOR_CONTEXT_MENU.refactor.id]: [{ type: 'item', order: 20, command: `${id}.leaveAnExcuse` }],
               [`${id}.reactions`]: [
                 { type: 'item', order: 10, command: `${id}.shrug` },
                 { type: 'item', order: 20, command: `${id}.flipTheTable` },

@@ -32,6 +32,11 @@ const ROLES = Object.keys({
   add: true,
   files: true,
   settings: true,
+  compare: true,
+  unified: true,
+  split: true,
+  revert: true,
+  'revert-chunk': true,
 } as const satisfies Record<IconName, true>) as readonly IconName[];
 
 const PROPS: readonly { key: string; label: string; render: ReactNode }[] = [

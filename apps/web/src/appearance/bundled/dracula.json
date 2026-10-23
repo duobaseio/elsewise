@@ -71,6 +71,12 @@
       "info": "#036A96",
       "hint": "#6C664B",
       "unnecessary": "#6C664B",
+      "diff": {
+        "addedLine": "#C0DCC2",
+        "addedGutter": "#14710A",
+        "deletedLine": "#F0C0BD",
+        "deletedGutter": "#CB3A2A"
+      },
       "tokens": {
         "comment": {
           "color": "#6C664B",
@@ -250,6 +256,12 @@
       "info": "#8BE9FD",
       "hint": "#8F9ABB",
       "unnecessary": "#8F9ABB",
+      "diff": {
+        "addedText": "#50FA7B20",
+        "addedGutter": "#50FA7B80",
+        "deletedText": "#FF555550",
+        "deletedGutter": "#FF555580"
+      },
       "tokens": {
         "comment": "#6272A4",
         "docComment": "#6272A4",

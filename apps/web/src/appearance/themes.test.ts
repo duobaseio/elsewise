@@ -18,7 +18,7 @@ const NIGHT: LoadedTheme = {
 
 const ELSEWISE = Theme.parse(elsewise);
 
-// Returns `variant` with the stripe's colors it resolves to, which it leaves to the interface's.
+// Returns `variant` with the stripe's and diff's colors it resolves to, which it leaves to the interface's.
 function resolved(variant: ThemeVariant | undefined) {
   const colors = variant?.interface ?? {};
   return {
@@ -32,6 +32,15 @@ function resolved(variant: ThemeVariant | undefined) {
         hint: colors.disabled,
         searchMatch: variant?.editor.searchMatch,
         usage: colors['info-line'],
+      },
+      diff: {
+        addedLine: colors['success-wash'],
+        addedText: colors['success-line'],
+        addedGutter: colors['success-line'],
+        deletedLine: colors['error-wash'],
+        deletedText: colors['error-line'],
+        deletedGutter: colors['error-line'],
+        ...variant?.editor.diff,
       },
     },
   };
@@ -66,6 +75,15 @@ describe('resolveActiveTheme', () => {
       editor: {
         ...resolved(ELSEWISE.dark).editor,
         background: '#010101',
+        // Night's own interface colors, which are Elsewise's, rather than Elsewise's diff.
+        diff: {
+          addedLine: ELSEWISE.dark?.interface['success-wash'],
+          addedText: ELSEWISE.dark?.interface['success-line'],
+          addedGutter: ELSEWISE.dark?.interface['success-line'],
+          deletedLine: ELSEWISE.dark?.interface['error-wash'],
+          deletedText: ELSEWISE.dark?.interface['error-line'],
+          deletedGutter: ELSEWISE.dark?.interface['error-line'],
+        },
         tokens: { ...ELSEWISE.dark?.editor.tokens, keyword: { color: '#ff0000' }, punctuation: { bold: true } },
       },
       terminal: { ...ELSEWISE.dark?.terminal, red: '#ff5555' },
@@ -89,6 +107,27 @@ describe('resolveActiveTheme', () => {
       error: '#880000',
       warning: '#ffff00',
       info: ELSEWISE.dark?.interface.info,
+    });
+  });
+
+  test('fills unspecified diff colors from interface colors', () => {
+    const theme: LoadedTheme = {
+      ...NIGHT,
+      theme: {
+        name: 'Night',
+        dark: {
+          interface: { 'success-wash': '#002200', 'error-line': '#ff0000' },
+          editor: { diff: { deletedLine: '#220000' } },
+          terminal: {},
+        },
+      },
+    };
+
+    expect(resolveActiveTheme([theme], theme.id, 'dark').editor.diff).toMatchObject({
+      addedLine: '#002200',
+      addedText: ELSEWISE.dark?.interface['success-line'],
+      deletedLine: '#220000',
+      deletedGutter: '#ff0000',
     });
   });
 });

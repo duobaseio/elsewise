@@ -9,6 +9,7 @@ export type Font = z.infer<typeof Font>;
 export type FontSize = z.infer<typeof FontSize>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
 export type LineSeparator = z.infer<typeof LineSeparator>;
+export type DiffLayout = z.infer<typeof DiffLayout>;
 export type CursorStyle = z.infer<typeof CursorStyle>;
 export type KeymapId = z.infer<typeof KeymapId>;
 export type BundledKeymap = z.infer<typeof BundledKeymap>;
@@ -101,6 +102,10 @@ export const Settings = z.lazy(() =>
              * Whether the stripe over the scrollbar marks the diagnostics, search matches and usages.
              */
             stripe: z.boolean().catch(true),
+            /**
+             * The default layout when viewing a diff.
+             */
+            diffLayout: DiffLayout.catch('split'),
             /**
              * Overrides by language, keyed by CodeMirror's name for it, e.g. `TypeScript`.
              *
@@ -217,6 +222,8 @@ export const EditorLanguageSettings = z.object({
    */
   visualGuides: z.array(z.int().min(1).max(500)),
 });
+
+export const DiffLayout = z.enum(['unified', 'split']);
 
 export const CursorStyle = z.enum(['block', 'underline', 'bar']);
 

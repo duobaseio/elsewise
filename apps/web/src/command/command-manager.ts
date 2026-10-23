@@ -54,6 +54,16 @@ import {
 } from '@/editor/codemirror-commands';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
 import { NEXT_DIAGNOSTIC, PREVIOUS_DIAGNOSTIC } from '@/editor/diagnostics';
+import {
+  BRANCH_DIFF,
+  CLOSE_DIFF,
+  NEXT_CHUNK,
+  PREVIOUS_CHUNK,
+  SPLIT_DIFF,
+  UNCOMMITTED_DIFF,
+  UNIFIED_DIFF,
+  UNSTAGED_DIFF,
+} from '@/editor/diff/commands';
 import { FORMAT } from '@/editor/format';
 import { SHOW_HOVER } from '@/editor/hover';
 import { GO_TO_DEFINITION } from '@/editor/lsp/definition';
@@ -112,6 +122,15 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand)[] =
   APPLY_TOP_FIX,
   NEXT_DIAGNOSTIC,
   PREVIOUS_DIAGNOSTIC,
+  // Diff
+  UNSTAGED_DIFF,
+  UNCOMMITTED_DIFF,
+  BRANCH_DIFF,
+  CLOSE_DIFF,
+  NEXT_CHUNK,
+  PREVIOUS_CHUNK,
+  UNIFIED_DIFF,
+  SPLIT_DIFF,
   // LSP
   GO_TO_DEFINITION,
   FIND_USAGES,

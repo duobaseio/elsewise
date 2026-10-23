@@ -23,15 +23,18 @@ const COMMANDS: ApplicationCommand[] = [
   },
   { scope: 'application', id: 'rename', label: 'Rename…', defaultKeys: ['Shift-F6'], run: () => true },
   { scope: 'application', id: 'extract', label: 'Extract function', run: () => true },
+  { scope: 'application', id: 'wrap', label: 'Soft wrap', active: () => true, run: () => true },
+  { scope: 'application', id: 'whitespace', label: 'Show whitespace', active: () => false, run: () => true },
 ];
 
-// Groups with keys, a disabled item, and a submenu.
+// Groups with keys, a disabled item, checked and unchecked items, and a submenu.
 const MENU: ContextMenu = {
   submenus: { refactor: 'Refactor' },
   groups: {
     actions: { order: 0 },
     navigate: { order: 10 },
     refactor: { order: 20 },
+    view: { order: 30 },
     inner: { menu: 'refactor', order: 0 },
   },
   items: {
@@ -41,6 +44,10 @@ const MENU: ContextMenu = {
       { type: 'item', order: 10, command: 'definition' },
     ],
     refactor: [{ type: 'submenu', order: 0, submenu: 'refactor' }],
+    view: [
+      { type: 'item', order: 0, command: 'wrap' },
+      { type: 'item', order: 10, command: 'whitespace' },
+    ],
     inner: [
       { type: 'item', order: 0, command: 'rename' },
       { type: 'item', order: 10, command: 'extract' },

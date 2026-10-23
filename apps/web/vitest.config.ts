@@ -45,6 +45,7 @@ function browserProject(
         '@tanstack/react-router',
         'dockview-react',
         'dompurify',
+        'motion/react',
         '@codemirror/autocomplete',
         '@codemirror/commands',
         '@codemirror/language',

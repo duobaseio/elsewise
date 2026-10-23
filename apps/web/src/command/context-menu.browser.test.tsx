@@ -170,7 +170,7 @@ describe('CommandContextMenu', () => {
     );
 
     await open();
-    expect(labels()).toEqual(['Item', 'Other', '-', 'Item']);
+    expect(labels()).toEqual(['Item', 'More', 'Other', '-', 'Item']);
     expect(menuitem('More').elements()).toHaveLength(1);
   });
 
@@ -226,10 +226,38 @@ describe('CommandContextMenu', () => {
     );
 
     await open();
-    expect(labels()).toEqual(['Item']);
+    expect(labels()).toEqual(['Item', 'Loop']);
     expect(menuitem('Empty').query()).toBeNull();
     await userEvent.click(menuitem('Loop'));
     await expect.element(menuitem('Item').nth(1)).toBeVisible();
     expect(menuitem('Loop').elements()).toHaveLength(1);
+  });
+
+  test('ticks active command', async () => {
+    const commands = setUp([
+      command('On', () => true, { active: () => true }),
+      command('Off', () => true, { active: () => false }),
+      command('Plain'),
+    ]);
+    await mount(menu({ groups: { a: group() }, items: { a: [item('On'), item('Off'), item('Plain')] } }), commands);
+
+    await open();
+    await expect.element(menuitem('On')).toHaveAttribute('aria-checked', 'true');
+    await expect.element(menuitem('Off')).toHaveAttribute('aria-checked', 'false');
+    await expect.element(menuitem('Plain')).not.toHaveAttribute('aria-checked');
+    expect(labels()).toEqual(['Off', 'On', 'Plain']);
+  });
+
+  test('runs active item and closes', async () => {
+    const run = vi.fn(() => true);
+    const onClosed = vi.fn();
+    const commands = setUp([command('Item', run, { active: () => true })]);
+    await mount(menu({ groups: { a: group() }, items: { a: [item('Item')] } }), commands, { onClosed });
+
+    await open();
+    await userEvent.click(menuitem('Item'));
+
+    await vi.waitFor(() => expect(run).toHaveBeenCalledOnce());
+    expect(onClosed).toHaveBeenCalledOnce();
   });
 });

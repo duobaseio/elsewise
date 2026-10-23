@@ -71,6 +71,12 @@
       "info": "#4868B1",
       "hint": "#7D7666",
       "unnecessary": "#7D7666",
+      "diff": {
+        "addedLine": "#EAF2EE",
+        "addedText": "#CBDED4",
+        "deletedLine": "#F7EBEA",
+        "deletedText": "#ECCDCA"
+      },
       "tokens": {
         "keyword": "#004393",
         "importKeyword": "#004393",
@@ -231,6 +237,13 @@
       "info": "#9FB2C8",
       "hint": "#8A8474",
       "unnecessary": "#8A8474",
+      "diff": {
+        "addedLine": "#17291E",
+        "addedText": "#214632",
+        "deletedLine": "#35221F",
+        "deletedText": "#57322C",
+        "deletedGutter": "#7C463F"
+      },
       "tokens": {
         "keyword": "#DA702C",
         "importKeyword": "#DA702C",

@@ -9,6 +9,7 @@ export {
   BundledTheme,
   CursorStyle,
   DEFAULT_SETTINGS,
+  DiffLayout,
   EditorLanguageSettings,
   FONT_SIZES,
   Font,

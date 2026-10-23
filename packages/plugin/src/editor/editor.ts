@@ -1,13 +1,15 @@
 import type { Completion } from '@codemirror/autocomplete';
 import type { LanguageDescription } from '@codemirror/language';
 import type { Action, Diagnostic } from '@codemirror/lint';
-import type { Extension } from '@codemirror/state';
+import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Tag } from '@lezer/highlight';
 import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol';
 import type { ContextMenu } from '../context-menu.ts';
 import type { Disposable } from '../plugin.ts';
-import type { LanguageServer } from './lsp.ts';
+import type { EditorDiffs } from './diff.ts';
+import type { EditorLanguages } from './language.ts';
+import type { EditorToolbarItem } from './toolbar.ts';
 
 /**
  * The orders of the built-in hover sections, shown lowest first.
@@ -48,6 +50,26 @@ export const DEFAULT_NAVIGATION_SOURCES = {
 } as const;
 
 /**
+ * The editor's current document, the same one that the functions given to {@link Editor.addExtensions} receive.
+ *
+ * `null` while the document's language loads.
+ */
+export const EDITOR_DOCUMENT = Facet.define<EditorDocument, EditorDocument | null>({
+  combine: (values) => values[0] ?? null,
+});
+
+/**
+ * How an editor shows its document:
+ * * `editor`: the default view.
+ * * `unified`: diffed, with the base's deleted lines inline.
+ * * `split`: as one side of a side-by-side diff, the `base` on the left or the `target` on the right.
+ */
+export type EditorDocumentLayout =
+  | { readonly type: 'editor' }
+  | { readonly type: 'unified' }
+  | { readonly type: 'split'; readonly side: 'base' | 'target' };
+
+/**
  * The code editor.
  */
 export interface Editor {
@@ -63,6 +85,16 @@ export interface Editor {
   readonly active: EditorView | null;
 
   /**
+   * The diffs of documents against sources, such as the index or `HEAD`.
+   */
+  readonly diffs: EditorDiffs;
+
+  /**
+   * The languages and their language servers.
+   */
+  readonly languages: EditorLanguages;
+
+  /**
    * Adds `extensions` to the editor, each an extension or a function that returns one for each document.
    *
    * ```ts
@@ -73,6 +105,9 @@ export interface Editor {
    *   // In TypeScript documents only.
    *   ({ language }) =>
    *     language?.name === 'TypeScript' ? language.support.language.data.of({ autocomplete: imports }) : [],
+   *
+   *   // Except on the base side of a split diff.
+   *   ({ layout }) => (layout.type === 'split' && layout.side === 'base' ? [] : blame()),
    * ]);
    * ```
    *
@@ -81,18 +116,18 @@ export interface Editor {
   addExtensions(extensions: readonly (Extension | ((document: EditorDocument) => Extension))[]): Disposable;
 
   /**
-   * Adds `languages`, which take precedence over the built-in languages for the same files.
+   * Adds `items` to the floating toolbar in the editor's top right corner.
    *
-   * Returns a disposable that removes the `languages`.
-   */
-  addLanguages(languages: readonly LanguageDescription[]): Disposable;
-
-  /**
-   * Adds language servers, which take precedence over the servers added earlier for the same languages.
+   * ```ts
+   * editor.addToolbarItems([
+   *   { type: 'command', order: 20, command: 'example.shrug', icon: ShrugIcon }, // Left of the diagnostics summary.
+   *   { type: 'component', id: 'example.words', component: Words }, // On the left.
+   * ]);
+   * ```
    *
-   * Returns a disposable that removes the `servers`.
+   * Returns a disposable that removes the `items`.
    */
-  addLanguageServers(servers: readonly LanguageServer[]): Disposable;
+  addToolbarItems(items: readonly EditorToolbarItem[]): Disposable;
 
   /**
    * Adds `menus` to the context menu.
@@ -107,9 +142,14 @@ export interface Editor {
  */
 export interface EditorDocument {
   /**
-   * The document's path.
+   * The document's path, relative to the worktree's root, e.g. `src/main.ts`.
    */
-  readonly path: string;
+  readonly relativePath: string;
+
+  /**
+   * The document's layout.
+   */
+  readonly layout: EditorDocumentLayout;
 
   /**
    * The document's language, with its `support` loaded, or undefined if none matches the path.

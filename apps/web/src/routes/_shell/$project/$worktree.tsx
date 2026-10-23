@@ -1,3 +1,4 @@
+import type { DiffLayout } from '@elsewise/bridge';
 import { Button } from '@elsewise/components/components/button';
 import { FileTree, useFileTree } from '@elsewise/components/components/file-tree';
 import { Icon } from '@elsewise/components/components/icon';
@@ -14,7 +15,9 @@ import {
   type IDockviewPanelProps,
 } from 'dockview-react';
 import { useEffect, useRef, useState } from 'react';
+import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
+import { useSettings } from '@/settings/settings';
 // TODO: Back this with the daemon.
 import FAKE_CODE from './$worktree.tsx?raw';
 
@@ -287,11 +290,23 @@ function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
   }
 }
 
-function EditorPanel(props: IDockviewPanelProps<{ path: string }>) {
+function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | null; layout?: DiffLayout }>) {
   // TODO: Back this with the daemon.
   const root = new URL(import.meta.env.ELSEWISE_REPOSITORY);
+  const defaultLayout = useSettings((settings) => settings.appearance.editor.diffLayout);
+  const [diff] = useState(() => new DiffState(props.params.diff ?? null, props.params.layout ?? defaultLayout));
 
-  return <Editor code={FAKE_CODE} path={props.params.path} root={root} />;
+  // Keeps the comparison in the panel's parameters, so that it is restored with the dock.
+  useEffect(() => {
+    const dispose = diff.subscribe(() => props.api.updateParameters({ diff: diff.source, layout: diff.layout }));
+    return () => {
+      void dispose();
+    };
+  }, [diff, props.api]);
+
+  return (
+    <Editor content={{ label: 'Current', code: FAKE_CODE }} relativePath={props.params.path} root={root} diff={diff} />
+  );
 }
 
 // TODO: Replace with the terminal once it is migrated.

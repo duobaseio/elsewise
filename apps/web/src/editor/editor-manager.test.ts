@@ -1,20 +1,8 @@
-import { LanguageDescription } from '@codemirror/language';
-import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import { EditorView } from '@codemirror/view';
-import type { ContextMenuGroup, ContextMenuItem, LanguageServer } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, EditorToolbarItem } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
 import { EditorManager } from './editor-manager';
-
-// Returns a language named `name` whose grammar never loads.
-function language(name: string): LanguageDescription {
-  return LanguageDescription.of({ name, extensions: ['toy'], load: () => new Promise(() => {}) });
-}
-
-// Returns a language server with `id` that never starts.
-function server(id: string): LanguageServer {
-  return { id, name: id, languages: { Toy: 'toy' }, start: () => new Promise(() => {}) };
-}
 
 // Returns an item that runs the command with `id`.
 function item(id: string): ContextMenuItem {
@@ -97,58 +85,6 @@ describe('addExtensions', () => {
     dispose();
 
     expect(editor.extensions).toEqual(extensions);
-  });
-});
-
-describe('addLanguages', () => {
-  test('prepends languages until disposed', () => {
-    const editor = new EditorManager();
-    const first = [language('a'), language('b')];
-    const second = [language('c')];
-    const dispose = editor.addLanguages(first);
-    editor.addLanguages(second);
-
-    expect(editor.languages).toEqual([...second, ...first, ...DEFAULT_LANGUAGES]);
-
-    dispose();
-
-    expect(editor.languages).toEqual([...second, ...DEFAULT_LANGUAGES]);
-  });
-
-  test('removes only disposed addition when added twice', () => {
-    const editor = new EditorManager();
-    const languages = [language('a')];
-    const dispose = editor.addLanguages(languages);
-    editor.addLanguages(languages);
-    dispose();
-
-    expect(editor.languages).toEqual([...languages, ...DEFAULT_LANGUAGES]);
-  });
-});
-
-describe('addLanguageServers', () => {
-  test('prepends servers until disposed', () => {
-    const editor = new EditorManager();
-    const first = [server('a'), server('b')];
-    const second = [server('c')];
-    const dispose = editor.addLanguageServers(first);
-    editor.addLanguageServers(second);
-
-    expect(editor.languageServers).toEqual([...second, ...first]);
-
-    dispose();
-
-    expect(editor.languageServers).toEqual(second);
-  });
-
-  test('removes only disposed addition when added twice', () => {
-    const editor = new EditorManager();
-    const servers = [server('a')];
-    const dispose = editor.addLanguageServers(servers);
-    editor.addLanguageServers(servers);
-    dispose();
-
-    expect(editor.languageServers).toEqual(servers);
   });
 });
 
@@ -252,5 +188,31 @@ describe('addContextMenus', () => {
 
     expect(editor.contextMenu.groups.constructor).toEqual(group());
     expect(editor.contextMenu.items.constructor).toEqual([item('first')]);
+  });
+});
+
+describe('addToolbarItems', () => {
+  test('appends items until disposed', () => {
+    const editor = new EditorManager();
+    const first: EditorToolbarItem[] = [{ type: 'command', command: 'a', icon: () => null }];
+    const second: EditorToolbarItem[] = [{ type: 'component', id: 'b', component: () => null }];
+    const dispose = editor.addToolbarItems(first);
+    editor.addToolbarItems(second);
+
+    expect(editor.toolbarItems).toEqual([...first, ...second]);
+
+    dispose();
+
+    expect(editor.toolbarItems).toEqual(second);
+  });
+
+  test('removes only disposed addition when added twice', () => {
+    const editor = new EditorManager();
+    const items: EditorToolbarItem[] = [{ type: 'command', command: 'a', icon: () => null }];
+    const dispose = editor.addToolbarItems(items);
+    editor.addToolbarItems(items);
+    dispose();
+
+    expect(editor.toolbarItems).toEqual(items);
   });
 });

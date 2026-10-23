@@ -4,12 +4,12 @@ import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type DiffLayout } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
 import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import type {
@@ -25,6 +25,7 @@ import type {
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -42,6 +43,11 @@ pub async fn attach(&self, id: SessionId) -> Result<Channel> {
     Ok(Channel::new(rx))
 }
 `;
+
+// `CODE` before its last edits: a smaller channel, no subscription and a log line.
+const BASE = CODE.replace('bounded(64)', 'bounded(32)')
+  .replace('    session.subscribe(tx).await?;\n', '')
+  .replace('    Ok(Channel::new(rx))', '    log::debug!("attached");\n    Ok(Channel::new(rx))');
 
 const LINKED = `/// Connects to the relay. See https://example.com/relay for the protocol.
 pub fn connect() -> Result<Channel> {
@@ -292,12 +298,13 @@ const ICONS: EditorCompletion[] = [
 ];
 
 // Mounts the editor, on `HOVERED` with a Rust language server if `hovered`, else on `code`, with a plugin's
-// `extensions`.
+// `extensions`, and diffed against `BASE` in `diff` if given.
 async function mount(
   theme: 'light' | 'dark',
   hovered = false,
   code = CODE,
   extensions: readonly Extension[] = [],
+  diff?: DiffLayout,
 ): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
@@ -309,9 +316,13 @@ async function mount(
   });
   const editor = new EditorManager();
   if (hovered) {
-    editor.addLanguageServers([RUST]);
+    editor.languages.addServers([RUST]);
   }
   editor.addExtensions(extensions);
+  editor.diffs.add([
+    { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
+    { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
+  ]);
   const commands = new CommandManager({
     appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
     editor,
@@ -328,9 +339,18 @@ async function mount(
               style={{ width: 1040, height: hovered ? 420 : 300 }}
             >
               {hovered ? (
-                <Editor code={HOVERED} path="src/main.rs" root={new URL('file:///worktree/')} />
+                <Editor
+                  content={{ label: 'Current', code: HOVERED }}
+                  relativePath="src/main.rs"
+                  root={new URL('file:///worktree/')}
+                  diff={new DiffState(null, 'unified')}
+                />
               ) : (
-                <Editor code={code} path="transport.rs" />
+                <Editor
+                  content={{ label: 'Current', code }}
+                  relativePath="transport.rs"
+                  diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
+                />
               )}
             </div>
           </LanguageServersContext>
@@ -416,6 +436,80 @@ describe.each(THEMES)('code editor (%s)', (theme) => {
     await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 
     await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-search-${theme}`);
+  });
+
+  test('unified diff', async () => {
+    await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-${theme}`);
+  });
+
+  test('split diff', async () => {
+    await mount(theme, false, CODE, [], 'split');
+    await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-${theme}`);
+  });
+
+  // Selects from the middle of the line before the deleted ones to the middle of the added line, so the selection crosses
+  // deleted, changed and added lines, and the active line shows on the added line's unselected part.
+  const select = (view: EditorView) =>
+    view.dispatch({ selection: { anchor: CODE.indexOf('self.sessions'), head: CODE.indexOf('.await') } });
+
+  test('unified diff with selection', async () => {
+    const view = await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
+    select(view);
+    await expect.poll(() => document.querySelector('.cm-selectionBackground')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-selection-${theme}`);
+  });
+
+  test('split diff with selection', async () => {
+    await mount(theme, false, CODE, [], 'split');
+    await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+    select(EditorView.findFromDOM(document.querySelector('.cm-merge-b') as HTMLElement) as EditorView);
+    await expect.poll(() => document.querySelector('.cm-merge-b .cm-selectionBackground')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-selection-${theme}`);
+  });
+
+  test('unified diff with cursor below deleted lines', async () => {
+    const view = await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
+    view.dispatch({ selection: { anchor: CODE.indexOf('let (tx') } });
+    await expect.poll(() => document.querySelector('.cm-activeLine')).not.toBeNull();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-active-line-${theme}`);
+  });
+
+  test('compare menu', async () => {
+    // The menu is portalled to the body, outside the editor's brightness, so the page takes it as the app does.
+    document.documentElement.dataset.brightness = theme;
+    onTestFinished(() => {
+      delete document.documentElement.dataset.brightness;
+    });
+    await mount(theme);
+    await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
+    await expect.element(page.getByRole('menuitemradio', { name: 'Branch main' })).toBeVisible();
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-compare-menu-${theme}`);
+  });
+
+  test('diff source menu', async () => {
+    document.documentElement.dataset.brightness = theme;
+    // The click leaves the pointer on the button, which later tests would show hovered, so it moves right of the editor.
+    onTestFinished(async () => {
+      delete document.documentElement.dataset.brightness;
+      await userEvent.hover(page.elementLocator(document.documentElement), { position: { x: 1300, y: 20 } });
+    });
+    await mount(theme, false, CODE, [], 'unified');
+    await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+    await userEvent.click(page.getByRole('button', { name: 'Compared with Base' }));
+    await expect.element(page.getByRole('menuitemradio', { name: 'Base' })).toHaveAttribute('aria-checked', 'true');
+
+    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-source-menu-${theme}`);
   });
 
   test('folded', async () => {

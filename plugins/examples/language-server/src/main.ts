@@ -25,7 +25,7 @@ export default function (_: PluginInfo): Plugin {
             return formatter ? (language?.support?.language.data.of({ formatter }) ?? []) : [];
           },
         ]),
-        editor.addLanguageServers([
+        editor.languages.addServers([
           {
             id: 'typescript',
             name: 'TypeScript',

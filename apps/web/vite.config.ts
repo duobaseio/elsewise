@@ -5,6 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
+import { fakeGit } from './vite/fake-git.ts';
 import { peerModules } from './vite/peer-modules.ts';
 
 export default defineConfig({
@@ -18,5 +19,7 @@ export default defineConfig({
     tanstackRouter({ target: 'react', autoCodeSplitting: false }),
     viteReact(),
     peerModules(PEER_MODULES),
+    // TODO: Remove once the daemon's git service reads files at a revision.
+    fakeGit(path.join(import.meta.dirname, '../../')),
   ],
 });

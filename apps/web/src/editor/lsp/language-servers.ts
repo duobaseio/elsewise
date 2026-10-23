@@ -36,7 +36,7 @@ export class LanguageServers {
   constructor(private readonly editor: EditorManager) {
     this.unsubscribe = editor.subscribe(() => {
       for (const [server, roots] of this.instances) {
-        if (!editor.languageServers.includes(server)) {
+        if (!editor.languages.servers.includes(server)) {
           for (const running of roots.values()) {
             running.stop();
           }
@@ -52,7 +52,7 @@ export class LanguageServers {
    * `language` is CodeMirror's name for the language, e.g. `TypeScript`.
    */
   find(language: string): LanguageServer | undefined {
-    return this.editor.languageServers.find((server) => Object.hasOwn(server.languages, language));
+    return this.editor.languages.servers.find((server) => Object.hasOwn(server.languages, language));
   }
 
   /**

@@ -42,9 +42,18 @@ const CHROME = {
   ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
-  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'stripe' | Diagnostic['severity']>,
+  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'stripe' | 'diff' | Diagnostic['severity']>,
   readonly [selector: string, property: string]
 >;
+
+const DIFF = {
+  addedLine: ['.cm-diffAddedLine', 'backgroundColor'],
+  addedText: ['.cm-diffAddedText', 'background'],
+  addedGutter: ['&.cm-merge-b .cm-changedLineGutter', 'background'],
+  deletedLine: ['.cm-diffDeletedLine', 'backgroundColor'],
+  deletedText: ['.cm-diffDeletedText', 'background'],
+  deletedGutter: ['&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter', 'background'],
+} as const satisfies Record<keyof ActiveTheme['editor']['diff'], readonly [selector: string, property: string]>;
 
 /**
  * The Lezer tags that each syntax highlighting token is applied to.
@@ -148,6 +157,18 @@ export const METRICS = EditorView.theme({
   },
   '.cm-scroller::-webkit-scrollbar-thumb:vertical': { borderWidth: `1px ${(STRIPE_WIDTH - 4) / 2}px` },
 
+  // The scrollbar that the editor draws itself, as wide as the stripe that marks it, with a thumb like a native one.
+  '.cm-scrollbar': { position: 'absolute', right: '0', width: `${STRIPE_WIDTH}px` },
+  '.cm-scrollbar-thumb': {
+    position: 'absolute',
+    left: `${(STRIPE_WIDTH - 4) / 2}px`,
+    right: `${(STRIPE_WIDTH - 4) / 2}px`,
+    borderRadius: '2px',
+    backgroundColor: 'var(--border)',
+  },
+  '.cm-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
+  '.cm-scrollbar-thumb[data-active]': { backgroundColor: 'var(--disabled)' },
+
   '.cm-stripe': {
     position: 'absolute',
     right: '0',
@@ -173,7 +194,7 @@ export const METRICS = EditorView.theme({
     borderRadius: '2px',
   },
   '.cm-stripe-tooltip': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px` },
-  '.cm-diagnostics-summary': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px`, marginTop: '4px' },
+  '.cm-toolbar': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px`, marginTop: '4px' },
 
   '.cm-scroller::-webkit-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
   '.cm-scroller::-webkit-scrollbar-thumb:active': { backgroundColor: 'var(--disabled)' },
@@ -523,6 +544,17 @@ export function useThemeExtension(): Extension {
       spec[selector][property] = editor[role];
     }
 
+    for (const [role, [selector, property]] of Object.entries(DIFF) as [
+      keyof typeof DIFF,
+      readonly [string, string],
+    ][]) {
+      const color = editor.diff[role];
+      if (color !== undefined) {
+        spec[selector] ??= {};
+        spec[selector][property] = color;
+      }
+    }
+
     // Draws the squiggles like CodeMirror does, in the editor's colors.
     for (const severity of ['error', 'warning', 'info'] as const) {
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="6" height="3"><path d="m0 2.5 l2 -1.5 l1 0 l2 1.5 l1 0" stroke="${editor[severity]}" fill="none" stroke-width=".7"/></svg>`;
@@ -549,16 +581,16 @@ export function useThemeExtension(): Extension {
       .replace(/^['"]|['"]$/g, '');
     const strikeout = STRIKEOUTS[family];
     if (strikeout) {
-      const propeerties = {
+      const properties = {
         backgroundImage: 'linear-gradient(currentColor, currentColor)',
         backgroundPosition: `0 calc(round(${strikeout.ascent}em, 1px) - ${strikeout.position}em)`,
         backgroundSize: `100% ${strikeout.size}em`,
         textDecoration: 'none',
       };
 
-      spec['.cm-lintRange.cm-lintRange-deprecated'] = propeerties;
+      spec['.cm-lintRange.cm-lintRange-deprecated'] = properties;
       spec['.cm-completion-deprecated .cm-completionLabel, .cm-completion-deprecated .cm-completionTail'] = {
-        ...propeerties,
+        ...properties,
         backgroundRepeat: 'no-repeat',
         lineHeight: 'normal',
       };

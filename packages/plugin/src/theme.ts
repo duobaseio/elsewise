@@ -164,6 +164,40 @@ export const ThemeVariant = z.lazy(() =>
           .partial(),
 
         /**
+         * The diff against a base.
+         *
+         * Each defaults to one of the current theme's colors instead of Elsewise's default theme.
+         */
+        diff: z
+          .object({
+            /**
+             * The background of added and changed lines. Defaults to the interface's `success-wash`.
+             */
+            addedLine: Color,
+            /**
+             * The background of added text within those lines. Defaults to the interface's `success-line`.
+             */
+            addedText: Color,
+            /**
+             * The gutter marker of added and changed lines. Defaults to the interface's `success-line`.
+             */
+            addedGutter: Color,
+            /**
+             * The background of the base's deleted lines. Defaults to the interface's `error-wash`.
+             */
+            deletedLine: Color,
+            /**
+             * The background of deleted text within those lines. Defaults to the interface's `error-line`.
+             */
+            deletedText: Color,
+            /**
+             * The gutter marker of deleted lines. Defaults to the interface's `error-line`.
+             */
+            deletedGutter: Color,
+          })
+          .partial(),
+
+        /**
          * The syntax highlighting tokens.
          */
         tokens: z
