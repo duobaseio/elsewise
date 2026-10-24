@@ -104,7 +104,7 @@ class Session<S> {
   readonly #tracked = new Map<string, Tracked>(); // Relative protocol path -> Tracked
   #nativeRoot: string | undefined;
 
-  #watch: { close(): void } | undefined;
+  #watch: { ready: Promise<void>; close(): void } | undefined;
   #pollTimer: NodeJS.Timeout | undefined;
 
   /** The watched paths that notified changes touched and that have not been read again yet. */
@@ -202,7 +202,7 @@ class Session<S> {
         this.#tracked.set(relativeProtocolPath, { absoluteNativePath, running: false, stale: false });
       }
 
-      void this.#check(relativeProtocolPath, true);
+      void this.#watch?.ready.then(() => this.#check(relativeProtocolPath, true));
     }
   }
 

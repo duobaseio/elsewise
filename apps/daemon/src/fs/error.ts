@@ -19,7 +19,7 @@ export function errnoOf(error: unknown): string | undefined {
 }
 
 /** Converts a thrown value into a transport error. */
-export function toTransportError(error: unknown): TransportError {
+export function fsToTransportError(error: unknown): TransportError {
   if (error instanceof TransportError) {
     return error;
   }
@@ -32,6 +32,6 @@ export async function attempt<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();
   } catch (error) {
-    throw toTransportError(error);
+    throw fsToTransportError(error);
   }
 }

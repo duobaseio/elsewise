@@ -43,11 +43,12 @@ export class DirectoryWatcher {
   }
 
   /** Watches a root until the returned object is closed. */
-  watch(root: string, listener: ChangeListener): { close(): void } {
+  watch(root: string, listener: ChangeListener): { ready: Promise<void>; close(): void } {
     const entry = this.#roots.get(root) ?? this.#open(root);
     const remove = entry.add(listener);
 
     return {
+      ready: entry.ready,
       close: () => {
         if (remove()) {
           this.#roots.delete(root);
@@ -110,6 +111,11 @@ class Root {
   /** The state of this root. */
   get state(): RootState | undefined {
     return this.#state;
+  }
+
+  /** Settles once the root is watched or polled. */
+  get ready(): Promise<void> {
+    return this.#ready;
   }
 
   /** Adds a listener. Returns a function that removes the listener and returns whether it was the last. */

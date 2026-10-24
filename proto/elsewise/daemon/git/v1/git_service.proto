@@ -1010,7 +1010,7 @@ message PushRequest {
 
   // The remote to push to.
   //
-  // Empty uses the branch's upstream remote, or `origin` when it has none or a tag is pushed.
+  // Empty uses the branch's upstream remote.
   string remote = 2;
 
   // What to push.

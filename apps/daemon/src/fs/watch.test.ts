@@ -84,7 +84,7 @@ function start({ includesChildren = false, pollIntervalMs = 60_000 } = {}): Stre
   const watcher = {
     watch: (_root: string, listener: ChangeListener) => {
       stream.notify = listener;
-      return { close: stream.close };
+      return { ready: Promise.resolve(), close: stream.close };
     },
   } as unknown as DirectoryWatcher;
   const states = watchPaths(stream.requests, stream.abort.signal, {

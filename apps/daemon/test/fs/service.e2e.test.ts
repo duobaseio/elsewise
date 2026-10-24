@@ -11,18 +11,19 @@ import {
   type WatchDirectoriesResponse,
   type WatchFilesResponse,
 } from '../../src/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { collect, type Harness, startHarness } from './harness';
+import { collect } from '../harness';
+import { FileSystemHarness } from './harness';
 
 const posix = process.platform !== 'win32';
 
 const NEVER_POLL = 60_000; // A poll interval no test outlasts.
 
-let harness: Harness;
+let harness: FileSystemHarness;
 let root: string;
 
 async function start(pollIntervalMs: number): Promise<void> {
-  harness = await startHarness({ readLimitBytes: 1024, listingLimit: 3, pollIntervalMs });
-  root = harness.root;
+  harness = await FileSystemHarness.start({ readLimitBytes: 1024, listingLimit: 3, pollIntervalMs });
+  root = harness.protocolRoot;
 }
 
 beforeEach(() => start(NEVER_POLL));
@@ -87,17 +88,17 @@ describe('paths', () => {
 
 describe('WatchDirectories', () => {
   test('reports a directory immediately and whenever it changes', async () => {
-    await fs.writeFile(harness.at('a.txt'), '');
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
     const call = harness.client.watchDirectories();
     const { seen } = collect(call.responses);
 
     await call.send({ root, relativePaths: [''] });
     await expect.poll(() => directoryNames(seen, '')).toEqual(['a.txt']);
 
-    await fs.writeFile(harness.at('b.txt'), '');
+    await fs.writeFile(harness.nativeAt('b.txt'), '');
     await expect.poll(() => directoryNames(seen, '')).toEqual(['a.txt', 'b.txt']);
 
-    await fs.rm(harness.at('a.txt'));
+    await fs.rm(harness.nativeAt('a.txt'));
     await expect.poll(() => directoryNames(seen, '')).toEqual(['b.txt']);
     call.cancel();
   });
@@ -109,14 +110,14 @@ describe('WatchDirectories', () => {
     await call.send({ root, relativePaths: ['src'] });
     await expect.poll(() => directoryNames(seen, 'src')).toBe(DirectoryReason.NOT_FOUND);
 
-    await fs.mkdir(harness.at('src'));
-    await fs.writeFile(harness.at('src', 'a.ts'), '');
+    await fs.mkdir(harness.nativeAt('src'));
+    await fs.writeFile(harness.nativeAt('src', 'a.ts'), '');
     await expect.poll(() => directoryNames(seen, 'src')).toEqual(['a.ts']);
     call.cancel();
   });
 
   test('reports a file as not a directory', async () => {
-    await fs.writeFile(harness.at('a.txt'), '');
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
     const call = harness.client.watchDirectories();
     const { seen } = collect(call.responses);
 
@@ -129,14 +130,14 @@ describe('WatchDirectories', () => {
 
 describe('WatchFiles', () => {
   test('reports a file immediately and whenever its content changes', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'one');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'one');
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
 
     await call.send({ root, relativePaths: ['a.txt'] });
     await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256('one'));
 
-    await fs.writeFile(harness.at('a.txt'), 'two');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'two');
     await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256('two'));
     call.cancel();
   });
@@ -155,14 +156,14 @@ describe('WatchFiles', () => {
   });
 
   test('reports a deleted file and a directory as unavailable', async () => {
-    await fs.writeFile(harness.at('a.txt'), '');
-    await fs.mkdir(harness.at('dir'));
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
+    await fs.mkdir(harness.nativeAt('dir'));
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['a.txt', 'dir'] });
     await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256(''));
 
-    await fs.rm(harness.at('a.txt'));
+    await fs.rm(harness.nativeAt('a.txt'));
 
     await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
     expect(fileHash(seen, 'dir')).toBe(FileReason.NOT_A_FILE);
@@ -170,14 +171,14 @@ describe('WatchFiles', () => {
   });
 
   test('reports a file whose directory was changed', async () => {
-    await fs.mkdir(harness.at('src'));
-    await fs.writeFile(harness.at('src', 'a.ts'), '');
+    await fs.mkdir(harness.nativeAt('src'));
+    await fs.writeFile(harness.nativeAt('src', 'a.ts'), '');
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['src/a.ts'] });
     await expect.poll(() => fileHash(seen, 'src/a.ts')).toEqual(sha256(''));
 
-    await fs.rename(harness.at('src'), harness.at('lib'));
+    await fs.rename(harness.nativeAt('src'), harness.nativeAt('lib'));
 
     await expect.poll(() => fileHash(seen, 'src/a.ts')).toBe(FileReason.NOT_FOUND);
     call.cancel();
@@ -203,9 +204,9 @@ describe('WatchRoots', () => {
 
 describe('ListDirectory', () => {
   test('lists the entries sorted by name', async () => {
-    await fs.mkdir(harness.at('src'));
-    await fs.writeFile(harness.at('b.txt'), '');
-    await fs.writeFile(harness.at('a.txt'), '');
+    await fs.mkdir(harness.nativeAt('src'));
+    await fs.writeFile(harness.nativeAt('b.txt'), '');
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
 
     const { listing } = await harness.client.listDirectory({ root, relativePath: '' });
 
@@ -222,7 +223,7 @@ describe('ListDirectory', () => {
 
   test('counts the entries over the listing limit', async () => {
     for (const name of ['a', 'b', 'c', 'd', 'e']) {
-      await fs.writeFile(harness.at(name), '');
+      await fs.writeFile(harness.nativeAt(name), '');
     }
 
     const { listing } = await harness.client.listDirectory({ root, relativePath: '' });
@@ -232,7 +233,7 @@ describe('ListDirectory', () => {
   });
 
   test('fails for a missing directory and file', async () => {
-    await fs.writeFile(harness.at('a.txt'), '');
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
 
     const missing = harness.client.listDirectory({ root, relativePath: 'missing' });
     await expect(missing).rejects.toMatchObject({ code: Code.NOT_FOUND });
@@ -243,7 +244,7 @@ describe('ListDirectory', () => {
 
 describe('ReadFile', () => {
   test('returns the content with its hash', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'hello');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'hello');
 
     const response = await harness.client.readFile({ root, relativePath: 'a.txt' });
 
@@ -253,14 +254,14 @@ describe('ReadFile', () => {
   });
 
   test('refuses a file over the read limit', async () => {
-    await fs.writeFile(harness.at('big.txt'), 'x'.repeat(1025));
+    await fs.writeFile(harness.nativeAt('big.txt'), 'x'.repeat(1025));
 
     const call = harness.client.readFile({ root, relativePath: 'big.txt' });
     await expect(call).rejects.toMatchObject({ code: Code.RESOURCE_EXHAUSTED });
   });
 
   test('fails for a missing file and directory', async () => {
-    await fs.mkdir(harness.at('dir'));
+    await fs.mkdir(harness.nativeAt('dir'));
 
     const missing = harness.client.readFile({ root, relativePath: 'missing.txt' });
     await expect(missing).rejects.toMatchObject({ code: Code.NOT_FOUND });
@@ -276,34 +277,34 @@ describe('WriteFile', () => {
     const response = await harness.client.writeFile({ root, relativePath: 'a/b/c.txt', content });
 
     expect(response.hash).toEqual(sha256('new'));
-    await expect(fs.readFile(harness.at('a', 'b', 'c.txt'), 'utf8')).resolves.toBe('new');
-    await expect(fs.readdir(harness.at('a', 'b'))).resolves.toEqual(['c.txt']);
+    await expect(fs.readFile(harness.nativeAt('a', 'b', 'c.txt'), 'utf8')).resolves.toBe('new');
+    await expect(fs.readdir(harness.nativeAt('a', 'b'))).resolves.toEqual(['c.txt']);
   });
 
   test('refuses to create a file that already exists', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'old');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'old');
 
     const call = harness.client.writeFile({ root, relativePath: 'a.txt', content });
     await expect(call).rejects.toMatchObject({ code: Code.ALREADY_EXISTS });
-    await expect(fs.readFile(harness.at('a.txt'), 'utf8')).resolves.toBe('old');
+    await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('old');
   });
 
   test('replaces a file that matches the base hash', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'old');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'old');
 
     await harness.client.writeFile({ root, relativePath: 'a.txt', baseHash: sha256('old'), content });
 
-    await expect(fs.readFile(harness.at('a.txt'), 'utf8')).resolves.toBe('new');
+    await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('new');
   });
 
   test('refuses a file that no longer matches the base hash', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'changed');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'changed');
 
     const stale = harness.client.writeFile({ root, relativePath: 'a.txt', baseHash: sha256('old'), content });
     await expect(stale).rejects.toMatchObject({ code: Code.FAILED_PRECONDITION });
     const deleted = harness.client.writeFile({ root, relativePath: 'gone.txt', baseHash: sha256('old'), content });
     await expect(deleted).rejects.toMatchObject({ code: Code.FAILED_PRECONDITION });
-    await expect(fs.readFile(harness.at('a.txt'), 'utf8')).resolves.toBe('changed');
+    await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('changed');
   });
 });
 
@@ -311,11 +312,11 @@ describe('CreateDirectory', () => {
   test('creates the directory and its parent directories', async () => {
     await harness.client.createDirectory({ root, relativePath: 'a/b' });
 
-    expect((await fs.stat(harness.at('a', 'b'))).isDirectory()).toBe(true);
+    expect((await fs.stat(harness.nativeAt('a', 'b'))).isDirectory()).toBe(true);
   });
 
   test('refuses a path that already has an entry', async () => {
-    await fs.mkdir(harness.at('a'));
+    await fs.mkdir(harness.nativeAt('a'));
 
     const call = harness.client.createDirectory({ root, relativePath: 'a' });
     await expect(call).rejects.toMatchObject({ code: Code.ALREADY_EXISTS });
@@ -324,29 +325,29 @@ describe('CreateDirectory', () => {
 
 describe('RenameEntry', () => {
   test('moves the entry and creates the parent directories of its new path', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'hello');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'hello');
 
     await harness.client.renameEntry({ root, relativePath: 'a.txt', newRelativePath: 'dir/b.txt' });
 
-    await expect(fs.readFile(harness.at('dir', 'b.txt'), 'utf8')).resolves.toBe('hello');
-    await expect(fs.readdir(harness.at())).resolves.toEqual(['dir']);
+    await expect(fs.readFile(harness.nativeAt('dir', 'b.txt'), 'utf8')).resolves.toBe('hello');
+    await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['dir']);
   });
 
   test('refuses a new path that already has an entry', async () => {
-    await fs.writeFile(harness.at('a.txt'), 'a');
-    await fs.writeFile(harness.at('b.txt'), 'b');
+    await fs.writeFile(harness.nativeAt('a.txt'), 'a');
+    await fs.writeFile(harness.nativeAt('b.txt'), 'b');
 
     const call = harness.client.renameEntry({ root, relativePath: 'a.txt', newRelativePath: 'b.txt' });
     await expect(call).rejects.toMatchObject({ code: Code.ALREADY_EXISTS });
-    await expect(fs.readFile(harness.at('b.txt'), 'utf8')).resolves.toBe('b');
+    await expect(fs.readFile(harness.nativeAt('b.txt'), 'utf8')).resolves.toBe('b');
   });
 
   test('renames an entry to another capitalization of the same name', async () => {
-    await fs.writeFile(harness.at('readme.md'), '');
+    await fs.writeFile(harness.nativeAt('readme.md'), '');
 
     await harness.client.renameEntry({ root, relativePath: 'readme.md', newRelativePath: 'README.md' });
 
-    await expect(fs.readdir(harness.at())).resolves.toEqual(['README.md']);
+    await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['README.md']);
   });
 
   test('fails for a missing entry', async () => {
@@ -357,22 +358,22 @@ describe('RenameEntry', () => {
 
 describe('DeleteEntry', () => {
   test('deletes a directory recursively', async () => {
-    await fs.mkdir(harness.at('dir', 'nested'), { recursive: true });
-    await fs.writeFile(harness.at('dir', 'nested', 'a.txt'), '');
+    await fs.mkdir(harness.nativeAt('dir', 'nested'), { recursive: true });
+    await fs.writeFile(harness.nativeAt('dir', 'nested', 'a.txt'), '');
 
     await harness.client.deleteEntry({ root, relativePath: 'dir' });
 
-    await expect(fs.readdir(harness.at())).resolves.toEqual([]);
+    await expect(fs.readdir(harness.nativeAt())).resolves.toEqual([]);
   });
 
   test.runIf(posix)('deletes a symbolic link and not what it references', async () => {
-    await fs.mkdir(harness.at('dir'));
-    await fs.writeFile(harness.at('dir', 'a.txt'), '');
-    await fs.symlink(harness.at('dir'), harness.at('link'));
+    await fs.mkdir(harness.nativeAt('dir'));
+    await fs.writeFile(harness.nativeAt('dir', 'a.txt'), '');
+    await fs.symlink(harness.nativeAt('dir'), harness.nativeAt('link'));
 
     await harness.client.deleteEntry({ root, relativePath: 'link' });
 
-    await expect(fs.readdir(harness.at('dir'))).resolves.toEqual(['a.txt']);
+    await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual(['a.txt']);
   });
 
   test('fails for a missing entry', async () => {
@@ -388,13 +389,13 @@ describe('polling', () => {
   });
 
   test('reports a directory whose changes are not notified', async () => {
-    await fs.mkdir(harness.at('node_modules', 'pkg'), { recursive: true });
+    await fs.mkdir(harness.nativeAt('node_modules', 'pkg'), { recursive: true });
     const call = harness.client.watchDirectories();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['node_modules/pkg'] });
     await expect.poll(() => directoryNames(seen, 'node_modules/pkg')).toEqual([]);
 
-    await fs.writeFile(harness.at('node_modules', 'pkg', 'index.js'), '');
+    await fs.writeFile(harness.nativeAt('node_modules', 'pkg', 'index.js'), '');
 
     await expect.poll(() => directoryNames(seen, 'node_modules/pkg')).toEqual(['index.js']);
     call.cancel();
@@ -413,8 +414,8 @@ describe('polling', () => {
       .toMatchObject([{ root: missing, mode: Mode.POLL, reason: Reason.OTHER }]);
     await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
 
-    await fs.mkdir(harness.at('missing'));
-    await fs.writeFile(harness.at('missing', 'a.txt'), 'late');
+    await fs.mkdir(harness.nativeAt('missing'));
+    await fs.writeFile(harness.nativeAt('missing', 'a.txt'), 'late');
 
     await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256('late'));
     call.cancel();
