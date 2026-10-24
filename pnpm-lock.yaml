@@ -22,6 +22,9 @@ importers:
       execa:
         specifier: ^10.1.1
         version: 10.1.1
+      which-command:
+        specifier: ^0.1.0
+        version: 0.1.0
       ws:
         specifier: ^8.21.3
         version: 8.22.0

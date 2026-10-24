@@ -58,7 +58,7 @@ export class Harness<S extends DescService> {
   async close(): Promise<void> {
     this.channel.close();
     await this.server.close();
-    await fs.rm(this.nativeRoot, { recursive: true, force: true });
+    await fs.rm(this.nativeRoot, { recursive: true, force: true, maxRetries: 10 }); // Windows may report EBUSY briefly.
   }
 }
 

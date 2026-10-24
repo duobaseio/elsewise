@@ -38,6 +38,7 @@ export async function* watchStatus(
   };
 
   const subscriptions = (await watchedDirectories(git)).map((root) => options.watcher.watch(root, notified));
+  await Promise.all(subscriptions.map((subscription) => subscription.ready));
   const poll = setInterval(mark, options.pollIntervalMs);
   signal.addEventListener('abort', mark, { once: true });
 
@@ -74,7 +75,7 @@ export async function* watchStatus(
 
 /** Returns the git root and the main git directory (for a linked worktree). */
 async function watchedDirectories(git: Git): Promise<string[]> {
-  const gitDir = (await git.text(['rev-parse', '--path-format=absolute', '--git-dir'])).trim();
+  const gitDir = path.normalize((await git.text(['rev-parse', '--path-format=absolute', '--git-dir'])).trim());
   const relative = path.relative(git.root, gitDir);
   const inside = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
   return inside ? [git.root] : [git.root, gitDir];

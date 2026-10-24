@@ -87,6 +87,7 @@ export class TestRepo extends Repo {
 
   /** Deletes the repository. */
   remove(): Promise<void> {
-    return fs.rm(this.nativeDirectory, { recursive: true, force: true });
+    // Windows may report EBUSY briefly.
+    return fs.rm(this.nativeDirectory, { recursive: true, force: true, maxRetries: 10 });
   }
 }

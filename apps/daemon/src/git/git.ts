@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { Code, TransportError } from '@elsewise/transport';
 import { execa } from 'execa';
+import { whichCommand } from 'which-command';
 import { GitError } from './error';
 
 /** Overrides the daemon's own environment on git. */
@@ -47,9 +48,10 @@ export class Git {
 
   /** Runs git with the arguments and returns stdout. */
   async run(args: string[], options: RunOptions = {}): Promise<Buffer> {
+    const env = { ...OVERRIDES, GIT_CEILING_DIRECTORIES: path.dirname(this.root), ...options.env };
     const subprocess = execa('git', args, {
       cwd: this.root,
-      env: { ...OVERRIDES, GIT_CEILING_DIRECTORIES: path.dirname(this.root), ...options.env },
+      env,
       input: options.stdin,
       cancelSignal: options.signal,
       maxBuffer: { stdout: this.limitBytes },
@@ -68,11 +70,12 @@ export class Git {
     if (result.isMaxBuffer) {
       throw new TransportError(Code.RESOURCE_EXHAUSTED, 'the output is over the read limit');
     }
-    if (result.code === 'ENOENT') {
+    const accepted = result.exitCode !== undefined && (options.exitCodes ?? [0]).includes(result.exitCode);
+    if (result.code === 'ENOENT' || (!accepted && (await missingOnWindows(env)))) {
       throw new TransportError(Code.FAILED_PRECONDITION, 'git is not installed on the daemon machine');
     }
     const stdout = view(result.stdout);
-    if (result.exitCode === undefined || !(options.exitCodes ?? [0]).includes(result.exitCode)) {
+    if (!accepted) {
       throw new GitError(result.exitCode ?? null, view(result.stderr).toString(), stdout.toString());
     }
     return stdout;
@@ -86,4 +89,13 @@ export class Git {
 
 function view(bytes: Uint8Array): Buffer {
   return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
+
+/**
+ * Returns whether git is missing on Windows.
+ *
+ * Execa on Windows returns exit code 1 instead of ENOENT.
+ */
+async function missingOnWindows(env: Record<string, string>): Promise<boolean> {
+  return process.platform === 'win32' && (await whichCommand('git', { path: env.PATH })) === undefined;
 }

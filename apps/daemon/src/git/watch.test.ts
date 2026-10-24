@@ -59,7 +59,7 @@ function start(git: Git, { pollIntervalMs = 60_000 } = {}): Stream {
     watch: (root: string, listener: ChangeListener) => {
       stream.roots.push(root);
       stream.notify = listener;
-      return { close: stream.close };
+      return { ready: Promise.resolve(), close: stream.close };
     },
   } as unknown as DirectoryWatcher;
   const statuses = watchStatus(git, stream.abort.signal, {
