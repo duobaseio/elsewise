@@ -53,6 +53,11 @@ build script has to name each native binary itself.
 
 No aliases. Every import inside the package is relative, including tests reaching back into `src/`.
 
+## Ordering
+
+Exported declarations come first in a file, and the private helpers they call go below them. In a class, `#private`
+members go after the public ones.
+
 ## Generated code
 
 Never hand-edit; Biome excludes `src/gen/`. `prepare` regenerates on install.

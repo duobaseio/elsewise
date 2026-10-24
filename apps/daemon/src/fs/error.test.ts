@@ -1,6 +1,6 @@
 import { Code, TransportError } from '@elsewise/transport';
 import { describe, expect, test } from 'vitest';
-import { attempt, errnoOf, toTransportError } from './error';
+import { attempt, errnoOf, fsToTransportError } from './error';
 
 function errno(code: string): NodeJS.ErrnoException {
   return Object.assign(new Error(`${code}: failed`), { code });
@@ -16,12 +16,12 @@ describe('errnoOf', () => {
   });
 });
 
-describe('toTransportError', () => {
+describe('fsToTransportError', () => {
   test.each([
     ['ENOENT', Code.NOT_FOUND],
     ['EMFILE', Code.UNKNOWN],
   ])('maps %s to %s', (code, expected) => {
-    const error = toTransportError(errno(code));
+    const error = fsToTransportError(errno(code));
 
     expect(error.code).toBe(expected);
     expect(error.message).toBe(`${code}: failed`);
@@ -30,11 +30,11 @@ describe('toTransportError', () => {
   test('returns a transport error as is', () => {
     const error = new TransportError(Code.RESOURCE_EXHAUSTED, 'too big');
 
-    expect(toTransportError(error)).toBe(error);
+    expect(fsToTransportError(error)).toBe(error);
   });
 
   test('wraps a thrown value that is not an error', () => {
-    const error = toTransportError('boom');
+    const error = fsToTransportError('boom');
 
     expect(error.code).toBe(Code.UNKNOWN);
     expect(error.message).toBe('boom');
