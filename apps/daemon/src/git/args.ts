@@ -9,6 +9,15 @@ export function guardOperand(value: string, operation: string): string {
   return value;
 }
 
+/** Returns the value as a ref name and guards against invalid/malicious operands. */
+export function guardRefName(value: string, operation: string): string {
+  // Values with a colon gets converted to a refspec on git.
+  if (value.includes(':')) {
+    throw new TransportError(Code.INVALID_ARGUMENT, `"${value}" is not a valid ${operation}`);
+  }
+  return guardOperand(value, operation);
+}
+
 /** Returns the revision or `HEAD`. */
 export function revisionOrHead(revision: string): string {
   return revision === '' ? 'HEAD' : guardOperand(revision, 'revision');

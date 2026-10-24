@@ -1,6 +1,15 @@
 import { Code, TransportError } from '@elsewise/transport';
 import { describe, expect, test } from 'vitest';
-import { filePath, guardOperand, mainline, pathspecs, revisionOrHead, revisions, withPathspecs } from './args';
+import {
+  filePath,
+  guardOperand,
+  guardRefName,
+  mainline,
+  pathspecs,
+  revisionOrHead,
+  revisions,
+  withPathspecs,
+} from './args';
 
 function thrown(operation: () => unknown): unknown {
   try {
@@ -23,6 +32,18 @@ describe('guardOperand', () => {
       code: Code.INVALID_ARGUMENT,
       message: `"${value}" is not a valid branch`,
     });
+  });
+});
+
+describe('guardRefName', () => {
+  test('refuses a colon on top of guardOperand', () => {
+    expect(guardRefName('feature/x', 'branch name')).toBe('feature/x');
+    expect(thrown(() => guardRefName('main:refs/heads/protected', 'branch name'))).toMatchObject({
+      name: 'TransportError',
+      code: Code.INVALID_ARGUMENT,
+      message: '"main:refs/heads/protected" is not a valid branch name',
+    });
+    expect(thrown(() => guardRefName('--all', 'branch name'))).toBeInstanceOf(TransportError);
   });
 });
 

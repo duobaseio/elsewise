@@ -68,7 +68,16 @@ import {
   type UpdateRemoteRequest,
   type WatchStatusRequest,
 } from '../gen/elsewise/daemon/git/v1/git_service_pb';
-import { filePath, guardOperand, mainline, pathspecs, revisionOrHead, revisions, withPathspecs } from './args';
+import {
+  filePath,
+  guardOperand,
+  guardRefName,
+  mainline,
+  pathspecs,
+  revisionOrHead,
+  revisions,
+  withPathspecs,
+} from './args';
 import { readBlame } from './commands/blame';
 import { readChangedEntries, readCommit, readLog } from './commands/commit';
 import type { ProgressInit } from './commands/progress';
@@ -698,7 +707,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     let remote: string;
     if (request.target.case === 'tag') {
       // Push a tag.
-      refspec = `refs/tags/${guardOperand(request.target.value, 'tag name')}`;
+      refspec = `refs/tags/${guardRefName(request.target.value, 'tag name')}`;
       if (request.remote === '') {
         throw new TransportError(Code.INVALID_ARGUMENT, 'pushing a tag needs a remote');
       }
@@ -707,7 +716,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
       // Push or delete a branch.
       const branch =
         request.target.case === 'branch'
-          ? guardOperand(request.target.value, 'branch name')
+          ? guardRefName(request.target.value, 'branch name')
           : await attempt(() => currentBranch(git));
       refspec = `refs/heads/${branch}`;
       if (request.remote !== '') {
