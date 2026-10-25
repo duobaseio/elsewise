@@ -1,4 +1,4 @@
-import type { ApplicationCommand, ContextMenu } from '@elsewise/plugin';
+import type { ApplicationCommand, ContextMenuGroup } from '@elsewise/plugin';
 import { describe, expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -28,32 +28,35 @@ const COMMANDS: ApplicationCommand[] = [
 ];
 
 // Groups with keys, a disabled item, checked and unchecked items, and a submenu.
-const MENU: ContextMenu = {
-  submenus: { refactor: 'Refactor' },
-  groups: {
-    actions: { order: 0 },
-    navigate: { order: 10 },
-    refactor: { order: 20 },
-    view: { order: 30 },
-    inner: { menu: 'refactor', order: 0 },
-  },
-  items: {
-    actions: [{ type: 'item', order: 0, command: 'actions' }],
-    navigate: [
-      { type: 'item', order: 0, command: 'usages' },
-      { type: 'item', order: 10, command: 'definition' },
-    ],
-    refactor: [{ type: 'submenu', order: 0, submenu: 'refactor' }],
-    view: [
-      { type: 'item', order: 0, command: 'wrap' },
-      { type: 'item', order: 10, command: 'whitespace' },
-    ],
-    inner: [
-      { type: 'item', order: 0, command: 'rename' },
-      { type: 'item', order: 10, command: 'extract' },
+const MENU: readonly ContextMenuGroup[] = [
+  { id: 'actions', order: 0, items: [{ order: 0, command: 'actions' }] },
+  {
+    id: 'navigate',
+    order: 10,
+    items: [
+      { order: 0, command: 'usages' },
+      { order: 10, command: 'definition' },
     ],
   },
-};
+  { id: 'refactor', order: 20, items: [{ order: 0, label: 'Refactor', submenu: 'refactor' }] },
+  {
+    id: 'view',
+    order: 30,
+    items: [
+      { order: 0, command: 'wrap' },
+      { order: 10, command: 'whitespace' },
+    ],
+  },
+  {
+    id: 'inner',
+    in: 'refactor',
+    order: 0,
+    items: [
+      { order: 0, command: 'rename' },
+      { order: 10, command: 'extract' },
+    ],
+  },
+];
 
 describe.each(THEMES)('context menu (%s)', (theme) => {
   test('open submenu', async () => {

@@ -69,7 +69,7 @@ describe('load', () => {
     expect(events).toEqual(['enable a']);
   });
 
-  test('adds context menus until unloaded', async () => {
+  test('adds context menu until unloaded', async () => {
     const { editor, loader } = setUp();
     await loader.load(
       'a',
@@ -77,18 +77,18 @@ describe('load', () => {
         export default function () {
           return {
             onEnable(app) {
-              return [app.editor.addContextMenus([{ groups: { 'a.group': { order: 0 } } }])];
+              return [app.editor.addContextMenu([{ id: 'a.group', order: 0, items: [] }])];
             },
           };
         }
       `),
     );
 
-    expect(editor.contextMenu.groups['a.group']).toEqual({ order: 0 });
+    expect(editor.contextMenu).toContainEqual({ id: 'a.group', order: 0, items: [] });
 
     await loader.unload('a');
 
-    expect(editor.contextMenu.groups['a.group']).toBeUndefined();
+    expect(editor.contextMenu).not.toContainEqual({ id: 'a.group', order: 0, items: [] });
   });
 
   test('adds commands', async () => {

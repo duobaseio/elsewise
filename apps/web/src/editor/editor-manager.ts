@@ -2,7 +2,6 @@ import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type {
   Commands,
-  ContextMenu,
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuSubmenuItem,
@@ -31,8 +30,8 @@ export class EditorManager implements Editor {
   private current: EditorView | null = null;
   private addedExtensions: readonly (readonly (Extension | ((document: EditorDocument) => Extension))[])[] = [];
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
-  private addedContextMenus: readonly (readonly Partial<ContextMenu>[])[] = [[DEFAULT_CONTEXT_MENU]];
-  private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus.flat());
+  private addedContextMenu: readonly (readonly ContextMenuGroup[])[] = [DEFAULT_CONTEXT_MENU];
+  private currentContextMenu: readonly ContextMenuGroup[] = this.merge(this.addedContextMenu.flat());
   private addedToolbarItems: readonly (readonly EditorToolbarItem[])[] = [];
   private currentToolbarItems: readonly EditorToolbarItem[] = [];
 
@@ -77,20 +76,20 @@ export class EditorManager implements Editor {
   }
 
   /**
-   * The active editor context menu.
+   * The context menu's groups, one per id, in order of first addition.
    */
-  get contextMenu(): ContextMenu {
+  get contextMenu(): readonly ContextMenuGroup[] {
     return this.currentContextMenu;
   }
 
-  addContextMenus(menus: readonly Partial<ContextMenu>[]): Disposable {
-    const added = [...menus];
-    this.addedContextMenus = [...this.addedContextMenus, added];
-    this.currentContextMenu = this.merge(this.addedContextMenus.flat());
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    const added = [...groups];
+    this.addedContextMenu = [...this.addedContextMenu, added];
+    this.currentContextMenu = this.merge(this.addedContextMenu.flat());
     this.notify();
     return () => {
-      this.addedContextMenus = this.addedContextMenus.filter((other) => other !== added);
-      this.currentContextMenu = this.merge(this.addedContextMenus.flat());
+      this.addedContextMenu = this.addedContextMenu.filter((other) => other !== added);
+      this.currentContextMenu = this.merge(this.addedContextMenu.flat());
       this.notify();
     };
   }
@@ -114,40 +113,44 @@ export class EditorManager implements Editor {
     };
   }
 
-  // Returns `menus` as one: the first submenu or group added with an id wins, and the items are in order of addition.
-  private merge(menus: readonly Partial<ContextMenu>[]): ContextMenu {
-    const submenus: Record<string, string> = {};
-    const groups: Record<string, ContextMenuGroup> = {};
-    const items: Record<string, (ContextMenuItem | ContextMenuSubmenuItem)[]> = {};
-    for (const menu of menus) {
-      for (const [id, submenu] of Object.entries(menu.submenus ?? {})) {
-        if (Object.hasOwn(submenus, id)) {
-          console.warn(`Context submenu ${id} was already added`);
-          continue;
-        }
-
-        submenus[id] = submenu;
+  // Returns `groups` with those of an id as one: their items in order of addition, and the first defined `order` and
+  // `in`.
+  private merge(groups: readonly ContextMenuGroup[]): ContextMenuGroup[] {
+    const merged = new Map<
+      string,
+      { order?: number; in?: string; items: (ContextMenuItem | ContextMenuSubmenuItem)[] }
+    >();
+    for (const group of groups) {
+      const existing = merged.get(group.id);
+      if (existing === undefined) {
+        merged.set(group.id, {
+          ...(group.order === undefined ? {} : { order: group.order }),
+          ...(group.in === undefined ? {} : { in: group.in }),
+          items: [...group.items],
+        });
+        continue;
       }
 
-      for (const [id, group] of Object.entries(menu.groups ?? {})) {
-        if (Object.hasOwn(groups, id)) {
-          console.warn(`Context menu group ${id} was already added`);
-          continue;
-        }
-
-        groups[id] = group;
-      }
-
-      for (const [id, added] of Object.entries(menu.items ?? {})) {
-        if (Object.hasOwn(items, id)) {
-          items[id].push(...added);
-        } else {
-          items[id] = [...added];
+      if (group.order !== undefined) {
+        if (existing.order === undefined) {
+          existing.order = group.order;
+        } else if (existing.order !== group.order) {
+          console.warn(`Context menu group ${group.id} already has order ${existing.order}, ignoring ${group.order}`);
         }
       }
+
+      if (group.in !== undefined) {
+        if (existing.in === undefined) {
+          existing.in = group.in;
+        } else if (existing.in !== group.in) {
+          console.warn(`Context menu group ${group.id} is already in ${existing.in}, ignoring ${group.in}`);
+        }
+      }
+
+      existing.items.push(...group.items);
     }
 
-    return { submenus, groups, items };
+    return [...merged].map(([id, group]) => ({ id, ...group }));
   }
 
   /**

@@ -13,12 +13,15 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { ContextMenu as Menu } from '@elsewise/plugin';
+import type { ContextMenuGroup } from '@elsewise/plugin';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { type CommandManager, useCommandManager } from '@/command/command-manager';
 
 export interface CommandContextMenuProps {
-  menu: Menu;
+  /**
+   * The menu's groups, one per id.
+   */
+  menu: readonly ContextMenuGroup[];
   view?: RefObject<EditorView | null>;
   /**
    * Called once the menu has closed, before the clicked item runs, e.g. to give the focus back.
@@ -95,34 +98,35 @@ export function CommandContextMenu({ menu, view, onClosed, className, children }
   );
 }
 
-// Returns the groups of the submenu at the end of `path`, or of the menu itself when it is empty, that have an entry to
-// show, sorted. `path` holds the ids of the submenus from the menu down, so a submenu inside itself is skipped. A
-// command or submenu is placed once per group.
-function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, path: readonly string[]): Group[] {
+// Returns the shown groups of the submenu at the end of `path`, or of the menu when it is empty, sorted. `path` holds the
+// submenu ids from the menu down, so a submenu inside itself is skipped. A command or submenu is placed once per group.
+function resolve(
+  menu: readonly ContextMenuGroup[],
+  commands: CommandManager,
+  view: EditorView | null,
+  path: readonly string[],
+): Group[] {
   const lsp = view === null ? null : LSPPlugin.get(view);
   const groups: Group[] = [];
-  const sorted = Object.entries(menu.groups).sort(
-    ([a, x], [b, y]) =>
-      (x.order ?? Number.POSITIVE_INFINITY) - (y.order ?? Number.POSITIVE_INFINITY) || a.localeCompare(b),
-  );
-  for (const [id, group] of sorted) {
-    if (group.menu !== path.at(-1)) {
-      continue;
-    }
-
+  const sorted = menu
+    .filter((group) => group.in === path.at(-1))
+    .sort(
+      (a, b) =>
+        (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) || a.id.localeCompare(b.id),
+    );
+  for (const group of sorted) {
     const entries: Entry[] = [];
     const placed = new Set<string>();
-    for (const item of Object.hasOwn(menu.items, id) ? menu.items[id] : []) {
-      const key = item.type === 'submenu' ? `submenu:${item.submenu}` : `item:${item.command}`;
+    for (const item of group.items) {
+      const key = 'submenu' in item ? `submenu:${item.submenu}` : `item:${item.command}`;
       if (placed.has(key)) {
         continue;
       }
 
       placed.add(key);
 
-      if (item.type === 'submenu') {
-        const declared = Object.hasOwn(menu.submenus, item.submenu) ? menu.submenus[item.submenu] : undefined;
-        if (declared === undefined || path.includes(item.submenu)) {
+      if ('submenu' in item) {
+        if (path.includes(item.submenu)) {
           continue;
         }
 
@@ -131,7 +135,7 @@ function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, 
           entries.push({
             type: 'submenu',
             id: item.submenu,
-            label: declared,
+            label: item.label,
             order: item.order ?? Number.POSITIVE_INFINITY,
             groups: inner,
           });
@@ -181,7 +185,7 @@ function resolve(menu: Menu, commands: CommandManager, view: EditorView | null, 
 
     if (entries.length > 0) {
       entries.sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
-      groups.push({ id, entries });
+      groups.push({ id: group.id, entries });
     }
   }
 

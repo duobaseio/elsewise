@@ -4,7 +4,7 @@ import { userEvent } from 'vitest/browser';
 import type { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { builtInCommands } from '../../test/commands';
-import { group, item, labels, menu, menuitem, mount, open, submenu } from '../../test/context-menu';
+import { group, item, labels, menuitem, mount, open, submenu } from '../../test/context-menu';
 
 // Returns an editor command with `id` whose label is `id`, with `run` and the `rest` of its fields.
 function command(id: string, run: EditorCommand['run'] = () => true, rest: Partial<EditorCommand> = {}): EditorCommand {
@@ -23,7 +23,7 @@ describe('EditorContextMenu', () => {
   test('runs command with view on click', async () => {
     const run = vi.fn();
     const [editor, commands] = setUp([command('Item', run)]);
-    editor.addContextMenus([menu({ groups: { a: group() }, items: { a: [item('Item')] } })]);
+    editor.addContextMenu([group('a', [item('Item')])]);
     const view = await mount(editor, commands);
 
     await open(view, 0);
@@ -33,7 +33,7 @@ describe('EditorContextMenu', () => {
   test('focuses editor before running item', async () => {
     let focused: boolean | undefined;
     const [editor, commands] = setUp([command('Item', (_, view) => (focused = view.hasFocus))]);
-    editor.addContextMenus([menu({ groups: { a: group() }, items: { a: [item('Item')] } })]);
+    editor.addContextMenu([group('a', [item('Item')])]);
     const view = await mount(editor, commands);
 
     await open(view, 0);
@@ -43,21 +43,12 @@ describe('EditorContextMenu', () => {
 
   test('fills submenu from several additions, and keeps it when first is disposed', async () => {
     const [editor, commands] = setUp([command('A'), command('B'), command('Item')]);
-    editor.addContextMenus([menu({ groups: { base: group(0) }, items: { base: [item('Item')] } })]);
-    const dispose = editor.addContextMenus([
-      menu({
-        submenus: { more: 'More' },
-        groups: { plugin: group(), inner: group(0, 'more') },
-        items: { plugin: [submenu('more')], inner: [item('A')] },
-      }),
+    editor.addContextMenu([group('base', [item('Item')], 0)]);
+    const dispose = editor.addContextMenu([
+      group('plugin', [submenu('more', 'More')]),
+      group('inner', [item('A')], 0, 'more'),
     ]);
-    editor.addContextMenus([
-      menu({
-        submenus: { more: 'Other' },
-        groups: { plugin: group(), inner: group(0, 'more') },
-        items: { inner: [item('B')] },
-      }),
-    ]);
+    editor.addContextMenu([group('plugin', []), group('inner', [item('B')], 0, 'more')]);
     const view = await mount(editor, commands);
 
     await open(view, 0);
@@ -78,7 +69,7 @@ describe('EditorContextMenu', () => {
 describe('RIGHT_CLICK_CONTEXT_MENU', () => {
   test('moves caret to right-click outside selection, and keeps it inside', async () => {
     const [editor, commands] = setUp([command('Item')]);
-    editor.addContextMenus([menu({ groups: { a: group() }, items: { a: [item('Item')] } })]);
+    editor.addContextMenu([group('a', [item('Item')])]);
     const view = await mount(editor, commands);
     const second = view.state.doc.line(2);
 

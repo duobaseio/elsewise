@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import {
-  type ContextMenu,
+  type ContextMenuGroup,
   DEFAULT_COMMANDS,
   DEFAULT_EDITOR_CONTEXT_MENU,
   DEFAULT_KEYS,
@@ -8,47 +8,51 @@ import {
 } from '@elsewise/plugin';
 
 const { actions, clipboard, navigate, diff, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
+const { compare } = diff.items;
 const { lsp } = DEFAULT_COMMANDS.editor;
 
-export const DEFAULT_CONTEXT_MENU: ContextMenu = {
-  submenus: { [diff.items.compare.id]: 'Compare with…' },
-  groups: {
-    [actions.id]: { order: actions.order },
-    [clipboard.id]: { order: clipboard.order },
-    [navigate.id]: { order: navigate.order },
-    [diff.id]: { order: diff.order },
-    [diff.items.compare.id]: { menu: diff.items.compare.id, order: diff.items.compare.order },
-    [diff.items.compare.none.id]: { menu: diff.items.compare.id, order: diff.items.compare.none.order },
-    [refactor.id]: { order: refactor.order },
+export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
+  {
+    id: actions.id,
+    order: actions.order,
+    items: [{ order: actions.items.show, command: DEFAULT_COMMANDS.editor.actions.show }],
   },
-  items: {
-    [actions.id]: [{ type: 'item', order: actions.items.show, command: DEFAULT_COMMANDS.editor.actions.show }],
-    [clipboard.id]: [
-      { type: 'item', order: clipboard.items.cut, command: DEFAULT_COMMANDS.editor.clipboard.cut },
-      { type: 'item', order: clipboard.items.copy, command: DEFAULT_COMMANDS.editor.clipboard.copy },
-      { type: 'item', order: clipboard.items.paste, command: DEFAULT_COMMANDS.editor.clipboard.paste },
+  {
+    id: clipboard.id,
+    order: clipboard.order,
+    items: [
+      { order: clipboard.items.cut, command: DEFAULT_COMMANDS.editor.clipboard.cut },
+      { order: clipboard.items.copy, command: DEFAULT_COMMANDS.editor.clipboard.copy },
+      { order: clipboard.items.paste, command: DEFAULT_COMMANDS.editor.clipboard.paste },
     ],
-    [navigate.id]: [
-      { type: 'item', order: navigate.items.usages, command: lsp.findUsages },
-      { type: 'item', order: navigate.items.definition, command: lsp.goToDefinition },
-    ],
-    [diff.id]: [{ type: 'submenu', submenu: diff.items.compare.id }],
-    [diff.items.compare.id]: [
-      { type: 'item', order: diff.items.compare.items.unstaged, command: DEFAULT_COMMANDS.editor.diff.unstaged },
-      { type: 'item', order: diff.items.compare.items.uncommitted, command: DEFAULT_COMMANDS.editor.diff.uncommitted },
-      { type: 'item', order: diff.items.compare.items.branch, command: DEFAULT_COMMANDS.editor.diff.branch },
-    ],
-    [diff.items.compare.none.id]: [
-      {
-        type: 'item',
-        order: diff.items.compare.none.items.none,
-        command: DEFAULT_COMMANDS.editor.diff.close,
-        label: 'None',
-      },
-    ],
-    [refactor.id]: [{ type: 'item', order: refactor.items.rename, command: lsp.rename }],
   },
-};
+  {
+    id: navigate.id,
+    order: navigate.order,
+    items: [
+      { order: navigate.items.usages, command: lsp.findUsages },
+      { order: navigate.items.definition, command: lsp.goToDefinition },
+    ],
+  },
+  { id: diff.id, order: diff.order, items: [{ order: compare.order, label: 'Compare with…', submenu: compare.id }] },
+  {
+    id: compare.groups.changes.id,
+    order: compare.groups.changes.order,
+    in: compare.id,
+    items: [
+      { order: compare.groups.changes.items.unstaged, command: DEFAULT_COMMANDS.editor.diff.unstaged },
+      { order: compare.groups.changes.items.uncommitted, command: DEFAULT_COMMANDS.editor.diff.uncommitted },
+      { order: compare.groups.changes.items.branch, command: DEFAULT_COMMANDS.editor.diff.branch },
+    ],
+  },
+  {
+    id: compare.groups.none.id,
+    order: compare.groups.none.order,
+    in: compare.id,
+    items: [{ order: compare.groups.none.items.none, label: 'None', command: DEFAULT_COMMANDS.editor.diff.close }],
+  },
+  { id: refactor.id, order: refactor.order, items: [{ order: refactor.items.rename, command: lsp.rename }] },
+];
 
 export const CUT: EditorCommand = {
   scope: 'editor',

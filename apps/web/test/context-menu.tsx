@@ -3,7 +3,7 @@ import { foldGutter, LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { ContextMenu, ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem } from '@elsewise/plugin';
 import { useEffect, useRef } from 'react';
 import { expect } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -97,22 +97,22 @@ export function labels(root: ParentNode = document): (string | null | undefined)
   });
 }
 
-/** Returns a menu with `submenus`, `groups` and `items`. */
-export function menu({ submenus = {}, groups = {}, items = {} }: Partial<ContextMenu>): ContextMenu {
-  return { submenus, groups, items };
-}
-
-/** Returns a group at `order`, or without one, in the submenu with id `menu`, or in the menu itself. */
-export function group(order?: number, menu?: string): ContextMenuGroup {
-  return { ...(menu === undefined ? {} : { menu }), ...(order === undefined ? {} : { order }) };
+/** Returns the group `id` with `items` at `order`, or without one, in the submenu `in`, or in the menu itself. */
+export function group(
+  id: string,
+  items: readonly (ContextMenuItem | ContextMenuSubmenuItem)[],
+  order?: number,
+  in_?: string,
+): ContextMenuGroup {
+  return { id, ...(order === undefined ? {} : { order }), ...(in_ === undefined ? {} : { in: in_ }), items };
 }
 
 /** Returns an item that runs the command with `id` at `order`, or without one. */
 export function item(id: string, order?: number): ContextMenuItem {
-  return { type: 'item', ...(order === undefined ? {} : { order }), command: id };
+  return { ...(order === undefined ? {} : { order }), command: id };
 }
 
-/** Returns an item that opens the submenu with `id` at `order`, or without one. */
-export function submenu(id: string, order?: number): ContextMenuSubmenuItem {
-  return { type: 'submenu', ...(order === undefined ? {} : { order }), submenu: id };
+/** Returns an item labelled `label` that opens the submenu with `id` at `order`, or without one. */
+export function submenu(id: string, label: string, order?: number): ContextMenuSubmenuItem {
+  return { ...(order === undefined ? {} : { order }), label, submenu: id };
 }

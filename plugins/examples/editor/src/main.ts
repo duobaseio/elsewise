@@ -59,28 +59,26 @@ export default function ({ id }: PluginInfo): Plugin {
             [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
           ),
         ]),
-        editor.addContextMenus([
+        editor.addContextMenu([
+          { id: DEFAULT_EDITOR_CONTEXT_MENU.refactor.id, items: [{ order: 20, command: `${id}.leaveAnExcuse` }] },
           {
-            submenus: { [`${id}.tone`]: 'Tone of voice' },
-            groups: {
-              [`${id}.reactions`]: { order: 50 },
-              [`${id}.tone`]: { order: 60 },
-              [`${id}.tones`]: { menu: `${id}.tone` },
-            },
-            items: {
-              [DEFAULT_EDITOR_CONTEXT_MENU.refactor.id]: [{ type: 'item', order: 20, command: `${id}.leaveAnExcuse` }],
-              [`${id}.reactions`]: [
-                { type: 'item', order: 10, command: `${id}.shrug` },
-                { type: 'item', order: 20, command: `${id}.flipTheTable` },
-                { type: 'item', order: 30, command: `${id}.rollAD20` },
-              ],
-              [`${id}.tone`]: [{ type: 'submenu', submenu: `${id}.tone` }],
-              [`${id}.tones`]: [
-                { type: 'item', order: 10, command: `${id}.uwu` },
-                { type: 'item', order: 20, command: `${id}.vaporwave` },
-                { type: 'item', order: 30, command: `${id}.mocking` },
-              ],
-            },
+            id: `${id}.reactions`,
+            order: 50,
+            items: [
+              { order: 10, command: `${id}.shrug` },
+              { order: 20, command: `${id}.flipTheTable` },
+              { order: 30, command: `${id}.rollAD20` },
+            ],
+          },
+          { id: `${id}.tone`, order: 60, items: [{ label: 'Tone of voice', submenu: `${id}.tone` }] },
+          {
+            id: `${id}.tones`,
+            in: `${id}.tone`,
+            items: [
+              { order: 10, command: `${id}.uwu` },
+              { order: 20, command: `${id}.vaporwave` },
+              { order: 30, command: `${id}.mocking` },
+            ],
           },
         ]),
       ];
