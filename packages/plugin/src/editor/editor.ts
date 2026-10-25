@@ -5,7 +5,7 @@ import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Tag } from '@lezer/highlight';
 import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol';
-import type { ContextMenu } from '../context-menu.ts';
+import type { ContextMenuGroup } from '../context-menu.ts';
 import type { Disposable } from '../plugin.ts';
 import type { EditorDiffs } from './diff.ts';
 import type { EditorLanguages } from './language.ts';
@@ -130,11 +130,13 @@ export interface Editor {
   addToolbarItems(items: readonly EditorToolbarItem[]): Disposable;
 
   /**
-   * Adds `menus` to the context menu.
+   * Adds `groups`, and their items, to the context menu.
    *
-   * Returns a disposable that removes the `menus`.
+   * See {@link ContextMenuGroup} for adding to a built-in group or submenu.
+   *
+   * Returns a disposable that removes the `groups`.
    */
-  addContextMenus(menus: readonly Partial<ContextMenu>[]): Disposable;
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
 }
 
 /**

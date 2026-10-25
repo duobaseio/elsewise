@@ -13,7 +13,7 @@ import type { ThemeVariant } from './theme.ts';
  *       const index = await buildIndex();
  *       return [
  *         app.commands.add([...]),
- *         app.editor.addContextMenus([...]),
+ *         app.editor.addContextMenu([...]),
  *         () => index.close(),
  *       ];
  *     },
