@@ -25,6 +25,8 @@ import { Editor } from '@/editor/editor';
 import { COMMANDS, EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../test/commands';
 import { StubTransport } from '../../test/stub-transport';
 
 const { EDITOR } = vi.hoisted(() => ({
@@ -75,6 +77,8 @@ async function mountEditor(
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
   });
   const screen = await render(
     shell(
@@ -462,6 +466,8 @@ async function mountDiff(source: string | null, layout: DiffLayout, editor = new
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
   });
   const screen = await render(
     shell(

@@ -26,6 +26,7 @@
     "./components/letter-icon": "./src/components/letter-icon.tsx",
     "./components/select": "./src/components/select.tsx",
     "./components/separator": "./src/components/separator.tsx",
+    "./components/settings": "./src/components/settings.tsx",
     "./components/sidebar": "./src/components/sidebar.tsx",
     "./components/skeleton": "./src/components/skeleton.tsx",
     "./components/switch": "./src/components/switch.tsx",
@@ -51,6 +52,7 @@
     "check": "biome check"
   },
   "peerDependencies": {
+    "dockview-react": "^8.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3"
@@ -78,6 +80,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "@vitest/browser": "^5.0.2",
     "@vitest/browser-playwright": "^5.0.2",
+    "dockview-react": "^8.4.0",
     "playwright": "^1.63.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

@@ -31,6 +31,8 @@ import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { toggleReplaceRow } from '@/editor/search/search-bar-query';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../commands';
 
 import { THEMES } from '../../sheet';
 import { StubTransport } from '../../stub-transport';
@@ -326,6 +328,8 @@ async function mount(
   const commands = new CommandManager({
     appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
   });
   render(
     <QueryClientProvider client={client}>

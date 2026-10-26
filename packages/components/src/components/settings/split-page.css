@@ -1,0 +1,9 @@
+.settings-split-page {
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--border);
+}
+
+/* The default resize cursor is semantically wrong. */
+.settings-split-page .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash.dv-enabled {
+  cursor: col-resize;
+}

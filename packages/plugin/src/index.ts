@@ -47,5 +47,20 @@ export {
 } from './editor/toolbar.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
 export { Manifest, PluginId } from './manifest.ts';
-export type { ActiveTheme, Appearance, Application, Disposable, Plugin, PluginInfo } from './plugin.ts';
+export {
+  type ActiveTheme,
+  type Appearance,
+  type Application,
+  DEFAULT_ROUTES,
+  type Disposable,
+  type Plugin,
+  type PluginInfo,
+} from './plugin.ts';
+export {
+  DEFAULT_SETTINGS_GROUPS,
+  type Settings,
+  type SettingsGroup,
+  type SettingsPanel,
+  type SettingsSearchTerm,
+} from './settings.ts';
 export { Color, TextStyle, Theme, ThemeVariant } from './theme.ts';

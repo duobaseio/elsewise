@@ -7,6 +7,8 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
 import { EditorManager } from '@/editor/editor-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
@@ -23,7 +25,12 @@ afterEach(() => {
 
 // Opens an editor with the keys of `added`, which are added in order, above a keymap that binds Ctrl-k to `fallback`.
 function open(fallback: () => boolean, ...added: EditorCommand[]): EditorView {
-  const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+  const commands = new CommandManager({
+    appearance: APPEARANCE,
+    editor: new EditorManager(),
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+  });
   for (const command of added) {
     commands.add([command]);
   }

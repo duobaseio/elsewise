@@ -5,6 +5,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { EditorManager } from '@/editor/editor-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../test/commands';
 import { CommandManager } from './command-manager';
 
 const APPEARANCE = new AppearanceManager(
@@ -14,7 +16,10 @@ const APPEARANCE = new AppearanceManager(
 
 // Returns the commands of an application whose editor is `editor`, on `platform`.
 function commands(editor = new EditorManager(), platform: Platform = 'linux'): CommandManager {
-  return new CommandManager({ appearance: APPEARANCE, editor }, platform);
+  return new CommandManager(
+    { appearance: APPEARANCE, editor, router: memoryRouter(), settings: new SettingsPanelManager() },
+    platform,
+  );
 }
 
 // Returns commands on `platform` with an editor command for each id in `keys`, with those default keys, added in order.

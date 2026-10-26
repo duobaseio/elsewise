@@ -1,6 +1,22 @@
+import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command.ts';
 import type { Editor } from './editor/editor.ts';
+import type { Settings } from './settings.ts';
 import type { ThemeVariant } from './theme.ts';
+
+/**
+ * The paths of Elsewise's pages.
+ *
+ * See {@link Application.router}.
+ */
+export const DEFAULT_ROUTES = {
+  settings: {
+    general: '/settings/appearance/general',
+    editor: '/settings/appearance/editor',
+    terminal: '/settings/appearance/terminal',
+    plugin: (id: string): `/settings/plugins/${string}` => `/settings/plugins/${encodeURIComponent(id)}`,
+  },
+} as const;
 
 /**
  * A `Plugin`.
@@ -79,6 +95,18 @@ export interface Application {
    * The commands.
    */
   readonly commands: Commands;
+
+  /**
+   * The router, for opening a page.
+   *
+   * See {@link DEFAULT_ROUTES}.
+   */
+  readonly router: AnyRouter;
+
+  /**
+   * The settings.
+   */
+  readonly settings: Settings;
 
   /**
    * The code editor.
