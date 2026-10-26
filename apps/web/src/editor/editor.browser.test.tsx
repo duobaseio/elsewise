@@ -131,7 +131,7 @@ function commentLanguage(extensions: string[]): LanguageDescription {
   });
 }
 
-// Returns a language server for Rust files that only answers `initialize`, and the messages it was sent.
+// Returns a language server for Rust files that only responds to `initialize`, and the messages it was sent.
 function rustServer(): { server: LanguageServer; sent: StubTransport['sent'] } {
   const transport = new StubTransport();
   return {

@@ -22,7 +22,7 @@ const SEND = {
   parameters: [{ label: [8, 20] as [number, number] }, { label: [22, 39] as [number, number] }],
 };
 
-// Returns a transport to a server that answers every signature help request with `help`.
+// Returns a transport to a server that responds to every signature help request with `help`.
 function transport(help: SignatureHelp): StubTransport {
   return new StubTransport(
     { textDocumentSync: 2, signatureHelpProvider: { triggerCharacters: ['(', ','] } },
@@ -44,7 +44,7 @@ afterEach(() => {
   }
 });
 
-// Opens `channel.send` on a server that answers with `help`, types `(`, and returns the rows once shown.
+// Opens `channel.send` on a server that responds with `help`, types `(`, and returns the rows once shown.
 async function open(help: SignatureHelp): Promise<[EditorView, HTMLElement[]]> {
   const server: LanguageServer = {
     id: 'rust',

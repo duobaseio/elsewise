@@ -7,6 +7,7 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { CodeActionParams } from 'vscode-languageserver-protocol';
 import { actions as editorActions } from '@/editor/actions';
+import { diagnostics } from '@/editor/diagnostics';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -51,12 +52,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Opens `DOC` with the cursor in `shout`, on a server with `DIAGNOSTIC` that answers code actions with `actions`, and
-// the plugin's `commandHandlers`.
+// Opens `DOC` with the cursor in `shout`, on a server with `DIAGNOSTIC` that responds to code actions with `actions`,
+// and the plugin's `commandHandlers`.
 async function open(
   actions: (params: CodeActionParams) => unknown,
   capabilities: object = {},
-  answers: ConstructorParameters<typeof StubTransport>[1] = {},
+  handlers: ConstructorParameters<typeof StubTransport>[1] = {},
   commandHandlers: LanguageServer['commandHandlers'] = {},
   extensions: Extension = [],
 ): Promise<{ view: EditorView; stub: StubTransport }> {
@@ -65,7 +66,7 @@ async function open(
     {
       'textDocument/diagnostic': () => ({ kind: 'full', items: [DIAGNOSTIC] }),
       'textDocument/codeAction': actions,
-      ...answers,
+      ...handlers,
     },
   );
   const instance = new LanguageServerInstance(
@@ -86,6 +87,7 @@ async function open(
       selection: { anchor: 16 },
       extensions: [
         instance.client.plugin(URI, 'typescript'),
+        diagnostics,
         editorActions(),
         commandsExtension(),
         history(),

@@ -25,11 +25,17 @@ const location = ([line, character]: number[], uri = URI) => ({
   range: { start: { line, character }, end: { line, character: character + 'total'.length } },
 });
 
-// Returns a transport to a server that finds `locations` as the usages of `total` in `DOC`.
-function transport(locations: unknown[]): StubTransport {
+// Returns a transport to a server that finds `locations` as the usages of `total` in `DOC`, counting its requests in
+// `requests`.
+function transport(locations: unknown[], requests: unknown[]): StubTransport {
   return new StubTransport(
     { textDocumentSync: 2, referencesProvider: true },
-    { 'textDocument/references': () => locations },
+    {
+      'textDocument/references': (params: unknown) => {
+        requests.push(params);
+        return locations;
+      },
+    },
   );
 }
 
@@ -41,14 +47,19 @@ afterEach(() => {
   }
 });
 
-// Opens `doc` in an editor 200px high with the cursor in the first `total`, on a server finding `locations`.
-async function open(locations: unknown[] = TOTALS.map((total) => location(total)), doc = DOC): Promise<EditorView> {
+// Opens `doc` in an editor 200px high with the cursor in the first `total`, on a server finding `locations` and
+// counting its requests in `requests`.
+async function open(
+  locations: unknown[] = TOTALS.map((total) => location(total)),
+  doc = DOC,
+  requests: unknown[] = [],
+): Promise<EditorView> {
   const instance = new LanguageServerInstance(
     {
       id: 'rust',
       name: 'Rust',
       languages: { Rust: 'rust' },
-      start: () => transport(locations),
+      start: () => transport(locations, requests),
     } satisfies LanguageServer,
     ROOT,
   );
@@ -215,6 +226,16 @@ describe('serverReferences', () => {
       expect(usage).not.toBeNull();
       expect(Math.abs((usage?.top ?? 0) - (bounds.top + bounds.height / 2))).toBeLessThan(20);
     });
+  });
+
+  test('ignores repeat while finding', async () => {
+    const requests: unknown[] = [];
+    const view = await open(undefined, DOC, requests);
+
+    expect(press(view, 'F7', SHOW_USAGES)).toBe(true);
+    await find(view);
+
+    expect(requests).toHaveLength(1);
   });
 
   test('says when no other usages', async () => {

@@ -9,6 +9,8 @@ import { expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { drawActiveLine } from '@/editor/active-line';
+import { completion, completionDocumentation } from '@/editor/completion';
+import { diagnostics } from '@/editor/diagnostics';
 import { unifiedDiff } from '@/editor/layouts/unified-layout';
 import { stripe, stripeMarks } from '@/editor/stripe/stripe';
 import { useThemeExtension } from '@/editor/theme';
@@ -108,7 +110,7 @@ function rgb(hex: string): string {
 
 test('stripe marks take theme colors', async () => {
   const source = { update: () => false, marks: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
-  const view = await mount('x', [stripe(), stripeMarks.of(source)]);
+  const view = await mount('x', [diagnostics, stripe(), stripeMarks.of(source)]);
   view.dispatch(setDiagnostics(view.state, [{ from: 0, to: 1, severity: 'error', message: 'x' }]));
   await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark')).toHaveLength(2));
 
@@ -207,6 +209,25 @@ test('selected completion keeps text color, and list shows whole rows', async ()
   expect(style(selected).color).not.toBe('rgb(255, 255, 255)');
   const list = style(tooltip?.querySelector('ul') ?? null);
   expect(Number.parseFloat(list.maxHeight)).toBe(10 * 24 + 8);
+});
+
+test("completion's documentation is hidden when setting is off", async () => {
+  const options = [{ label: 'send', info: 'Sends a message.' }];
+  const source = () => ({ from: 0, options });
+  const view = await mount('', [
+    completion(),
+    completionDocumentation.of(false),
+    EditorState.languageData.of(() => [{ autocomplete: source }]),
+  ]);
+  view.focus();
+  startCompletion(view);
+
+  const info = await vi.waitFor(() => {
+    const info = view.dom.querySelector('.cm-completionInfo');
+    expect(info).not.toBeNull();
+    return info;
+  });
+  expect(style(info).display).toBe('none');
 });
 
 test('hovered row of completions, usages and actions takes hover color, unless selected', async () => {

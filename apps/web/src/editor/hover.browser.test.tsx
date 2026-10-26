@@ -3,6 +3,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { EditorActionSource, EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';
 import { closeHoverOnClick, hover, SHOW_HOVER } from '@/editor/hover';
 import { commandsExtension } from '../../test/commands';
@@ -25,13 +26,13 @@ afterEach(() => {
   }
 });
 
-// Opens `DOC` with `diagnostics` and `extensions`, without a language server.
-function open(diagnostics: EditorDiagnostic[], extensions: Extension = []): EditorView {
+// Opens `DOC` with `initial` diagnostics and `extensions`, without a language server.
+function open(initial: EditorDiagnostic[], extensions: Extension = []): EditorView {
   const view = new EditorView({
-    state: EditorState.create({ doc: DOC, extensions: [hover(), commandsExtension(), extensions] }),
+    state: EditorState.create({ doc: DOC, extensions: [diagnostics, hover(), commandsExtension(), extensions] }),
     parent: document.body,
   });
-  view.dispatch(setDiagnostics(view.state, diagnostics));
+  view.dispatch(setDiagnostics(view.state, initial));
   views.push(view);
   return view;
 }

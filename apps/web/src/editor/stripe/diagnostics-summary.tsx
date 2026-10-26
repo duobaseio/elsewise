@@ -1,13 +1,12 @@
-import { forEachDiagnostic, setDiagnosticsEffect } from '@codemirror/lint';
-import type { EditorView } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Kbd } from '@elsewise/components/components/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { DEFAULT_COMMANDS, type EditorToolbarProps } from '@elsewise/plugin';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
-import { useEffect, useState } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useCommandManager } from '@/command/command-manager';
+import { diagnostics } from '@/editor/diagnostics';
 import { useSettings } from '@/settings/settings';
 
 type Counts = Record<(typeof COUNTED)[number], number>;
@@ -29,7 +28,16 @@ const PRESENCE = {
  */
 export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
   const shown = useSettings((settings) => settings.appearance.editor.stripe) && !view.state.readOnly;
-  const [counts, setCounts] = useState(() => count(view));
+  const found = useSyncExternalStore(subscribe, () => view.state.field(diagnostics));
+  const counts = useMemo(() => {
+    const counts: Counts = { error: 0, warning: 0, info: 0 };
+    for (const { severity } of found) {
+      if (severity !== 'hint') {
+        counts[severity] += 1;
+      }
+    }
+    return counts;
+  }, [found]);
   const commands = useCommandManager();
   const keys = {
     previous: useCommandManager(
@@ -37,26 +45,6 @@ export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
     ),
     next: useCommandManager((commands) => commands.keymap.commands.get(DEFAULT_COMMANDS.editor.diagnostics.next)?.[0]),
   };
-
-  useEffect(() => {
-    if (!shown) {
-      return;
-    }
-
-    const recount = () => {
-      const next = count(view);
-      setCounts((previous) => (COUNTED.every((severity) => previous[severity] === next[severity]) ? previous : next));
-    };
-    recount();
-    return subscribe((update) => {
-      if (
-        update.docChanged ||
-        update.transactions.some((tr) => tr.effects.some((effect) => effect.is(setDiagnosticsEffect)))
-      ) {
-        recount();
-      }
-    });
-  }, [view, subscribe, shown]);
 
   if (!shown) {
     return null;
@@ -144,15 +132,4 @@ export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
       </div>
     </MotionConfig>
   );
-}
-
-// Counts `view`'s diagnostics by severity.
-function count(view: EditorView): Counts {
-  const counts: Counts = { error: 0, warning: 0, info: 0 };
-  forEachDiagnostic(view.state, ({ severity }) => {
-    if (severity !== 'hint') {
-      counts[severity] += 1;
-    }
-  });
-  return counts;
 }

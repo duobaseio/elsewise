@@ -3,9 +3,9 @@ import type { LanguageServerTransport } from '@elsewise/plugin';
 type Response = { result?: unknown; error?: { code: number; message: string } };
 
 /**
- * A transport to a server with `capabilities` that answers each request in `answers` with what its answer returns,
- * or resolves to, and ignores every other message. Each answer takes the params of its method, and one that rejects
- * is answered with the server's error.
+ * A transport to a server with `capabilities` that responds to each request in `handlers` with what its handler
+ * returns, or resolves to, and ignores every other message. Each handler takes the params of its method, and one that
+ * rejects sends the server's error.
  */
 export class StubTransport implements LanguageServerTransport {
   /** The messages sent to the server, in order. */
@@ -14,16 +14,16 @@ export class StubTransport implements LanguageServerTransport {
   closed = false;
 
   readonly #capabilities: object;
-  readonly #answers: Record<string, (params: never) => unknown>;
+  readonly #handlers: Record<string, (params: never) => unknown>;
   readonly #messageListeners = new Set<(message: string) => void>();
   readonly #closeListeners = new Set<() => void>();
-  // The server's requests that the client hasn't answered, by id.
+  // The server's requests that the client hasn't responded to, by id.
   readonly #requests = new Map<number, (response: Response) => void>();
   #lastId = 0;
 
-  constructor(capabilities: object = {}, answers: Record<string, (params: never) => unknown> = {}) {
+  constructor(capabilities: object = {}, handlers: Record<string, (params: never) => unknown> = {}) {
     this.#capabilities = capabilities;
-    this.#answers = answers;
+    this.#handlers = handlers;
   }
 
   send(message: string): void {
@@ -35,11 +35,11 @@ export class StubTransport implements LanguageServerTransport {
       return;
     }
     this.sent.push({ id, method, params });
-    const answer = method === 'initialize' ? () => ({ capabilities: this.#capabilities }) : this.#answers[method];
-    if (answer === undefined) {
+    const handler = method === 'initialize' ? () => ({ capabilities: this.#capabilities }) : this.#handlers[method];
+    if (handler === undefined) {
       return;
     }
-    const result = answer(params as never);
+    const result = handler(params as never);
     if (result instanceof Promise) {
       result.then(
         (value) => this.#reply(id, { result: value }),
@@ -50,9 +50,9 @@ export class StubTransport implements LanguageServerTransport {
     }
   }
 
-  #reply(id: number, answer: { result: unknown } | { error: { code: number; message: string } }): void {
+  #reply(id: number, response: { result: unknown } | { error: { code: number; message: string } }): void {
     for (const listener of this.#messageListeners) {
-      listener(JSON.stringify({ jsonrpc: '2.0', id, ...answer }));
+      listener(JSON.stringify({ jsonrpc: '2.0', id, ...response }));
     }
   }
 

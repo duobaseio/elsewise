@@ -1,6 +1,7 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { diagnostics } from '@/editor/diagnostics';
 import { selectionMatches } from '@/editor/stripe/selection-matches';
 import { stripe } from '@/editor/stripe/stripe';
 import { METRICS } from '@/editor/theme';
@@ -23,7 +24,7 @@ function open(doc = DOC): EditorView {
   const view = new EditorView({
     state: EditorState.create({
       doc,
-      extensions: [selectionMatches(), stripe(), METRICS, EditorState.allowMultipleSelections.of(true)],
+      extensions: [selectionMatches(), diagnostics, stripe(), METRICS, EditorState.allowMultipleSelections.of(true)],
     }),
     parent: host,
   });

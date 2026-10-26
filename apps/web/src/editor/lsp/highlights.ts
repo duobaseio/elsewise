@@ -55,7 +55,7 @@ const highlights = ViewPlugin.fromClass(
     decorations: DecorationSet = Decoration.none;
     frame: number | undefined;
     /**
-     * The request awaiting its answer, which is dropped when the caret or document changes first.
+     * The request in flight, which is dropped when the caret or document changes first.
      */
     request: { drop: boolean } | null = null;
 

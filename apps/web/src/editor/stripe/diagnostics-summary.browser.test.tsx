@@ -9,6 +9,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
+import { diagnostics } from '@/editor/diagnostics';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { hover } from '@/editor/hover';
 import { METRICS } from '@/editor/theme';
@@ -41,6 +42,7 @@ function mount(
           extensions: [
             toolbar,
             METRICS,
+            diagnostics,
             hover(),
             commandsExtension(commands),
             EditorView.theme({ '&': { height: '200px' } }),

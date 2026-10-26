@@ -1,8 +1,7 @@
-import { forEachDiagnostic, setDiagnosticsEffect } from '@codemirror/lint';
 import { type Extension, Facet } from '@codemirror/state';
 import { type EditorView, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import type { EditorDiagnostic } from '@elsewise/plugin';
-import { SEVERITIES } from '@/editor/diagnostics';
+import { diagnostics, SEVERITIES } from '@/editor/diagnostics';
 import { diagnosticsSection } from '@/editor/hover';
 import { jump } from '@/editor/scroll';
 import { STRIPE_MIN_HEIGHT, STRIPE_TOLERANCE } from '@/editor/theme';
@@ -33,16 +32,11 @@ export interface StripeSource {
 export function stripe(): Extension {
   return [
     stripeMarks.of({
-      update: (update) =>
-        update.docChanged ||
-        update.transactions.some((tr) => tr.effects.some((effect) => effect.is(setDiagnosticsEffect))),
-      marks(view) {
-        const marks: StripeMark[] = [];
-        forEachDiagnostic(view.state, (diagnostic, from, to) => {
-          marks.push({ from, to, kind: diagnostic.severity, diagnostic: { ...diagnostic, from, to } });
-        });
-        return marks;
-      },
+      update: (update) => update.state.field(diagnostics) !== update.startState.field(diagnostics),
+      marks: (view) =>
+        view.state
+          .field(diagnostics)
+          .map((diagnostic) => ({ from: diagnostic.from, to: diagnostic.to, kind: diagnostic.severity, diagnostic })),
     }),
     painter,
     keymap.of([

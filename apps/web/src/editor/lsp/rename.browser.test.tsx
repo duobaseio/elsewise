@@ -4,7 +4,7 @@ import { EditorView, runScopeHandlers } from '@codemirror/view';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
-import type { RenameParams } from 'vscode-languageserver-protocol';
+import type { PrepareRenameParams, RenameParams } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -37,10 +37,14 @@ interface Server {
    * The rename requests received.
    */
   renames?: string[];
+  /**
+   * The positions of the prepare requests received.
+   */
+  prepares?: unknown[];
 }
 
 // Returns a transport to a server that renames `total` in `DOC`.
-function transport({ prepare = true, renamable = true, renames = [] }: Server): StubTransport {
+function transport({ prepare = true, renamable = true, renames = [], prepares = [] }: Server): StubTransport {
   return new StubTransport(
     {
       textDocumentSync: 2,
@@ -48,7 +52,10 @@ function transport({ prepare = true, renamable = true, renames = [] }: Server): 
       documentHighlightProvider: true,
     },
     {
-      'textDocument/prepareRename': () => (renamable ? range(TOTALS[0]) : null),
+      'textDocument/prepareRename': ({ position }: PrepareRenameParams) => {
+        prepares.push(position);
+        return renamable ? range(TOTALS[0]) : null;
+      },
       'textDocument/documentHighlight': () => TOTALS.map((total) => ({ range: range(total) })),
       'textDocument/rename': ({ newName }: RenameParams) => {
         renames.push(newName);
@@ -175,12 +182,33 @@ describe('serverRename', () => {
     expect(view.dom.querySelector('.cm-lsp-rename-message')).toBeNull();
   });
 
+  test("prepares again after symbol can't be renamed", async () => {
+    const prepares: unknown[] = [];
+    const view = await open({ renamable: false, prepares });
+    press(view, 'F6', { shiftKey: true });
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-lsp-rename-message')).not.toBeNull());
+
+    press(view, 'F6', { shiftKey: true });
+
+    await vi.waitFor(() => expect(prepares).toHaveLength(2));
+  });
+
   test('renames word at cursor without prepare', async () => {
     const view = await open({ prepare: false });
 
     const input = await rename(view);
 
     expect(input.value).toBe('total');
+  });
+
+  test('ignores repeat while preparing', async () => {
+    const prepares: unknown[] = [];
+    const view = await open({ prepares });
+
+    expect(press(view, 'F6', { shiftKey: true })).toBe(true);
+    await rename(view);
+
+    expect(prepares).toHaveLength(1);
   });
 
   test('skips server for unchanged name', async () => {

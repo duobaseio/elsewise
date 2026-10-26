@@ -1,4 +1,4 @@
-import { type Diagnostic, forEachDiagnostic, linter } from '@codemirror/lint';
+import { type Diagnostic, linter } from '@codemirror/lint';
 import { CharCategory, type Extension, Facet, Prec, StateEffect, StateField } from '@codemirror/state';
 import {
   closeHoverTooltips,
@@ -19,6 +19,7 @@ import {
   type EditorHoverSource,
 } from '@elsewise/plugin';
 import { APPLY_TOP_FIX, actionsAt, apply, SHOW_ACTIONS } from '@/editor/actions';
+import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';
 import { appendCode } from '@/editor/tooltip';
 
@@ -158,13 +159,8 @@ export function hover(): Extension {
  * arrive.
  */
 async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tooltip[] | null> {
-  const found: EditorDiagnostic[] = [];
   // Includes the diagnostics that only touch `pos`, whichever `side` the pointer is on, as servers' documentation does.
-  forEachDiagnostic(view.state, (diagnostic, from, to) => {
-    if (pos >= from && pos <= to) {
-      found.push({ ...diagnostic, from, to });
-    }
-  });
+  const found = view.state.field(diagnostics).filter(({ from, to }) => pos >= from && pos <= to);
 
   const sources = view.state.languageDataAt<EditorHoverSource>('hover', pos, side);
   const [dom, tooltips] = await Promise.all([

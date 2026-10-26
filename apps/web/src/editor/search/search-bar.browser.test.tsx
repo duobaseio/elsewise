@@ -8,6 +8,7 @@ import { afterEach, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
+import { diagnostics } from '@/editor/diagnostics';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { stripe } from '@/editor/stripe/stripe';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
@@ -101,7 +102,7 @@ test('live search, Enter walks matches', async () => {
 });
 
 test('marks matches on stripe while open', async () => {
-  const view = await mount([stripe()]);
+  const view = await mount([diagnostics, stripe()]);
   openSearchPanel(view);
   await userEvent.fill(find(), 'let');
 

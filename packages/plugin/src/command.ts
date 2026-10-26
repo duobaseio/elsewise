@@ -1,4 +1,3 @@
-import type { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
@@ -299,8 +298,7 @@ export interface ApplicationCommand extends Command {
 /**
  * A command that runs in an active editor.
  *
- * Its keys fire while an editor has focus. `lsp` is the editor's connection to its language server, or `null` without
- * one.
+ * Its keys fire while an editor has focus.
  */
 export interface EditorCommand extends Command {
   readonly scope: 'editor';
@@ -310,23 +308,23 @@ export interface EditorCommand extends Command {
    *
    * A disabled command is greyed out in menus, and pressing its keys does not run it.
    */
-  enabled?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  enabled?(application: Application, view: EditorView): boolean;
 
   /**
    * Returns whether the command is shown in menus. Defaults to true.
    */
-  shown?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  shown?(application: Application, view: EditorView): boolean;
 
   /**
    * Returns whether the command's effect is active, e.g. the source that the file is compared with. Menus show a
    * check beside an active command. Defaults to none, for a command that is neither.
    */
-  active?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  active?(application: Application, view: EditorView): boolean;
 
   /**
    * Runs the command against `view`.
    *
    * Returns whether the command applied. If it did not, its keys fall through to the next command.
    */
-  run(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  run(application: Application, view: EditorView): boolean;
 }

@@ -392,7 +392,7 @@ describe('LanguageServerInstance.start', () => {
     expect(add).not.toHaveBeenCalled();
   });
 
-  test('answers requests with request handlers', async () => {
+  test('handles requests with request handlers', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
@@ -411,7 +411,7 @@ describe('LanguageServerInstance.start', () => {
     expect(await fake.request('toy/ignore', {})).toEqual({ result: null });
   });
 
-  test('answers requests with error when handler fails', async () => {
+  test('returns error when request handler fails', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
@@ -430,7 +430,7 @@ describe('LanguageServerInstance.start', () => {
     expect(await fake.request('toy/reject', {})).toEqual({ error: { code: -32603, message: 'Rejected' } });
   });
 
-  test('answers requests with request handlers ahead of core', async () => {
+  test('handles requests with request handlers ahead of core', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, { requestHandlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),

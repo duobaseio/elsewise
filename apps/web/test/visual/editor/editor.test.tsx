@@ -200,7 +200,7 @@ const CHANNELS = [range('channel ='), range('channel.send_raw'), range('channel.
   end: { ...start, character: start.character + 'channel'.length },
 }));
 
-// A Rust language server that answers hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, completions after a dot
+// A Rust language server that returns hovers from `HOVERS`, diagnostics from `DIAGNOSTICS`, completions after a dot
 // from `MEMBERS`, else from `STATEMENTS`, signatures in a method call from `SEND_TIMEOUT`, else from `ATTACH`, and
 // renames, usages and highlights of `channel` from `CHANNELS`, with one more usage in a file that isn't open, and code
 // actions, with fixes for `undefined_name`.
@@ -244,7 +244,7 @@ const RUST: LanguageServer = {
             range: { start: { line: 41, character: 8 }, end: { line: 41, character: 15 } },
           },
         ],
-        // The ranges are the sample's, so it stops answering once the sample is edited.
+        // The ranges are the sample's, so it stops returning them once the sample is edited.
         'textDocument/documentHighlight': ({ position }: DocumentHighlightParams) =>
           !stub.methods.includes('textDocument/didChange') &&
           CHANNELS.some(

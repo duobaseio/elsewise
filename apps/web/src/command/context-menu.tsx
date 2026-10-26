@@ -1,4 +1,3 @@
-import { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import {
   ContextMenu,
@@ -76,7 +75,8 @@ export function CommandContextMenu({ menu, view, onClosed, className, children }
   }
 
   // Runs the clicked entry once the menu has closed and `onClosed` has run, e.g. given the editor its focus back. The
-  // returning focus would otherwise undo a selection that the entry changes later, e.g. on a language server's answer.
+  // returning focus would otherwise undo a selection that the entry changes later, e.g. in response to a language
+  // server.
   function onOpenChangeComplete(open: boolean): void {
     const run = clicked.current;
     clicked.current = null;
@@ -106,7 +106,6 @@ function resolve(
   view: EditorView | null,
   path: readonly string[],
 ): Group[] {
-  const lsp = view === null ? null : LSPPlugin.get(view);
   const groups: Group[] = [];
   const sorted = menu
     .filter((group) => group.in === path.at(-1))
@@ -157,9 +156,9 @@ function resolve(
           enabled = command.enabled?.(commands.application);
           active = command.active?.(commands.application);
         } else if (view !== null) {
-          shown = command.shown?.(commands.application, view, lsp);
-          enabled = command.enabled?.(commands.application, view, lsp);
-          active = command.active?.(commands.application, view, lsp);
+          shown = command.shown?.(commands.application, view);
+          enabled = command.enabled?.(commands.application, view);
+          active = command.active?.(commands.application, view);
         } else {
           continue;
         }

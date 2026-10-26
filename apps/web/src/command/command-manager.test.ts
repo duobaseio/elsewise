@@ -175,7 +175,6 @@ describe('run', () => {
     editor.activate(active);
     expect(manager.run('c')).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(active);
-    expect(run.mock.lastCall?.[2]).toBeNull();
 
     expect(manager.run('c', target)).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(target);

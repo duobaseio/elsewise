@@ -38,10 +38,11 @@ export const GO_TO_DEFINITION: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.lsp.goToDefinition,
   label: 'Go to definition',
   defaultKeys: DEFAULT_KEYS.editor.lsp.goToDefinition,
-  enabled: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.definitionProvider),
-  shown: (_, view, lsp) => Boolean(lsp?.client.serverCapabilities?.definitionProvider) && navigable(view.state),
-  run(_, view, lsp) {
-    if (lsp === null) {
+  enabled: (_, view) => Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.definitionProvider),
+  shown: (_, view) =>
+    Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.definitionProvider) && navigable(view.state),
+  run(_, view) {
+    if (LSPPlugin.get(view) === null) {
       return false;
     }
 

@@ -52,12 +52,13 @@ export const SHOW_SIGNATURE_HELP: EditorCommand = {
   id: DEFAULT_COMMANDS.editor.lsp.showSignatureHelp,
   label: 'Parameter info',
   defaultKeys: DEFAULT_KEYS.editor.lsp.showSignatureHelp,
-  enabled: (_, view, lsp) =>
-    view.plugin(requests) !== null && Boolean(lsp?.client.serverCapabilities?.signatureHelpProvider),
-  shown: (_, view, lsp) =>
-    view.plugin(requests) !== null && Boolean(lsp?.client.serverCapabilities?.signatureHelpProvider),
+  enabled: (_, view) =>
+    view.plugin(requests) !== null && Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.signatureHelpProvider),
+  shown: (_, view) =>
+    view.plugin(requests) !== null && Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.signatureHelpProvider),
   // Based on `@codemirror/lsp-client`'s `showSignatureHelp`.
-  run(_, view, lsp) {
+  run(_, view) {
+    const lsp = LSPPlugin.get(view);
     const requester = view.plugin(requests);
     if (!requester || lsp === null) {
       return false;
