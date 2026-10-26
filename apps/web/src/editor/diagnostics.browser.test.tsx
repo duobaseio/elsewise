@@ -4,6 +4,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_COMMANDS, type EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { diagnostics } from '@/editor/diagnostics';
 import { hover } from '@/editor/hover';
 import { builtInCommands, commandsExtension } from '../../test/commands';
 
@@ -17,17 +18,17 @@ afterEach(() => {
   }
 });
 
-// Opens `DOC` in an editor 200px high with `diagnostics`, and returns it with the built-in commands.
-function open(diagnostics: EditorDiagnostic[]) {
+// Opens `DOC` in an editor 200px high with `initial` diagnostics, and returns it with the built-in commands.
+function open(initial: EditorDiagnostic[]) {
   const commands = builtInCommands();
   const view = new EditorView({
     state: EditorState.create({
       doc: DOC,
-      extensions: [hover(), commandsExtension(commands), EditorView.theme({ '&': { height: '200px' } })],
+      extensions: [diagnostics, hover(), commandsExtension(commands), EditorView.theme({ '&': { height: '200px' } })],
     }),
     parent: document.body,
   });
-  view.dispatch(setDiagnostics(view.state, diagnostics));
+  view.dispatch(setDiagnostics(view.state, initial));
   views.push(view);
   return { view, commands };
 }

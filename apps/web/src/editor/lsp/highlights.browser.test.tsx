@@ -6,6 +6,7 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { DocumentHighlightParams } from 'vscode-languageserver-protocol';
+import { diagnostics } from '@/editor/diagnostics';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { stripe } from '@/editor/stripe/stripe';
@@ -98,7 +99,7 @@ describe('serverHighlights', () => {
   });
 
   test('marks usages on stripe until cleared', async () => {
-    const { view } = await open({ documentHighlightProvider: true }, 0, stripe());
+    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, stripe()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
     // Two, since two usages share a line.
     await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(2));
@@ -109,7 +110,7 @@ describe('serverHighlights', () => {
   });
 
   test('jumps to usage from its mark, keeping highlights', async () => {
-    const { view } = await open({ documentHighlightProvider: true }, 0, stripe());
+    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, stripe()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
     const mark = await vi.waitFor(() => {
       const marks = view.dom.querySelectorAll<HTMLElement>('.cm-stripe-mark-usage');
@@ -172,7 +173,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test('drops answer arriving after caret moved', async () => {
+  test('drops response arriving after caret moved', async () => {
     const { view, asked } = await open(undefined, 300);
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(asked).toHaveLength(1));

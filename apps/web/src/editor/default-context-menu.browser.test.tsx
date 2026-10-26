@@ -4,6 +4,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { actions } from '@/editor/actions';
 import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
+import { diagnostics } from '@/editor/diagnostics';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { builtInCommands, commandsExtension } from '../../test/commands';
@@ -14,16 +15,16 @@ import { StubTransport } from '../../test/stub-transport';
 function mountBuiltIn(extensions: Extension = []): Promise<EditorView> {
   const editor = new EditorManager();
   const commands = builtInCommands(editor);
-  return mount(editor, commands, [commandsExtension(commands), actions(), extensions]);
+  return mount(editor, commands, [commandsExtension(commands), diagnostics, actions(), extensions]);
 }
 
-// Returns the extension that connects the editor to a server with `capabilities` that answers with `answers`.
+// Returns the extension that connects the editor to a server with `capabilities` that responds with `handlers`.
 async function server(
   capabilities: object,
-  answers: ConstructorParameters<typeof StubTransport>[1] = {},
+  handlers: ConstructorParameters<typeof StubTransport>[1] = {},
 ): Promise<Extension> {
   const instance = new LanguageServerInstance(
-    { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => new StubTransport(capabilities, answers) },
+    { id: 'rust', name: 'Rust', languages: { Rust: 'rust' }, start: () => new StubTransport(capabilities, handlers) },
     new URL('file:///worktree/'),
   );
   await instance.start();

@@ -21,6 +21,7 @@ import { actions } from '@/editor/actions';
 import { drawActiveLine } from '@/editor/active-line';
 import { completion } from '@/editor/completion';
 import { RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
+import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
@@ -190,6 +191,7 @@ export function useEditorExtensions(
             LANGUAGE.of(support),
             LANGUAGE_SERVER.of(languageServer),
             completion(),
+            diagnostics,
             hover(),
             actions(),
             format,
@@ -239,6 +241,7 @@ export function useEditorExtensions(
             Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
 
             LANGUAGE.of(support),
+            diagnostics,
             hover(),
             bracketMatching(),
             // Has to be after lineNumbers to ensure the fold icon is to the right of it.

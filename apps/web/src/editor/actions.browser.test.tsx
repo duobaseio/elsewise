@@ -8,6 +8,7 @@ import { toast } from '@elsewise/components/components/toast';
 import type { EditorAction, EditorActionSource, EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { actions } from '@/editor/actions';
+import { diagnostics } from '@/editor/diagnostics';
 import { commandsExtension } from '../../test/commands';
 
 const DOC = 'let total = shout(1);\nlet other = 2;';
@@ -55,10 +56,10 @@ function source(found: readonly EditorAction[], order?: number): EditorActionSou
   return { order, actions: vi.fn(async () => found) };
 }
 
-// Opens `doc` with the cursor in `shout`, the `sources` and `diagnostics`, as a plugin's extension adds them.
+// Opens `doc` with the cursor in `shout`, the `sources` and `initial` diagnostics, as a plugin's extension adds them.
 function open(
   sources: readonly EditorActionSource[],
-  diagnostics: readonly EditorDiagnostic[] = [DIAGNOSTIC],
+  initial: readonly EditorDiagnostic[] = [DIAGNOSTIC],
   doc = DOC,
   extensions: Extension = [],
 ): EditorView {
@@ -67,11 +68,18 @@ function open(
     state: EditorState.create({
       doc,
       selection: { anchor: Math.max(doc.indexOf('shout'), 0) + 2 },
-      extensions: [actions(), EditorState.languageData.of(() => data), commandsExtension(), history(), extensions],
+      extensions: [
+        diagnostics,
+        actions(),
+        EditorState.languageData.of(() => data),
+        commandsExtension(),
+        history(),
+        extensions,
+      ],
     }),
     parent: document.body,
   });
-  view.dispatch(setDiagnostics(view.state, diagnostics));
+  view.dispatch(setDiagnostics(view.state, initial));
   views.push(view);
   view.focus();
   return view;

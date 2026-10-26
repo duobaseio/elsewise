@@ -4,6 +4,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import type { EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { diagnostics } from '@/editor/diagnostics';
 import { hover } from '@/editor/hover';
 import { stripe, stripeMarks } from '@/editor/stripe/stripe';
 import { METRICS } from '@/editor/theme';
@@ -21,19 +22,19 @@ afterEach(() => {
   }
 });
 
-// Opens `doc` in an editor 400px high, with `diagnostics` and `extensions`.
-function open(diagnostics: EditorDiagnostic[], doc = DOC, extensions: Extension = []): EditorView {
+// Opens `doc` in an editor 400px high, with `initial` diagnostics and `extensions`.
+function open(initial: EditorDiagnostic[], doc = DOC, extensions: Extension = []): EditorView {
   // The editor's metrics make it fill its host.
   const host = document.body.appendChild(document.createElement('div'));
   host.style.height = '400px';
   const view = new EditorView({
     state: EditorState.create({
       doc,
-      extensions: [stripe(), METRICS, hover(), commandsExtension(), extensions],
+      extensions: [diagnostics, stripe(), METRICS, hover(), commandsExtension(), extensions],
     }),
     parent: host,
   });
-  view.dispatch(setDiagnostics(view.state, diagnostics));
+  view.dispatch(setDiagnostics(view.state, initial));
   views.push(view);
   return view;
 }

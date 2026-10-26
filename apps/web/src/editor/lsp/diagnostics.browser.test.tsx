@@ -19,11 +19,11 @@ interface DiagnosticsTransport extends StubTransport {
 interface DiagnosticRequest {
   readonly uri: string;
   readonly previousResultId: string | undefined;
-  /** Answers with diagnostics on the first line, each from `[from, to)` with a severity and tags, under `resultId`. */
-  answer(items: [from: number, to: number, severity: number, tags?: number[]][], resultId?: string): void;
-  /** Answers with `items` as they are. */
+  /** Responds with diagnostics on the first line, each from `[from, to)` with a severity and tags, under `resultId`. */
+  respond(items: [from: number, to: number, severity: number, tags?: number[]][], resultId?: string): void;
+  /** Responds with `items` as they are. */
   reply(items: Diagnostic[]): void;
-  /** Answers that nothing changed since `resultId`. */
+  /** Responds that nothing changed since `resultId`. */
   unchanged(resultId: string): void;
 }
 
@@ -38,7 +38,7 @@ function transport(diagnostics = true): DiagnosticsTransport {
           requests.push({
             uri: textDocument.uri,
             previousResultId,
-            answer: (items, resultId) =>
+            respond: (items, resultId) =>
               resolve({
                 kind: 'full',
                 resultId,
@@ -118,7 +118,7 @@ describe('serverDiagnostics', () => {
 
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
 
-    fake.requests[0].answer([
+    fake.requests[0].respond([
       [0, 3, 1],
       [4, 7, 2],
       [8, 9, 3],
@@ -144,7 +144,7 @@ describe('serverDiagnostics', () => {
     const view = open(instance);
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    fake.requests[0].answer([
+    fake.requests[0].respond([
       [0, 3, 4, [2]],
       [4, 7, 4],
     ]);
@@ -165,7 +165,7 @@ describe('serverDiagnostics', () => {
     const view = open(instance);
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    fake.requests[0].answer([
+    fake.requests[0].respond([
       [0, 3, 4, [1]],
       [4, 7, 4, [1, 2]],
       [8, 9, 4],
@@ -257,7 +257,7 @@ describe('serverDiagnostics', () => {
     const view = open(instance);
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    fake.requests[0].answer([]);
+    fake.requests[0].respond([]);
     view.dispatch({ changes: { from: 0, insert: 'x' } });
 
     await vi.waitFor(() => expect(fake.requests).toHaveLength(2));
@@ -275,7 +275,7 @@ describe('serverDiagnostics', () => {
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
     view.dispatch({ changes: { from: 0, insert: 'xx' } });
-    fake.requests[0].answer([[4, 7, 1]]);
+    fake.requests[0].respond([[4, 7, 1]]);
 
     await vi.waitFor(() => expect(shown(view)).toEqual([[6, 9, 'error']]));
   });
@@ -291,7 +291,7 @@ describe('serverDiagnostics', () => {
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
     view.dispatch({ changes: { from: 0, insert: 'xx' } });
     instance.client.sync();
-    fake.requests[0].answer([[0, 3, 1]]);
+    fake.requests[0].respond([[0, 3, 1]]);
     await settled();
 
     expect(shown(view)).toEqual([]);
@@ -311,8 +311,8 @@ describe('serverDiagnostics', () => {
 
     expect(fake.methods).toContain('$/cancelRequest');
 
-    fake.requests[0].answer([[0, 1, 1]]);
-    fake.requests[1].answer([[0, 2, 2]]);
+    fake.requests[0].respond([[0, 1, 1]]);
+    fake.requests[1].respond([[0, 2, 2]]);
 
     await vi.waitFor(() => expect(shown(view)).toEqual([[0, 2, 'warning']]));
   });
@@ -327,7 +327,7 @@ describe('serverDiagnostics', () => {
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
     expect(fake.requests[0].previousResultId).toBeUndefined();
-    fake.requests[0].answer([[4, 7, 1]], 'first');
+    fake.requests[0].respond([[4, 7, 1]], 'first');
     await vi.waitFor(() => expect(shown(view)).toEqual([[4, 7, 'error']]));
     view.dispatch({ changes: { from: 0, insert: 'xx' } });
     await vi.waitFor(() => expect(fake.requests).toHaveLength(2));
@@ -404,7 +404,7 @@ describe('serverDiagnostics', () => {
     const view = open(instance);
     await instance.start();
     await vi.waitFor(() => expect(fake.requests).toHaveLength(1));
-    fake.requests[0].answer([[4, 7, 1]]);
+    fake.requests[0].respond([[4, 7, 1]]);
     await vi.waitFor(() => expect(shown(view)).toHaveLength(1));
 
     view.dispatch({ changes: { from: 0, insert: '  ' } });

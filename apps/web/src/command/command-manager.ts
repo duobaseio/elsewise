@@ -1,4 +1,3 @@
-import { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
 import type {
@@ -237,12 +236,11 @@ export class CommandManager implements Commands {
           return false;
         }
 
-        const lsp = LSPPlugin.get(editor);
-        if (command.enabled?.(this.application, editor, lsp) === false) {
+        if (command.enabled?.(this.application, editor) === false) {
           return false;
         }
 
-        return command.run(this.application, editor, lsp);
+        return command.run(this.application, editor);
       }
 
       if (command.enabled?.(this.application) === false) {

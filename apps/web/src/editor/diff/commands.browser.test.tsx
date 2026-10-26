@@ -82,7 +82,7 @@ describe('NEXT_CHUNK', () => {
 
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: BASE } });
 
-    expect(NEXT_CHUNK.enabled?.(commands.application, view, null)).toBe(false);
+    expect(NEXT_CHUNK.enabled?.(commands.application, view)).toBe(false);
   });
 });
 
@@ -101,7 +101,7 @@ describe('PREVIOUS_CHUNK', () => {
 
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: BASE } });
 
-    expect(PREVIOUS_CHUNK.enabled?.(commands.application, view, null)).toBe(false);
+    expect(PREVIOUS_CHUNK.enabled?.(commands.application, view)).toBe(false);
   });
 });
 
@@ -109,21 +109,21 @@ describe('UNSTAGED_DIFF', () => {
   test('is active while comparing with unstaged', () => {
     const { view, commands } = open(DEFAULT_DIFF_SOURCES.unstaged);
 
-    expect(UNSTAGED_DIFF.active?.(commands.application, view, null)).toBe(true);
-    expect(UNCOMMITTED_DIFF.active?.(commands.application, view, null)).toBe(false);
+    expect(UNSTAGED_DIFF.active?.(commands.application, view)).toBe(true);
+    expect(UNCOMMITTED_DIFF.active?.(commands.application, view)).toBe(false);
   });
 
   test('is hidden and disabled on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(UNSTAGED_DIFF.shown?.(commands.application, view, null)).toBe(false);
-    expect(UNSTAGED_DIFF.enabled?.(commands.application, view, null)).toBe(false);
+    expect(UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('is shown and enabled on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
-      expect(UNSTAGED_DIFF.shown?.(commands.application, view, null)).toBe(true);
-      expect(UNSTAGED_DIFF.enabled?.(commands.application, view, null)).toBe(true);
+      expect(UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(true);
+      expect(UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(true);
     }
   });
 });
@@ -132,14 +132,14 @@ describe('UNCOMMITTED_DIFF', () => {
   test('is hidden and disabled on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(UNCOMMITTED_DIFF.shown?.(commands.application, view, null)).toBe(false);
-    expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view, null)).toBe(false);
+    expect(UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('is shown and enabled on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
-      expect(UNCOMMITTED_DIFF.shown?.(commands.application, view, null)).toBe(true);
-      expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view, null)).toBe(true);
+      expect(UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(true);
+      expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(true);
     }
   });
 });
@@ -148,14 +148,14 @@ describe('BRANCH_DIFF', () => {
   test('is hidden and disabled on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(BRANCH_DIFF.shown?.(commands.application, view, null)).toBe(false);
-    expect(BRANCH_DIFF.enabled?.(commands.application, view, null)).toBe(false);
+    expect(BRANCH_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(BRANCH_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('is shown and enabled on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
-      expect(BRANCH_DIFF.shown?.(commands.application, view, null)).toBe(true);
-      expect(BRANCH_DIFF.enabled?.(commands.application, view, null)).toBe(true);
+      expect(BRANCH_DIFF.shown?.(commands.application, view)).toBe(true);
+      expect(BRANCH_DIFF.enabled?.(commands.application, view)).toBe(true);
     }
   });
 });
@@ -164,27 +164,27 @@ describe('CLOSE_DIFF', () => {
   test('is hidden without source', () => {
     const { view, commands } = open(null);
 
-    expect(CLOSE_DIFF.shown?.(commands.application, view, null)).toBe(false);
+    expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
   });
 
   test('is hidden and disabled on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(CLOSE_DIFF.shown?.(commands.application, view, null)).toBe(false);
-    expect(CLOSE_DIFF.enabled?.(commands.application, view, null)).toBe(false);
+    expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('is shown and enabled on target side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_TARGET);
 
-    expect(CLOSE_DIFF.shown?.(commands.application, view, null)).toBe(true);
-    expect(CLOSE_DIFF.enabled?.(commands.application, view, null)).toBe(true);
+    expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(true);
+    expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
   });
 
   test('is enabled in editor', () => {
     const { view, commands } = open(null, 'unified', PLAIN);
 
-    expect(CLOSE_DIFF.enabled?.(commands.application, view, null)).toBe(true);
+    expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
   });
 
   test('clears source', () => {
@@ -206,8 +206,8 @@ describe('SPLIT_DIFF', () => {
   test('is active in split layout', () => {
     const { view, commands } = open('test.source', 'split');
 
-    expect(SPLIT_DIFF.active?.(commands.application, view, null)).toBe(true);
-    expect(UNIFIED_DIFF.active?.(commands.application, view, null)).toBe(false);
+    expect(SPLIT_DIFF.active?.(commands.application, view)).toBe(true);
+    expect(UNIFIED_DIFF.active?.(commands.application, view)).toBe(false);
   });
 });
 
@@ -222,7 +222,7 @@ describe('UNIFIED_DIFF', () => {
   test('is active in unified layout', () => {
     const { view, commands } = open();
 
-    expect(UNIFIED_DIFF.active?.(commands.application, view, null)).toBe(true);
-    expect(SPLIT_DIFF.active?.(commands.application, view, null)).toBe(false);
+    expect(UNIFIED_DIFF.active?.(commands.application, view)).toBe(true);
+    expect(SPLIT_DIFF.active?.(commands.application, view)).toBe(false);
   });
 });

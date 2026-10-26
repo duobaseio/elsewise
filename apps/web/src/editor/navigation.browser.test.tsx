@@ -103,7 +103,7 @@ function click(coords: { clientX: number; clientY: number }, init: MouseEventIni
   return event;
 }
 
-// Waits for the sources that have answered to show their navigation.
+// Waits for the sources that have returned to show their navigation.
 function settle(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve));
 }

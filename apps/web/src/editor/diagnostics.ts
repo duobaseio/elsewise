@@ -1,4 +1,5 @@
-import { forEachDiagnostic } from '@codemirror/lint';
+import { forEachDiagnostic, setDiagnosticsEffect } from '@codemirror/lint';
+import { type EditorState, StateField } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand, type EditorDiagnostic } from '@elsewise/plugin';
 import { COMMANDS } from '@/editor/editor-manager';
@@ -8,6 +9,23 @@ import { jump } from '@/editor/scroll';
  * The severities from the highest down.
  */
 export const SEVERITIES: readonly EditorDiagnostic['severity'][] = ['error', 'warning', 'info', 'hint'];
+
+/**
+ * The diagnostics, at their positions in the current document.
+ */
+export const diagnostics = StateField.define<readonly EditorDiagnostic[]>({
+  create: collect,
+  update: (value, tr) =>
+    tr.docChanged || tr.effects.some((effect) => effect.is(setDiagnosticsEffect)) ? collect(tr.state) : value,
+});
+
+function collect(state: EditorState): readonly EditorDiagnostic[] {
+  const found: EditorDiagnostic[] = [];
+  forEachDiagnostic(state, (diagnostic, from, to) => {
+    found.push({ ...diagnostic, from, to });
+  });
+  return found;
+}
 
 export const NEXT_DIAGNOSTIC: EditorCommand = {
   scope: 'editor',
@@ -27,13 +45,7 @@ export const PREVIOUS_DIAGNOSTIC: EditorCommand = {
 
 // Moves the cursor to the diagnostic before/after it, grouped by severity.
 function step(view: EditorView, next: boolean): boolean {
-  const found: { from: number; to: number; severity: EditorDiagnostic['severity'] }[] = [];
-  forEachDiagnostic(view.state, ({ severity }, from, to) => {
-    if (severity !== 'hint') {
-      found.push({ from, to, severity });
-    }
-  });
-
+  const found = view.state.field(diagnostics).filter(({ severity }) => severity !== 'hint');
   const highest = Math.min(...found.map(({ severity }) => SEVERITIES.indexOf(severity)));
   const ordered = found
     .filter(({ severity }) => SEVERITIES.indexOf(severity) === highest)

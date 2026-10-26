@@ -12,6 +12,7 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
 import { APPLY_TOP_FIX, actions, SHOW_ACTIONS } from '@/editor/actions';
+import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';
 import { hover as editorHover, SHOW_HOVER } from '@/editor/hover';
 import { highlightUsages } from '@/editor/lsp/highlights';
@@ -23,8 +24,8 @@ const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.rs';
 const DOC = 'let channel = attach(1);';
 
-// Returns a transport to a server that answers every hover with `hover`, and offers no hovers if it is undefined. It
-// finds `diagnostics`, and answers code actions with `actions`.
+// Returns a transport to a server that responds to every hover with `hover`, and offers no hovers if it is undefined.
+// It finds `diagnostics`, and responds to code actions with `actions`.
 function transport(
   hover: Hover | null | undefined,
   diagnostics: Diagnostic[] = [],
@@ -106,6 +107,7 @@ async function open(
       doc: DOC,
       extensions: [
         instance.client.plugin(URI, 'rust'),
+        diagnostics,
         editorHover(),
         actions(),
         commandsExtension(commands),
@@ -559,11 +561,11 @@ describe('SHOW_HOVER', () => {
     });
   });
 
-  test('opens despite update while server answers', async () => {
-    let answer = (_: Hover) => {};
+  test('opens despite update while server responds', async () => {
+    let respond = (_: Hover) => {};
     const fake = new StubTransport(
       { textDocumentSync: 2, hoverProvider: true },
-      { 'textDocument/hover': () => new Promise<Hover>((resolve) => (answer = resolve)) },
+      { 'textDocument/hover': () => new Promise<Hover>((resolve) => (respond = resolve)) },
     );
     const view = await open(fake);
     view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
@@ -571,7 +573,7 @@ describe('SHOW_HOVER', () => {
     await vi.waitFor(() => expect(fake.methods).toContain('textDocument/hover'));
 
     view.dispatch({});
-    answer(markdown('Attaches.'));
+    respond(markdown('Attaches.'));
 
     await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull());
   });

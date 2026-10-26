@@ -353,6 +353,7 @@ export const METRICS = EditorView.theme({
   // The list is replaced whenever the options change, so the hint is put after it by `order`.
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': { color: 'inherit' },
   '.cm-tooltip.cm-tooltip-autocomplete': { display: 'flex', flexDirection: 'column' },
+  '.cm-completion-undocumented .cm-completionInfo': { display: 'none' },
   '.cm-completionKind': { flex: 'none', width: '16px', marginRight: '6px' },
   // A row that doesn't fit cuts the text after its label first, then the label. The detail is cut at 40% of the row.
   '.cm-completionLabel, .cm-completionTail, .cm-completionDetail': {
@@ -465,7 +466,7 @@ export const METRICS = EditorView.theme({
   },
   '.cm-actions-divider': { height: '1px', margin: '4px 2px', backgroundColor: 'var(--border)' },
   '.cm-actions-hint': { borderTop: '1px solid var(--border)' },
-  // The line for a diagnostic's fixes, empty until the server answers, and if it has none.
+  // The line for a diagnostic's fixes, empty until the server responds, and if it has none.
   '.cm-actions-hover': {
     marginTop: '6px',
     fontSize: 'var(--text-sm)',

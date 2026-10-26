@@ -28,7 +28,7 @@ describe('EditorContextMenu', () => {
 
     await open(view, 0);
     await userEvent.click(menuitem('Item'));
-    expect(run).toHaveBeenCalledWith(commands.application, view, null);
+    expect(run).toHaveBeenCalledWith(commands.application, view);
   });
   test('focuses editor before running item', async () => {
     let focused: boolean | undefined;
