@@ -5,6 +5,7 @@ import {
   ArrowUUpLeftIcon,
   CaretDoubleRightIcon,
   CaretDownIcon,
+  CaretLeftIcon,
   CaretRightIcon,
   CaretUpIcon,
   CheckCircleIcon,
@@ -17,6 +18,7 @@ import {
   MagnifyingGlassIcon,
   MinusIcon,
   PlusIcon,
+  QuestionIcon,
   RowsIcon,
   SidebarIcon,
   SpinnerIcon,
@@ -66,6 +68,8 @@ const DEFAULT_ICONS = {
   split: SquareSplitHorizontalIcon,
   revert: ArrowUUpLeftIcon,
   'revert-chunk': CaretDoubleRightIcon,
+  back: CaretLeftIcon,
+  help: QuestionIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

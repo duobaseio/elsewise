@@ -3,6 +3,8 @@ import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../test/commands';
 import { PluginLoader } from './loader';
 
 // Returns a loader over its own managers.
@@ -12,7 +14,12 @@ function setUp() {
     resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
   );
   const editor = new EditorManager();
-  const commands = new CommandManager({ appearance, editor });
+  const commands = new CommandManager({
+    appearance,
+    editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+  });
   return { appearance, editor, commands, loader: new PluginLoader(appearance, commands) };
 }
 

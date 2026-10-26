@@ -7,6 +7,8 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { CommandContextMenu } from '@/command/context-menu';
 import { EditorManager } from '@/editor/editor-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../commands';
 
 import { THEMES } from '../../sheet';
 
@@ -69,6 +71,8 @@ describe.each(THEMES)('context menu (%s)', (theme) => {
     const commands = new CommandManager({
       appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
       editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
     });
     commands.add(COMMANDS);
     render(

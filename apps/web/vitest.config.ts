@@ -62,8 +62,10 @@ function browserProject(
         // The languages the tests load, which `language-data` imports on demand.
         '@codemirror/language-data > @codemirror/lang-html',
         '@codemirror/language-data > @codemirror/lang-rust',
+        '@base-ui/react/combobox',
         // The components' own dependencies, which the app cannot resolve by name.
         '@elsewise/components > @base-ui/react/*',
+        '@elsewise/components > dockview-react',
         '@elsewise/components > @phosphor-icons/react',
         '@elsewise/components > @pierre/trees',
         '@elsewise/components > @pierre/trees/react',

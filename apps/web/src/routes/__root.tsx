@@ -1,5 +1,5 @@
 import { Toaster } from '@elsewise/components/components/toast';
-import { createRootRoute, Outlet } from '@tanstack/react-router';
+import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { useActiveTheme } from '@/appearance/themes';
@@ -9,7 +9,9 @@ import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
+import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
+import { SettingsPanelManager, SettingsPanelManagerContext } from '@/settings/settings-panel-manager';
 
 import '../styles.css';
 
@@ -38,11 +40,13 @@ function RootComponent() {
   const brightness = useBrightness();
   const theme = useActiveTheme();
   const keymap = useKeymap();
+  const router = useRouter();
 
-  const [{ appearance, commands, editor, languageServers, loader }] = useState(() => {
+  const [{ appearance, commands, editor, settings, languageServers, loader }] = useState(() => {
     const appearance = new AppearanceManager(brightness, theme);
     const editor = new EditorManager();
-    const commands = new CommandManager({ appearance, editor });
+    const settings = new SettingsPanelManager(Object.values(DEFAULT_PANELS));
+    const commands = new CommandManager({ appearance, editor, router, settings });
 
     // TODO: Replace with actual diffs once git daemon is ready
     editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
@@ -51,6 +55,7 @@ function RootComponent() {
       appearance,
       commands,
       editor,
+      settings,
       languageServers: new LanguageServers(editor),
       loader: new PluginLoader(appearance, commands),
     };
@@ -83,11 +88,13 @@ function RootComponent() {
   return (
     <EditorManagerContext value={editor}>
       <CommandManagerContext value={commands}>
-        <LanguageServersContext value={languageServers}>
-          <Toaster>
-            <Outlet />
-          </Toaster>
-        </LanguageServersContext>
+        <SettingsPanelManagerContext value={settings}>
+          <LanguageServersContext value={languageServers}>
+            <Toaster>
+              <Outlet />
+            </Toaster>
+          </LanguageServersContext>
+        </SettingsPanelManagerContext>
       </CommandManagerContext>
     </EditorManagerContext>
   );

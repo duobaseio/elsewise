@@ -4,6 +4,8 @@ import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../test/commands';
 import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from './keymap';
 
 const APPEARANCE = new AppearanceManager(
@@ -29,7 +31,12 @@ afterEach(() => {
 // Returns a window with application keys installed for `added`, which are added in order.
 function install(...added: ApplicationCommand[]) {
   const window = new EventTarget() as Window;
-  const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+  const commands = new CommandManager({
+    appearance: APPEARANCE,
+    editor: new EditorManager(),
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+  });
   for (const command of added) {
     commands.add([command]);
   }
@@ -104,7 +111,12 @@ describe('installApplicationKeys', () => {
     const run = vi.fn(() => true);
     const window = new EventTarget() as Window;
     window.addEventListener('keydown', (event) => event.preventDefault());
-    const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+    const commands = new CommandManager({
+      appearance: APPEARANCE,
+      editor: new EditorManager(),
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+    });
     commands.add([command('a', run)]);
     installApplicationKeys(window, commands);
     window.dispatchEvent(press());

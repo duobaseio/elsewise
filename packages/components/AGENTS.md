@@ -8,8 +8,8 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/components <script>`.
 
 | Path               | What it is                                                                    |
 |--------------------|-------------------------------------------------------------------------------|
-| `src/components/`  | One component per file, flat. `file-tree/` is the one directory, entered via  |
-|                    | `file-tree.tsx` beside it.                                                    |
+| `src/components/`  | One component per file, flat. A family with several files, `file-tree/` or    |
+|                    | `settings/`, is a directory entered via the file of the same name beside it.  |
 | `src/lib/`         | Helpers. `utils.ts` is `cn()`.                                                |
 | `src/styles.css`   | The Tailwind entry and structure: token mapping, type scale, radius.          |
 | `src/elsewise.css` | The default theme's values, and nothing else.                                 |

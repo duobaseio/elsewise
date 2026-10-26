@@ -13,6 +13,8 @@ import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { SplitLayout, type SplitLayoutProps } from '@/editor/layouts/split-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -35,6 +37,8 @@ async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManage
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
   });
   const servers = new LanguageServers(editor);
   const session = { current: null };

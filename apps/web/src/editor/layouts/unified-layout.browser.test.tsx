@@ -14,6 +14,8 @@ import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { UnifiedLayout, type UnifiedLayoutProps } from '@/editor/layouts/unified-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -53,6 +55,8 @@ async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorMana
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
   });
   const servers = new LanguageServers(editor);
   const session = { current: null };

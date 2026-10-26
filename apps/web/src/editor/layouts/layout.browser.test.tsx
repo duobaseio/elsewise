@@ -32,6 +32,8 @@ import {
 } from '@/editor/layouts/layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { memoryRouter } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const BASE: EditorDocumentLayout = { type: 'split', side: 'base' };
@@ -110,6 +112,8 @@ async function mount(
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
   });
   let setSource: (source: EditorSource) => void = () => {};
   let setCode: (code: string) => void = () => {};

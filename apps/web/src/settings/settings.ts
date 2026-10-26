@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type EditorLanguageSettings, type Settings } from '@elsewise/bridge';
-import { type ApplicationCommand, DEFAULT_COMMANDS, DEFAULT_KEYS } from '@elsewise/plugin';
+import { type ApplicationCommand, DEFAULT_COMMANDS, DEFAULT_KEYS, DEFAULT_ROUTES } from '@elsewise/plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 
@@ -8,8 +8,13 @@ export const OPEN_SETTINGS: ApplicationCommand = {
   id: DEFAULT_COMMANDS.application.settings.open,
   label: 'Settings',
   defaultKeys: DEFAULT_KEYS.application.settings.open,
-  // TODO: Open the settings once they have a UI.
-  run: () => true,
+  run: ({ router }) => {
+    if (!router.state.location.pathname.startsWith('/settings')) {
+      void router.navigate({ to: DEFAULT_ROUTES.settings.general });
+    }
+
+    return true;
+  },
 };
 
 /**
