@@ -36,6 +36,23 @@ test.each(THEMES)('rows (%s)', async (theme) => {
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`row-${theme}`);
 });
 
+test.each(THEMES)('inherited and overridden (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <div className="flex w-[480px] flex-col gap-6">
+        <Row description="The display width of a tab character." id="tab-size" inherited label="Tab width">
+          <Input aria-label="Tab width" className="w-16" defaultValue="4" />
+        </Row>
+        <Row description="The separator for new files." id="line-separator" label="Line endings" onReset={() => {}}>
+          <Input aria-label="Line endings" className="w-20" defaultValue="LF" />
+        </Row>
+      </div>
+    </Sheet>,
+  );
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`row-inherited-${theme}`);
+});
+
 test.each(THEMES)('highlighted (%s)', async (theme) => {
   await render(
     <Sheet theme={theme}>

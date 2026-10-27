@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!-- Session overview: rendered by the daemon's status page. -->
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>Sessions &amp; channels</title>
+	<style>
+		.pending { color: #b45309; font-weight: 600; }
+	</style>
+</head>
+<body class="status" data-daemon="elsewise-daemon" data-version="0.4.1">
+	<header id="top">
+		<nav aria-label="Primary">
+			<a href="/sessions" aria-current="page">Sessions</a>
+			<a href="/channels">Channels</a>
+		</nav>
+	</header>
+
+	<section id="sessions" aria-labelledby="sessions-heading">
+		<h1 id="sessions-heading">Open sessions</h1>
+		<p>Each session attaches to <code>editor.sessions</code> and <em>replays</em> pending edits after a restart.</p>
+
+		<ul class="sessions" role="list">
+			<li class="session" data-id="s-4f2a" data-worktree="feature/menu">
+				<span class="id">s-4f2a</span>
+				<ul class="edits">
+					<li class="pending">12 pending edits</li>
+					<li>attached at <time datetime="2026-09-17T08:41:03Z">08:41</time></li>
+				</ul>
+			</li>
+			<li class="session" data-id="s-9c10" data-worktree="main" hidden>
+				<span class="id">s-9c10</span>
+			</li>
+		</ul>
+
+		<form action="/sessions/subscribe" method="post">
+			<label for="channel">Channel</label>
+			<input id="channel" name="channel" type="text" value="editor.sessions" required autofocus>
+			<button type="submit" disabled>Subscribe</button>
+		</form>
+	</section>
+
+	<script>
+		const pending = document.querySelectorAll("li.pending").length;
+		document.title = `${pending} pending - Sessions`;
+	</script>
+</body>
+</html>

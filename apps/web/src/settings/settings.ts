@@ -2,6 +2,7 @@ import { DEFAULT_SETTINGS, type EditorLanguageSettings, type Settings } from '@e
 import { type ApplicationCommand, DEFAULT_COMMANDS, DEFAULT_KEYS, DEFAULT_ROUTES } from '@elsewise/plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
+import { LANGUAGES } from '@/settings/languages';
 
 export const OPEN_SETTINGS: ApplicationCommand = {
   scope: 'application',
@@ -45,8 +46,9 @@ export function useEditorSettings<K extends keyof EditorLanguageSettings>(
   language: string | undefined,
   key: K,
 ): EditorLanguageSettings[K] {
+  const name = language === undefined ? undefined : (LANGUAGES[language]?.name ?? language);
   return useSettings(({ appearance: { editor } }) => {
-    const override = language === undefined ? undefined : editor.languages[language]?.[key];
+    const override = name === undefined ? undefined : editor.languages[name]?.[key];
     return override ?? editor[key];
   });
 }

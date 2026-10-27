@@ -49,11 +49,12 @@ export interface SettingsPanel {
   readonly id: string;
 
   /**
-   * The sidebar group it is listed. Defaults to `plugins`.
+   * The id of the group or panel it is listed in. Defaults to `plugins`. Omitted if the panel does not exist or is
+   * itself in a panel.
    *
-   * See {@link DEFAULT_SETTINGS_GROUPS}.
+   * See {@link DEFAULT_SETTINGS_GROUPS} for the groups.
    */
-  readonly group?: SettingsGroup;
+  readonly in?: SettingsGroup | (string & {});
 
   /**
    * The panel's label in the sidebar.

@@ -1,0 +1,50 @@
+// Session service: the daemon keeps editing sessions and attaches them to channels.
+syntax = "proto3";
+
+package elsewise.daemon.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "dev.elsewise.daemon.v1";
+
+/** An editing session pinned to one worktree, plus the channels it is attached to and their pending edits. */
+message Session {
+	string id = 1;
+	string worktree = 2;
+	State state = 3;
+	uint32 pending = 4;
+	int64 bytes_pending = 5;
+	double backoff_factor = 6;
+	bool attached = 7;
+	bytes cursor = 8;
+	optional string channel = 9 [deprecated = true];
+	repeated string tags = 10;
+	map<string, Channel> channels = 11;
+	google.protobuf.Timestamp attached_at = 12;
+
+	oneof origin {
+		string client_id = 13;
+		uint32 replay_from_seq = 14;
+	}
+
+	reserved 15 to 19;
+	uint32 schema_version = 536870911; // the largest field number proto allows
+
+	message Channel {
+		string name = 1; // e.g. "editor.sessions"
+		bool subscribed = 2;
+		uint32 retries = 3;
+	}
+
+	enum State {
+		STATE_UNSPECIFIED = 0;
+		STATE_PENDING = 1;
+		STATE_ATTACHED = 2;
+		reserved 3, 4;
+	}
+}
+
+service SessionService {
+	rpc WatchSessions(Session) returns (stream Session);
+	rpc Attach(Session) returns (Session);
+}

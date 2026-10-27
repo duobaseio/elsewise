@@ -2,9 +2,9 @@ import type { SettingsPanel } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from './settings-panel-manager';
 
-// Returns a panel with `id`.
-function panel(id: string): SettingsPanel {
-  return { id, label: id, terms: {}, component: () => null };
+// Returns a panel with `id`, listed in the group or panel `in`.
+function panel(id: string, inside?: string): SettingsPanel {
+  return { id, label: id, terms: {}, component: () => null, ...(inside === undefined ? {} : { in: inside }) };
 }
 
 afterEach(() => {
@@ -65,6 +65,44 @@ describe('add', () => {
     settings.add([again]);
 
     expect(settings.panels).toEqual([again]);
+  });
+
+  test('accepts panel in group or earlier panel', () => {
+    const settings = new SettingsPanelManager([panel('a', 'appearance')]);
+    settings.add([panel('b'), panel('c', 'a'), panel('d', 'b')]);
+
+    expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  test('omits panel in unknown panel, warning', () => {
+    const settings = new SettingsPanelManager();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    settings.add([panel('a', 'missing')]);
+
+    expect(settings.panels).toEqual([]);
+    expect(warn).toHaveBeenCalledWith('Settings panel a is in unknown panel missing');
+  });
+
+  test('omits panel in nested panel, warning', () => {
+    const settings = new SettingsPanelManager([panel('a'), panel('b', 'a')]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    settings.add([panel('c', 'b')]);
+
+    expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b']);
+    expect(warn).toHaveBeenCalledWith('Settings panel c is in b, which is itself in a panel');
+  });
+
+  test('removes panels in disposed panel', () => {
+    const settings = new SettingsPanelManager();
+    const dispose = settings.add([panel('a')]);
+    settings.add([panel('b', 'a'), panel('c')]);
+    dispose();
+
+    expect(settings.panels.map((panel) => panel.id)).toEqual(['c']);
+
+    settings.add([panel('a')]);
+
+    expect(settings.panels.map((panel) => panel.id)).toEqual(['c', 'a']);
   });
 
   test('notifies on add and dispose', () => {

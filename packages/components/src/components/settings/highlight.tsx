@@ -12,8 +12,10 @@ export function HighlightProvider({ id, children }: { id: string | undefined; ch
 }
 
 /**
- * Whether the row with `id` is highlighted, as props to spread onto its root. The root scrolls into view when it becomes
- * highlighted. A label inside it washes with `in-data-highlighted:bg-match-wash`.
+ * Whether the row with `id` is highlighted, as props to spread onto its root.
+ *
+ * The root scrolls into view when it becomes highlighted. A label inside it washes with
+ * `in-data-highlighted:bg-match-wash`.
  */
 export function useHighlight<T extends HTMLElement>(
   id: string,

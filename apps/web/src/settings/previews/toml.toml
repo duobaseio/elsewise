@@ -1,0 +1,45 @@
+# Daemon configuration: sessions are kept alive and attached to channels.
+version = "0.4.1"
+started = 2026-09-17T08:41:03+02:00
+release_date = 2026-09-17
+maintenance_window = 03:30:00
+owner.name = "Ren\u00E9"
+
+[daemon]
+	name = "Elsewise\tdaemon" # basic string, tab escape
+	socket = 'C:\ProgramData\elsewise\daemon.sock' # literal, no escapes
+	listen.host = "127.0.0.1"
+	listen.port = 7_331
+	summary = "Keeps editing sessions alive, attaches them to channels and replays pending edits after a restart."
+	description = """
+		Pending edits survive a restart; the daemon replays them \
+		in order before it accepts new ones."""
+
+[daemon.limits]
+	sessions = 64
+	pending_edits = 4_096
+	max_bytes = 0xFFFF_FFFF
+	backoff_factor = 1.5
+	backoff_max_ms = 3.0e4
+	clock_skew_ms = -250
+
+[daemon.retries]
+	enabled = true
+	attempts = [1, 2, 3, 5, 8]
+	jitter = { min_ms = 50, max_ms = 250 }
+	channels = [
+		"editor.sessions",
+		"editor.edits",
+	]
+
+[[sessions]]
+	id = "s-4f2a"
+	worktree = "feature/menu"
+	pending = 12
+	attached_at = 2026-09-17T08:41:03Z
+
+[[sessions]]
+	id = "s-9c10"
+	worktree = "main"
+	pending = 0
+	attached = false
