@@ -148,6 +148,12 @@ function useCurrentFonts() {
       }
 
       style.setProperty(`--text-${text}`, `${font.size}px`);
+      if ('lineHeight' in font) {
+        // The gutter shares the editor's line grid.
+        const grid = `round(calc(var(--text-${text}) * ${font.lineHeight}), 1px)`;
+        style.setProperty(`--text-${text}--line-height`, grid);
+        style.setProperty(`--text-${text}-gutter--line-height`, grid);
+      }
       style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
     }
   }, [general, editor]);

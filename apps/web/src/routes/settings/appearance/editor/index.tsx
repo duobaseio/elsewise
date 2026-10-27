@@ -9,6 +9,7 @@ import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { FontRows } from '../../-font-rows';
+import { LineHeightInput } from '../../-line-height-input';
 import { ThemeSelect } from '../-theme';
 import { CompletionDocumentationHelp, HighlightUsagesHelp, ScrollbarMarkersHelp } from './-help';
 import { LanguageRows } from './-language-rows';
@@ -19,6 +20,7 @@ export const Route = createFileRoute('/settings/appearance/editor/')({ component
 export const EDITOR_TERMS = {
   theme: { label: 'Theme', keywords: ['colors', 'color scheme', 'syntax highlighting', 'light', 'dark'] },
   font: { label: 'Font', keywords: ['font family', 'typeface', 'monospace', 'font size', 'code font'] },
+  lineHeight: { label: 'Line height', keywords: ['line spacing', 'leading', 'row height', 'code font'] },
   ligatures: { label: 'Ligatures', keywords: ['font', 'glyphs', 'monospace', 'code font'] },
   lineNumbers: { label: 'Line numbers', keywords: ['gutter', 'numbering', 'show line numbers'] },
   lineWrapping: { label: 'Line wrapping', keywords: ['word wrap', 'soft wrap', 'long lines', 'horizontal scrolling'] },
@@ -31,7 +33,7 @@ export const EDITOR_TERMS = {
   scrollbarMarkers: { label: 'Scrollbar markers', keywords: ['overview', 'marks', 'diagnostics', 'matches'] },
   diffLayout: { label: 'Diff layout', keywords: ['compare', 'split', 'unified', 'side by side', 'inline'] },
   languages: { label: 'Languages', keywords: ['overrides', 'per language'] },
-} as const satisfies Record<keyof Settings['appearance']['editor'] | 'ligatures', SettingsSearchTerm>;
+} as const satisfies Record<keyof Settings['appearance']['editor'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
 
 const DIFF_LAYOUTS: Record<DiffLayout, string> = { split: 'Split', unified: 'Unified' };
 
@@ -64,7 +66,19 @@ export function Editor() {
         onChange={(font) => set({ font })}
         stack={monoFontStack}
         terms={EDITOR_TERMS}
-      />
+      >
+        <Row
+          id="lineHeight"
+          label={EDITOR_TERMS.lineHeight.label}
+          description="A multiple of the font size, between 1 and 2.5."
+        >
+          <LineHeightInput
+            label={EDITOR_TERMS.lineHeight.label}
+            onChange={(lineHeight) => set({ font: { ...editor.font, lineHeight } })}
+            value={editor.font.lineHeight}
+          />
+        </Row>
+      </FontRows>
 
       <Separator />
 

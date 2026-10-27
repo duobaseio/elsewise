@@ -669,7 +669,7 @@ test('failed base replaces editor with why', async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
   failing.reject(new Error('unreadable'));
 
-  await expect.element(page.getByText("Couldn't load the base for test.failing")).toBeVisible();
+  await expect.element(page.getByText('Could not show the diff')).toBeVisible();
   await expect.element(page.getByText('unreadable')).toBeVisible();
   expect(file()).toBeNull();
   expect(header()).toBeNull();
@@ -684,7 +684,7 @@ test('failed base closes back to editor', async () => {
   failing.reject(new Error('unreadable'));
   await expect.element(page.getByText('unreadable')).toBeVisible();
 
-  await userEvent.click(page.getByRole('button', { name: 'Close' }));
+  await userEvent.click(page.getByRole('button', { name: 'Stop comparing' }));
 
   await expect.poll(() => diff.source).toBeNull();
   await expect.poll(() => file()).not.toBeNull();

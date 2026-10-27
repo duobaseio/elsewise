@@ -88,7 +88,11 @@ export function Search() {
         <ComboboxEmpty>No settings found</ComboboxEmpty>
         <ComboboxList>
           {(hit: SettingsSearchHit) => (
-            <ComboboxItem className="pt-1.25 pr-1.5" key={`${hit.panel.id}.${hit.language ?? ''}.${hit.id}`} value={hit}>
+            <ComboboxItem
+              className="pt-1.25 pr-1.5"
+              key={`${hit.panel.id}.${hit.language ?? ''}.${hit.id}`}
+              value={hit}
+            >
               <div className="flex flex-col leading-tight">
                 <span>{hit.term.label}</span>
                 <span className="flex items-center gap-0.5 text-text-2 text-xs leading-tight">

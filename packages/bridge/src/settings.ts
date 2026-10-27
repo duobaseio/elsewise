@@ -7,6 +7,7 @@ export type ThemeId = z.infer<typeof ThemeId>;
 export type BundledTheme = z.infer<typeof BundledTheme>;
 export type Font = z.infer<typeof Font>;
 export type FontSize = z.infer<typeof FontSize>;
+export type LineHeight = z.infer<typeof LineHeight>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
 export type LineSeparator = z.infer<typeof LineSeparator>;
 export type DiffLayout = z.infer<typeof DiffLayout>;
@@ -117,7 +118,7 @@ export const Settings = z.lazy(() =>
              * The editor's theme, or `null` to follow the interface's.
              */
             theme: ThemeId.nullable().catch(null),
-            font: font(12),
+            font: font(12, 1.54),
             lineNumbers: z.boolean().catch(true),
             lineWrapping: z.boolean().catch(false),
             /**
@@ -170,7 +171,7 @@ export const Settings = z.lazy(() =>
              * The terminal's theme, or `null` to follow the interface's.
              */
             theme: ThemeId.nullable().catch(null),
-            font: font(12),
+            font: font(12, 1.0625),
             cursorStyle: CursorStyle.catch('block'),
             cursorBlink: z.boolean().catch(true),
             /**
@@ -217,19 +218,28 @@ export const Brightness = z.enum(['light', 'dark', 'system']);
 
 export const FontSize = z.literal(FONT_SIZES);
 
+/**
+ * A multiple of the font size in the editor, and of the glyph height in the terminal.
+ */
+export const LineHeight = z.number().min(1).max(2.5);
+
 export const Font = z.object({
   /**
    * A font family, or `null` for the default.
    */
   family: z.string().min(1).nullable(),
   size: FontSize,
+  lineHeight: LineHeight.optional(),
   ligatures: z.boolean(),
 });
 
-function font(size: FontSize) {
+function font(size: FontSize): z.ZodType<Omit<Font, 'lineHeight'>>;
+function font(size: FontSize, lineHeight: LineHeight): z.ZodType<Required<Font>>;
+function font(size: FontSize, lineHeight?: LineHeight): z.ZodType {
   const font = z.object({
     family: Font.shape.family.catch(null),
     size: FontSize.catch(size),
+    ...(lineHeight === undefined ? {} : { lineHeight: LineHeight.catch(lineHeight) }),
     ligatures: Font.shape.ligatures.catch(true),
   });
   return font.catch(() => font.parse({}));

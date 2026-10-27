@@ -94,6 +94,40 @@ describe('Terminal', () => {
     );
   });
 
+  test('saves line height within limits', async () => {
+    const save = await mount();
+    const input = page.getByRole('textbox', { name: 'Line height' });
+
+    await userEvent.fill(input, '0.9');
+    await expect.element(input).toHaveAttribute('aria-invalid', 'true');
+    await userEvent.fill(input, '2.6');
+    await expect.element(input).toHaveAttribute('aria-invalid', 'true');
+    expect(save).not.toHaveBeenCalled();
+
+    await userEvent.fill(input, '1.20');
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(
+      withTerminal({ font: { ...DEFAULT_SETTINGS.appearance.terminal.font, lineHeight: 1.2 } }),
+    );
+    await expect.element(input).toHaveValue('1.20');
+  });
+
+  test('keeps trailing zero of line height', async () => {
+    const save = await mount();
+    const input = page.getByRole('textbox', { name: 'Line height' });
+
+    await userEvent.fill(input, '1.02');
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    await userEvent.keyboard('{Backspace}');
+
+    await expect.poll(() => save.mock.calls.length).toBe(2);
+    expect(save).toHaveBeenLastCalledWith(
+      withTerminal({ font: { ...DEFAULT_SETTINGS.appearance.terminal.font, lineHeight: 1 } }),
+    );
+    await expect.element(input).toHaveValue('1.0');
+  });
+
   test('saves scrollback within limits', async () => {
     const save = await mount();
     const input = page.getByRole('textbox', { name: 'Scrollback' });

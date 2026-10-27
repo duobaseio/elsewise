@@ -279,6 +279,20 @@ describe('useEditorExtensions', () => {
       await expect.poll(() => view().defaultCharacterWidth).toBe(width);
     });
 
+    test('remeasures line height', async () => {
+      notifyManager.setScheduler((callback) => callback());
+      document.documentElement.style.setProperty('--text-code--line-height', '18px');
+      const { view, settings } = await mount('workingTree', { code: 'fn main() {}' });
+      await expect.poll(() => view().defaultLineHeight).toBe(18);
+
+      // Changes the CSS variable that the editor's theme reads the line height from along with the settings, as the
+      // app does.
+      document.documentElement.style.setProperty('--text-code--line-height', '30px');
+      settings(withSettings({}, { font: { ...DEFAULT_SETTINGS.appearance.editor.font, lineHeight: 2.5 } }));
+
+      await expect.poll(() => view().defaultLineHeight).toBe(30);
+    });
+
     test('edits with undo history', async () => {
       const { view, commands } = await mount('workingTree', { code: 'main\n' });
 
@@ -844,7 +858,7 @@ function Plugins({
   document: EditorDocument | null;
   onPlugins: (plugins: Extension) => void;
 }) {
-  onPlugins(usePlugins(view, document));
+  onPlugins(usePlugins(view, document, LAYOUT));
   return null;
 }
 

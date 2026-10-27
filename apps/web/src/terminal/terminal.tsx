@@ -14,8 +14,6 @@ import { ClipboardShortcuts } from '@/terminal/clipboard-shortcuts';
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
 
-const LINE_HEIGHT = 1.38;
-
 /** `session` is the shell on the far side: an addon that reads the terminal's input and writes its output. */
 export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefObject<XTerm | null> }) {
   const host = useRef<HTMLDivElement>(null);
@@ -43,7 +41,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       // Unicode11Addon and LigaturesAddon both reach proposed API.
       allowProposedApi: true,
       fontSize: font.size,
-      lineHeight: LINE_HEIGHT,
+      lineHeight: font.lineHeight,
       cursorStyle,
       cursorInactiveStyle,
       cursorBlink,
@@ -106,13 +104,14 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
         if (live) {
           terminal.xterm.options.fontFamily = stack;
           terminal.xterm.options.fontSize = font.size;
+          terminal.xterm.options.lineHeight = font.lineHeight;
           terminal.fit.fit();
         }
       });
     return () => {
       live = false;
     };
-  }, [terminal, font.family, font.size]);
+  }, [terminal, font.family, font.size, font.lineHeight]);
 
   useEffect(() => {
     if (terminal === null || !font.ligatures) {

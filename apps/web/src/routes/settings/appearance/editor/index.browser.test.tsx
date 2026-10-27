@@ -96,6 +96,15 @@ describe('Editor', () => {
     expect(save).toHaveBeenCalledWith(withEditor({ font: { ...SETTINGS.appearance.editor.font, size: 14 } }));
   });
 
+  test('saves line height', async () => {
+    const { save } = await mount();
+
+    await userEvent.fill(page.getByRole('textbox', { name: 'Line height' }), '1.8');
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withEditor({ font: { ...SETTINGS.appearance.editor.font, lineHeight: 1.8 } }));
+  });
+
   test('saves tab width', async () => {
     const { save } = await mount();
     await userEvent.fill(page.getByRole('textbox', { name: 'Tab width' }), '8');
