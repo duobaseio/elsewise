@@ -24,22 +24,24 @@ const SIZES: Record<string, string> = Object.fromEntries(FONT_SIZES.map((size) =
 type FontGroup = { value: string; items: readonly FontChoice[] };
 
 /**
- * The rows of a font: its family and size, then its ligatures.
+ * The rows of a font: its family and size, then `children`, then its ligatures.
  */
-export function FontRows({
+export function FontRows<F extends Font>({
   font,
   defaults,
   stack,
   terms,
   description,
   onChange,
+  children,
 }: {
-  font: Font;
+  font: F;
   defaults: readonly FontChoice[];
   stack: (family: string | null) => string;
   terms: { font: SettingsSearchTerm; ligatures: SettingsSearchTerm };
   description: ReactNode;
-  onChange: (font: Font) => void;
+  onChange: (font: F) => void;
+  children?: ReactNode;
 }) {
   const [installed, setInstalled] = useState<readonly string[]>([]);
   useEffect(() => {
@@ -123,6 +125,8 @@ export function FontRows({
           </SelectContent>
         </Select>
       </Row>
+
+      {children}
 
       <Row id="ligatures" label={terms.ligatures.label} description="Use several characters as a single ligature.">
         <Switch

@@ -12,6 +12,7 @@ import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { Terminal as TerminalView } from '@/terminal/terminal';
 import { FontRows } from '../-font-rows';
+import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from './-theme';
 
 export const Route = createFileRoute('/settings/appearance/terminal')({ component: Terminal });
@@ -19,11 +20,12 @@ export const Route = createFileRoute('/settings/appearance/terminal')({ componen
 export const TERMINAL_TERMS = {
   theme: { label: 'Theme', keywords: ['colors', 'color scheme', 'ansi', 'palette', 'light', 'dark'] },
   font: { label: 'Font', keywords: ['font family', 'typeface', 'monospace', 'font size', 'terminal font'] },
+  lineHeight: { label: 'Line height', keywords: ['line spacing', 'leading', 'row height', 'terminal font'] },
   ligatures: { label: 'Ligatures', keywords: ['font', 'glyphs', 'monospace', 'terminal font'] },
   cursorStyle: { label: 'Cursor style', keywords: ['caret', 'block', 'underline', 'bar', 'beam'] },
   cursorBlink: { label: 'Cursor blinking', keywords: ['caret', 'blink', 'flash'] },
   scrollback: { label: 'Scrollback', keywords: ['history', 'lines', 'buffer', 'scroll'] },
-} as const satisfies Record<keyof Settings['appearance']['terminal'] | 'ligatures', SettingsSearchTerm>;
+} as const satisfies Record<keyof Settings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
 
 const CURSOR_STYLES: Record<CursorStyle, string> = { block: 'Block', underline: 'Underline', bar: 'Bar' };
 
@@ -85,7 +87,19 @@ export function Terminal() {
         onChange={(font) => set({ font })}
         stack={monoFontStack}
         terms={TERMINAL_TERMS}
-      />
+      >
+        <Row
+          id="lineHeight"
+          label={TERMINAL_TERMS.lineHeight.label}
+          description="A multiple of the font's height, between 1 and 2.5."
+        >
+          <LineHeightInput
+            label={TERMINAL_TERMS.lineHeight.label}
+            onChange={(lineHeight) => set({ font: { ...terminal.font, lineHeight } })}
+            value={terminal.font.lineHeight}
+          />
+        </Row>
+      </FontRows>
 
       <Separator />
 
@@ -137,11 +151,15 @@ export function Terminal() {
 
 function ScrollbackInput({ value, onChange }: { value: number; onChange: (value: number) => void }) {
   const [draft, setDraft] = useState(String(value));
-  const [committed, setCommitted] = useState(value);
-  if (committed !== value) {
-    setCommitted(value);
-    setDraft(String(value));
+  const [previous, setPrevious] = useState(value);
+
+  if (previous !== value) {
+    setPrevious(value);
+    if (parseScrollback(draft) !== value) {
+      setDraft(String(value));
+    }
   }
+
   const valid = parseScrollback(draft) !== undefined;
 
   return (

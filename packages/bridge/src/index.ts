@@ -17,6 +17,7 @@ export {
   FontSize,
   type Json,
   KeymapId,
+  LineHeight,
   LineSeparator,
   Settings,
   type SettingsBridge,

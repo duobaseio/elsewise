@@ -120,6 +120,7 @@ describe('Terminal', () => {
     const { client, xterm } = await mount(fake);
     const elsewise = resolveActiveTheme(THEMES, { source: 'elsewise', name: 'elsewise' }, 'light').terminal;
     await expect.poll(() => xterm.options.fontSize).toBe(12);
+    expect(xterm.options.lineHeight).toBe(1.0625);
     expect(xterm.options.cursorStyle).toBe('block');
     expect(xterm.options.theme?.background).toBe(elsewise.background);
 
@@ -129,7 +130,7 @@ describe('Terminal', () => {
         ...SETTINGS.appearance,
         terminal: {
           theme: { source: 'elsewise', name: 'dracula' },
-          font: { family: null, size: 16, ligatures: false },
+          font: { family: null, size: 16, lineHeight: 1.2, ligatures: false },
           cursorStyle: 'bar',
           cursorBlink: false,
           scrollback: 2000,
@@ -143,6 +144,7 @@ describe('Terminal', () => {
       'light',
     ).terminal;
     await expect.poll(() => xterm.options.fontSize).toBe(16);
+    expect(xterm.options.lineHeight).toBe(1.2);
     expect(xterm.options.cursorStyle).toBe('bar');
     expect(xterm.options.cursorBlink).toBe(false);
     expect(xterm.options.scrollback).toBe(2000);

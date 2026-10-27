@@ -281,7 +281,7 @@ describe('settings:load', () => {
   test('keeps valid terminal leaves and replaces bad ones', () => {
     const terminal = {
       theme: { source: 'elsewise', name: 'dracula' },
-      font: { family: 'Iosevka', size: 16, ligatures: false },
+      font: { family: 'Iosevka', size: 16, lineHeight: 1.2, ligatures: false },
       cursorStyle: 'bar',
       cursorBlink: false,
       scrollback: 50000,
@@ -299,6 +299,31 @@ describe('settings:load', () => {
       write({ appearance: { terminal: bad } });
       expect(load()).toEqual(DEFAULT_SETTINGS);
     }
+  });
+
+  test('keeps a valid line height and replaces a bad one', () => {
+    write({ appearance: { editor: { font: { lineHeight: 1.8 } } } });
+    expect(load()).toEqual({
+      ...DEFAULT_SETTINGS,
+      appearance: {
+        ...DEFAULT_SETTINGS.appearance,
+        editor: {
+          ...DEFAULT_SETTINGS.appearance.editor,
+          font: { ...DEFAULT_SETTINGS.appearance.editor.font, lineHeight: 1.8 },
+        },
+      },
+    });
+
+    for (const lineHeight of [0.9, 2.6, '1.5']) {
+      write({ appearance: { editor: { font: { lineHeight } }, terminal: { font: { lineHeight } } } });
+      expect(load()).toEqual(DEFAULT_SETTINGS);
+    }
+  });
+
+  test('drops the interface font line height', () => {
+    write({ appearance: { general: { font: { lineHeight: 2 } } } });
+
+    expect(load()).toEqual(DEFAULT_SETTINGS);
   });
 
   test('replaces a non-object language map with the default', () => {

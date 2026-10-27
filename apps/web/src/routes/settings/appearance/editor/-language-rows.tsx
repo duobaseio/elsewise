@@ -137,11 +137,15 @@ export function LanguageRows({
 
 function WidthInput({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   const [draft, setDraft] = useState(String(value));
-  const [committed, setCommitted] = useState(value);
-  if (committed !== value) {
-    setCommitted(value);
-    setDraft(String(value));
+  const [previous, setPrevious] = useState(value);
+
+  if (previous !== value) {
+    setPrevious(value);
+    if (parseWidth(draft) !== value) {
+      setDraft(String(value));
+    }
   }
+
   const valid = parseWidth(draft) !== undefined;
 
   return (
