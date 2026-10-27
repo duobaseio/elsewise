@@ -15,6 +15,7 @@
       "**/vitest.config.ts",
       "**/vite/**/*",
       "!**/src/routeTree.gen.ts",
+      "!**/src/settings/previews",
       "!**/src/styles.css"
     ]
   },

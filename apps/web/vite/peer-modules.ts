@@ -6,7 +6,7 @@ import { type Plugin, type ResolvedConfig, transformWithOxc, type ViteDevServer 
 
 /**
  * A Vite plugin that allows Elsewise and its separately bundled plugins to share one instance of each module specified
- * by `specifiers`.
+ * by `specifiers`. A specifier ending in `/` stands for every module the package exports, except stylesheets.
  *
  * Without this, Elsewise and its plugins will each have their own distinct copy of a module, e.g. React, and two React
  * modules break context and hooks.
@@ -18,17 +18,19 @@ export function peerModules(specifiers: readonly string[]): Plugin[] {
   return [build(specifiers), serve(specifiers)];
 }
 
-function build(specifiers: readonly string[]): Plugin {
+function build(prefixed: readonly string[]): Plugin {
   // The id prefix of a peer module's facade, e.g. `\0peer:react`.
   const prefix = '\0peer:';
 
   let config: ResolvedConfig;
+  let specifiers: readonly string[];
   return {
     name: 'peer-modules:build',
     apply: 'build',
 
     configResolved(resolvedConfig) {
       config = resolvedConfig;
+      specifiers = expand(prefixed, config.root);
     },
 
     // Adds the (not yet generated) facades as entry points.
@@ -92,11 +94,12 @@ function build(specifiers: readonly string[]): Plugin {
   };
 }
 
-function serve(specifiers: readonly string[]): Plugin {
+function serve(prefixed: readonly string[]): Plugin {
   // The path under `base` that the dev server serves a peer module's facade at, e.g. `/@peer/react`.
   const devPath = '@peer/';
 
   let server: ViteDevServer;
+  let specifiers: readonly string[];
   return {
     name: 'peer-modules:serve',
     apply: 'serve',
@@ -104,6 +107,7 @@ function serve(specifiers: readonly string[]): Plugin {
     // Excludes workspace packages from pre-bundling to preserve HMR.
     config(userConfig) {
       const root = path.resolve(userConfig.root ?? '');
+      specifiers = expand(prefixed, root);
       const include = specifiers.filter((specifier) => {
         const name = specifier.split('/', specifier.startsWith('@') ? 2 : 1).join('/');
         return realpathSync(path.join(root, 'node_modules', name)).includes(`${path.sep}node_modules${path.sep}`);
@@ -155,6 +159,21 @@ function serve(specifiers: readonly string[]): Plugin {
       return facade(specifier, resolved.split('?')[0]);
     },
   };
+}
+
+/** Replaces each specifier ending in `/` with the modules its package, under `root`, exports, except stylesheets. */
+function expand(specifiers: readonly string[], root: string): string[] {
+  return specifiers.flatMap((specifier) => {
+    if (!specifier.endsWith('/')) {
+      return [specifier];
+    }
+
+    const name = specifier.slice(0, -1);
+    const { exports } = JSON.parse(readFileSync(path.join(root, 'node_modules', name, 'package.json'), 'utf8'));
+    return Object.keys(exports)
+      .filter((subpath) => !subpath.endsWith('.css'))
+      .map((subpath) => name + subpath.slice(1));
+  });
 }
 
 /** Generates the code of a facade module that re-exports everything from `specifier`, whose source is `file`. */

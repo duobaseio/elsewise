@@ -1,6 +1,16 @@
 import type { ReactNode } from 'react';
 
-export type PageProps = { title: ReactNode; children?: ReactNode };
+export type PageProps = {
+  /**
+   * The page's title.
+   */
+  title: ReactNode;
+
+  /**
+   * The page's rows.
+   */
+  children?: ReactNode;
+};
 
 /**
  * A settings page.

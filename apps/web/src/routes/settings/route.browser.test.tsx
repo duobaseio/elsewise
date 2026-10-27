@@ -22,11 +22,18 @@ const PANELS: InstalledPlugin = {
               {
                 id: 'io.example.words',
                 label: 'Words',
-                group: 'appearance',
+                in: 'appearance',
                 terms: { dictionary: { label: 'Dictionary', keywords: ['spelling'] } },
                 component: () => 'Dictionary',
               },
               { id: 'io.example.hooks', label: 'Hooks', terms: {}, component: () => 'Hooks' },
+              {
+                id: 'io.example.words.spelling',
+                label: 'Spelling',
+                in: 'io.example.words',
+                terms: { locale: { label: 'Locale', keywords: ['language', 'region'] } },
+                component: () => 'Spelling',
+              },
               { id: 'io.example.broken', label: 'Broken', terms: {}, component: () => { throw new Error('boom'); } },
             ]),
           ];
@@ -86,6 +93,32 @@ describe('Settings', () => {
       .map((link) => link.textContent);
     expect(links).toEqual(['General', 'Editor', 'Terminal', 'Words', 'Hooks', 'Broken']);
     await expect.element(page.getByText('Plugins')).toBeVisible();
+  });
+
+  test('lists panels in panel under it, expanded on demand or when open', async () => {
+    const router = await mount(['/settings'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
+
+    await userEvent.click(sidebar().getByRole('button', { name: 'Expand Words' }));
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toBeVisible();
+
+    await userEvent.dblClick(sidebar().getByRole('link', { name: 'Words' }));
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
+
+    await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words.spelling' } });
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toHaveAttribute('data-active');
+    await expect.poll(() => page.getByRole('main').element().textContent).toContain('Spelling');
+  });
+
+  test('search shows panel in panel under its panel', async () => {
+    await mount(['/settings'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'region');
+
+    await expect
+      .poll(() => page.getByRole('option', { name: /Locale/ }).element().textContent)
+      .toMatch(/Words.*Spelling/);
   });
 
   test('hides plugins group without panels', async () => {

@@ -8,7 +8,7 @@ export const DEFAULT_PANELS = {
   general: {
     id: 'io.duobase.elsewise.settings.general',
     label: 'General',
-    group: DEFAULT_SETTINGS_GROUPS.appearance,
+    in: DEFAULT_SETTINGS_GROUPS.appearance,
     route: '/settings/appearance/general',
     terms: GENERAL_TERMS,
     component: General,
@@ -16,7 +16,7 @@ export const DEFAULT_PANELS = {
   editor: {
     id: 'io.duobase.elsewise.settings.editor',
     label: 'Editor',
-    group: DEFAULT_SETTINGS_GROUPS.appearance,
+    in: DEFAULT_SETTINGS_GROUPS.appearance,
     route: '/settings/appearance/editor',
     terms: EDITOR_TERMS,
     component: Editor,
@@ -24,7 +24,7 @@ export const DEFAULT_PANELS = {
   terminal: {
     id: 'io.duobase.elsewise.settings.terminal',
     label: 'Terminal',
-    group: DEFAULT_SETTINGS_GROUPS.appearance,
+    in: DEFAULT_SETTINGS_GROUPS.appearance,
     route: '/settings/appearance/terminal',
     terms: TERMINAL_TERMS,
     component: Terminal,

@@ -10,7 +10,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { useNavigate } from '@tanstack/react-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { linkTo } from '@/settings/default-panels';
 import { type SettingsSearchHit, search } from '@/settings/search';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
@@ -91,7 +91,17 @@ export function Search() {
             <ComboboxItem className="pr-1.5" key={`${hit.panel.id}.${hit.id}`} value={hit}>
               <div className="flex flex-col leading-tight">
                 <span>{hit.term.label}</span>
-                <span className="text-text-2 text-xs">{hit.panel.label}</span>
+                <span className="flex items-center gap-0.5 text-text-2 text-xs">
+                  {panels
+                    .filter((panel) => panel.id === hit.panel.in)
+                    .map((panel) => (
+                      <Fragment key={panel.id}>
+                        {panel.label}
+                        <Icon className="size-2.5" name="submenu" />
+                      </Fragment>
+                    ))}
+                  {hit.panel.label}
+                </span>
               </div>
             </ComboboxItem>
           )}

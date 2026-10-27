@@ -14,10 +14,11 @@ import { Route as ShellRouteRouteImport } from './routes/_shell/route'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ShellProjectWorktreeRouteImport } from './routes/_shell/$project/$worktree'
-import { Route as SettingsAppearanceEditorRouteImport } from './routes/settings/appearance/editor'
 import { Route as SettingsAppearanceGeneralRouteImport } from './routes/settings/appearance/general'
 import { Route as SettingsAppearanceTerminalRouteImport } from './routes/settings/appearance/terminal'
 import { Route as SettingsPluginsIdRouteImport } from './routes/settings/plugins/$id'
+import { Route as SettingsAppearanceEditorIndexRouteImport } from './routes/settings/appearance/editor/index'
+import { Route as SettingsAppearanceEditorLanguageRouteImport } from './routes/settings/appearance/editor/$language'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,12 +44,6 @@ const ShellProjectWorktreeRoute = ShellProjectWorktreeRouteImport.update({
   path: '/$project/$worktree',
   getParentRoute: () => ShellRouteRoute,
 } as any)
-const SettingsAppearanceEditorRoute =
-  SettingsAppearanceEditorRouteImport.update({
-    id: '/appearance/editor',
-    path: '/appearance/editor',
-    getParentRoute: () => SettingsRouteRoute,
-  } as any)
 const SettingsAppearanceGeneralRoute =
   SettingsAppearanceGeneralRouteImport.update({
     id: '/appearance/general',
@@ -66,25 +61,39 @@ const SettingsPluginsIdRoute = SettingsPluginsIdRouteImport.update({
   path: '/plugins/$id',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
+const SettingsAppearanceEditorIndexRoute =
+  SettingsAppearanceEditorIndexRouteImport.update({
+    id: '/appearance/editor/',
+    path: '/appearance/editor/',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
+const SettingsAppearanceEditorLanguageRoute =
+  SettingsAppearanceEditorLanguageRouteImport.update({
+    id: '/appearance/editor/$language',
+    path: '/appearance/editor/$language',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/': typeof SettingsIndexRoute
   '/$project/$worktree': typeof ShellProjectWorktreeRoute
-  '/settings/appearance/editor': typeof SettingsAppearanceEditorRoute
   '/settings/appearance/general': typeof SettingsAppearanceGeneralRoute
   '/settings/appearance/terminal': typeof SettingsAppearanceTerminalRoute
   '/settings/plugins/$id': typeof SettingsPluginsIdRoute
+  '/settings/appearance/editor/$language': typeof SettingsAppearanceEditorLanguageRoute
+  '/settings/appearance/editor/': typeof SettingsAppearanceEditorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsIndexRoute
   '/$project/$worktree': typeof ShellProjectWorktreeRoute
-  '/settings/appearance/editor': typeof SettingsAppearanceEditorRoute
   '/settings/appearance/general': typeof SettingsAppearanceGeneralRoute
   '/settings/appearance/terminal': typeof SettingsAppearanceTerminalRoute
   '/settings/plugins/$id': typeof SettingsPluginsIdRoute
+  '/settings/appearance/editor/$language': typeof SettingsAppearanceEditorLanguageRoute
+  '/settings/appearance/editor': typeof SettingsAppearanceEditorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,10 +102,11 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/': typeof SettingsIndexRoute
   '/_shell/$project/$worktree': typeof ShellProjectWorktreeRoute
-  '/settings/appearance/editor': typeof SettingsAppearanceEditorRoute
   '/settings/appearance/general': typeof SettingsAppearanceGeneralRoute
   '/settings/appearance/terminal': typeof SettingsAppearanceTerminalRoute
   '/settings/plugins/$id': typeof SettingsPluginsIdRoute
+  '/settings/appearance/editor/$language': typeof SettingsAppearanceEditorLanguageRoute
+  '/settings/appearance/editor/': typeof SettingsAppearanceEditorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -105,19 +115,21 @@ export interface FileRouteTypes {
     | '/settings'
     | '/settings/'
     | '/$project/$worktree'
-    | '/settings/appearance/editor'
     | '/settings/appearance/general'
     | '/settings/appearance/terminal'
     | '/settings/plugins/$id'
+    | '/settings/appearance/editor/$language'
+    | '/settings/appearance/editor/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/settings'
     | '/$project/$worktree'
-    | '/settings/appearance/editor'
     | '/settings/appearance/general'
     | '/settings/appearance/terminal'
     | '/settings/plugins/$id'
+    | '/settings/appearance/editor/$language'
+    | '/settings/appearance/editor'
   id:
     | '__root__'
     | '/'
@@ -125,10 +137,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/settings/'
     | '/_shell/$project/$worktree'
-    | '/settings/appearance/editor'
     | '/settings/appearance/general'
     | '/settings/appearance/terminal'
     | '/settings/plugins/$id'
+    | '/settings/appearance/editor/$language'
+    | '/settings/appearance/editor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -174,13 +187,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellProjectWorktreeRouteImport
       parentRoute: typeof ShellRouteRoute
     }
-    '/settings/appearance/editor': {
-      id: '/settings/appearance/editor'
-      path: '/appearance/editor'
-      fullPath: '/settings/appearance/editor'
-      preLoaderRoute: typeof SettingsAppearanceEditorRouteImport
-      parentRoute: typeof SettingsRouteRoute
-    }
     '/settings/appearance/general': {
       id: '/settings/appearance/general'
       path: '/appearance/general'
@@ -202,6 +208,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsPluginsIdRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/appearance/editor/': {
+      id: '/settings/appearance/editor/'
+      path: '/appearance/editor'
+      fullPath: '/settings/appearance/editor/'
+      preLoaderRoute: typeof SettingsAppearanceEditorIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/appearance/editor/$language': {
+      id: '/settings/appearance/editor/$language'
+      path: '/appearance/editor/$language'
+      fullPath: '/settings/appearance/editor/$language'
+      preLoaderRoute: typeof SettingsAppearanceEditorLanguageRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
   }
 }
 
@@ -219,18 +239,20 @@ const ShellRouteRouteWithChildren = ShellRouteRoute._addFileChildren(
 
 interface SettingsRouteRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
-  SettingsAppearanceEditorRoute: typeof SettingsAppearanceEditorRoute
   SettingsAppearanceGeneralRoute: typeof SettingsAppearanceGeneralRoute
   SettingsAppearanceTerminalRoute: typeof SettingsAppearanceTerminalRoute
   SettingsPluginsIdRoute: typeof SettingsPluginsIdRoute
+  SettingsAppearanceEditorLanguageRoute: typeof SettingsAppearanceEditorLanguageRoute
+  SettingsAppearanceEditorIndexRoute: typeof SettingsAppearanceEditorIndexRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
-  SettingsAppearanceEditorRoute: SettingsAppearanceEditorRoute,
   SettingsAppearanceGeneralRoute: SettingsAppearanceGeneralRoute,
   SettingsAppearanceTerminalRoute: SettingsAppearanceTerminalRoute,
   SettingsPluginsIdRoute: SettingsPluginsIdRoute,
+  SettingsAppearanceEditorLanguageRoute: SettingsAppearanceEditorLanguageRoute,
+  SettingsAppearanceEditorIndexRoute: SettingsAppearanceEditorIndexRoute,
 }
 
 const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(

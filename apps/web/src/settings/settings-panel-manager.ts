@@ -1,5 +1,7 @@
-import type { Disposable, Settings, SettingsPanel } from '@elsewise/plugin';
+import { DEFAULT_SETTINGS_GROUPS, type Disposable, type Settings, type SettingsPanel } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+
+const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
 
 /**
  * The settings as plugins see them.
@@ -25,21 +27,34 @@ export class SettingsPanelManager implements Settings {
    * {@inheritDoc}
    */
   add(panels: readonly SettingsPanel[]): Disposable {
-    const ids = new Set(this.currentPanels.map((panel) => panel.id));
+    const known = new Map(this.addedPanels.flat().map((panel) => [panel.id, panel]));
     const added = panels.filter((panel) => {
-      if (ids.has(panel.id)) {
+      if (known.has(panel.id)) {
         console.warn(`Settings panel ${panel.id} already exists`);
         return false;
       }
 
-      ids.add(panel.id);
+      const parent = panel.in === undefined || GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
+      if (panel.in !== undefined && !GROUPS.includes(panel.in) && parent === undefined) {
+        console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
+        return false;
+      }
+      if (parent?.in !== undefined && !GROUPS.includes(parent.in)) {
+        console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
+        return false;
+      }
+
+      known.set(panel.id, panel);
       return true;
     });
     this.addedPanels = [...this.addedPanels, added];
     this.currentPanels = this.addedPanels.flat();
     this.notify();
     return () => {
-      this.addedPanels = this.addedPanels.filter((other) => other !== added);
+      const removed = new Set(added.map((panel) => panel.id));
+      this.addedPanels = this.addedPanels
+        .filter((other) => other !== added)
+        .map((other) => other.filter((panel) => panel.in === undefined || !removed.has(panel.in)));
       this.currentPanels = this.addedPanels.flat();
       this.notify();
     };

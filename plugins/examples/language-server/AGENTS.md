@@ -10,7 +10,7 @@ processes.
 
 ## Rules
 
-- **Peer modules stay out of the bundle.** `vite.config.ts` externalizes `PEER_MODULES`, which Elsewise provides at
+- **Peer modules stay out of the bundle.** `vite.config.ts` externalizes the `PEER_MODULES`, which Elsewise provides at
   runtime. Declare the ones the plugin imports as peer dependencies.
 - **The port and origins match.** `src/main.ts` and `scripts/serve.mjs` share the port, and `serve.mjs` only accepts
   Elsewise's origins.

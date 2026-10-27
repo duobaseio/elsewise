@@ -7,8 +7,19 @@ import 'dockview-react/dist/styles/dockview.css';
 import './split-page.css';
 
 export type SplitPageProps = {
+  /**
+   * The page's title.
+   */
   title: ReactNode;
+
+  /**
+   * The preview beside the rows.
+   */
   preview: ReactNode;
+
+  /**
+   * The page's rows.
+   */
   children?: ReactNode;
 };
 

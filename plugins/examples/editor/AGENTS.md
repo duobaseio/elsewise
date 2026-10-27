@@ -8,6 +8,6 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin-example-editor 
 
 ## Rules
 
-- **Peer modules stay out of the bundle.** `vite.config.ts` externalizes `PEER_MODULES`, which Elsewise provides at
+- **Peer modules stay out of the bundle.** `vite.config.ts` externalizes the `PEER_MODULES`, which Elsewise provides at
   runtime. Declare the ones the plugin imports as peer dependencies.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.
