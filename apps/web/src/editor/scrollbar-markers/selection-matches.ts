@@ -1,6 +1,6 @@
 import { highlightSelectionMatches, SearchCursor } from '@codemirror/search';
 import type { Extension } from '@codemirror/state';
-import { type StripeMark, stripeMarks } from '@/editor/stripe/stripe';
+import { type ScrollbarMarker, scrollbarMarkerSources } from '@/editor/scrollbar-markers/scrollbar-markers';
 
 /**
  * The maximum length of a selection whose matches are marked.
@@ -8,7 +8,7 @@ import { type StripeMark, stripeMarks } from '@/editor/stripe/stripe';
 const MAX_SELECTION_LENGTH = 200;
 
 /**
- * The maximum number of stripe marks for selection matches.
+ * The maximum number of scrollbar markers for selection matches.
  */
 const MAX_MATCHES = 100;
 
@@ -20,15 +20,15 @@ const MAX_LINES = 10_000;
 
 /**
  * Returns the extension that highlights the other occurrences of the selected text in the code, and marks them on the
- * stripe throughout the document.
+ * scrollbar throughout the document.
  */
 export function selectionMatches(): Extension {
   return [
     highlightSelectionMatches(),
-    stripeMarks.of({
+    scrollbarMarkerSources.of({
       update: (update) => update.selectionSet || update.docChanged,
       // Follows `highlightSelectionMatches`' rules, which keeps its matches to itself and to the viewport.
-      marks(view) {
+      markers(view) {
         const { state } = view;
         const { main, ranges } = state.selection;
         if (
@@ -40,19 +40,19 @@ export function selectionMatches(): Extension {
           return [];
         }
 
-        const marks: StripeMark[] = [];
+        const markers: ScrollbarMarker[] = [];
         const cursor = new SearchCursor(state.doc, state.sliceDoc(main.from, main.to));
         for (let next = cursor.next(); !next.done; next = cursor.next()) {
           const { from, to } = next.value;
           // Skips the selection itself, which shows as the selection.
           if (from >= main.to || to <= main.from) {
-            marks.push({ from, to, kind: 'usage' });
+            markers.push({ from, to, kind: 'usage' });
           }
-          if (marks.length > MAX_MATCHES) {
+          if (markers.length > MAX_MATCHES) {
             return [];
           }
         }
-        return marks;
+        return markers;
       },
     }),
   ];

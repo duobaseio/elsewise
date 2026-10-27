@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { describe, expect, onTestFinished, test } from 'vitest';
@@ -36,8 +36,11 @@ const WORDS: InstalledPlugin = {
   `)}`,
 };
 
+// A few languages under the editor, for the sidebar to fit.
+const LANGUAGES: Settings['appearance']['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
+
 describe.each(THEMES)('settings (%s)', (theme) => {
-  async function mount() {
+  async function mount(languages = DEFAULT_SETTINGS.appearance.editor.languages) {
     // The app sets the page's brightness from the settings, which the search results, portalled to the body, take.
     onTestFinished(() => {
       delete document.documentElement.dataset.brightness;
@@ -48,6 +51,7 @@ describe.each(THEMES)('settings (%s)', (theme) => {
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
         general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
+        editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
       },
     });
     client.setQueryData(pluginsQuery.queryKey, [WORDS]);
@@ -73,6 +77,16 @@ describe.each(THEMES)('settings (%s)', (theme) => {
     await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-nested-${theme}`);
   });
 
+  test('languages under editor', async () => {
+    await mount(LANGUAGES);
+    await userEvent.click(page.getByRole('button', { name: 'Expand Editor' }));
+    await expect.element(page.getByRole('link', { name: 'Rust' })).toBeVisible();
+    await expect.element(page.getByRole('combobox', { name: 'Add language' })).toBeVisible();
+    await userEvent.hover(page.getByRole('heading', { name: 'General' }));
+
+    await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-languages-${theme}`);
+  });
+
   test('search results', async () => {
     await mount();
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'col');
@@ -87,6 +101,14 @@ describe.each(THEMES)('settings (%s)', (theme) => {
     await expect.element(page.getByRole('option', { name: /Locale/ })).toBeVisible();
 
     await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-nested-${theme}`);
+  });
+
+  test('search result for language', async () => {
+    await mount(LANGUAGES);
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'markdown tab');
+    await expect.element(page.getByRole('option', { name: /Tab width/ })).toBeVisible();
+
+    await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-language-${theme}`);
   });
 
   test('search without results', async () => {

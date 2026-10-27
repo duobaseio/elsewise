@@ -6,7 +6,7 @@ import type { EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { diagnostics } from '@/editor/diagnostics';
 import { hover } from '@/editor/hover';
-import { stripe, stripeMarks } from '@/editor/stripe/stripe';
+import { scrollbarMarkerSources, scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
 import { METRICS } from '@/editor/theme';
 import { commandsExtension } from '../../../test/commands';
 
@@ -30,7 +30,7 @@ function open(initial: EditorDiagnostic[], doc = DOC, extensions: Extension = []
   const view = new EditorView({
     state: EditorState.create({
       doc,
-      extensions: [diagnostics, stripe(), METRICS, hover(), commandsExtension(), extensions],
+      extensions: [diagnostics, scrollbarMarkers(), METRICS, hover(), commandsExtension(), extensions],
     }),
     parent: host,
   });
@@ -45,81 +45,81 @@ function at(line: number, severity: EditorDiagnostic['severity'] = 'error', mess
   return { from, to: from + `line ${line}`.length, severity, message };
 }
 
-// Waits for the stripe to be drawn, and returns its marks of `kind`, or all of them.
-function marks(view: EditorView, kind?: string): Promise<HTMLElement[]> {
+// Waits for the markers to be drawn, and returns those of `kind`, or all of them.
+function markers(view: EditorView, kind?: string): Promise<HTMLElement[]> {
   return vi.waitFor(() => {
-    const found = [...view.dom.querySelectorAll<HTMLElement>(`.cm-stripe-mark${kind ? `-${kind}` : ''}`)];
+    const found = [...view.dom.querySelectorAll<HTMLElement>(`.cm-scrollbar-marker${kind ? `-${kind}` : ''}`)];
     expect(found).not.toHaveLength(0);
     return found;
   });
 }
 
-// Returns where `mark` is painted on the stripe, without the pointer's tolerance around it.
-function painted(mark: HTMLElement): { top: number; height: number } {
-  const padding = Number.parseFloat(getComputedStyle(mark).paddingTop);
-  const box = mark.getBoundingClientRect();
-  const stripe = (mark.parentElement as HTMLElement).getBoundingClientRect();
-  return { top: box.top - stripe.top + padding, height: box.height - 2 * padding };
+// Returns where `marker` is painted on the scrollbar, without the pointer's tolerance around it.
+function painted(marker: HTMLElement): { top: number; height: number } {
+  const padding = Number.parseFloat(getComputedStyle(marker).paddingTop);
+  const box = marker.getBoundingClientRect();
+  const layer = (marker.parentElement as HTMLElement).getBoundingClientRect();
+  return { top: box.top - layer.top + padding, height: box.height - 2 * padding };
 }
 
-// Points at, or clicks, the middle of `mark`.
-function point(mark: HTMLElement, type = 'mousemove'): void {
-  const { left, right, top, bottom } = mark.getBoundingClientRect();
+// Points at, or clicks, the middle of `marker`.
+function point(marker: HTMLElement, type = 'mousemove'): void {
+  const { left, right, top, bottom } = marker.getBoundingClientRect();
   const [x, y] = [(left + right) / 2, (top + bottom) / 2];
   document.elementFromPoint(x, y)?.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, bubbles: true }));
 }
 
-// Waits for the stripe's tooltip to open in `view`, and returns it.
+// Waits for the markers' tooltip to open in `view`, and returns it.
 function opened(view: EditorView): Promise<HTMLElement> {
   return vi.waitFor(() => {
-    const tooltip = view.dom.querySelector<HTMLElement>('.cm-stripe-tooltip');
+    const tooltip = view.dom.querySelector<HTMLElement>('.cm-scrollbar-marker-tooltip');
     expect(tooltip).not.toBeNull();
     return tooltip as HTMLElement;
   });
 }
 
-describe('stripe', () => {
+describe('scrollbarMarkers', () => {
   test('covers scrollbar track', async () => {
     const view = open([at(1)]);
-    await marks(view);
+    await markers(view);
 
-    const stripe = view.dom.querySelector<HTMLElement>('.cm-stripe') as HTMLElement;
+    const layer = view.dom.querySelector<HTMLElement>('.cm-scrollbar-markers') as HTMLElement;
     const { scrollDOM } = view;
-    expect(stripe.getBoundingClientRect().right).toBe(scrollDOM.getBoundingClientRect().right);
-    expect(stripe.offsetTop).toBe(scrollDOM.offsetTop);
-    expect(stripe.offsetHeight).toBe(scrollDOM.clientHeight);
+    expect(layer.getBoundingClientRect().right).toBe(scrollDOM.getBoundingClientRect().right);
+    expect(layer.offsetTop).toBe(scrollDOM.offsetTop);
+    expect(layer.offsetHeight).toBe(scrollDOM.clientHeight);
   });
 
-  test('scales marks to track when document is taller', async () => {
+  test('scales markers to track when document is taller', async () => {
     const view = open([at(100)]);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
     const { scrollDOM } = view;
     const scale = scrollDOM.clientHeight / scrollDOM.scrollHeight;
     const line = view.lineBlockAt(at(100).from);
-    expect(painted(mark).top).toBeCloseTo((line.top + view.documentPadding.top) * scale, 0);
+    expect(painted(marker).top).toBeCloseTo((line.top + view.documentPadding.top) * scale, 0);
     expect(scale).toBeLessThan(1);
   });
 
-  test('lays marks at lines when document fits, two pixels high on one line', async () => {
+  test('lays markers at lines when document fits, two pixels high on one line', async () => {
     const short = 'one\ntwo\nthree';
     const view = open([{ from: 4, to: 7, severity: 'error', message: 'two' }], short);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
     const line = view.lineBlockAt(4);
-    expect(painted(mark).top).toBeCloseTo(line.top + view.documentPadding.top, 0);
-    expect(painted(mark).height).toBe(2);
+    expect(painted(marker).top).toBeCloseTo(line.top + view.documentPadding.top, 0);
+    expect(painted(marker).height).toBe(2);
   });
 
   test('spans lines to top of last', async () => {
     const short = 'one\ntwo\nthree\nfour';
     const view = open([{ from: 0, to: 10, severity: 'error', message: 'to three' }], short);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    expect(painted(mark).height).toBeCloseTo(view.lineBlockAt(10).top - view.lineBlockAt(0).top, 0);
+    expect(painted(marker).height).toBeCloseTo(view.lineBlockAt(10).top - view.lineBlockAt(0).top, 0);
   });
 
-  test('keeps marks apart on neighbouring lines', async () => {
+  test('keeps markers apart on neighbouring lines', async () => {
     const short = 'one\ntwo\nthree';
     const view = open(
       [
@@ -129,25 +129,25 @@ describe('stripe', () => {
       short,
     );
 
-    expect(await marks(view, 'error')).toHaveLength(2);
+    expect(await markers(view, 'error')).toHaveLength(2);
   });
 
-  test('merges touching marks of kind, keeping kinds apart with higher severity above', async () => {
+  test('merges touching markers of kind, keeping kinds apart with higher severity above', async () => {
     const view = open([at(100), at(101), at(100, 'warning')]);
     expect(view.scrollDOM.scrollHeight).toBeGreaterThan(view.scrollDOM.clientHeight);
-    await marks(view);
+    await markers(view);
 
-    const all = await marks(view);
-    expect(all.map((mark) => mark.className)).toEqual([
-      'cm-stripe-mark cm-stripe-mark-warning',
-      'cm-stripe-mark cm-stripe-mark-error',
+    const all = await markers(view);
+    expect(all.map((marker) => marker.className)).toEqual([
+      'cm-scrollbar-marker cm-scrollbar-marker-warning',
+      'cm-scrollbar-marker cm-scrollbar-marker-error',
     ]);
     expect(painted(all[1]).height).toBeGreaterThan(painted(all[0]).height);
   });
 
-  test('moves marks with edits before next diagnostics', async () => {
+  test('moves markers with edits before next diagnostics', async () => {
     const view = open([at(100)]);
-    const [before] = await marks(view, 'error');
+    const [before] = await markers(view, 'error');
     const top = painted(before).top;
 
     // Deletes the first 50 lines, which the lint field maps the diagnostic through.
@@ -156,56 +156,61 @@ describe('stripe', () => {
     const scale = view.scrollDOM.clientHeight / view.scrollDOM.scrollHeight;
     const line = view.lineBlockAt(view.state.doc.toString().indexOf('line 100\n'));
     await vi.waitFor(() => {
-      const [after] = view.dom.querySelectorAll<HTMLElement>('.cm-stripe-mark-error');
+      const [after] = view.dom.querySelectorAll<HTMLElement>('.cm-scrollbar-marker-error');
       expect(painted(after).top).toBeCloseTo((line.top + view.documentPadding.top) * scale, 0);
     });
-    expect(painted(view.dom.querySelector<HTMLElement>('.cm-stripe-mark-error') as HTMLElement).top).toBeLessThan(top);
+    expect(painted(view.dom.querySelector<HTMLElement>('.cm-scrollbar-marker-error') as HTMLElement).top).toBeLessThan(
+      top,
+    );
   });
 
   test('follows document edits', async () => {
     const view = open([at(1)]);
-    await marks(view);
+    await markers(view);
 
     view.dispatch(setDiagnostics(view.state, [at(100), at(150)]));
-    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark')).toHaveLength(2));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker')).toHaveLength(2));
 
     view.dispatch(setDiagnostics(view.state, []));
-    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark')).toHaveLength(0));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker')).toHaveLength(0));
   });
 
   test('marks sources, by their layer', async () => {
-    const source = { update: () => false, marks: () => [{ ...at(100), kind: 'searchMatch' as const }] };
-    const view = open([at(100)], DOC, stripeMarks.of(source));
-    const all = await marks(view);
+    const source = { update: () => false, markers: () => [{ ...at(100), kind: 'searchMatch' as const }] };
+    const view = open([at(100)], DOC, scrollbarMarkerSources.of(source));
+    const all = await markers(view);
 
-    expect(all.map((mark) => mark.classList[1])).toEqual(['cm-stripe-mark-error', 'cm-stripe-mark-searchMatch']);
+    expect(all.map((marker) => marker.classList[1])).toEqual([
+      'cm-scrollbar-marker-error',
+      'cm-scrollbar-marker-searchMatch',
+    ]);
   });
 
   test('asks only sources that changed', async () => {
     const asked = { still: 0, moving: 0 };
     const view = open([], DOC, [
-      stripeMarks.of({
+      scrollbarMarkerSources.of({
         update: () => false,
-        marks: () => {
+        markers: () => {
           asked.still += 1;
           return [{ ...at(10), kind: 'usage' }];
         },
       }),
-      stripeMarks.of({
+      scrollbarMarkerSources.of({
         update: (update) => update.selectionSet,
-        marks: () => {
+        markers: () => {
           asked.moving += 1;
           return [{ ...at(20), kind: 'usage' }];
         },
       }),
     ]);
-    await marks(view);
+    await markers(view);
 
     view.dispatch({ selection: { anchor: 5 } });
     await vi.waitFor(() => expect(asked.moving).toBe(2));
 
     expect(asked.still).toBe(1);
-    expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(2);
+    expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(2);
   });
 
   test('shows diagnostics under pointer once, highest severity first', async () => {
@@ -215,9 +220,9 @@ describe('stripe', () => {
       at(101, 'warning', 'later'),
       at(150, 'error', 'elsewhere'),
     ]);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    point(mark);
+    point(marker);
     const tooltip = await opened(view);
 
     expect([...tooltip.querySelectorAll('.cm-diagnosticMessage')].map((message) => message.textContent)).toEqual([
@@ -227,98 +232,98 @@ describe('stripe', () => {
     expect(tooltip.classList.contains('cm-tooltip-hover')).toBe(true);
   });
 
-  test('keeps tooltip centred on mark within editor', async () => {
+  test('keeps tooltip centred on marker within editor', async () => {
     const view = open([at(1), at(100)]);
-    const [first, middle] = await marks(view, 'error');
+    const [first, middle] = await markers(view, 'error');
 
     point(first);
     const top = await opened(view);
     expect(top.offsetTop).toBe(0);
 
     point(middle);
-    await vi.waitFor(() => expect(view.dom.querySelector('.cm-stripe-tooltip')).not.toBe(top));
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).not.toBe(top));
     const tooltip = await opened(view);
-    const { top: markTop, height } = painted(middle);
-    expect(tooltip.offsetTop + tooltip.offsetHeight / 2).toBeCloseTo(markTop + height / 2, 0);
+    const { top: markerTop, height } = painted(middle);
+    expect(tooltip.offsetTop + tooltip.offsetHeight / 2).toBeCloseTo(markerTop + height / 2, 0);
     expect(tooltip.getBoundingClientRect().right).toBeLessThan(middle.getBoundingClientRect().left);
   });
 
   test('hides tooltip once pointer leaves, unless onto tooltip', async () => {
     const view = open([at(100)]);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    point(mark);
+    point(marker);
     const tooltip = await opened(view);
-    mark.parentElement?.dispatchEvent(new MouseEvent('mouseleave'));
+    marker.parentElement?.dispatchEvent(new MouseEvent('mouseleave'));
     tooltip.dispatchEvent(new MouseEvent('mouseenter'));
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(view.dom.querySelector('.cm-stripe-tooltip')).toBe(tooltip);
+    expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBe(tooltip);
 
     tooltip.dispatchEvent(new MouseEvent('mouseleave'));
-    await vi.waitFor(() => expect(view.dom.querySelector('.cm-stripe-tooltip')).toBeNull());
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBeNull());
   });
 
   test('hides tooltip when diagnostics change', async () => {
     const view = open([at(100)]);
-    const [mark] = await marks(view, 'error');
-    point(mark);
+    const [marker] = await markers(view, 'error');
+    point(marker);
     await opened(view);
 
     view.dispatch(setDiagnostics(view.state, [at(100), at(120)]));
 
-    expect(view.dom.querySelector('.cm-stripe-tooltip')).toBeNull();
+    expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBeNull();
   });
 
   test('hides tooltip on its actions', async () => {
     const view = open([{ ...at(100), actions: [{ name: 'Fix', type: 'fix', apply: () => {} }] }]);
-    const [mark] = await marks(view, 'error');
-    point(mark);
+    const [marker] = await markers(view, 'error');
+    point(marker);
     const tooltip = await opened(view);
 
     const more = [...tooltip.querySelectorAll('button')].find((button) => button.textContent === 'More actions');
     more?.click();
 
-    expect(view.dom.querySelector('.cm-stripe-tooltip')).toBeNull();
+    expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBeNull();
   });
 
   test('hides tooltip on Escape', async () => {
     const view = open([at(100)]);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    point(mark);
+    point(marker);
     await opened(view);
     view.contentDOM.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
 
-    expect(view.dom.querySelector('.cm-stripe-tooltip')).toBeNull();
+    expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBeNull();
   });
 
   test('keeps editor focused while pressed', async () => {
     const view = open([at(100)]);
     view.focus();
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    point(mark, 'mousedown');
+    point(marker, 'mousedown');
 
     expect(view.hasFocus).toBe(true);
   });
 
-  test('jumps to visible mark without scrolling', async () => {
+  test('jumps to visible marker without scrolling', async () => {
     const view = open([at(3)]);
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    point(mark, 'click');
+    point(marker, 'click');
 
     expect(view.state.selection.main.head).toBe(at(3).from);
     expect(view.scrollDOM.scrollTop).toBe(0);
   });
 
-  test('jumps to mark, unfolding it', async () => {
+  test('jumps to marker, unfolding it', async () => {
     const view = open([at(100)]);
     const { from } = at(100);
     view.dispatch({ effects: foldEffect.of({ from: DOC.indexOf('line 90'), to: DOC.indexOf('line 110') }) });
-    const [mark] = await marks(view, 'error');
+    const [marker] = await markers(view, 'error');
 
-    point(mark, 'click');
+    point(marker, 'click');
 
     expect(view.state.selection.main.head).toBe(from);
     expect(foldedRanges(view.state).size).toBe(0);

@@ -85,6 +85,7 @@ function browserProject(
         provider: playwright({
           launchOptions: {
             args: ['--disable-gpu', '--force-color-profile=srgb', '--disable-lcd-text'],
+            ...(frozenMotion ? {} : { ignoreDefaultArgs: ['--hide-scrollbars'] }),
           },
           contextOptions: {
             deviceScaleFactor: 2,

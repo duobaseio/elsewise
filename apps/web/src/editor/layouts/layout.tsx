@@ -1,5 +1,12 @@
 import { closeBrackets } from '@codemirror/autocomplete';
-import { history, historyField, simplifySelection, standardKeymap } from '@codemirror/commands';
+import {
+  history,
+  historyField,
+  historyKeymap,
+  indentWithTab,
+  simplifySelection,
+  standardKeymap,
+} from '@codemirror/commands';
 import { bracketMatching, foldGutter, LanguageDescription } from '@codemirror/language';
 import { Compartment, type EditorSelection, EditorState, type Extension, Prec, type Text } from '@codemirror/state';
 import {
@@ -28,9 +35,9 @@ import { hover } from '@/editor/hover';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
 import { navigation } from '@/editor/navigation';
 import { scrollbarsKeepFocus } from '@/editor/scroll';
+import { selectionMatches } from '@/editor/scrollbar-markers/selection-matches';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
-import { selectionMatches } from '@/editor/stripe/selection-matches';
 import { useThemeExtension } from '@/editor/theme';
 import { useToolbarExtension } from '@/editor/toolbar';
 import { useEditorSettings, useSettings } from '@/settings/settings';
@@ -130,7 +137,7 @@ export function useEditorExtensions(
     relativePath,
   );
   const folding = useMemo<Extension>(() => (layout.type === 'split' ? [] : foldMarkers()), [layout.type]);
-  const settings = useSettingsExtension(name);
+  const settings = useSettingsExtension(name, layout);
   const { search, portal: searchPortal } = useSearchExtension();
   const { toolbar, portal: toolbarPortal } = useToolbarExtension();
 
@@ -157,118 +164,127 @@ export function useEditorExtensions(
   // Has to come before the plugins, so that their extensions are built with the document.
   useCompartment(view, DOCUMENT, documentExtension);
 
-  const plugins = usePlugins(view, document);
+  const plugins = usePlugins(view, document, layout);
 
   useFontRebuild(view);
 
   return {
     document,
     core:
-      source.type === 'workingTree'
+      layout.type === 'preview'
         ? [
-            // First to let plugins' themes and keymaps take precedence. Plugins are applied by the caller to prevent
-            // broken plugins from causing the entire editor to fail.
-            PLUGINS.of([]),
-            DOCUMENT.of(documentExtension),
-            // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
-            KEYS.of(keys),
-            COMMANDS.of(commands),
-            EditorView.updateListener.of((update) => {
-              if (update.focusChanged && update.view.hasFocus) {
-                editorManager.activate(update.view);
-              }
-            }),
             THEME.of(theme),
+            SETTINGS.of(settings),
+            LANGUAGE.of(support),
             history(),
-            search,
-
-            SETTINGS.of(settings),
-            toolbar,
-            // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be
-            // reparsed. Has the precedence for the same reason as the settings' facets.
-            Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
-
-            LANGUAGE.of(support),
-            LANGUAGE_SERVER.of(languageServer),
-            completion(),
-            diagnostics,
-            hover(),
-            actions(),
-            format,
-            closeBrackets(),
-            bracketMatching(),
-            // Has to be after lineNumbers to ensure the fold icon is to the right of it.
-            FOLDING.of(folding),
-
-            EditorState.allowMultipleSelections.of(true),
-            drawSelection(),
-            crosshairCursor(),
-            rectangularSelection(),
-
-            drawActiveLine(),
-            highlightActiveLineGutter(),
-            selectionMatches(),
-            highlightSpecialChars(),
-            RIGHT_CLICK_CONTEXT_MENU,
-            navigation(),
-            scrollbarsKeepFocus(),
-
-            // Escape is not a command to keep it from taking precedence over the popups' own Escape.
-            keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
+            keymap.of([...standardKeymap, ...historyKeymap, indentWithTab]),
           ]
-        : [
-            // First and at the highest precedence to prevent plugins from accidentally overriding.
-            Prec.highest(EditorState.readOnly.of(true)),
-            // First to let plugins' themes and keymaps take precedence. Plugins are applied by the caller to prevent
-            // broken plugins from causing the entire editor to fail.
-            PLUGINS.of([]),
-            DOCUMENT.of(documentExtension),
-            // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
-            KEYS.of(keys),
-            COMMANDS.of(commands),
-            EditorView.updateListener.of((update) => {
-              if (update.focusChanged && update.view.hasFocus) {
-                editorManager.activate(update.view);
-              }
-            }),
-            THEME.of(theme),
-            search,
+        : source.type === 'workingTree'
+          ? [
+              // First to let plugins' themes and keymaps take precedence. Plugins are applied by the caller to prevent
+              // broken plugins from causing the entire editor to fail.
+              PLUGINS.of([]),
+              DOCUMENT.of(documentExtension),
+              // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
+              KEYS.of(keys),
+              COMMANDS.of(commands),
+              EditorView.updateListener.of((update) => {
+                if (update.focusChanged && update.view.hasFocus) {
+                  editorManager.activate(update.view);
+                }
+              }),
+              THEME.of(theme),
+              history(),
+              search,
 
-            SETTINGS.of(settings),
-            toolbar,
-            // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be
-            // reparsed. Has the precedence for the same reason as the settings' facets.
-            Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
+              SETTINGS.of(settings),
+              toolbar,
+              // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be
+              // reparsed. Has the precedence for the same reason as the settings' facets.
+              Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
 
-            LANGUAGE.of(support),
-            diagnostics,
-            hover(),
-            bracketMatching(),
-            // Has to be after lineNumbers to ensure the fold icon is to the right of it.
-            FOLDING.of(folding),
+              LANGUAGE.of(support),
+              LANGUAGE_SERVER.of(languageServer),
+              completion(),
+              diagnostics,
+              hover(),
+              actions(),
+              format,
+              closeBrackets(),
+              bracketMatching(),
+              // Has to be after lineNumbers to ensure the fold icon is to the right of it.
+              FOLDING.of(folding),
 
-            EditorState.allowMultipleSelections.of(true),
-            drawSelection(),
-            crosshairCursor(),
-            rectangularSelection(),
+              EditorState.allowMultipleSelections.of(true),
+              drawSelection(),
+              crosshairCursor(),
+              rectangularSelection(),
 
-            drawActiveLine(),
-            highlightActiveLineGutter(),
-            selectionMatches(),
-            highlightSpecialChars(),
-            RIGHT_CLICK_CONTEXT_MENU,
-            navigation(),
-            scrollbarsKeepFocus(),
+              drawActiveLine(),
+              highlightActiveLineGutter(),
+              selectionMatches(),
+              highlightSpecialChars(),
+              RIGHT_CLICK_CONTEXT_MENU,
+              navigation(),
+              scrollbarsKeepFocus(),
 
-            // Escape is not a command to keep it from taking precedence over the popups' own Escape.
-            keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
-          ],
-    portal: (
-      <>
-        {searchPortal}
-        {toolbarPortal}
-      </>
-    ),
+              // Escape is not a command to keep it from taking precedence over the popups' own Escape.
+              keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
+            ]
+          : [
+              // First and at the highest precedence to prevent plugins from accidentally overriding.
+              Prec.highest(EditorState.readOnly.of(true)),
+              // First to let plugins' themes and keymaps take precedence. Plugins are applied by the caller to prevent
+              // broken plugins from causing the entire editor to fail.
+              PLUGINS.of([]),
+              DOCUMENT.of(documentExtension),
+              // Has high precedence to let the commands' keys take precedence over the keymaps of plugins' extensions.
+              KEYS.of(keys),
+              COMMANDS.of(commands),
+              EditorView.updateListener.of((update) => {
+                if (update.focusChanged && update.view.hasFocus) {
+                  editorManager.activate(update.view);
+                }
+              }),
+              THEME.of(theme),
+              search,
+
+              SETTINGS.of(settings),
+              toolbar,
+              // This cannot be inside SETTINGS because changing the line separator requires the entire doc to be
+              // reparsed. Has the precedence for the same reason as the settings' facets.
+              Prec.highest(EditorState.lineSeparator.of(lineSeparator)),
+
+              LANGUAGE.of(support),
+              diagnostics,
+              hover(),
+              bracketMatching(),
+              // Has to be after lineNumbers to ensure the fold icon is to the right of it.
+              FOLDING.of(folding),
+
+              EditorState.allowMultipleSelections.of(true),
+              drawSelection(),
+              crosshairCursor(),
+              rectangularSelection(),
+
+              drawActiveLine(),
+              highlightActiveLineGutter(),
+              selectionMatches(),
+              highlightSpecialChars(),
+              RIGHT_CLICK_CONTEXT_MENU,
+              navigation(),
+              scrollbarsKeepFocus(),
+
+              // Escape is not a command to keep it from taking precedence over the popups' own Escape.
+              keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
+            ],
+    portal:
+      layout.type === 'preview' ? null : (
+        <>
+          {searchPortal}
+          {toolbarPortal}
+        </>
+      ),
     lineSeparator,
     plugins,
   };
@@ -323,13 +339,23 @@ export function useLanguage(path: string): {
 }
 
 /**
- * Returns the plugins' extensions for `document`, and applies them to `view` when they change.
+ * Returns the plugins' extensions for `document` in `layout`, and applies them to `view` when they change.
  *
- * Leaves out those from functions while the document's language loads (null), so that they see its `support`.
+ * Leaves out those from functions while the document's language loads (null), so that they see its `support`. A
+ * preview has none.
  */
-export function usePlugins(view: RefObject<EditorView | null>, document: EditorDocument | null): Extension {
+export function usePlugins(
+  view: RefObject<EditorView | null>,
+  document: EditorDocument | null,
+  layout: EditorDocumentLayout,
+): Extension {
   const extensions = useEditorManager((editor) => editor.extensions);
+  const preview = layout.type === 'preview';
   const plugins = useMemo(() => {
+    if (preview) {
+      return [];
+    }
+
     try {
       return extensions.flatMap((extension) =>
         typeof extension === 'function' ? (document === null ? [] : extension(document)) : extension,
@@ -338,13 +364,13 @@ export function usePlugins(view: RefObject<EditorView | null>, document: EditorD
       console.error('Plugin extension failed', error);
       return [];
     }
-  }, [extensions, document]);
+  }, [extensions, document, preview]);
 
   useEffect(() => {
-    if (view.current !== null) {
+    if (!preview && view.current !== null) {
       applyPlugins(view.current, plugins);
     }
-  }, [view, plugins]);
+  }, [view, plugins, preview]);
 
   return plugins;
 }

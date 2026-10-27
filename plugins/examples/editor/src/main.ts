@@ -4,6 +4,15 @@ import { DEFAULT_EDITOR_CONTEXT_MENU, type EditorCommand, type Plugin, type Plug
 import { colorHover, colorPicker } from './color-picker.ts';
 import { keys, reactions } from './completions.ts';
 
+// Previewed in Dotenv's settings.
+const PREVIEW = `# The daemon
+PORT=3000
+LOG_LEVEL=debug
+
+# The database
+DATABASE_URL="postgres://elsewise:secret@localhost:5432/elsewise"
+`;
+
 const EXCUSES = [
   'It worked on my machine.',
   'Here be dragons.',
@@ -34,8 +43,9 @@ const dotenv = StreamLanguage.define({
  */
 export default function ({ id }: PluginInfo): Plugin {
   return {
-    onEnable({ commands, editor }) {
+    onEnable({ commands, editor, settings }) {
       return [
+        settings.addLanguagePreviews([{ language: 'Dotenv', path: '.env', code: PREVIEW }]),
         editor.addExtensions([colorPicker, colorHover, reactions]),
         editor.languages.add([
           LanguageDescription.of({

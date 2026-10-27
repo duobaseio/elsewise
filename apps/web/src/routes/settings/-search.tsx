@@ -12,7 +12,9 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import { useNavigate } from '@tanstack/react-router';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { linkTo } from '@/settings/default-panels';
+import { LANGUAGES } from '@/settings/languages';
 import { type SettingsSearchHit, search } from '@/settings/search';
+import { useSettings } from '@/settings/settings';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
 
 /**
@@ -21,11 +23,12 @@ import { useSettingsPanels } from '@/settings/settings-panel-manager';
 export function Search() {
   const navigate = useNavigate();
   const panels = useSettingsPanels((settings) => settings.panels);
+  const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const debounced = useDebounced(query, 150);
-  const hits = useMemo(() => search(debounced, panels), [debounced, panels]);
+  const hits = useMemo(() => search(debounced, panels, languages), [debounced, panels, languages]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -58,7 +61,7 @@ export function Search() {
         }
         setQuery('');
         setOpen(false);
-        void navigate({ ...linkTo(hit.panel), replace: true, search: { highlight: hit.id } });
+        void navigate({ ...linkTo(hit.panel, hit.language), replace: true, search: { highlight: hit.id } });
       }}
       open={open && debounced.trim() !== ''}
       value={null}
@@ -88,10 +91,10 @@ export function Search() {
         <ComboboxEmpty>No settings found</ComboboxEmpty>
         <ComboboxList>
           {(hit: SettingsSearchHit) => (
-            <ComboboxItem className="pr-1.5" key={`${hit.panel.id}.${hit.id}`} value={hit}>
+            <ComboboxItem className="pt-1.25 pr-1.5" key={`${hit.panel.id}.${hit.language ?? ''}.${hit.id}`} value={hit}>
               <div className="flex flex-col leading-tight">
                 <span>{hit.term.label}</span>
-                <span className="flex items-center gap-0.5 text-text-2 text-xs">
+                <span className="flex items-center gap-0.5 text-text-2 text-xs leading-tight">
                   {panels
                     .filter((panel) => panel.id === hit.panel.in)
                     .map((panel) => (
@@ -101,6 +104,12 @@ export function Search() {
                       </Fragment>
                     ))}
                   {hit.panel.label}
+                  {hit.language !== undefined && (
+                    <>
+                      <Icon className="size-2.5" name="submenu" />
+                      {LANGUAGES[hit.language]?.label ?? hit.language}
+                    </>
+                  )}
                 </span>
               </div>
             </ComboboxItem>

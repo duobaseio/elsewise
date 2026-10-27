@@ -24,7 +24,7 @@ import { createPortal } from 'react-dom';
 import { useCommandManager } from '@/command/command-manager';
 import { CompareToolbarItem } from '@/editor/diff/compare';
 import { useEditorManager } from '@/editor/editor-manager';
-import { DiagnosticsSummary } from '@/editor/stripe/diagnostics-summary';
+import { DiagnosticsSummary } from '@/editor/scrollbar-markers/diagnostics-summary';
 
 interface Mounted extends EditorToolbarProps {
   dom: HTMLElement;

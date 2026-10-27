@@ -9,8 +9,8 @@ import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
 import { diagnostics } from '@/editor/diagnostics';
+import { scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
 import { useSearchExtension } from '@/editor/search/search-bar';
-import { stripe } from '@/editor/stripe/stripe';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
@@ -101,15 +101,15 @@ test('live search, Enter walks matches', async () => {
   expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
 });
 
-test('marks matches on stripe while open', async () => {
-  const view = await mount([diagnostics, stripe()]);
+test('marks matches on scrollbar while open', async () => {
+  const view = await mount([diagnostics, scrollbarMarkers()]);
   openSearchPanel(view);
   await userEvent.fill(find(), 'let');
 
-  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-searchMatch')).toHaveLength(4));
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-searchMatch')).toHaveLength(4));
 
   await userEvent.keyboard('{Escape}');
-  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-searchMatch')).toHaveLength(0));
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-searchMatch')).toHaveLength(0));
 });
 
 test('typing selects first match from cursor on', async () => {

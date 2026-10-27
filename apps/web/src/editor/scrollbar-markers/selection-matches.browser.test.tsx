@@ -2,8 +2,8 @@ import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { diagnostics } from '@/editor/diagnostics';
-import { selectionMatches } from '@/editor/stripe/selection-matches';
-import { stripe } from '@/editor/stripe/stripe';
+import { scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
+import { selectionMatches } from '@/editor/scrollbar-markers/selection-matches';
 import { METRICS } from '@/editor/theme';
 
 const DOC = 'let total = 1;\ntotal + 2;\nlet other = total;\n// total\n';
@@ -17,14 +17,20 @@ afterEach(() => {
   }
 });
 
-// Opens `doc` in an editor 400px high with the stripe.
+// Opens `doc` in an editor 400px high with the scrollbar markers.
 function open(doc = DOC): EditorView {
   const host = document.body.appendChild(document.createElement('div'));
   host.style.height = '400px';
   const view = new EditorView({
     state: EditorState.create({
       doc,
-      extensions: [selectionMatches(), diagnostics, stripe(), METRICS, EditorState.allowMultipleSelections.of(true)],
+      extensions: [
+        selectionMatches(),
+        diagnostics,
+        scrollbarMarkers(),
+        METRICS,
+        EditorState.allowMultipleSelections.of(true),
+      ],
     }),
     parent: host,
   });
@@ -38,7 +44,7 @@ function select(view: EditorView, text: string): void {
   view.dispatch({ selection: { anchor, head: anchor + text.length } });
 }
 
-const marked = (view: EditorView) => view.dom.querySelectorAll('.cm-stripe-mark-usage').length;
+const marked = (view: EditorView) => view.dom.querySelectorAll('.cm-scrollbar-marker-usage').length;
 
 describe('selectionMatches', () => {
   test('marks other occurrences of selection, until it is cleared', async () => {

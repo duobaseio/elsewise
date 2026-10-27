@@ -1,6 +1,7 @@
 # Editor example
 
-An example plugin that adds to the code editor: extensions, a language and context menu items.
+An example plugin that adds to the code editor: extensions, a language with a preview in its settings, and context
+menu items.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin-example-editor <script>`.
 

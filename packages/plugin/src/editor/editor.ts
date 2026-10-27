@@ -61,11 +61,13 @@ export const EDITOR_DOCUMENT = Facet.define<EditorDocument, EditorDocument | nul
 /**
  * How an editor shows its document:
  * * `editor`: the default view.
+ * * `preview`: a stripped down view for previewing code.
  * * `unified`: diffed, with the base's deleted lines inline.
  * * `split`: as one side of a side-by-side diff, the `base` on the left or the `target` on the right.
  */
 export type EditorDocumentLayout =
   | { readonly type: 'editor' }
+  | { readonly type: 'preview' }
   | { readonly type: 'unified' }
   | { readonly type: 'split'; readonly side: 'base' | 'target' };
 

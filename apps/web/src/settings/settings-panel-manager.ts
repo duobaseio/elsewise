@@ -1,5 +1,12 @@
-import { DEFAULT_SETTINGS_GROUPS, type Disposable, type Settings, type SettingsPanel } from '@elsewise/plugin';
+import {
+  DEFAULT_SETTINGS_GROUPS,
+  type Disposable,
+  type Settings,
+  type SettingsLanguagePreview,
+  type SettingsPanel,
+} from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { LANGUAGES } from '@/settings/languages';
 
 const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
 
@@ -10,6 +17,8 @@ export class SettingsPanelManager implements Settings {
   private readonly listeners = new Set<() => void>();
   private addedPanels: readonly (readonly SettingsPanel[])[];
   private currentPanels: readonly SettingsPanel[];
+  private addedPreviews: readonly (readonly SettingsLanguagePreview[])[] = [];
+  private currentPreviews: Readonly<Record<string, SettingsLanguagePreview>> = {};
 
   constructor(defaults: readonly SettingsPanel[] = []) {
     this.addedPanels = [defaults];
@@ -61,7 +70,38 @@ export class SettingsPanelManager implements Settings {
   }
 
   /**
-   * Registers a `listener` that is called when a panel is added or removed.
+   * The previews plugins added, by language, a later addition replacing an earlier one.
+   */
+  get previews(): Readonly<Record<string, SettingsLanguagePreview>> {
+    return this.currentPreviews;
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  addLanguagePreviews(previews: readonly SettingsLanguagePreview[]): Disposable {
+    const added = [...previews];
+    this.addedPreviews = [...this.addedPreviews, added];
+    this.updatePreviews();
+    return () => {
+      this.addedPreviews = this.addedPreviews.filter((other) => other !== added);
+      this.updatePreviews();
+    };
+  }
+
+  private updatePreviews() {
+    const previews: Record<string, SettingsLanguagePreview> = {};
+    for (const preview of this.addedPreviews.flat()) {
+      // Some languages, e.g. JS & JSX, share the same settings page.
+      const canonical = LANGUAGES[preview.language];
+      previews[canonical?.name ?? preview.language] = preview;
+    }
+    this.currentPreviews = previews;
+    this.notify();
+  }
+
+  /**
+   * Registers a `listener` that is called when a panel or preview is added or removed.
    *
    * Returns a disposable that unregisters the `listener`.
    */

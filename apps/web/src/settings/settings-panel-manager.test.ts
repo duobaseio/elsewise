@@ -115,3 +115,40 @@ describe('add', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('addLanguagePreviews', () => {
+  test('keys previews by language, later addition replacing earlier', () => {
+    const settings = new SettingsPanelManager();
+    settings.addLanguagePreviews([
+      { language: 'a', path: 'a.toy', code: 'first' },
+      { language: 'b', path: 'b.toy', code: 'b' },
+    ]);
+    const dispose = settings.addLanguagePreviews([{ language: 'a', path: 'a.toy', code: 'second' }]);
+
+    expect(settings.previews).toEqual({
+      a: { language: 'a', path: 'a.toy', code: 'second' },
+      b: { language: 'b', path: 'b.toy', code: 'b' },
+    });
+
+    dispose();
+
+    expect(settings.previews.a).toEqual({ language: 'a', path: 'a.toy', code: 'first' });
+  });
+
+  test('keys preview by name language is listed as', () => {
+    const settings = new SettingsPanelManager();
+    settings.addLanguagePreviews([{ language: 'JSX', path: 'a.jsx', code: 'a' }]);
+
+    expect(Object.keys(settings.previews)).toEqual(['JavaScript']);
+  });
+
+  test('notifies on addition and disposal', () => {
+    const settings = new SettingsPanelManager();
+    const listener = vi.fn();
+    settings.subscribe(listener);
+    const dispose = settings.addLanguagePreviews([{ language: 'a', path: 'a.toy', code: 'a' }]);
+    dispose();
+
+    expect(listener).toHaveBeenCalledTimes(2);
+  });
+});

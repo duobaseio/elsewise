@@ -20,6 +20,36 @@ export type BundledKeymap = z.infer<typeof BundledKeymap>;
 export const FONT_SIZES = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] as const;
 
 /**
+ * The CodeMirror names of the default languages.
+ */
+export const DEFAULT_LANGUAGES = [
+  'C',
+  'C#',
+  'C++',
+  'CSS',
+  'Dart',
+  'Go',
+  'HTML',
+  'Java',
+  'JavaScript',
+  'JSON',
+  'Kotlin',
+  'Markdown',
+  'Objective-C',
+  'PHP',
+  'ProtoBuf',
+  'Python',
+  'Ruby',
+  'Rust',
+  'SQL',
+  'Swift',
+  'TOML',
+  'TypeScript',
+  'XML',
+  'YAML',
+] as const;
+
+/**
  * The persisted application and plugins' settings.
  */
 export interface SettingsBridge {
@@ -99,9 +129,9 @@ export const Settings = z.lazy(() =>
              */
             highlightUsages: z.boolean().catch(true),
             /**
-             * Whether the stripe over the scrollbar marks the diagnostics, search matches and usages.
+             * Whether to show markers over the scrollbar.
              */
-            stripe: z.boolean().catch(true),
+            scrollbarMarkers: z.boolean().catch(true),
             /**
              * The default layout when viewing a diff.
              */
@@ -130,7 +160,7 @@ export const Settings = z.lazy(() =>
                   )
                   .catch({}),
               )
-              .catch({}),
+              .catch(Object.fromEntries(DEFAULT_LANGUAGES.map((language) => [language, {}]))),
           }),
         ),
         terminal: z.preprocess(

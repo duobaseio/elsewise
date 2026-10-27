@@ -31,9 +31,20 @@ export const DEFAULT_PANELS = {
   },
 } as const satisfies Record<string, SettingsPanel & { route: FileRouteTypes['to'] }>;
 
+/**
+ * Returns the link to `panel`, or to `language`'s page under the editor.
+ */
 export function linkTo(
   panel: SettingsPanel,
-): { to: FileRouteTypes['to']; params?: undefined } | { to: '/settings/plugins/$id'; params: { id: string } } {
+  language?: string,
+):
+  | { to: FileRouteTypes['to']; params?: undefined }
+  | { to: '/settings/plugins/$id'; params: { id: string } }
+  | { to: '/settings/appearance/editor/$language'; params: { language: string } } {
+  if (language !== undefined) {
+    return { to: '/settings/appearance/editor/$language', params: { language } };
+  }
+
   const route = Object.values(DEFAULT_PANELS).find((other) => other.id === panel.id)?.route;
   return route === undefined ? { to: '/settings/plugins/$id', params: { id: panel.id } } : { to: route };
 }

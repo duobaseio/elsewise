@@ -37,6 +37,38 @@ export interface Settings {
    * Returns a disposable that removes the `panels`.
    */
   add(panels: readonly SettingsPanel[]): Disposable;
+
+  /**
+   * Adds `previews` of languages to their editor settings, a later addition replacing an earlier one for the same
+   * language.
+   *
+   * ```ts
+   * settings.addLanguagePreviews([{ language: 'Dotenv', path: '.env', code: 'PORT=3000\n' }]);
+   * ```
+   *
+   * Returns a disposable that removes the `previews`.
+   */
+  addLanguagePreviews(previews: readonly SettingsLanguagePreview[]): Disposable;
+}
+
+/**
+ * A code snippet, shown in a language's editor settings.
+ */
+export interface SettingsLanguagePreview {
+  /**
+   * CodeMirror's name for the language, e.g. `Dotenv`.
+   */
+  readonly language: string;
+
+  /**
+   * The code snippet's path, which is matched to its language like a file's, e.g. `.env`.
+   */
+  readonly path: string;
+
+  /**
+   * The code snippet.
+   */
+  readonly code: string;
 }
 
 /**

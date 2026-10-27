@@ -130,11 +130,11 @@ export const ThemeVariant = z.lazy(() =>
         unnecessary: Color,
 
         /**
-         * The stripe marks drawn over the scrollbar.
+         * The markers drawn over the scrollbar.
          *
          * Each defaults to one of the current theme's colors instead of Elsewise's default theme.
          */
-        stripe: z
+        scrollbarMarkers: z
           .object({
             /**
              * Defaults to the interface's `error`.

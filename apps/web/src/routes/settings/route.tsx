@@ -1,5 +1,15 @@
+import { Combobox as ComboboxPrimitive } from '@base-ui/react/combobox';
 import { Button } from '@elsewise/components/components/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@elsewise/components/components/collapsible';
+import {
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@elsewise/components/components/combobox';
 import { Icon } from '@elsewise/components/components/icon';
 import { HighlightProvider } from '@elsewise/components/components/settings';
 import {
@@ -16,11 +26,14 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
 } from '@elsewise/components/components/sidebar';
-import { DEFAULT_SETTINGS_GROUPS, type SettingsPanel } from '@elsewise/plugin';
-import { createFileRoute, Link, Outlet, useMatchRoute, useRouter } from '@tanstack/react-router';
-import { useEffect, useState } from 'react';
+import { DEFAULT_SETTINGS_GROUPS } from '@elsewise/plugin';
+import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate, useRouter } from '@tanstack/react-router';
+import { type ReactNode, useEffect, useState } from 'react';
 import { Header } from '@/components/header';
-import { linkTo } from '@/settings/default-panels';
+import { useEditorManager } from '@/editor/editor-manager';
+import { DEFAULT_PANELS, linkTo } from '@/settings/default-panels';
+import { LANGUAGES } from '@/settings/languages';
+import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
 import { Search } from './-search';
 
@@ -42,6 +55,7 @@ function Settings() {
   const router = useRouter();
   const navigate = Route.useNavigate();
   const panels = useSettingsPanels((settings) => settings.panels);
+  const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const { highlight } = Route.useSearch();
 
   // Highlights until user does something.
@@ -91,9 +105,33 @@ function Settings() {
                 <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {members.map((panel) => (
-                      <Item key={panel.id} panel={panel} panels={panels.filter((other) => other.in === panel.id)} />
-                    ))}
+                    {members.map((panel) =>
+                      panel.id === DEFAULT_PANELS.editor.id ? (
+                        <Item
+                          entries={languages
+                            .map((language) => ({
+                              key: language,
+                              label: LANGUAGES[language]?.label ?? language,
+                              link: linkTo(panel, language),
+                            }))
+                            .sort((a, b) => a.label.localeCompare(b.label))}
+                          key={panel.id}
+                          label={panel.label}
+                          link={linkTo(panel)}
+                        >
+                          <AddLanguage languages={languages} />
+                        </Item>
+                      ) : (
+                        <Item
+                          entries={panels
+                            .filter((other) => other.in === panel.id)
+                            .map((other) => ({ key: other.id, label: other.label, link: linkTo(other) }))}
+                          key={panel.id}
+                          label={panel.label}
+                          link={linkTo(panel)}
+                        />
+                      ),
+                    )}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
@@ -114,21 +152,33 @@ function Settings() {
   );
 }
 
-function Item({ panel, panels }: { panel: SettingsPanel; panels: readonly SettingsPanel[] }) {
+type Entry = { key: string; label: string; link: ReturnType<typeof linkTo> };
+
+// A page, and the `entries` under it, with `children` after them.
+function Item({
+  label,
+  link,
+  entries,
+  children,
+}: {
+  label: string;
+  link: ReturnType<typeof linkTo>;
+  entries: readonly Entry[];
+  children?: ReactNode;
+}) {
   const matchRoute = useMatchRoute();
-  const link = linkTo(panel);
   const active = Boolean(matchRoute(link));
-  const activeInside = panels.some((other) => matchRoute(linkTo(other)));
+  const activeInside = entries.some((entry) => matchRoute(entry.link));
   const [open, setOpen] = useState(active || activeInside);
 
-  // Opening a panel inside, e.g. from a search result, shows it.
+  // Opening a page inside, e.g. from a search result, shows it.
   useEffect(() => {
     if (activeInside) {
       setOpen(true);
     }
   }, [activeInside]);
 
-  if (panels.length === 0) {
+  if (entries.length === 0 && children === undefined) {
     return (
       <SidebarMenuItem>
         <SidebarMenuButton
@@ -136,7 +186,7 @@ function Item({ panel, panels }: { panel: SettingsPanel; panels: readonly Settin
           isActive={active}
           render={<Link draggable={false} replace {...link} />}
         >
-          {panel.label}
+          {label}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -149,7 +199,7 @@ function Item({ panel, panels }: { panel: SettingsPanel; panels: readonly Settin
         data-active={active ? '' : undefined}
       >
         <CollapsibleTrigger
-          aria-label={open ? `Collapse ${panel.label}` : `Expand ${panel.label}`}
+          aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
           className="relative flex size-4 shrink-0 cursor-default items-center justify-center rounded-sm text-text-3 outline-none after:absolute after:-inset-2 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
         >
           <Icon
@@ -165,25 +215,88 @@ function Item({ panel, panels }: { panel: SettingsPanel; panels: readonly Settin
           replace
           {...link}
         >
-          {panel.label}
+          {label}
         </Link>
       </div>
       <CollapsibleContent>
         <SidebarMenuSub>
-          {panels.map((other) => (
-            <SidebarMenuSubItem key={other.id}>
+          {entries.map((entry) => (
+            <SidebarMenuSubItem key={entry.key}>
               <SidebarMenuSubButton
                 className="cursor-default"
-                isActive={Boolean(matchRoute(linkTo(other)))}
-                render={<Link draggable={false} replace {...linkTo(other)} />}
+                isActive={Boolean(matchRoute(entry.link))}
+                render={<Link draggable={false} replace {...entry.link} />}
                 size="sm"
               >
-                <span>{other.label}</span>
+                <span>{entry.label}</span>
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
           ))}
+          {children}
         </SidebarMenuSub>
       </CollapsibleContent>
     </Collapsible>
+  );
+}
+
+function AddLanguage({ languages }: { languages: readonly string[] }) {
+  const update = useUpdateSettings();
+  const navigate = useNavigate();
+  const known = useEditorManager((editor) => editor.languages.languages);
+  // Some languages, e.g. JS & JSX, share the same settings page.
+  const remaining = [...new Set(known.map((language) => LANGUAGES[language.name]?.name ?? language.name))]
+    .filter((name) => !languages.includes(name))
+    .sort((a, b) => a.localeCompare(b));
+
+  return (
+    <SidebarMenuSubItem>
+      <Combobox
+        items={remaining}
+        onValueChange={(language: string | null) => {
+          if (language === null) {
+            return;
+          }
+          update((settings) => ({
+            ...settings,
+            appearance: {
+              ...settings.appearance,
+              editor: {
+                ...settings.appearance.editor,
+                languages: { ...settings.appearance.editor.languages, [language]: {} },
+              },
+            },
+          }));
+          void navigate({ ...linkTo(DEFAULT_PANELS.editor, language), replace: true });
+        }}
+        value={null}
+      >
+        <ComboboxPrimitive.Trigger
+          aria-label="Add language"
+          render={
+            <SidebarMenuSubButton
+              className="w-full cursor-default text-text-2 [&>svg]:size-3"
+              render={<button type="button" />}
+              size="sm"
+            />
+          }
+        >
+          <Icon name="add" />
+          <span>Add language</span>
+        </ComboboxPrimitive.Trigger>
+        <ComboboxContent align="start" className="w-64">
+          <ComboboxInput placeholder="Search languages" />
+          <ComboboxEmpty>No languages found</ComboboxEmpty>
+          <ComboboxList>
+            <ComboboxCollection>
+              {(name: string) => (
+                <ComboboxItem key={name} value={name}>
+                  {LANGUAGES[name]?.label ?? name}
+                </ComboboxItem>
+              )}
+            </ComboboxCollection>
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+    </SidebarMenuSubItem>
   );
 }

@@ -25,9 +25,9 @@ export const GENERAL_TERMS = {
 
 const BRIGHTNESS: Record<Brightness, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 
-const THEME_ITEMS = THEMES.map((theme) => ({ value: theme.id, label: theme.theme.name }));
+export const THEME_ITEMS = THEMES.map((theme) => ({ value: theme.id, label: theme.theme.name }));
 
-function sameTheme(a: ThemeId, b: ThemeId): boolean {
+export function sameTheme(a: ThemeId, b: ThemeId): boolean {
   return a.source === 'elsewise'
     ? b.source === 'elsewise' && a.name === b.name
     : b.source === 'plugin' && a.plugin === b.plugin && a.name === b.name;
