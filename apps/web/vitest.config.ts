@@ -59,6 +59,13 @@ function browserProject(
         '@lezer/highlight',
         'vscode-languageserver-protocol',
         'w3c-keyname',
+        '@xterm/addon-clipboard',
+        '@xterm/addon-fit',
+        '@xterm/addon-ligatures',
+        '@xterm/addon-unicode11',
+        '@xterm/addon-web-links',
+        '@xterm/addon-webgl',
+        '@xterm/xterm',
         // The languages the tests load, which `language-data` imports on demand.
         '@codemirror/language-data > @codemirror/lang-html',
         '@codemirror/language-data > @codemirror/lang-rust',

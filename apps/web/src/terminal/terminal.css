@@ -1,0 +1,28 @@
+.terminal-host .xterm {
+  padding-left: 8px;
+}
+
+/* xterm's stylesheet paints the viewport black and it spans the padding; the host already carries the theme background. */
+.terminal-host .xterm .xterm-viewport {
+  background-color: transparent;
+}
+
+.terminal-host .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider {
+  /* biome-ignore lint/complexity/noImportantStyles: xterm positions the slider with inline styles. */
+  left: auto !important;
+  right: 0;
+  /* biome-ignore lint/complexity/noImportantStyles: xterm sizes the slider with inline styles. */
+  width: 6px !important;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background-clip: content-box;
+  background-color: var(--border);
+}
+
+.terminal-host .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider:hover {
+  background-color: var(--input);
+}
+
+.terminal-host .xterm .xterm-scrollable-element > .scrollbar.vertical > .slider.active {
+  background-color: var(--disabled);
+}

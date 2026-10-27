@@ -1,4 +1,4 @@
-import type { DiffLayout, Settings, ThemeId } from '@elsewise/bridge';
+import type { DiffLayout, Settings } from '@elsewise/bridge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
@@ -9,7 +9,7 @@ import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { FontRows } from '../../-font-rows';
-import { sameTheme, THEME_ITEMS } from '../general';
+import { ThemeSelect } from '../-theme';
 import { CompletionDocumentationHelp, HighlightUsagesHelp, ScrollbarMarkersHelp } from './-help';
 import { LanguageRows } from './-language-rows';
 import { Preview } from './-preview';
@@ -33,17 +33,7 @@ export const EDITOR_TERMS = {
   languages: { label: 'Languages', keywords: ['overrides', 'per language'] },
 } as const satisfies Record<keyof Settings['appearance']['editor'] | 'ligatures', SettingsSearchTerm>;
 
-type ThemeChoice = { value: ThemeId | null; label: string };
-
-// The interface's theme first, which the editor follows unless one is picked. The choices are the select's values, as
-// `null` would otherwise be no value.
-const THEMES: readonly ThemeChoice[] = [{ value: null, label: 'Same as interface' }, ...THEME_ITEMS];
-
 const DIFF_LAYOUTS: Record<DiffLayout, string> = { split: 'Split', unified: 'Unified' };
-
-function sameThemeOrNone(a: ThemeId | null, b: ThemeId | null): boolean {
-  return a === null || b === null ? a === b : sameTheme(a, b);
-}
 
 export function Editor() {
   const editor = useSettings((settings) => settings.appearance.editor);
@@ -62,28 +52,7 @@ export function Editor() {
         description="The editor's colors."
         help="A theme without a light or dark variant uses the default theme's variant."
       >
-        <Select
-          isItemEqualToValue={(a: ThemeChoice, b: ThemeChoice) => sameThemeOrNone(a.value, b.value)}
-          items={THEMES}
-          itemToStringLabel={(choice: ThemeChoice) => choice.label}
-          onValueChange={(choice: ThemeChoice | null) => {
-            if (choice) {
-              set({ theme: choice.value });
-            }
-          }}
-          value={THEMES.find((choice) => sameThemeOrNone(choice.value, editor.theme)) ?? THEMES[0]}
-        >
-          <SelectTrigger aria-label={EDITOR_TERMS.theme.label} autoWidth size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {THEMES.map((choice) => (
-              <SelectItem key={choice.label} value={choice}>
-                {choice.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ThemeSelect label={EDITOR_TERMS.theme.label} onChange={(theme) => set({ theme })} theme={editor.theme} />
       </Row>
 
       <Separator />

@@ -5,6 +5,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import { createFileRoute } from '@tanstack/react-router';
+import type { IDisposable, ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import {
   type DockviewApi,
   DockviewReact,
@@ -18,6 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { useSettings } from '@/settings/settings';
+import { Terminal } from '@/terminal/terminal';
 // TODO: Back this with the daemon.
 import FAKE_CODE from './$worktree.tsx?raw';
 
@@ -309,9 +311,42 @@ function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | 
   );
 }
 
-// TODO: Replace with the terminal once it is migrated.
-function TerminalPanel(props: IDockviewPanelProps<{ index: number }>) {
-  return <p className="p-2 font-mono text-base text-text-3">zsh {props.params.index}</p>;
+function TerminalPanel(_props: IDockviewPanelProps<{ index: number }>) {
+  const [session] = useState(() => new EchoStub());
+  return <Terminal session={session} />;
+}
+
+const PROMPT = '\x1b[32m➜\x1b[0m \x1b[36melsewise\x1b[0m ';
+
+// TODO: Replace with actual terminal session.
+class EchoStub implements ITerminalAddon {
+  private input: IDisposable | undefined;
+
+  activate(terminal: XTerm): void {
+    let line = '';
+    terminal.write(PROMPT);
+    this.input = terminal.onData((data) => {
+      if (data === '\r') {
+        terminal.write(line === '' ? `\r\n${PROMPT}` : `\r\n${line}\r\n${PROMPT}`);
+        line = '';
+      } else if (data === '\x7f') {
+        if (line !== '') {
+          line = line.slice(0, -1);
+          terminal.write('\b \b');
+        }
+      } else if (data === '\x03') {
+        terminal.write(`^C\r\n${PROMPT}`);
+        line = '';
+      } else if (data >= ' ' && !data.startsWith('\x1b')) {
+        line += data;
+        terminal.write(data);
+      }
+    });
+  }
+
+  dispose(): void {
+    this.input?.dispose();
+  }
 }
 
 // TODO: Back this with the daemon.

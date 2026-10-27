@@ -17,9 +17,6 @@ import { type SettingsSearchHit, search } from '@/settings/search';
 import { useSettings } from '@/settings/settings';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
 
-/**
- * The settings search: a field whose results open the setting they name, highlighted.
- */
 export function Search() {
   const navigate = useNavigate();
   const panels = useSettingsPanels((settings) => settings.panels);
