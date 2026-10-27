@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
@@ -43,6 +43,15 @@ const PANELS: InstalledPlugin = {
   `)}`,
 };
 
+// Settings with overrides for a language listed under another, and one that is unknown.
+const LANGUAGES: Settings = {
+  ...DEFAULT_SETTINGS,
+  appearance: {
+    ...DEFAULT_SETTINGS.appearance,
+    editor: { ...DEFAULT_SETTINGS.appearance.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
+  },
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
@@ -53,9 +62,9 @@ function sidebar() {
 }
 
 // Renders the app at the last of `entries`, with the others behind it in the history, and `plugins` installed.
-async function mount(entries: string[], plugins: InstalledPlugin[] = []) {
+async function mount(entries: string[], plugins: InstalledPlugin[] = [], settings = DEFAULT_SETTINGS) {
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, settings);
   client.setQueryData(pluginsQuery.queryKey, plugins);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: entries }) });
   await render(
@@ -109,6 +118,64 @@ describe('Settings', () => {
     await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words.spelling' } });
     await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toHaveAttribute('data-active');
     await expect.poll(() => page.getByRole('main').element().textContent).toContain('Spelling');
+  });
+
+  test('lists languages under editor, sorted by label, expanded when open', async () => {
+    const router = await mount(['/settings'], [], LANGUAGES);
+    await expect.element(sidebar().getByRole('link', { name: 'Editor' })).toBeVisible();
+    await expect.element(sidebar().getByRole('link', { name: 'Markdown' })).not.toBeInTheDocument();
+
+    await userEvent.click(sidebar().getByRole('button', { name: 'Expand Editor' }));
+    const links = sidebar()
+      .getByRole('link')
+      .elements()
+      .map((link) => link.textContent);
+    expect(links).toEqual(['General', 'Editor', 'Elm', 'JavaScript/JSX', 'Markdown', 'Terminal']);
+
+    await userEvent.click(sidebar().getByRole('link', { name: 'JavaScript/JSX' }));
+    await expect.element(page.getByRole('heading', { name: 'JavaScript/JSX' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/appearance/editor/JavaScript');
+    await expect.element(sidebar().getByRole('link', { name: 'JavaScript/JSX' })).toHaveAttribute('data-active');
+    await expect.element(sidebar().getByRole('link', { name: 'Editor' })).not.toHaveAttribute('data-active');
+  });
+
+  test('shows language page under editor when opened', async () => {
+    await mount(['/settings/appearance/editor/Markdown'], [], LANGUAGES);
+    await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
+    await expect.element(sidebar().getByRole('link', { name: 'Markdown' })).toHaveAttribute('data-active');
+  });
+
+  test('adds language without override, excluding listed and those listed under another, and opens it', async () => {
+    const save = vi.fn(async () => {});
+    window.bridge = {
+      settings: { load: async () => LANGUAGES, save, loadPlugin: async () => ({}), savePlugin: async () => {} },
+    };
+    const router = await mount(['/settings/appearance/editor'], [], LANGUAGES);
+    await userEvent.click(sidebar().getByRole('combobox', { name: 'Add language' }));
+    await userEvent.fill(page.getByPlaceholder('Search languages'), 'J');
+
+    const options = page
+      .getByRole('option')
+      .elements()
+      .map((option) => option.textContent);
+    expect(options).toContain('Java');
+    expect(options).not.toContain('JavaScript/JSX');
+    expect(options).not.toContain('JSX');
+
+    await userEvent.click(page.getByRole('option', { name: 'Java', exact: true }));
+
+    await expect.element(page.getByRole('heading', { name: 'Java' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/appearance/editor/Java');
+    await expect.element(sidebar().getByRole('link', { name: 'Java' })).toHaveAttribute('data-active');
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith({
+      ...LANGUAGES,
+      appearance: {
+        ...LANGUAGES.appearance,
+        editor: { ...LANGUAGES.appearance.editor, languages: { ...LANGUAGES.appearance.editor.languages, Java: {} } },
+      },
+    });
+    window.bridge = undefined;
   });
 
   test('search shows panel in panel under its panel', async () => {
@@ -188,6 +255,21 @@ describe('Settings', () => {
     expect(router.state.location.pathname).toBe('/settings/appearance/editor');
     expect(router.state.location.search).toEqual({ highlight: 'lineSeparator' });
     await expect.element(page.getByRole('combobox', { name: 'Search' })).toHaveValue('');
+  });
+
+  test('search opens language setting, highlighted', async () => {
+    const router = await mount(['/settings'], [], LANGUAGES);
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'markdown tab');
+
+    const option = page.getByRole('option', { name: /Tab width/ });
+    await expect.element(option).toBeVisible();
+    await expect.poll(() => option.element().textContent).toMatch(/Editor.*Markdown/);
+
+    await userEvent.click(option);
+
+    await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/appearance/editor/Markdown');
+    expect(router.state.location.search).toEqual({ highlight: 'tabSize' });
   });
 
   test('search opens plugin panel', async () => {

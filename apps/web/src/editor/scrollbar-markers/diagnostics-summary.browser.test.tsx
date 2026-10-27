@@ -184,12 +184,12 @@ describe('DiagnosticsSummary', () => {
     expect(view.hasFocus).toBe(true);
   });
 
-  test('hidden with stripe', async () => {
+  test('hidden with scrollbar markers', async () => {
     await mount({
       ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, stripe: false },
+        editor: { ...DEFAULT_SETTINGS.appearance.editor, scrollbarMarkers: false },
       },
     });
 
@@ -207,7 +207,10 @@ describe('DiagnosticsSummary', () => {
   test('recounts when shown again', async () => {
     const hidden = {
       ...DEFAULT_SETTINGS,
-      appearance: { ...DEFAULT_SETTINGS.appearance, editor: { ...DEFAULT_SETTINGS.appearance.editor, stripe: false } },
+      appearance: {
+        ...DEFAULT_SETTINGS.appearance,
+        editor: { ...DEFAULT_SETTINGS.appearance.editor, scrollbarMarkers: false },
+      },
     };
     const client = new QueryClient();
     const view = await mount(hidden, [], client);

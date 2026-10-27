@@ -61,14 +61,14 @@ export function resolveActiveTheme(
     interface: colors,
     editor: {
       ...editor,
-      stripe: {
+      scrollbarMarkers: {
         error: colors.error,
         warning: colors['warning-fill'],
         info: colors.info,
         hint: colors.disabled,
         searchMatch: editor.searchMatch,
         usage: colors['info-line'],
-        ...variant?.editor.stripe,
+        ...variant?.editor.scrollbarMarkers,
       },
       diff: {
         addedLine: colors['success-wash'],

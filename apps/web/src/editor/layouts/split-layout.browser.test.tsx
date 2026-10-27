@@ -382,12 +382,12 @@ describe('SplitLayout', () => {
     await expect.poll(() => top(base())).toBe(top(target()));
   });
 
-  test('hides stripe of base', async () => {
+  test('hides scrollbar markers of base', async () => {
     const { base, target } = await mount({});
 
     const display = (view: EditorView) => {
-      const stripe = view.dom.querySelector('.cm-stripe');
-      return stripe === null ? null : getComputedStyle(stripe).display;
+      const markers = view.dom.querySelector('.cm-scrollbar-markers');
+      return markers === null ? null : getComputedStyle(markers).display;
     };
     expect(display(base())).toBe('none');
     expect(display(target())).not.toBe('none');

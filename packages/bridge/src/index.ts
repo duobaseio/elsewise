@@ -8,6 +8,7 @@ export {
   BundledKeymap,
   BundledTheme,
   CursorStyle,
+  DEFAULT_LANGUAGES,
   DEFAULT_SETTINGS,
   DiffLayout,
   EditorLanguageSettings,

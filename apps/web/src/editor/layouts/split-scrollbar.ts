@@ -35,7 +35,7 @@ const painter = ViewPlugin.fromClass(
     private readonly measure: { read: () => Layout; write: (layout: Layout) => void };
 
     constructor(private readonly view: EditorView) {
-      // Right after the scroller, so that what is drawn over the scrollbar later, e.g. the stripe, stays on top.
+      // Right after the scroller, so that what is drawn over the scrollbar later, e.g. the markers, stays on top.
       this.dom = view.dom.insertBefore(document.createElement('div'), view.scrollDOM.nextSibling);
       this.dom.className = 'cm-scrollbar';
       this.thumb = this.dom.appendChild(document.createElement('div'));

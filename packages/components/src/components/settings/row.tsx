@@ -25,7 +25,8 @@ export type RowProps = ComponentProps<'div'> & {
   description?: ReactNode;
 
   /**
-   * Longer guidance, behind a help icon after the description.
+   * Longer guidance, behind a help icon after the description. Guidance other than text, such as an image, sets its
+   * own width.
    */
   help?: ReactNode;
 
@@ -74,7 +75,9 @@ export function Row({ id, label, description, help, inherited, onReset, children
                   >
                     <Icon name="help" />
                   </TooltipTrigger>
-                  <TooltipContent>{help}</TooltipContent>
+                  <TooltipContent className={typeof help === 'string' ? undefined : 'max-w-none py-3'}>
+                    {help}
+                  </TooltipContent>
                 </Tooltip>
               </>
             )}

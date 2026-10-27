@@ -60,3 +60,19 @@ test('reconfiguring replaces set', async () => {
 test('guide spans content height', () => {
   expect(guides()[0].getBoundingClientRect().height).toBeGreaterThanOrEqual(view.contentHeight);
 });
+
+test('spans scroller as horizontal scrollbar appears', async () => {
+  view.dom.style.height = '200px';
+  view.dom.style.width = `${120 * view.defaultCharacterWidth}px`;
+  // Redraws the guides at the new height.
+  view.dispatch({ effects: GUIDES.reconfigure(visualGuides([40, 80])) });
+  const scroller = view.scrollDOM;
+  await expect.poll(() => guides()[0].offsetHeight).toBe(scroller.clientHeight);
+
+  // Narrower than the guides, before the layer's next measure cycle.
+  view.dom.style.width = `${20 * view.defaultCharacterWidth}px`;
+
+  expect(scroller.offsetHeight - scroller.clientHeight).toBeGreaterThan(0);
+  expect(scroller.scrollHeight).toBe(scroller.clientHeight);
+  expect(guides()[0].offsetHeight).toBe(scroller.clientHeight);
+});

@@ -12,7 +12,7 @@ import { drawActiveLine } from '@/editor/active-line';
 import { completion, completionDocumentation } from '@/editor/completion';
 import { diagnostics } from '@/editor/diagnostics';
 import { unifiedDiff } from '@/editor/layouts/unified-layout';
-import { stripe, stripeMarks } from '@/editor/stripe/stripe';
+import { scrollbarMarkerSources, scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
 import { useThemeExtension } from '@/editor/theme';
 import { visualGuides } from '@/editor/visual-guides';
 import { settingsQuery } from '@/settings/settings';
@@ -31,7 +31,7 @@ const { EDITOR } = vi.hoisted(() => ({
     searchMatchSelectedBorder: '#D0E0F0',
     completionHovered: '#F0A0E0',
     completionSelected: '#E0F0A0',
-    stripe: { error: '#F0B0A0', searchMatch: '#A0F0B0' },
+    scrollbarMarkers: { error: '#F0B0A0', searchMatch: '#A0F0B0' },
     diff: {
       addedLine: '#B0F0A0',
       addedText: '#A0E0B0',
@@ -108,14 +108,14 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-test('stripe marks take theme colors', async () => {
-  const source = { update: () => false, marks: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
-  const view = await mount('x', [diagnostics, stripe(), stripeMarks.of(source)]);
+test('scrollbar markers take theme colors', async () => {
+  const source = { update: () => false, markers: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
+  const view = await mount('x', [diagnostics, scrollbarMarkers(), scrollbarMarkerSources.of(source)]);
   view.dispatch(setDiagnostics(view.state, [{ from: 0, to: 1, severity: 'error', message: 'x' }]));
-  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark')).toHaveLength(2));
+  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker')).toHaveLength(2));
 
   const painted = (kind: string) =>
-    getComputedStyle(view.dom.querySelector(`.cm-stripe-mark-${kind}`) as Element, '::before').backgroundColor;
+    getComputedStyle(view.dom.querySelector(`.cm-scrollbar-marker-${kind}`) as Element, '::before').backgroundColor;
   expect(painted('error')).toBe(rgb('#F0B0A0'));
   expect(painted('searchMatch')).toBe(rgb('#A0F0B0'));
 });
@@ -357,4 +357,21 @@ test("diagnostic's fixes are links underlined only on hover", async () => {
   expect(style(button).color).toBe(color('--link-hover'));
   expect(style(button).textDecorationColor).toBe(color('--link-hover'));
   expect(style(button).textUnderlineOffset).toBe('4px');
+});
+
+test('keeps scroller width when horizontal scrollbar appears', async () => {
+  const line = 'x'.repeat(40);
+  const view = await mount(Array.from({ length: 10 }, () => line).join('\n'), []);
+  const host = view.dom.parentElement as HTMLElement;
+  const scroller = view.scrollDOM;
+  const width = line.length * view.defaultCharacterWidth;
+  host.style.width = `${2 * width}px`;
+  // The content falls within the horizontal scrollbar's height of filling the editor.
+  host.style.height = `${scroller.scrollHeight + 3}px`;
+  const reserved = scroller.offsetWidth - scroller.clientWidth;
+
+  host.style.width = `${width / 2}px`;
+
+  await expect.poll(() => scroller.offsetHeight - scroller.clientHeight).toBe(6);
+  expect(scroller.offsetWidth - scroller.clientWidth).toBe(reserved);
 });

@@ -9,7 +9,7 @@ import type { DocumentHighlightParams } from 'vscode-languageserver-protocol';
 import { diagnostics } from '@/editor/diagnostics';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
-import { stripe } from '@/editor/stripe/stripe';
+import { scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
 import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
@@ -98,32 +98,32 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(highlighted(view)).toEqual(['total (write)', 'total', 'total']));
   });
 
-  test('marks usages on stripe until cleared', async () => {
-    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, stripe()]);
+  test('marks usages on scrollbar until cleared', async () => {
+    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, scrollbarMarkers()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
     // Two, since two usages share a line.
-    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(2));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(2));
 
     view.dispatch({ selection: { anchor: 0, head: 3 } });
 
-    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(0));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(0));
   });
 
-  test('jumps to usage from its mark, keeping highlights', async () => {
-    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, stripe()]);
+  test('jumps to usage from its marker, keeping highlights', async () => {
+    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, scrollbarMarkers()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
-    const mark = await vi.waitFor(() => {
-      const marks = view.dom.querySelectorAll<HTMLElement>('.cm-stripe-mark-usage');
-      expect(marks).toHaveLength(2);
-      return marks[0];
+    const marker = await vi.waitFor(() => {
+      const markers = view.dom.querySelectorAll<HTMLElement>('.cm-scrollbar-marker-usage');
+      expect(markers).toHaveLength(2);
+      return markers[0];
     });
 
     // Held long enough for a frame to pass, as a person's click is.
-    await userEvent.click(page.elementLocator(mark), { delay: 100 });
+    await userEvent.click(page.elementLocator(marker), { delay: 100 });
     await rest();
 
     expect(view.state.selection.main.head).toBe(DOC.indexOf('total'));
-    expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(2);
+    expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(2);
     expect(highlighted(view)).toHaveLength(3);
   });
 

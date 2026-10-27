@@ -60,6 +60,7 @@ export {
   DEFAULT_SETTINGS_GROUPS,
   type Settings,
   type SettingsGroup,
+  type SettingsLanguagePreview,
   type SettingsPanel,
   type SettingsSearchTerm,
 } from './settings.ts';
