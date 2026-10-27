@@ -1,14 +1,15 @@
-import type { Brightness, Settings, ThemeId } from '@elsewise/bridge';
+import type { Brightness, Settings } from '@elsewise/bridge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Page, Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import { DEFAULT_ROUTES, type SettingsSearchTerm } from '@elsewise/plugin';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { THEMES } from '@/appearance/themes';
+import { sameTheme } from '@/appearance/themes';
 import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { FontRows } from '../-font-rows';
+import { THEME_ITEMS } from './-theme';
 
 export const Route = createFileRoute('/settings/appearance/general')({ component: General });
 
@@ -24,14 +25,6 @@ export const GENERAL_TERMS = {
 } as const satisfies Record<keyof Settings['appearance']['general'] | 'ligatures', SettingsSearchTerm>;
 
 const BRIGHTNESS: Record<Brightness, string> = { system: 'System', light: 'Light', dark: 'Dark' };
-
-export const THEME_ITEMS = THEMES.map((theme) => ({ value: theme.id, label: theme.theme.name }));
-
-export function sameTheme(a: ThemeId, b: ThemeId): boolean {
-  return a.source === 'elsewise'
-    ? b.source === 'elsewise' && a.name === b.name
-    : b.source === 'plugin' && a.plugin === b.plugin && a.name === b.name;
-}
 
 export function General() {
   const general = useSettings((settings) => settings.appearance.general);

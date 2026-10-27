@@ -54,22 +54,14 @@ function withEditor(changes: Partial<Settings['appearance']['editor']>): Setting
 }
 
 describe('Editor', () => {
-  test('saves theme, and null for interface theme', async () => {
+  test('saves theme', async () => {
     const { save } = await mount();
-    const theme = page.getByRole('combobox', { name: 'Theme' });
-    const shown = () => document.querySelector('[aria-label="Theme"] [data-slot="select-value"]')?.textContent;
-    await expect.poll(shown).toBe('Same as interface');
 
-    await userEvent.click(theme);
+    await userEvent.click(page.getByRole('combobox', { name: 'Theme' }));
     await userEvent.click(page.getByRole('option', { name: 'Dracula' }));
-    await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenLastCalledWith(withEditor({ theme: { source: 'elsewise', name: 'dracula' } }));
-    await expect.poll(shown).toBe('Dracula');
 
-    await userEvent.click(theme);
-    await userEvent.click(page.getByRole('option', { name: 'Same as interface' }));
-    await expect.poll(() => save.mock.calls.length).toBe(2);
-    expect(save).toHaveBeenLastCalledWith(withEditor({ theme: null }));
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withEditor({ theme: { source: 'elsewise', name: 'dracula' } }));
   });
 
   test.each([

@@ -16,6 +16,12 @@ export const THEMES: readonly LoadedTheme[] = Object.entries(
   theme: Theme.parse(content),
 }));
 
+export function sameTheme(a: ThemeId, b: ThemeId): boolean {
+  return a.source === 'elsewise'
+    ? b.source === 'elsewise' && a.name === b.name
+    : b.source === 'plugin' && a.plugin === b.plugin && a.name === b.name;
+}
+
 /**
  * Returns the interface, editor, and terminal's theme for the current brightness.
  *
