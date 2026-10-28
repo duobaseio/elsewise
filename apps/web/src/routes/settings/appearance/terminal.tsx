@@ -24,6 +24,7 @@ export const TERMINAL_TERMS = {
   ligatures: { label: 'Ligatures', keywords: ['font', 'glyphs', 'monospace', 'terminal font'] },
   cursorStyle: { label: 'Cursor style', keywords: ['caret', 'block', 'underline', 'bar', 'beam'] },
   cursorBlink: { label: 'Cursor blinking', keywords: ['caret', 'blink', 'flash'] },
+  copyOnSelect: { label: 'Copy on select', keywords: ['clipboard', 'selection', 'auto copy'] },
   scrollback: { label: 'Scrollback', keywords: ['history', 'lines', 'buffer', 'scroll'] },
 } as const satisfies Record<keyof Settings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
 
@@ -138,6 +139,20 @@ export function Terminal() {
         />
       </Row>
 
+      <Separator />
+
+      <Row
+        id="copyOnSelect"
+        label={TERMINAL_TERMS.copyOnSelect.label}
+        description="Copy text to clipboard on selection."
+      >
+        <Switch
+          aria-label={TERMINAL_TERMS.copyOnSelect.label}
+          checked={terminal.copyOnSelect}
+          onCheckedChange={(copyOnSelect) => set({ copyOnSelect })}
+        />
+      </Row>
+
       <Row
         id="scrollback"
         label={TERMINAL_TERMS.scrollback.label}
@@ -145,6 +160,7 @@ export function Terminal() {
       >
         <ScrollbackInput onChange={(scrollback) => set({ scrollback })} value={terminal.scrollback} />
       </Row>
+
     </SplitPage>
   );
 }

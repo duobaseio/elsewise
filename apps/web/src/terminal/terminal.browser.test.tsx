@@ -2,7 +2,7 @@ import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import { createRef } from 'react';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { resolveActiveTheme, THEMES } from '@/appearance/themes';
@@ -16,6 +16,10 @@ const SETTINGS: Settings = {
     general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
   },
 };
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function session() {
   const fake = {
@@ -32,9 +36,9 @@ function session() {
   return fake;
 }
 
-async function mount(fake: ITerminalAddon) {
+async function mount(fake: ITerminalAddon, settings = SETTINGS) {
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, settings);
   const ref = createRef<XTerm | null>();
   const screen = await render(
     <QueryClientProvider client={client}>
@@ -115,6 +119,32 @@ describe('Terminal', () => {
     });
   });
 
+  describe('copy on select', () => {
+    test('copies selection', async () => {
+      const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+      const { xterm } = await mount(session(), {
+        ...SETTINGS,
+        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+      });
+      await new Promise<void>((resolve) => xterm.write('hello world', resolve));
+
+      xterm.select(0, 0, 5);
+
+      expect(writeText.mock.calls).toEqual([['hello']]);
+    });
+
+    test('leaves clipboard when off', async () => {
+      const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+      const { xterm } = await mount(session());
+      await new Promise<void>((resolve) => xterm.write('hello world', resolve));
+
+      xterm.select(0, 0, 5);
+
+      expect(xterm.getSelection()).toBe('hello');
+      expect(writeText).not.toHaveBeenCalled();
+    });
+  });
+
   test('follows settings', async () => {
     const fake = session();
     const { client, xterm } = await mount(fake);
@@ -133,6 +163,7 @@ describe('Terminal', () => {
           font: { family: null, size: 16, lineHeight: 1.2, ligatures: false },
           cursorStyle: 'bar',
           cursorBlink: false,
+          copyOnSelect: false,
           scrollback: 2000,
         },
       },

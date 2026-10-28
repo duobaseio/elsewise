@@ -29,6 +29,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
   const cursorStyle = useSettings((settings) => settings.appearance.terminal.cursorStyle);
   const cursorInactiveStyle = cursorStyle === 'block' ? 'outline' : cursorStyle;
   const cursorBlink = useSettings((settings) => settings.appearance.terminal.cursorBlink);
+  const copyOnSelect = useSettings((settings) => settings.appearance.terminal.copyOnSelect);
   const scrollback = useSettings((settings) => settings.appearance.terminal.scrollback);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
@@ -126,6 +127,19 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       ligatures.current = null;
     };
   }, [terminal, font.ligatures]);
+
+  useEffect(() => {
+    if (terminal === null || !copyOnSelect) {
+      return;
+    }
+
+    const listener = terminal.xterm.onSelectionChange(() => {
+      if (terminal.xterm.hasSelection()) {
+        void navigator.clipboard.writeText(terminal.xterm.getSelection());
+      }
+    });
+    return () => listener.dispose();
+  }, [terminal, copyOnSelect]);
 
   useEffect(() => {
     if (terminal !== null) {
