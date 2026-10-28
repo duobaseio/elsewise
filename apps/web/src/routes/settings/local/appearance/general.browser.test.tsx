@@ -5,7 +5,7 @@ import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } fr
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { General } from '@/routes/settings/appearance/general';
+import { General } from '@/routes/settings/local/appearance/general';
 import { settingsQuery } from '@/settings/settings';
 
 afterEach(() => {

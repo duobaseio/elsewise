@@ -16,7 +16,7 @@ import { FontRows } from '../-font-rows';
 import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from './-theme';
 
-export const Route = createFileRoute('/settings/appearance/terminal')({ component: Terminal });
+export const Route = createFileRoute('/settings/local/appearance/terminal')({ component: Terminal });
 
 export const TERMINAL_TERMS = {
   theme: { label: 'Theme', keywords: ['colors', 'color scheme', 'ansi', 'palette', 'light', 'dark'] },

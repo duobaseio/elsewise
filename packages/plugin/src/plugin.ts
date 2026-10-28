@@ -16,9 +16,9 @@ export const DEFAULT_ROUTES = {
      * The settings page last open, or General otherwise.
      */
     last: '/settings',
-    general: '/settings/appearance/general',
-    editor: '/settings/appearance/editor',
-    terminal: '/settings/appearance/terminal',
+    general: '/settings/local/appearance/general',
+    editor: '/settings/local/appearance/editor',
+    terminal: '/settings/local/appearance/terminal',
   },
 } as const;
 

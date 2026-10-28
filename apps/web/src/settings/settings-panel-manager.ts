@@ -1,9 +1,10 @@
 import {
   DEFAULT_SETTINGS_GROUPS,
   type Disposable,
+  type LocalSettingsPanel,
+  type RemoteSettingsPanel,
   type Settings,
   type SettingsLanguagePreview,
-  type SettingsPanel,
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import { LANGUAGES } from '@/settings/languages';
@@ -15,12 +16,12 @@ const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
  */
 export class SettingsPanelManager implements Settings {
   private readonly listeners = new Set<() => void>();
-  private addedPanels: readonly (readonly SettingsPanel[])[];
-  private currentPanels: readonly SettingsPanel[];
+  private addedPanels: readonly (readonly (LocalSettingsPanel | RemoteSettingsPanel)[])[];
+  private currentPanels: readonly (LocalSettingsPanel | RemoteSettingsPanel)[];
   private addedPreviews: readonly (readonly SettingsLanguagePreview[])[] = [];
   private currentPreviews: Readonly<Record<string, SettingsLanguagePreview>> = {};
 
-  constructor(defaults: readonly SettingsPanel[] = []) {
+  constructor(defaults: readonly (LocalSettingsPanel | RemoteSettingsPanel)[] = []) {
     this.addedPanels = [defaults];
     this.currentPanels = defaults;
   }
@@ -28,14 +29,14 @@ export class SettingsPanelManager implements Settings {
   /**
    * The built-in panels, then those plugins added in order of addition.
    */
-  get panels(): readonly SettingsPanel[] {
+  get panels(): readonly (LocalSettingsPanel | RemoteSettingsPanel)[] {
     return this.currentPanels;
   }
 
   /**
    * {@inheritDoc}
    */
-  add(panels: readonly SettingsPanel[]): Disposable {
+  add(panels: readonly (LocalSettingsPanel | RemoteSettingsPanel)[]): Disposable {
     const known = new Map(this.addedPanels.flat().map((panel) => [panel.id, panel]));
     const added = panels.filter((panel) => {
       if (known.has(panel.id)) {
@@ -48,8 +49,14 @@ export class SettingsPanelManager implements Settings {
         console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
         return false;
       }
+
       if (parent !== undefined && !GROUPS.includes(parent.in)) {
         console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
+        return false;
+      }
+
+      if (parent !== undefined && parent.scope !== panel.scope) {
+        console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
         return false;
       }
 

@@ -60,7 +60,7 @@ async function mount(language: string, settings = SETTINGS, label = language, pl
   client.setQueryData(pluginsQuery.queryKey, plugins);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: [`/settings/appearance/editor/${language}`] }),
+    history: createMemoryHistory({ initialEntries: [`/settings/local/appearance/editor/${language}`] }),
   });
   await render(
     <QueryClientProvider client={client}>
@@ -122,12 +122,12 @@ describe('Language', () => {
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenLastCalledWith(withLanguages({ Markdown: { lineSeparator: '\n' } }));
     await expect.element(page.getByRole('heading', { name: 'Editor' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/editor');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor');
   });
 
   test('redirects to language listed as', async () => {
     const { router } = await mount('JSX', SETTINGS, 'JavaScript/JSX');
-    expect(router.state.location.pathname).toBe('/settings/appearance/editor/JavaScript');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/JavaScript');
   });
 
   test('previews plugin language, and built-in language with plugin snippet', async () => {

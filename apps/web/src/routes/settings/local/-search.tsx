@@ -9,7 +9,7 @@ import {
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useParams } from '@tanstack/react-router';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { linkTo } from '@/settings/default-panels';
 import { LANGUAGES } from '@/settings/languages';
@@ -19,7 +19,12 @@ import { useSettingsPanels } from '@/settings/settings-panel-manager';
 
 export function Search() {
   const navigate = useNavigate();
-  const panels = useSettingsPanels((settings) => settings.panels);
+  const { remote } = useParams({ strict: false });
+  const all = useSettingsPanels((settings) => settings.panels);
+  const panels = useMemo(
+    () => all.filter((panel) => panel.scope === (remote === undefined ? 'local' : 'remote')),
+    [all, remote],
+  );
   const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
@@ -58,7 +63,11 @@ export function Search() {
         }
         setQuery('');
         setOpen(false);
-        void navigate({ ...linkTo(hit.panel, hit.language), replace: true, search: { highlight: hit.id } });
+        void navigate({
+          ...linkTo(hit.panel, { language: hit.language, remote }),
+          replace: true,
+          search: { highlight: hit.id },
+        });
       }}
       open={open && debounced.trim() !== ''}
       value={null}

@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { PanelError } from '@/routes/settings/plugins/$id';
+import { PanelError } from '@/routes/settings/-panel-error';
 
 import { THEMES } from '../../../sheet';
 

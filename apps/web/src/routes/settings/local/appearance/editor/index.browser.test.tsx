@@ -38,7 +38,7 @@ async function mount(settings = SETTINGS) {
   client.setQueryData(pluginsQuery.queryKey, []);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/settings/appearance/editor'] }),
+    history: createMemoryHistory({ initialEntries: ['/settings/local/appearance/editor'] }),
   });
   await render(
     <QueryClientProvider client={client}>

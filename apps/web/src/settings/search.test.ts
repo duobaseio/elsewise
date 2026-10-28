@@ -1,11 +1,11 @@
-import type { SettingsPanel, SettingsSearchTerm } from '@elsewise/plugin';
+import type { LocalSettingsPanel, SettingsSearchTerm } from '@elsewise/plugin';
 import { describe, expect, test } from 'vitest';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { type SettingsSearchHit, search } from '@/settings/search';
 
 // Returns a panel with `id` and `terms`.
-function panel(id: string, terms: Record<string, SettingsSearchTerm>): SettingsPanel {
-  return { id, label: id, in: 'appearance', terms, component: () => null };
+function panel(id: string, terms: Record<string, SettingsSearchTerm>): LocalSettingsPanel {
+  return { scope: 'local', id, label: id, in: 'appearance', terms, component: () => null };
 }
 
 const PANELS = [

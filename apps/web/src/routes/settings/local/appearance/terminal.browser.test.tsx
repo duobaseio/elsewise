@@ -24,7 +24,7 @@ async function mount() {
   client.setQueryData(pluginsQuery.queryKey, []);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/settings/appearance/terminal'] }),
+    history: createMemoryHistory({ initialEntries: ['/settings/local/appearance/terminal'] }),
   });
   await render(
     <QueryClientProvider client={client}>

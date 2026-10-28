@@ -9,7 +9,7 @@ import { pluginsQuery } from '@/plugins/loader';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
-// A plugin that adds a panel to each group, and one that throws.
+// A plugin that adds local panels, one of them throwing, and a remote panel.
 const PANELS: InstalledPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
   enabled: true,
@@ -20,21 +20,31 @@ const PANELS: InstalledPlugin = {
           return [
             app.settings.add([
               {
+                scope: 'local',
                 id: 'io.example.words',
                 label: 'Words',
                 in: 'appearance',
                 terms: { dictionary: { label: 'Dictionary', keywords: ['spelling'] } },
                 component: () => 'Dictionary',
               },
-              { id: 'io.example.hooks', label: 'Hooks', in: 'appearance', terms: {}, component: () => 'Hooks' },
+              { scope: 'local', id: 'io.example.hooks', label: 'Hooks', in: 'appearance', terms: {}, component: () => 'Hooks' },
               {
+                scope: 'local',
                 id: 'io.example.words.spelling',
                 label: 'Spelling',
                 in: 'io.example.words',
                 terms: { locale: { label: 'Locale', keywords: ['language', 'region'] } },
                 component: () => 'Spelling',
               },
-              { id: 'io.example.broken', label: 'Broken', in: 'appearance', terms: {}, component: () => { throw new Error('boom'); } },
+              { scope: 'local', id: 'io.example.broken', label: 'Broken', in: 'appearance', terms: {}, component: () => { throw new Error('boom'); } },
+              {
+                scope: 'remote',
+                id: 'io.example.shell',
+                label: 'Shell',
+                in: 'appearance',
+                terms: { program: { label: 'Program', keywords: ['shell'] } },
+                component: ({ id }) => 'Shell on ' + id,
+              },
             ]),
           ];
         },
@@ -80,44 +90,52 @@ describe('/settings/', () => {
   test('opens general', async () => {
     const router = await mount(['/settings']);
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/general');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
   });
 
   test('reopens last page', async () => {
-    const router = await mount(['/settings/appearance/terminal']);
+    const router = await mount(['/settings/local/appearance/terminal']);
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
 
     await router.navigate({ to: '/settings' });
 
-    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/terminal');
   });
 
   test('reopens last page after leaving', async () => {
-    const router = await mount(['/elsewhere', '/settings/appearance/terminal']);
+    const router = await mount(['/elsewhere', '/settings/local/appearance/terminal']);
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
     router.history.back();
     await expect.poll(() => router.state.location.pathname).toBe('/elsewhere');
 
     await router.navigate({ to: '/settings' });
 
-    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/terminal');
   });
 
   test('redirects last page gone to general', async () => {
-    localStorage.setItem('elsewise.settings.page', '/settings/plugins/io.example.missing');
+    localStorage.setItem('elsewise.settings.page', '/settings/local/io.example.missing');
     const router = await mount(['/settings']);
 
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/general');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+  });
+
+  test('redirects last page outside scopes to general', async () => {
+    localStorage.setItem('elsewise.settings.page', '/settings/appearance/terminal');
+    const router = await mount(['/settings']);
+
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
   });
 });
 
 describe('Settings', () => {
   test('saves page without highlight', async () => {
-    await mount(['/settings/appearance/terminal?highlight=scrollback']);
+    await mount(['/settings/local/appearance/terminal?highlight=scrollback']);
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
 
-    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/appearance/terminal');
+    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/local/appearance/terminal');
   });
 
   test('shows page of each link, marking it active', async () => {
@@ -155,13 +173,13 @@ describe('Settings', () => {
 
     await userEvent.click(sidebar().getByRole('link', { name: 'JavaScript/JSX' }));
     await expect.element(page.getByRole('heading', { name: 'JavaScript/JSX' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/editor/JavaScript');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/JavaScript');
     await expect.element(sidebar().getByRole('link', { name: 'JavaScript/JSX' })).toHaveAttribute('data-active');
     await expect.element(sidebar().getByRole('link', { name: 'Editor' })).not.toHaveAttribute('data-active');
   });
 
   test('keeps highlight on modifier key', async () => {
-    const router = await mount(['/settings/appearance/general?highlight=brightness']);
+    const router = await mount(['/settings/local/appearance/general?highlight=brightness']);
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
     for (const key of ['{Shift}', '{Meta}', '{Control}', '{Alt}']) {
@@ -173,7 +191,7 @@ describe('Settings', () => {
   });
 
   test('clears highlight on pointer or other key', async () => {
-    const router = await mount(['/settings/appearance/general?highlight=brightness']);
+    const router = await mount(['/settings/local/appearance/general?highlight=brightness']);
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
 
     await userEvent.keyboard('{Escape}');
@@ -186,10 +204,10 @@ describe('Settings', () => {
   });
 
   test('returns to previous page', async () => {
-    const router = await mount(['/settings/appearance/terminal', '/settings/appearance/general']);
+    const router = await mount(['/settings/local/appearance/terminal', '/settings/local/appearance/general']);
     await userEvent.click(page.getByRole('button', { name: 'Back' }));
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/terminal');
   });
 });
 
@@ -205,13 +223,13 @@ describe('Item', () => {
     await userEvent.dblClick(sidebar().getByRole('link', { name: 'Words' }));
     await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
 
-    await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words.spelling' } });
+    await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.words.spelling' } });
     await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toHaveAttribute('data-active');
     await expect.poll(() => page.getByRole('main').element().textContent).toContain('Spelling');
   });
 
   test('shows open language page under editor', async () => {
-    await mount(['/settings/appearance/editor/Markdown'], [], LANGUAGES);
+    await mount(['/settings/local/appearance/editor/Markdown'], [], LANGUAGES);
     await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
     await expect.element(sidebar().getByRole('link', { name: 'Markdown' })).toHaveAttribute('data-active');
   });
@@ -223,7 +241,7 @@ describe('AddLanguage', () => {
     window.bridge = {
       settings: { load: async () => LANGUAGES, save, loadPlugin: async () => ({}), savePlugin: async () => {} },
     };
-    const router = await mount(['/settings/appearance/editor'], [], LANGUAGES);
+    const router = await mount(['/settings/local/appearance/editor'], [], LANGUAGES);
     await userEvent.click(sidebar().getByRole('combobox', { name: 'Add language' }));
     await userEvent.fill(page.getByPlaceholder('Search languages'), 'J');
 
@@ -238,7 +256,7 @@ describe('AddLanguage', () => {
     await userEvent.click(page.getByRole('option', { name: 'Java', exact: true }));
 
     await expect.element(page.getByRole('heading', { name: 'Java' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/editor/Java');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/Java');
     await expect.element(sidebar().getByRole('link', { name: 'Java' })).toHaveAttribute('data-active');
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith({
@@ -263,7 +281,7 @@ describe('Search', () => {
     await userEvent.click(option);
 
     await expect.element(page.getByRole('heading', { name: 'Editor' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/editor');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor');
     expect(router.state.location.search).toEqual({ highlight: 'lineSeparator' });
     await expect.element(page.getByRole('combobox', { name: 'Search' })).toHaveValue('');
   });
@@ -279,7 +297,7 @@ describe('Search', () => {
     await userEvent.click(option);
 
     await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/editor/Markdown');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/Markdown');
     expect(router.state.location.search).toEqual({ highlight: 'tabSize' });
   });
 
@@ -293,8 +311,27 @@ describe('Search', () => {
 
     await userEvent.click(option);
 
-    expect(router.state.location.pathname).toBe('/settings/plugins/io.example.words');
+    expect(router.state.location.pathname).toBe('/settings/local/io.example.words');
     expect(router.state.location.search).toEqual({ highlight: 'dictionary' });
+  });
+
+  test('finds panels of current scope only', async () => {
+    const router = await mount(['/settings'], [PANELS]);
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'program');
+    await expect.element(page.getByText('No settings found')).toBeVisible();
+
+    await router.navigate({
+      to: '/settings/remote/$remote/$id',
+      params: { remote: 'dev-box', id: 'io.example.shell' },
+    });
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'dictionary');
+    await expect.element(page.getByText('No settings found')).toBeVisible();
+
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'program');
+    await userEvent.click(page.getByRole('option', { name: /Program/ }));
+
+    expect(router.state.location.pathname).toBe('/settings/remote/dev-box/io.example.shell');
+    expect(router.state.location.search).toEqual({ highlight: 'program' });
   });
 
   test('shows nested panel under parent', async () => {
@@ -333,19 +370,59 @@ describe('Search', () => {
   });
 });
 
-describe('PluginPanel', () => {
+describe('LocalPanel', () => {
   test('shows panel, marking it active', async () => {
     const router = await mount(['/settings'], [PANELS]);
     await userEvent.click(sidebar().getByRole('link', { name: 'Words' }));
     await expect.poll(() => page.getByRole('main').element().textContent).toContain('Dictionary');
     await expect.element(sidebar().getByRole('link', { name: 'Words' })).toHaveAttribute('data-active');
-    expect(router.state.location.pathname).toBe('/settings/plugins/io.example.words');
+    expect(router.state.location.pathname).toBe('/settings/local/io.example.words');
+  });
+
+  test('lists local panels only', async () => {
+    await mount(['/settings'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await expect.element(sidebar().getByRole('link', { name: 'Shell' })).not.toBeInTheDocument();
   });
 
   test('redirects unknown panel to general', async () => {
-    const router = await mount(['/settings/plugins/io.example.missing']);
+    const router = await mount(['/settings/local/io.example.missing']);
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/general');
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+  });
+
+  test('redirects remote panel to general', async () => {
+    const router = await mount(['/settings/local/appearance/terminal'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.shell' } });
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+  });
+});
+
+describe('RemotePanel', () => {
+  test('shows panel for remote, listing remote panels only', async () => {
+    const router = await mount(['/settings'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await router.navigate({
+      to: '/settings/remote/$remote/$id',
+      params: { remote: 'dev-box', id: 'io.example.shell' },
+    });
+    await expect.poll(() => page.getByRole('main').element().textContent).toContain('Shell on dev-box');
+    await expect.element(sidebar().getByRole('link', { name: 'Shell' })).toHaveAttribute('data-active');
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).not.toBeInTheDocument();
+    await expect.element(sidebar().getByRole('link', { name: 'General' })).not.toBeInTheDocument();
+  });
+
+  test('redirects local panel to general', async () => {
+    const router = await mount(['/settings/local/appearance/terminal'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await router.navigate({
+      to: '/settings/remote/$remote/$id',
+      params: { remote: 'dev-box', id: 'io.example.words' },
+    });
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
   });
 });
 

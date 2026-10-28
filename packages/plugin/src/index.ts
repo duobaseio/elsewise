@@ -66,6 +66,8 @@ export {
 } from './plugin.ts';
 export {
   DEFAULT_SETTINGS_GROUPS,
+  type LocalSettingsPanel,
+  type RemoteSettingsPanel,
   type Settings,
   type SettingsGroup,
   type SettingsLanguagePreview,

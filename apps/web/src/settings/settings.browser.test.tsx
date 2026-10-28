@@ -57,6 +57,6 @@ describe('OPEN_SETTINGS', () => {
   });
 
   test('keeps open settings page', async () => {
-    await expect(open('/settings/appearance/terminal')).resolves.toBe('/settings/appearance/terminal');
+    await expect(open('/settings/local/appearance/terminal')).resolves.toBe('/settings/local/appearance/terminal');
   });
 });

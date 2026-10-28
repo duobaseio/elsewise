@@ -14,8 +14,8 @@ export const Route = createFileRoute('/settings/')({
       // Unable to retrieve stored page, that's fine.
     }
 
-    throw page?.startsWith('/settings/')
+    throw page?.startsWith('/settings/local/') || page?.startsWith('/settings/remote/')
       ? redirect({ href: page, replace: true })
-      : redirect({ to: '/settings/appearance/general', replace: true });
+      : redirect({ to: '/settings/local/appearance/general', replace: true });
   },
 });
