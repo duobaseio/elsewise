@@ -64,8 +64,6 @@ export function General() {
         </Select>
       </Row>
 
-      <Separator />
-
       <Row id="theme" label={GENERAL_TERMS.theme.label} description="The interface's colors.">
         <Select
           isItemEqualToValue={sameTheme}

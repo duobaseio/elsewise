@@ -128,6 +128,15 @@ describe('Terminal', () => {
     await expect.element(input).toHaveValue('1.0');
   });
 
+  test('saves copy on select', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Copy on select' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withTerminal({ copyOnSelect: true }));
+  });
+
   test('saves scrollback within limits', async () => {
     const save = await mount();
     const input = page.getByRole('textbox', { name: 'Scrollback' });

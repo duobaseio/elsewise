@@ -174,6 +174,7 @@ export const Settings = z.lazy(() =>
             font: font(12, 1.0625),
             cursorStyle: CursorStyle.catch('block'),
             cursorBlink: z.boolean().catch(true),
+            copyOnSelect: z.boolean().catch(false),
             /**
              * The number of lines kept above the screen.
              */

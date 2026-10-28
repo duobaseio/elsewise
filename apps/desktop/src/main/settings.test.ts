@@ -284,6 +284,7 @@ describe('settings:load', () => {
       font: { family: 'Iosevka', size: 16, lineHeight: 1.2, ligatures: false },
       cursorStyle: 'bar',
       cursorBlink: false,
+      copyOnSelect: true,
       scrollback: 50000,
     };
     write({ appearance: { terminal } });
@@ -292,6 +293,7 @@ describe('settings:load', () => {
     for (const bad of [
       { cursorStyle: 'beam' },
       { cursorBlink: 'yes' },
+      { copyOnSelect: 'yes' },
       { scrollback: 999 },
       { scrollback: 100001 },
       { scrollback: 5000.5 },
