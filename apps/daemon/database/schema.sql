@@ -7,7 +7,7 @@
 create table project (
     id text not null primary key,
     name text not null,
-    absolute_path text not null unique,
+    folder text not null unique, -- A human-readable project's folder name under `project/<folder>/workspaces/`.
     created_at integer not null
 ) strict;
 

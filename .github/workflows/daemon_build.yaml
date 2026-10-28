@@ -6,6 +6,7 @@ on:
     paths:
       - .github/workflows/daemon_build.yaml
       - apps/daemon/**
+      - packages/core/**
       - packages/transport/ts/**
       - package.json
       - pnpm-lock.yaml
@@ -15,6 +16,7 @@ on:
     paths:
       - .github/workflows/daemon_build.yaml
       - apps/daemon/**
+      - packages/core/**
       - packages/transport/ts/**
       - package.json
       - pnpm-lock.yaml
@@ -47,3 +49,20 @@ jobs:
       - run: pnpm --filter @elsewise/daemon typecheck
       - run: pnpm --filter @elsewise/daemon test
       - run: pnpm --filter @elsewise/daemon build
+
+  migrations:
+    name: Check Daemon Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 12
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - uses: ariga/setup-atlas@v0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @elsewise/daemon migration:check

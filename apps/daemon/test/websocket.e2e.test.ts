@@ -1,23 +1,35 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { Channel, createClient, WebSocketWire } from '@elsewise/transport';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 import manifest from '../package.json' with { type: 'json' };
-import { createDaemon } from '../src/daemon';
+import { createDaemon, type Daemon } from '../src/daemon';
 import { InfoService } from '../src/gen/elsewise/daemon/info/v1/info_service_pb';
 import { PROTOCOL, startWebSocketServer, TOKEN_PREFIX, type WebSocketServerHandle } from '../src/websocket';
 
 const TOKEN = 'test-token';
 const BEARER = TOKEN_PREFIX + TOKEN;
 
+let dataDirectory: string;
+let codeDirectory: string;
+let daemon: Daemon;
 let server: WebSocketServerHandle;
 let url: string;
 
 beforeEach(async () => {
-  server = await startWebSocketServer(createDaemon(), { port: 0, token: TOKEN });
+  dataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-'));
+  codeDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-code-'));
+  daemon = createDaemon({ dataDirectory, codeDirectory });
+  server = await startWebSocketServer(daemon, { port: 0, token: TOKEN });
   url = `ws://127.0.0.1:${server.port}`;
 });
 
 afterEach(async () => {
   await server.close();
+  await daemon.close();
+  await fs.rm(dataDirectory, { recursive: true, force: true, maxRetries: 10 });
+  await fs.rm(codeDirectory, { recursive: true, force: true, maxRetries: 10 });
 });
 
 test('serves a client that offers the protocol and the token', async () => {
@@ -55,5 +67,5 @@ test('refuses a client that offers no subprotocol', async () => {
 });
 
 test.each(['', 'has space', 'a/b=', 'a,b'])('refuses to start with the token %j', async (token) => {
-  await expect(startWebSocketServer(createDaemon(), { port: 0, token })).rejects.toThrow();
+  await expect(startWebSocketServer(daemon, { port: 0, token })).rejects.toThrow();
 });

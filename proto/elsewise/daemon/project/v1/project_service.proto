@@ -240,12 +240,6 @@ message UpdateWorkspaceRequest {
   //
   // Unset leaves it as is.
   string name = 3;
-
-  // Renames the existing branch of this workspace.
-  //
-  // Unset leaves it as is. A workspace with no branch checked out fails with FAILED_PRECONDITION, and a branch that
-  // already exists fails with ALREADY_EXISTS.
-  string branch = 4;
 }
 
 message UpdateWorkspaceResponse {

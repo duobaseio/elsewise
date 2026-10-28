@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, TransportError } from '@elsewise/transport';
 import { toProtocolPath } from '../../fs/path';
@@ -14,17 +15,28 @@ export async function readWorktrees(git: Git): Promise<WorktreeInit[]> {
   return parseWorktrees(await git.text(['worktree', 'list', '--porcelain', '-z']));
 }
 
-/** Reads the worktree at a native path. */
+/** Reads the worktree at a native path and throws a `TransportError` if one is not found. */
 export async function readWorktree(git: Git, absoluteNativePath: string): Promise<WorktreeInit> {
+  const worktree = await findWorktree(await readWorktrees(git), absoluteNativePath);
+  if (!worktree) {
+    throw new TransportError(Code.NOT_FOUND, `${absoluteNativePath} is not a worktree of the repository`);
+  }
+  return worktree;
+}
+
+/** Finds the worktree at a native path. */
+export async function findWorktree(
+  worktrees: WorktreeInit[],
+  absoluteNativePath: string,
+): Promise<WorktreeInit | undefined> {
   const wanted = await fs.realpath(absoluteNativePath).catch(() => absoluteNativePath);
-  for (const worktree of await readWorktrees(git)) {
-    const native = worktree.absolutePath ?? '';
-    const resolved = await fs.realpath(native).catch(() => native);
-    if (resolved === wanted) {
+  for (const worktree of worktrees) {
+    const listed = path.resolve(worktree.absolutePath ?? '');
+    if ((await fs.realpath(listed).catch(() => listed)) === wanted) {
       return worktree;
     }
   }
-  throw new TransportError(Code.NOT_FOUND, `${absoluteNativePath} is not a worktree of the repository`);
+  return undefined;
 }
 
 /** Parses `git worktree list --porcelain -z` output. */

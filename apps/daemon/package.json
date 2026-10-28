@@ -13,7 +13,9 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "node scripts/build.mjs",
-    "generate": "buf generate",
+    "generate": "buf generate && tsx scripts/codegen.ts",
+    "migration": "cd database && atlas migrate diff --env local",
+    "migration:check": "tsx scripts/migration-check.ts",
     "prepare": "pnpm generate",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
@@ -23,9 +25,11 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",
+    "@elsewise/core": "workspace:*",
     "@elsewise/transport": "workspace:*",
     "@parcel/watcher": "^2.6.0",
     "execa": "^10.1.1",
+    "kysely": "^0.29.7",
     "which-command": "^0.1.0",
     "ws": "^8.21.3"
   },
@@ -36,6 +40,7 @@
     "@types/node": "^26.4.1",
     "@types/ws": "^8.18.1",
     "esbuild": "^0.28.2",
+    "kysely-codegen": "^0.20.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
