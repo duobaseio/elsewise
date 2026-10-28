@@ -42,7 +42,7 @@ function at(line: number, severity: EditorDiagnostic['severity'] = 'error') {
 const NEXT = DEFAULT_COMMANDS.editor.diagnostics.next;
 const PREVIOUS = DEFAULT_COMMANDS.editor.diagnostics.previous;
 
-describe('NEXT_DIAGNOSTIC', () => {
+describe('EDITOR_NEXT_DIAGNOSTIC', () => {
   test('steps through highest severity, wrapping', () => {
     const { view, commands } = open([at(5, 'warning'), at(20), at(10)]);
 
@@ -85,7 +85,7 @@ describe('NEXT_DIAGNOSTIC', () => {
   });
 });
 
-describe('PREVIOUS_DIAGNOSTIC', () => {
+describe('EDITOR_PREVIOUS_DIAGNOSTIC', () => {
   test('steps back through highest severity, wrapping', () => {
     const { view, commands } = open([at(5, 'warning'), at(20), at(10)]);
 

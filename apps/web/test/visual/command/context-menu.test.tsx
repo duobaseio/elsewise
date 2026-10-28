@@ -8,6 +8,7 @@ import { CommandManager, CommandManagerContext } from '@/command/command-manager
 import { CommandContextMenu } from '@/command/context-menu';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../commands';
 
 import { THEMES } from '../../sheet';
@@ -71,6 +72,7 @@ test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
     editor: new EditorManager(),
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   commands.add(COMMANDS);
   render(

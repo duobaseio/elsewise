@@ -32,6 +32,7 @@ import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-s
 import { toggleReplaceRow } from '@/editor/search/search-bar-query';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../commands';
 
 import { THEMES } from '../../sheet';
@@ -330,6 +331,7 @@ async function mount(
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   render(
     <QueryClientProvider client={client}>

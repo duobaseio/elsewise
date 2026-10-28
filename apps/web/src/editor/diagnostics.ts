@@ -27,7 +27,7 @@ function collect(state: EditorState): readonly EditorDiagnostic[] {
   return found;
 }
 
-export const NEXT_DIAGNOSTIC: EditorCommand = {
+export const EDITOR_NEXT_DIAGNOSTIC: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diagnostics.next,
   label: 'Next diagnostic',
@@ -35,7 +35,7 @@ export const NEXT_DIAGNOSTIC: EditorCommand = {
   run: (_, view) => step(view, true),
 };
 
-export const PREVIOUS_DIAGNOSTIC: EditorCommand = {
+export const EDITOR_PREVIOUS_DIAGNOSTIC: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diagnostics.previous,
   label: 'Previous diagnostic',

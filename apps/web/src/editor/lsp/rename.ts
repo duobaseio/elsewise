@@ -125,7 +125,7 @@ const message = StateField.define<Tooltip | null>({
 
 const showMessage = StateEffect.define<{ pos: number; text: string } | null>();
 
-export const RENAME: EditorCommand = {
+export const EDITOR_RENAME: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.rename,
   label: 'Rename…',

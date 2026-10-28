@@ -11,10 +11,10 @@ import { formatKey } from '@elsewise/components/lib/platform';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
-import { APPLY_TOP_FIX, actions, SHOW_ACTIONS } from '@/editor/actions';
+import { actions, EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';
-import { hover as editorHover, SHOW_HOVER } from '@/editor/hover';
+import { EDITOR_SHOW_HOVER, hover as editorHover } from '@/editor/hover';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
@@ -323,7 +323,7 @@ describe('serverHover', () => {
 
   test('hints command keys', async () => {
     const commands = builtInCommands();
-    commands.selected = { name: 'Test', keys: { [APPLY_TOP_FIX.id]: ['Mod-k'], [SHOW_ACTIONS.id]: [] } };
+    commands.selected = { name: 'Test', keys: { [EDITOR_APPLY_TOP_FIX.id]: ['Mod-k'], [EDITOR_SHOW_ACTIONS.id]: [] } };
     const view = await open(
       transport(null, [DIAGNOSTIC], () => [FIX]),
       [],
@@ -534,13 +534,13 @@ describe('serverHover', () => {
   });
 });
 
-describe('SHOW_HOVER', () => {
+describe('EDITOR_SHOW_HOVER', () => {
   test('opens documentation at cursor', async () => {
     const fake = transport(markdown('Attaches.'));
     const view = await open(fake);
 
     view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
-    expect(view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view)).toBe(true);
+    expect(view.state.facet(COMMANDS)?.run(EDITOR_SHOW_HOVER.id, view)).toBe(true);
     const tooltip = await vi.waitFor(
       () => {
         const tooltip = view.dom.querySelector<HTMLElement>('.cm-tooltip-hover');
@@ -564,7 +564,7 @@ describe('SHOW_HOVER', () => {
     );
     const view = await open(fake);
     view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
-    view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view);
+    view.state.facet(COMMANDS)?.run(EDITOR_SHOW_HOVER.id, view);
     await vi.waitFor(() => expect(fake.methods).toContain('textDocument/hover'));
 
     view.dispatch({});
@@ -578,7 +578,7 @@ describe('SHOW_HOVER', () => {
     const view = await open(fake);
 
     view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
-    view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view);
+    view.state.facet(COMMANDS)?.run(EDITOR_SHOW_HOVER.id, view);
     await vi.waitFor(() => expect(fake.methods).toContain('textDocument/hover'), { timeout: 2000 });
     await new Promise((resolve) => setTimeout(resolve, 50));
 

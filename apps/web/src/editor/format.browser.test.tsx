@@ -76,7 +76,7 @@ function press(view: EditorView): boolean {
   return runScopeHandlers(view, event, 'editor');
 }
 
-describe('FORMAT', () => {
+describe('EDITOR_FORMAT', () => {
   test('applies formatter changes in one undo step', async () => {
     const view = open([
       {

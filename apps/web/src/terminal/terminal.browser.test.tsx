@@ -7,8 +7,12 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { resolveActiveTheme, THEMES } from '@/appearance/themes';
+import { CommandManagerContext } from '@/command/command-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { settingsQuery } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
+import { TerminalManager, TerminalManagerContext } from '@/terminal/terminal-manager';
+import { builtInCommands } from '../../test/commands';
 
 const SETTINGS: Settings = {
   ...DEFAULT_SETTINGS,
@@ -40,16 +44,21 @@ function session() {
 async function mount(fake: ITerminalAddon, settings = SETTINGS) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
+  const terminals = new TerminalManager();
   const ref = createRef<XTerm | null>();
   const screen = await render(
     <QueryClientProvider client={client}>
-      <div data-testid="frame" style={{ height: 300, width: 600 }}>
-        <Terminal ref={ref} session={fake} />
-      </div>
+      <TerminalManagerContext value={terminals}>
+        <CommandManagerContext value={builtInCommands(new EditorManager(), terminals)}>
+          <div data-testid="frame" style={{ height: 300, width: 600 }}>
+            <Terminal ref={ref} session={fake} />
+          </div>
+        </CommandManagerContext>
+      </TerminalManagerContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => ref.current).not.toBeNull();
-  return { client, screen, xterm: ref.current as XTerm };
+  return { client, screen, terminals, xterm: ref.current as XTerm };
 }
 
 // Drags the mouse across `text`, the first thing on the first row.
@@ -142,6 +151,62 @@ describe('Terminal', () => {
 
       await expect.poll(() => xterm.element?.classList.contains('focus')).toBe(false);
       expect(xterm.options.cursorInactiveStyle).toBe('bar');
+    });
+  });
+
+  test('activates on focus', async () => {
+    const { terminals, xterm } = await mount(session());
+    expect(terminals.active).toBeNull();
+
+    xterm.focus();
+
+    expect(terminals.active).toBe(xterm);
+  });
+
+  test('deactivates on unmount', async () => {
+    const { screen, terminals, xterm } = await mount(session());
+    xterm.focus();
+
+    await screen.unmount();
+
+    expect(terminals.active).toBeNull();
+  });
+
+  describe('clipboard keys', () => {
+    test('copies selection', async () => {
+      const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+      const fake = session();
+      const { xterm } = await mount(fake);
+      await new Promise<void>((resolve) => xterm.write('hello world', resolve));
+      xterm.select(0, 0, 5);
+      xterm.focus();
+
+      await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}c{/Meta}' : '{Control>}{Shift>}c{/Shift}{/Control}');
+
+      expect(writeText.mock.calls).toEqual([['hello']]);
+      expect(fake.write).not.toHaveBeenCalled();
+    });
+
+    test('pastes clipboard', async () => {
+      vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('pasted');
+      const fake = session();
+      const { xterm } = await mount(fake);
+      xterm.focus();
+
+      await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}v{/Meta}' : '{Control>}{Shift>}v{/Shift}{/Control}');
+
+      await expect.poll(() => fake.write.mock.calls).toEqual([['pasted']]);
+    });
+
+    test('leaves paste key to read-only terminal', async () => {
+      const readText = vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('pasted');
+      const { xterm } = await mount(session());
+      xterm.options.disableStdin = true;
+      xterm.focus();
+
+      await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}v{/Meta}' : '{Control>}{Shift>}v{/Shift}{/Control}');
+
+      expect(readText).not.toHaveBeenCalled();
     });
   });
 

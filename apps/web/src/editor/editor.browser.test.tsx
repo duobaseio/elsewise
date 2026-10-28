@@ -26,6 +26,7 @@ import { COMMANDS, EditorManager, EditorManagerContext } from '@/editor/editor-m
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../test/commands';
 import { StubTransport } from '../../test/stub-transport';
 
@@ -79,6 +80,7 @@ async function mountEditor(
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   const screen = await render(
     shell(
@@ -187,6 +189,7 @@ async function mountDiff(source: string | null, layout: DiffLayout, editor = new
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   const screen = await render(
     shell(

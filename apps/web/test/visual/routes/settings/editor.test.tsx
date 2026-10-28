@@ -13,6 +13,7 @@ import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-s
 import { Editor } from '@/routes/settings/appearance/editor';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager, SettingsPanelManagerContext } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../../commands';
 
 import { THEMES } from '../../../sheet';
@@ -36,6 +37,7 @@ test.each(THEMES)('editor (%s)', async (theme) => {
     editor,
     router: memoryRouter(),
     settings,
+    terminal: new TerminalManager(),
   });
   const router = createRouter({
     routeTree: createRootRoute({

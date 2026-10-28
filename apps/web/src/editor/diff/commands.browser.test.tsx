@@ -4,14 +4,14 @@ import type { DiffLayout } from '@elsewise/bridge';
 import { DEFAULT_COMMANDS, DEFAULT_DIFF_SOURCES, EDITOR_DOCUMENT, type EditorDocumentLayout } from '@elsewise/plugin';
 import { afterEach, describe, expect, test } from 'vitest';
 import {
-  BRANCH_DIFF,
-  CLOSE_DIFF,
-  NEXT_CHUNK,
-  PREVIOUS_CHUNK,
-  SPLIT_DIFF,
-  UNCOMMITTED_DIFF,
-  UNIFIED_DIFF,
-  UNSTAGED_DIFF,
+  EDITOR_BRANCH_DIFF,
+  EDITOR_CLOSE_DIFF,
+  EDITOR_NEXT_CHUNK,
+  EDITOR_PREVIOUS_CHUNK,
+  EDITOR_SPLIT_DIFF,
+  EDITOR_UNCOMMITTED_DIFF,
+  EDITOR_UNIFIED_DIFF,
+  EDITOR_UNSTAGED_DIFF,
 } from '@/editor/diff/commands';
 import { DiffState } from '@/editor/diff/diff';
 import { unifiedDiff } from '@/editor/layouts/unified-layout';
@@ -63,7 +63,7 @@ function line(view: EditorView): number {
   return view.state.doc.lineAt(view.state.selection.main.head).number;
 }
 
-describe('NEXT_CHUNK', () => {
+describe('EDITOR_NEXT_CHUNK', () => {
   test('steps through chunks, wrapping', () => {
     const { view, commands } = open();
 
@@ -82,11 +82,11 @@ describe('NEXT_CHUNK', () => {
 
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: BASE } });
 
-    expect(NEXT_CHUNK.enabled?.(commands.application, view)).toBe(false);
+    expect(EDITOR_NEXT_CHUNK.enabled?.(commands.application, view)).toBe(false);
   });
 });
 
-describe('PREVIOUS_CHUNK', () => {
+describe('EDITOR_PREVIOUS_CHUNK', () => {
   test('steps back through chunks, wrapping', () => {
     const { view, commands } = open();
 
@@ -101,90 +101,90 @@ describe('PREVIOUS_CHUNK', () => {
 
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: BASE } });
 
-    expect(PREVIOUS_CHUNK.enabled?.(commands.application, view)).toBe(false);
+    expect(EDITOR_PREVIOUS_CHUNK.enabled?.(commands.application, view)).toBe(false);
   });
 });
 
-describe('UNSTAGED_DIFF', () => {
+describe('EDITOR_UNSTAGED_DIFF', () => {
   test('is active while comparing with unstaged', () => {
     const { view, commands } = open(DEFAULT_DIFF_SOURCES.unstaged);
 
-    expect(UNSTAGED_DIFF.active?.(commands.application, view)).toBe(true);
-    expect(UNCOMMITTED_DIFF.active?.(commands.application, view)).toBe(false);
+    expect(EDITOR_UNSTAGED_DIFF.active?.(commands.application, view)).toBe(true);
+    expect(EDITOR_UNCOMMITTED_DIFF.active?.(commands.application, view)).toBe(false);
   });
 
   test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(false);
-    expect(UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(false);
+    expect(EDITOR_UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(EDITOR_UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('shows and enables on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
-      expect(UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(true);
-      expect(UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(true);
+      expect(EDITOR_UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(true);
+      expect(EDITOR_UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(true);
     }
   });
 });
 
-describe('UNCOMMITTED_DIFF', () => {
+describe('EDITOR_UNCOMMITTED_DIFF', () => {
   test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(false);
-    expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(false);
+    expect(EDITOR_UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(EDITOR_UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('shows and enables on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
-      expect(UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(true);
-      expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(true);
+      expect(EDITOR_UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(true);
+      expect(EDITOR_UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(true);
     }
   });
 });
 
-describe('BRANCH_DIFF', () => {
+describe('EDITOR_BRANCH_DIFF', () => {
   test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(BRANCH_DIFF.shown?.(commands.application, view)).toBe(false);
-    expect(BRANCH_DIFF.enabled?.(commands.application, view)).toBe(false);
+    expect(EDITOR_BRANCH_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(EDITOR_BRANCH_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('shows and enables on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
-      expect(BRANCH_DIFF.shown?.(commands.application, view)).toBe(true);
-      expect(BRANCH_DIFF.enabled?.(commands.application, view)).toBe(true);
+      expect(EDITOR_BRANCH_DIFF.shown?.(commands.application, view)).toBe(true);
+      expect(EDITOR_BRANCH_DIFF.enabled?.(commands.application, view)).toBe(true);
     }
   });
 });
 
-describe('CLOSE_DIFF', () => {
+describe('EDITOR_CLOSE_DIFF', () => {
   test('hides without source', () => {
     const { view, commands } = open(null);
 
-    expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(EDITOR_CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
   });
 
   test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
-    expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
-    expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(false);
+    expect(EDITOR_CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
+    expect(EDITOR_CLOSE_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
   test('shows and enables on target side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_TARGET);
 
-    expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(true);
-    expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
+    expect(EDITOR_CLOSE_DIFF.shown?.(commands.application, view)).toBe(true);
+    expect(EDITOR_CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
   });
 
   test('enables in editor', () => {
     const { view, commands } = open(null, 'unified', PLAIN);
 
-    expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
+    expect(EDITOR_CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
   });
 
   test('clears source', () => {
@@ -195,7 +195,7 @@ describe('CLOSE_DIFF', () => {
   });
 });
 
-describe('SPLIT_DIFF', () => {
+describe('EDITOR_SPLIT_DIFF', () => {
   test('sets layout', () => {
     const { view, diff, commands } = open();
     commands.run(DEFAULT_COMMANDS.editor.diff.split, view);
@@ -206,12 +206,12 @@ describe('SPLIT_DIFF', () => {
   test('is active in split layout', () => {
     const { view, commands } = open('test.source', 'split');
 
-    expect(SPLIT_DIFF.active?.(commands.application, view)).toBe(true);
-    expect(UNIFIED_DIFF.active?.(commands.application, view)).toBe(false);
+    expect(EDITOR_SPLIT_DIFF.active?.(commands.application, view)).toBe(true);
+    expect(EDITOR_UNIFIED_DIFF.active?.(commands.application, view)).toBe(false);
   });
 });
 
-describe('UNIFIED_DIFF', () => {
+describe('EDITOR_UNIFIED_DIFF', () => {
   test('sets layout', () => {
     const { view, diff, commands } = open('test.source', 'split');
     commands.run(DEFAULT_COMMANDS.editor.diff.unified, view);
@@ -222,7 +222,7 @@ describe('UNIFIED_DIFF', () => {
   test('is active in unified layout', () => {
     const { view, commands } = open();
 
-    expect(UNIFIED_DIFF.active?.(commands.application, view)).toBe(true);
-    expect(SPLIT_DIFF.active?.(commands.application, view)).toBe(false);
+    expect(EDITOR_UNIFIED_DIFF.active?.(commands.application, view)).toBe(true);
+    expect(EDITOR_SPLIT_DIFF.active?.(commands.application, view)).toBe(false);
   });
 });

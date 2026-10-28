@@ -5,7 +5,7 @@ import { toast } from '@elsewise/components/components/toast';
 import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand, type EditorFormatter } from '@elsewise/plugin';
 
 /**
- * The edits made since each pending {@link FORMAT} started, which its formatter's changes are mapped through.
+ * The edits made since each pending {@link EDITOR_FORMAT} started, which its formatter's changes are mapped through.
  */
 export const format = StateField.define<ReadonlyMap<object, ChangeSet>>({
   create: () => new Map(),
@@ -32,7 +32,7 @@ export const format = StateField.define<ReadonlyMap<object, ChangeSet>>({
 
 const trackEdits = StateEffect.define<{ request: object; track: boolean }>();
 
-export const FORMAT: EditorCommand = {
+export const EDITOR_FORMAT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.edit.format,
   label: 'Format',

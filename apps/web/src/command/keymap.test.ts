@@ -6,6 +6,7 @@ import { CommandManager } from '@/command/command-manager';
 import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from '@/command/keymap';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
@@ -36,6 +37,7 @@ function install(...added: ApplicationCommand[]) {
     editor: new EditorManager(),
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   for (const command of added) {
     commands.add([command]);
@@ -116,6 +118,7 @@ describe('installApplicationKeys', () => {
       editor: new EditorManager(),
       router: memoryRouter(),
       settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
     });
     commands.add([command('a', run)]);
     installApplicationKeys(window, commands);

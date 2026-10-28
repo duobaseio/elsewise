@@ -54,7 +54,7 @@ export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
   { id: refactor.id, order: refactor.order, items: [{ order: refactor.items.rename, command: lsp.rename }] },
 ];
 
-export const CUT: EditorCommand = {
+export const EDITOR_CUT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.cut,
   label: 'Cut',
@@ -67,7 +67,7 @@ export const CUT: EditorCommand = {
   },
 };
 
-export const COPY: EditorCommand = {
+export const EDITOR_COPY: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.copy,
   label: 'Copy',
@@ -79,7 +79,7 @@ export const COPY: EditorCommand = {
   },
 };
 
-export const PASTE: EditorCommand = {
+export const EDITOR_PASTE: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.paste,
   label: 'Paste',

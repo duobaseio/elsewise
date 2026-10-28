@@ -14,6 +14,7 @@ import { SplitLayout, type SplitLayoutProps } from '@/editor/layouts/split-layou
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
@@ -33,6 +34,7 @@ async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManage
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   const servers = new LanguageServers(editor);
   const session = { current: null };

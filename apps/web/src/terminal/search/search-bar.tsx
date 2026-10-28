@@ -1,18 +1,33 @@
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
+import { DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
 import { type ISearchOptions, type ISearchResultChangeEvent, SearchAddon } from '@xterm/addon-search';
-import type { IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm';
+import type { ITerminalAddon, Terminal } from '@xterm/xterm';
 import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
+import { useCommandManager } from '@/command/command-manager';
+import { eventKeys } from '@/command/keys';
 import { SearchAction, SearchOption } from '@/components/search-controls';
-import { isShortcut, type TerminalShortcuts } from '@/terminal/shortcuts';
 
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
 const CLOSE = 'Escape';
 
 export const LIMIT = 1000;
+
+// TODO: Open the search directly once terminals have state that commands can reach.
+const FIND = 'elsewise-terminal-find';
+
+export const TERMINAL_FIND: TerminalCommand = {
+  scope: 'terminal',
+  id: DEFAULT_COMMANDS.terminal.search.find,
+  label: 'Find',
+  defaultKeys: DEFAULT_KEYS.terminal.search.find,
+  run: (_, terminal) =>
+    terminal.element !== undefined && !terminal.element.dispatchEvent(new Event(FIND, { cancelable: true })),
+};
 
 interface Query {
   query: string;
@@ -21,10 +36,7 @@ interface Query {
   regex: boolean;
 }
 
-/**
- * Returns the terminal's search add-on, which adds the find shortcut to `shortcuts`, and the search bar it opens.
- */
-export function useTerminalSearch(shortcuts: TerminalShortcuts): { search: ITerminalAddon; bar: ReactNode } {
+export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } {
   const [active, setActive] = useState<{ terminal: Terminal; addon: SearchAddon } | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState<Query>({
@@ -34,9 +46,6 @@ export function useTerminalSearch(shortcuts: TerminalShortcuts): { search: ITerm
     regex: false,
   });
   const field = useRef<HTMLInputElement>(null);
-  // Read by the shortcut, which outlives the render it was created in.
-  const opened = useRef(false);
-  opened.current = open;
 
   const colors = useActiveTheme().terminal;
   const decorations = useMemo(() => {
@@ -51,35 +60,42 @@ export function useTerminalSearch(shortcuts: TerminalShortcuts): { search: ITerm
   }, [colors]);
 
   const search = useMemo<ITerminalAddon>(() => {
-    let disposables: IDisposable[] = [];
+    let loaded: SearchAddon | null = null;
     return {
       activate(terminal) {
-        const addon = new SearchAddon({ highlightLimit: LIMIT + 1 });
-        terminal.loadAddon(addon);
-        // Opens the search bar, seeded with the selected line, or focuses it when open.
-        const find = {
-          key: 'f',
-          run: () => {
-            const selection = terminal.getSelection();
-            if (!opened.current && selection !== '' && !selection.includes('\n')) {
-              setQuery((query) => ({ ...query, query: selection }));
-            }
-            setOpen(true);
-            field.current?.select();
-          },
-        };
-        disposables = [addon, shortcuts.add([find])];
-        setActive({ terminal, addon });
+        loaded = new SearchAddon({ highlightLimit: LIMIT + 1 });
+        terminal.loadAddon(loaded);
+        setActive({ terminal, addon: loaded });
       },
       dispose() {
-        for (const disposable of disposables) {
-          disposable.dispose();
-        }
-        disposables = [];
+        loaded?.dispose();
+        loaded = null;
         setActive(null);
       },
     };
-  }, [shortcuts]);
+  }, []);
+
+  // Handles the find command.
+  useEffect(() => {
+    if (active?.terminal.element === undefined) {
+      return;
+    }
+
+    const find = (event: Event) => {
+      event.preventDefault();
+      const selection = active.terminal.getSelection();
+      if (!open && selection !== '' && !selection.includes('\n')) {
+        setQuery((query) => ({ ...query, query: selection }));
+      }
+      setOpen(true);
+      field.current?.select();
+    };
+
+    const element = active.terminal.element;
+    element.addEventListener(FIND, find);
+
+    return () => element.removeEventListener(FIND, find);
+  }, [active, open]);
 
   const bar = open && active !== null && (
     <SearchBar
@@ -140,6 +156,7 @@ export function SearchBar({
   const [wholeWord, setWholeWord] = useState(initial.wholeWord);
   const [regex, setRegex] = useState(initial.regex);
   const [results, setResults] = useState({ resultIndex: -1, resultCount: 0 });
+  const keys = useCommandManager((commands) => commands.keymap.keys.terminal);
   const options: ISearchOptions = { caseSensitive, wholeWord, regex, decorations };
   const valid = !regex || isRegex(query);
 
@@ -169,7 +186,11 @@ export function SearchBar({
   }, [search, query, caseSensitive, wholeWord, regex, decorations, valid]);
 
   function keydown(event: KeyboardEvent<HTMLElement>) {
-    if (isShortcut(event.nativeEvent, 'f')) {
+    const find = eventKeys(event.nativeEvent, PLATFORM).some((key) =>
+      keys.get(key)?.includes(DEFAULT_COMMANDS.terminal.search.find),
+    );
+
+    if (find) {
       event.preventDefault();
       field.current?.select();
     } else if (event.key === 'Escape') {
