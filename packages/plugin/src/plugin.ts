@@ -11,10 +11,13 @@ import type { ThemeVariant } from './theme.ts';
  */
 export const DEFAULT_ROUTES = {
   settings: {
+    /**
+     * The settings page last open, or General otherwise.
+     */
+    last: '/settings',
     general: '/settings/appearance/general',
     editor: '/settings/appearance/editor',
     terminal: '/settings/appearance/terminal',
-    plugin: (id: string): `/settings/plugins/${string}` => `/settings/plugins/${encodeURIComponent(id)}`,
   },
 } as const;
 

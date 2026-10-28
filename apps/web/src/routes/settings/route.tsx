@@ -27,7 +27,15 @@ import {
   SidebarProvider,
 } from '@elsewise/components/components/sidebar';
 import { DEFAULT_SETTINGS_GROUPS } from '@elsewise/plugin';
-import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate, useRouter } from '@tanstack/react-router';
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useLocation,
+  useMatchRoute,
+  useNavigate,
+  useRouter,
+} from '@tanstack/react-router';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Header } from '@/components/header';
 import { useEditorManager } from '@/editor/editor-manager';
@@ -36,6 +44,7 @@ import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
 import { Search } from './-search';
+import { PAGE } from './index';
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -57,6 +66,17 @@ function Settings() {
   const panels = useSettingsPanels((settings) => settings.panels);
   const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const { highlight } = Route.useSearch();
+  const pathname = useLocation({ select: (location) => location.pathname });
+
+  useEffect(() => {
+    if (pathname.startsWith('/settings/')) {
+      try {
+        localStorage.setItem(PAGE, pathname);
+      } catch (error) {
+        console.warn('settings: could not save the last page', error);
+      }
+    }
+  }, [pathname]);
 
   // Highlights until user does something.
   useEffect(() => {
