@@ -10,13 +10,13 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
-import { Editor } from '@/routes/settings/appearance/editor';
+import { Editor } from '@/routes/settings/local/appearance/editor';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager, SettingsPanelManagerContext } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../../commands';
+import { memoryRouter } from '../../../../../../commands';
 
-import { THEMES } from '../../../sheet';
+import { THEMES } from '../../../../../../sheet';
 
 test.each(THEMES)('editor (%s)', async (theme) => {
   // Wide enough for the preview's longest line, and tall enough for every row.

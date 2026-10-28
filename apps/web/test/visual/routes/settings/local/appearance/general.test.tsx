@@ -5,10 +5,10 @@ import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } fr
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { General } from '@/routes/settings/appearance/general';
+import { General } from '@/routes/settings/local/appearance/general';
 import { settingsQuery } from '@/settings/settings';
 
-import { THEMES } from '../../../sheet';
+import { THEMES } from '../../../../../sheet';
 
 test.each(THEMES)('general (%s)', async (theme) => {
   const client = new QueryClient();

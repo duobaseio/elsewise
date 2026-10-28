@@ -1,10 +1,10 @@
-import type { SettingsPanel } from '@elsewise/plugin';
+import type { LocalSettingsPanel } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 
-// Returns a panel with `id`, listed in the group or panel `in`.
-function panel(id: string, inside = 'appearance'): SettingsPanel {
-  return { id, label: id, in: inside, terms: {}, component: () => null };
+// Returns a local panel with `id`, listed in the group or panel `in`.
+function panel(id: string, inside = 'appearance'): LocalSettingsPanel {
+  return { scope: 'local', id, label: id, in: inside, terms: {}, component: () => null };
 }
 
 afterEach(() => {
@@ -81,6 +81,15 @@ describe('add', () => {
 
     expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b']);
     expect(warn).toHaveBeenCalledWith('Settings panel c is in b, which is itself in a panel');
+  });
+
+  test('omits panel in panel of other scope, warning', () => {
+    const settings = new SettingsPanelManager([panel('a')]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    settings.add([{ scope: 'remote', id: 'b', label: 'b', in: 'a', terms: {}, component: () => null }]);
+
+    expect(settings.panels.map((panel) => panel.id)).toEqual(['a']);
+    expect(warn).toHaveBeenCalledWith('Settings panel b is remote, but a is local');
   });
 
   test('removes panels in disposed panel', () => {

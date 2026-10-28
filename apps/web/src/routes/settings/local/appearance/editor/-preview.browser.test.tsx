@@ -26,7 +26,7 @@ async function mount({ lineWrapping = false, guides = [] as number[], viewport =
   client.setQueryData(pluginsQuery.queryKey, []);
   const router = createRouter({
     routeTree,
-    history: createMemoryHistory({ initialEntries: ['/settings/appearance/editor/Rust'] }),
+    history: createMemoryHistory({ initialEntries: ['/settings/local/appearance/editor/Rust'] }),
   });
   await render(
     <div className="h-dvh" style={{ width: viewport }}>

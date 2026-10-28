@@ -15,7 +15,7 @@ import { CompletionDocumentationHelp, HighlightUsagesHelp, ScrollbarMarkersHelp 
 import { LanguageRows } from './-language-rows';
 import { Preview } from './-preview';
 
-export const Route = createFileRoute('/settings/appearance/editor/')({ component: Editor });
+export const Route = createFileRoute('/settings/local/appearance/editor/')({ component: Editor });
 
 export const EDITOR_TERMS = {
   theme: { label: 'Theme', keywords: ['colors', 'color scheme', 'syntax highlighting', 'light', 'dark'] },

@@ -10,12 +10,12 @@ import { LanguageRows } from './-language-rows';
 import { Preview } from './-preview';
 import { EDITOR_TERMS } from './index';
 
-export const Route = createFileRoute('/settings/appearance/editor/$language')({
+export const Route = createFileRoute('/settings/local/appearance/editor/$language')({
   // Redirect aliases, e.g. JSX, to the canonical page, e.g. JS.
   beforeLoad: ({ params: { language } }) => {
     const name = LANGUAGES[language]?.name;
     if (name !== undefined && name !== language) {
-      throw redirect({ to: '/settings/appearance/editor/$language', params: { language: name }, replace: true });
+      throw redirect({ to: '/settings/local/appearance/editor/$language', params: { language: name }, replace: true });
     }
   },
   component: LanguageRoute,

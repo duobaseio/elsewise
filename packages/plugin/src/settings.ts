@@ -25,6 +25,7 @@ export interface Settings {
    * ```ts
    * settings.add([
    *   {
+   *     scope: 'local',
    *     id: 'io.example.words',
    *     label: 'Words',
    *     in: 'appearance',
@@ -36,7 +37,7 @@ export interface Settings {
    *
    * Returns a disposable that removes the `panels`.
    */
-  add(panels: readonly SettingsPanel[]): Disposable;
+  add(panels: readonly (LocalSettingsPanel | RemoteSettingsPanel)[]): Disposable;
 
   /**
    * Adds `previews` of languages to their editor settings, a later addition replacing an earlier one for the same
@@ -76,6 +77,13 @@ export interface SettingsLanguagePreview {
  */
 export interface SettingsPanel {
   /**
+   * The settings scope the panel is shown under:
+   * * `local`: the local application's and daemon's settings.
+   * * `remote`: a remote daemon's settings.
+   */
+  readonly scope: 'local' | 'remote';
+
+  /**
    * The panel's id, namespaced by the plugin's, e.g. `io.example.words`. Omitted if the id already exists.
    */
   readonly id: string;
@@ -96,11 +104,34 @@ export interface SettingsPanel {
    * The panel's search terms by the id of their row, which a search result scrolls to and highlights.
    */
   readonly terms: Readonly<Record<string, SettingsSearchTerm>>;
+}
+
+/**
+ * A local settings panel, at `/settings/local/<id>`.
+ *
+ * Typically contains both application and daemon settings.
+ */
+export interface LocalSettingsPanel extends SettingsPanel {
+  readonly scope: 'local';
 
   /**
    * The panel, rendered inside Elsewise's React tree.
    */
   readonly component: ComponentType;
+}
+
+/**
+ * A remote settings panel, at `/settings/remote/<remote id>/<id>`.
+ *
+ * Typically contains only daemon settings.
+ */
+export interface RemoteSettingsPanel extends SettingsPanel {
+  readonly scope: 'remote';
+
+  /**
+   * The panel, rendered inside Elsewise's React tree with the given remote's id.
+   */
+  readonly component: ComponentType<{ readonly id: string }>;
 }
 
 /**

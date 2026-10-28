@@ -7,10 +7,10 @@ import {
   CompletionDocumentationHelp,
   HighlightUsagesHelp,
   ScrollbarMarkersHelp,
-} from '@/routes/settings/appearance/editor/-help';
+} from '@/routes/settings/local/appearance/editor/-help';
 import { settingsQuery } from '@/settings/settings';
 
-import { THEMES } from '../../../sheet';
+import { THEMES } from '../../../../../../sheet';
 
 test.each(THEMES)('editor help (%s)', async (theme) => {
   // The illustrations take the editor's colors for the brightness in the settings.

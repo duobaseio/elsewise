@@ -34,6 +34,7 @@ import {
   useLocation,
   useMatchRoute,
   useNavigate,
+  useParams,
   useRouter,
 } from '@tanstack/react-router';
 import { type ReactNode, useEffect, useState } from 'react';
@@ -43,8 +44,8 @@ import { DEFAULT_PANELS, linkTo } from '@/settings/default-panels';
 import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
-import { Search } from './-search';
 import { PAGE } from './index';
+import { Search } from './local/-search';
 
 export const Route = createFileRoute('/settings')({
   component: Settings,
@@ -60,7 +61,9 @@ const GROUPS = [{ id: DEFAULT_SETTINGS_GROUPS.appearance, label: 'Appearance & B
 function Settings() {
   const router = useRouter();
   const navigate = Route.useNavigate();
-  const panels = useSettingsPanels((settings) => settings.panels);
+  const { remote } = useParams({ strict: false });
+  const all = useSettingsPanels((settings) => settings.panels);
+  const panels = all.filter((panel) => panel.scope === (remote === undefined ? 'local' : 'remote'));
   const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const { highlight } = Route.useSearch();
   const pathname = useLocation({ select: (location) => location.pathname });
@@ -129,12 +132,12 @@ function Settings() {
                             .map((language) => ({
                               key: language,
                               label: LANGUAGES[language]?.label ?? language,
-                              link: linkTo(panel, language),
+                              link: linkTo(panel, { language }),
                             }))
                             .sort((a, b) => a.label.localeCompare(b.label))}
                           key={panel.id}
                           label={panel.label}
-                          link={linkTo(panel)}
+                          link={linkTo(panel, { remote })}
                         >
                           <AddLanguage languages={languages} />
                         </Item>
@@ -142,10 +145,10 @@ function Settings() {
                         <Item
                           entries={panels
                             .filter((other) => other.in === panel.id)
-                            .map((other) => ({ key: other.id, label: other.label, link: linkTo(other) }))}
+                            .map((other) => ({ key: other.id, label: other.label, link: linkTo(other, { remote }) }))}
                           key={panel.id}
                           label={panel.label}
-                          link={linkTo(panel)}
+                          link={linkTo(panel, { remote })}
                         />
                       ),
                     )}
@@ -283,7 +286,7 @@ function AddLanguage({ languages }: { languages: readonly string[] }) {
               },
             },
           }));
-          void navigate({ ...linkTo(DEFAULT_PANELS.editor, language), replace: true });
+          void navigate({ ...linkTo(DEFAULT_PANELS.editor, { language }), replace: true });
         }}
         value={null}
       >
