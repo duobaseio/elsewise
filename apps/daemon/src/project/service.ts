@@ -102,6 +102,7 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
       cloned = true;
     } finally {
       if (!cloned) {
+        await fs.rm(mainWorkspaceNativePath, { recursive: true, force: true });
         await deleteProjectFolder(path.join(this.#code.workspaces, folder));
       }
     }

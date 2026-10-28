@@ -1,18 +1,18 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { type Database, openDatabase } from '../database/database';
+import { type DatabaseHandle, openDatabase } from '../database/database';
 import { MIGRATIONS } from '../gen/migrations';
 import { ProjectStore } from './store';
 
-let db: Database;
+let db: DatabaseHandle;
 let store: ProjectStore;
 
 beforeEach(() => {
   db = openDatabase(':memory:', MIGRATIONS);
-  store = new ProjectStore(db);
+  store = new ProjectStore(db.database);
 });
 
 afterEach(async () => {
-  await db.destroy();
+  await db.close();
 });
 
 test('getProjects returns projects oldest first', async () => {
