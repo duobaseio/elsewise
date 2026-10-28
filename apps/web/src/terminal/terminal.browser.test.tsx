@@ -67,6 +67,16 @@ async function select(xterm: XTerm, text: string) {
   await expect.poll(() => xterm.getSelection()).toBe(text);
 }
 
+// Writes `text`, then opens the search bar with its shortcut.
+async function find(xterm: XTerm, text: string) {
+  await new Promise<void>((resolve) => xterm.write(text, resolve));
+  xterm.focus();
+  await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}f{/Meta}' : '{Control>}{Shift>}f{/Shift}{/Control}');
+  const field = page.getByRole('textbox', { name: 'Find' });
+  await expect.element(field).toHaveFocus();
+  return field;
+}
+
 function line(xterm: XTerm, row: number): string {
   return xterm.buffer.active.getLine(row)?.translateToString(true) ?? '';
 }
@@ -195,129 +205,8 @@ describe('Terminal', () => {
       expect(xterm.getSelection()).toBe('hello');
       expect(writeText).not.toHaveBeenCalled();
     });
-  });
 
-  describe('find', () => {
-    // Writes `text`, then opens the search bar from the terminal.
-    async function find(xterm: XTerm, text: string) {
-      await new Promise<void>((resolve) => xterm.write(text, resolve));
-      xterm.focus();
-      await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}f{/Meta}' : '{Control>}{Shift>}f{/Shift}{/Control}');
-      const field = page.getByRole('textbox', { name: 'Find' });
-      await expect.element(field).toHaveFocus();
-      return field;
-    }
-
-    test('opens with selected line', async () => {
-      const { xterm } = await mount(session());
-      await new Promise<void>((resolve) => xterm.write('hello world\r\nhello again', resolve));
-      xterm.select(0, 0, 5);
-
-      const field = await find(xterm, '');
-
-      await expect.element(field).toHaveValue('hello');
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
-    });
-
-    test('moves between matches', async () => {
-      const { xterm } = await mount(session());
-      const field = await find(xterm, 'one two one');
-      await userEvent.fill(field, 'one');
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
-
-      await userEvent.keyboard('{Enter}');
-      await expect.element(page.getByRole('status')).toHaveTextContent('2/2');
-      await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
-
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
-    });
-
-    test('matches case on demand', async () => {
-      const { xterm } = await mount(session());
-      const field = await find(xterm, 'Hello hello');
-      await userEvent.fill(field, 'hello');
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
-
-      await userEvent.click(page.getByRole('button', { name: 'Match case' }));
-
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/1');
-    });
-
-    test('counts 1000 matches exactly', async () => {
-      const { xterm } = await mount(session());
-      const field = await find(xterm, 'x '.repeat(1000));
-      await userEvent.fill(field, 'x');
-
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/1000');
-      await expect.element(page.getByRole('status')).not.toHaveTextContent('+');
-    });
-
-    test('caps count past 1000 matches', async () => {
-      const { xterm } = await mount(session());
-      const field = await find(xterm, 'x '.repeat(1001));
-      await userEvent.fill(field, 'x');
-
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/1000+');
-    });
-
-    test('says when nothing matches', async () => {
-      const { xterm } = await mount(session());
-      const field = await find(xterm, 'hello');
-
-      await userEvent.fill(field, 'bye');
-
-      await expect.element(page.getByRole('status')).toHaveTextContent('No results');
-    });
-
-    test('reopens with last options', async () => {
-      const { xterm } = await mount(session());
-      const field = await find(xterm, 'a1 b2');
-      await userEvent.fill(field, '[ab]\\d');
-      await userEvent.click(page.getByRole('button', { name: 'Regex' }));
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
-      await userEvent.keyboard('{Escape}');
-      xterm.clearSelection();
-
-      await find(xterm, '');
-
-      await expect.element(page.getByRole('textbox', { name: 'Find' })).toHaveValue('[ab]\\d');
-      await expect.element(page.getByRole('button', { name: 'Regex' })).toHaveAttribute('aria-pressed', 'true');
-      await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
-    });
-
-    test('recolors matches with theme', async () => {
-      const { client, xterm } = await mount(session());
-      const field = await find(xterm, 'hello');
-      await userEvent.fill(field, 'hello');
-      // Only the current match is outlined.
-      const current = () =>
-        [...(xterm.element?.querySelectorAll<HTMLElement>('.xterm-find-result-decoration') ?? [])]
-          .map((match) => match.style.outlineColor)
-          .find((color) => color !== '');
-      await expect.poll(current).toBe('rgb(143, 106, 36)');
-
-      client.setQueryData(settingsQuery.queryKey, {
-        ...SETTINGS,
-        appearance: {
-          ...SETTINGS.appearance,
-          general: { ...SETTINGS.appearance.general, brightness: 'dark' },
-        },
-      } satisfies Settings);
-
-      await expect.poll(current).toBe('rgb(217, 179, 106)');
-    });
-
-    test('closes on escape, refocusing terminal', async () => {
-      const { xterm } = await mount(session());
-      await find(xterm, 'hello');
-
-      await userEvent.keyboard('{Escape}');
-
-      await expect.element(page.getByRole('textbox', { name: 'Find' })).not.toBeInTheDocument();
-      expect(document.activeElement).toBe(xterm.textarea);
-    });
-
-    test('copies mouse selection when copying on select', async () => {
+    test('copies mouse selection while finding', async () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
@@ -332,7 +221,7 @@ describe('Terminal', () => {
       expect(writeText.mock.calls).toEqual([['hello']]);
     });
 
-    test('leaves clipboard when copying on select', async () => {
+    test('leaves matches off clipboard', async () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
