@@ -285,6 +285,7 @@ describe('settings:load', () => {
       cursorStyle: 'bar',
       cursorBlink: false,
       copyOnSelect: true,
+      macOptionIsMeta: true,
       scrollback: 50000,
     };
     write({ appearance: { terminal } });
@@ -294,6 +295,7 @@ describe('settings:load', () => {
       { cursorStyle: 'beam' },
       { cursorBlink: 'yes' },
       { copyOnSelect: 'yes' },
+      { macOptionIsMeta: 'yes' },
       { scrollback: 999 },
       { scrollback: 100001 },
       { scrollback: 5000.5 },

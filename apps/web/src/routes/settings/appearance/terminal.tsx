@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { SettingsSearchTerm } from '@elsewise/plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import type { ITerminalAddon } from '@xterm/xterm';
@@ -25,8 +26,13 @@ export const TERMINAL_TERMS = {
   cursorStyle: { label: 'Cursor style', keywords: ['caret', 'block', 'underline', 'bar', 'beam'] },
   cursorBlink: { label: 'Cursor blinking', keywords: ['caret', 'blink', 'flash'] },
   copyOnSelect: { label: 'Copy on select', keywords: ['clipboard', 'selection', 'auto copy'] },
+  ...(PLATFORM === 'mac' && {
+    macOptionIsMeta: { label: 'Option as Meta', keywords: ['alt', 'keyboard', 'emacs', 'readline'] },
+  }),
   scrollback: { label: 'Scrollback', keywords: ['history', 'lines', 'buffer', 'scroll'] },
-} as const satisfies Record<keyof Settings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
+} as const satisfies Partial<
+  Record<keyof Settings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>
+>;
 
 const CURSOR_STYLES: Record<CursorStyle, string> = { block: 'Block', underline: 'Underline', bar: 'Bar' };
 
@@ -152,6 +158,20 @@ export function Terminal() {
           onCheckedChange={(copyOnSelect) => set({ copyOnSelect })}
         />
       </Row>
+
+      {TERMINAL_TERMS.macOptionIsMeta && (
+        <Row
+          id="macOptionIsMeta"
+          label={TERMINAL_TERMS.macOptionIsMeta.label}
+          description="Use Option as the Meta key instead of typing special characters."
+        >
+          <Switch
+            aria-label={TERMINAL_TERMS.macOptionIsMeta.label}
+            checked={terminal.macOptionIsMeta}
+            onCheckedChange={(macOptionIsMeta) => set({ macOptionIsMeta })}
+          />
+        </Row>
+      )}
 
       <Row
         id="scrollback"

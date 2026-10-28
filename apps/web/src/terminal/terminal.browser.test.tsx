@@ -152,6 +152,7 @@ describe('Terminal', () => {
     await expect.poll(() => xterm.options.fontSize).toBe(12);
     expect(xterm.options.lineHeight).toBe(1.0625);
     expect(xterm.options.cursorStyle).toBe('block');
+    expect(xterm.options.macOptionIsMeta).toBe(false);
     expect(xterm.options.theme?.background).toBe(elsewise.background);
 
     client.setQueryData(settingsQuery.queryKey, {
@@ -164,6 +165,7 @@ describe('Terminal', () => {
           cursorStyle: 'bar',
           cursorBlink: false,
           copyOnSelect: false,
+          macOptionIsMeta: true,
           scrollback: 2000,
         },
       },
@@ -178,6 +180,7 @@ describe('Terminal', () => {
     expect(xterm.options.lineHeight).toBe(1.2);
     expect(xterm.options.cursorStyle).toBe('bar');
     expect(xterm.options.cursorBlink).toBe(false);
+    expect(xterm.options.macOptionIsMeta).toBe(true);
     expect(xterm.options.scrollback).toBe(2000);
     expect(xterm.options.theme).toEqual({ ...dracula, selectionBackground: selection });
   });

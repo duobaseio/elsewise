@@ -132,7 +132,7 @@ export function Editor() {
       <Row
         id="highlightUsages"
         label={EDITOR_TERMS.highlightUsages.label}
-        description="Highlights usages of the symbol under"
+        description="Highlight usages of the symbol under the cursor."
         help={<HighlightUsagesHelp>Requires a language server.</HighlightUsagesHelp>}
       >
         <Switch

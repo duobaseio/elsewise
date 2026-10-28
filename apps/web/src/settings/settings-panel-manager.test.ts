@@ -3,8 +3,8 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from './settings-panel-manager';
 
 // Returns a panel with `id`, listed in the group or panel `in`.
-function panel(id: string, inside?: string): SettingsPanel {
-  return { id, label: id, terms: {}, component: () => null, ...(inside === undefined ? {} : { in: inside }) };
+function panel(id: string, inside = 'appearance'): SettingsPanel {
+  return { id, label: id, in: inside, terms: {}, component: () => null };
 }
 
 afterEach(() => {

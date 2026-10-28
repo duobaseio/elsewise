@@ -30,6 +30,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
   const cursorInactiveStyle = cursorStyle === 'block' ? 'outline' : cursorStyle;
   const cursorBlink = useSettings((settings) => settings.appearance.terminal.cursorBlink);
   const copyOnSelect = useSettings((settings) => settings.appearance.terminal.copyOnSelect);
+  const macOptionIsMeta = useSettings((settings) => settings.appearance.terminal.macOptionIsMeta);
   const scrollback = useSettings((settings) => settings.appearance.terminal.scrollback);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
@@ -46,6 +47,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       cursorStyle,
       cursorInactiveStyle,
       cursorBlink,
+      macOptionIsMeta,
       scrollback,
       theme,
     });
@@ -147,9 +149,10 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       terminal.xterm.options.cursorStyle = cursorStyle;
       terminal.xterm.options.cursorInactiveStyle = cursorInactiveStyle;
       terminal.xterm.options.cursorBlink = cursorBlink;
+      terminal.xterm.options.macOptionIsMeta = macOptionIsMeta;
       terminal.xterm.options.scrollback = scrollback;
     }
-  }, [terminal, theme, cursorStyle, cursorInactiveStyle, cursorBlink, scrollback]);
+  }, [terminal, theme, cursorStyle, cursorInactiveStyle, cursorBlink, macOptionIsMeta, scrollback]);
 
   return <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />;
 }

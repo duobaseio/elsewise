@@ -10,7 +10,8 @@ import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../../sheet';
 
-// A plugin with a panel inside another, for a result's path.
+// A plugin with a panel inside another, for a result's path. The tests open the outer one, which is blank, so that only
+// the sidebar and search show.
 const WORDS: InstalledPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
   enabled: true,
@@ -20,7 +21,7 @@ const WORDS: InstalledPlugin = {
         onEnable(app) {
           return [
             app.settings.add([
-              { id: 'io.example.words', label: 'Words', in: 'appearance', terms: {}, component: () => 'Words' },
+              { id: 'io.example.words', label: 'Words', in: 'appearance', terms: {}, component: () => null },
               {
                 id: 'io.example.words.spelling',
                 label: 'Spelling',
@@ -65,14 +66,16 @@ describe.each(THEMES)('settings (%s)', (theme) => {
     );
 
     await expect.element(page.getByRole('link', { name: 'Words' })).toBeVisible();
-    await userEvent.hover(page.getByRole('heading', { name: 'General' }));
+    await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words' } });
+    await expect.element(page.getByRole('heading', { name: 'General' })).not.toBeInTheDocument();
+    await userEvent.hover(page.getByRole('main'));
   }
 
   test('panel in panel', async () => {
     await mount();
     await userEvent.click(page.getByRole('button', { name: 'Expand Words' }));
     await expect.element(page.getByRole('link', { name: 'Spelling' })).toBeVisible();
-    await userEvent.hover(page.getByRole('heading', { name: 'General' }));
+    await userEvent.hover(page.getByRole('main'));
 
     await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-nested-${theme}`);
   });
@@ -82,7 +85,7 @@ describe.each(THEMES)('settings (%s)', (theme) => {
     await userEvent.click(page.getByRole('button', { name: 'Expand Editor' }));
     await expect.element(page.getByRole('link', { name: 'Rust' })).toBeVisible();
     await expect.element(page.getByRole('combobox', { name: 'Add language' })).toBeVisible();
-    await userEvent.hover(page.getByRole('heading', { name: 'General' }));
+    await userEvent.hover(page.getByRole('main'));
 
     await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-languages-${theme}`);
   });

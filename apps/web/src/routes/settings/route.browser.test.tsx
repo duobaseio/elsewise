@@ -26,7 +26,7 @@ const PANELS: InstalledPlugin = {
                 terms: { dictionary: { label: 'Dictionary', keywords: ['spelling'] } },
                 component: () => 'Dictionary',
               },
-              { id: 'io.example.hooks', label: 'Hooks', terms: {}, component: () => 'Hooks' },
+              { id: 'io.example.hooks', label: 'Hooks', in: 'appearance', terms: {}, component: () => 'Hooks' },
               {
                 id: 'io.example.words.spelling',
                 label: 'Spelling',
@@ -34,7 +34,7 @@ const PANELS: InstalledPlugin = {
                 terms: { locale: { label: 'Locale', keywords: ['language', 'region'] } },
                 component: () => 'Spelling',
               },
-              { id: 'io.example.broken', label: 'Broken', terms: {}, component: () => { throw new Error('boom'); } },
+              { id: 'io.example.broken', label: 'Broken', in: 'appearance', terms: {}, component: () => { throw new Error('boom'); } },
             ]),
           ];
         },
@@ -75,7 +75,7 @@ async function mount(entries: string[], plugins: InstalledPlugin[] = [], setting
   return router;
 }
 
-describe('Settings', () => {
+describe('/settings/', () => {
   test('opens general', async () => {
     const router = await mount(['/settings']);
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
@@ -102,19 +102,21 @@ describe('Settings', () => {
     expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
   });
 
-  test('saves page without highlight', async () => {
-    await mount(['/settings/appearance/terminal?highlight=scrollback']);
-    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
-
-    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/appearance/terminal');
-  });
-
   test('redirects last page gone to general', async () => {
     localStorage.setItem('elsewise.settings.page', '/settings/plugins/io.example.missing');
     const router = await mount(['/settings']);
 
     await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
     expect(router.state.location.pathname).toBe('/settings/appearance/general');
+  });
+});
+
+describe('Settings', () => {
+  test('saves page without highlight', async () => {
+    await mount(['/settings/appearance/terminal?highlight=scrollback']);
+    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
+
+    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/appearance/terminal');
   });
 
   test('shows page of each link, marking it active', async () => {
@@ -136,23 +138,6 @@ describe('Settings', () => {
       .elements()
       .map((link) => link.textContent);
     expect(links).toEqual(['General', 'Editor', 'Terminal', 'Words', 'Hooks', 'Broken']);
-    await expect.element(page.getByText('Plugins')).toBeVisible();
-  });
-
-  test('lists panels in panel under it, expanded on demand or when open', async () => {
-    const router = await mount(['/settings'], [PANELS]);
-    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
-    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
-
-    await userEvent.click(sidebar().getByRole('button', { name: 'Expand Words' }));
-    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toBeVisible();
-
-    await userEvent.dblClick(sidebar().getByRole('link', { name: 'Words' }));
-    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
-
-    await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words.spelling' } });
-    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toHaveAttribute('data-active');
-    await expect.poll(() => page.getByRole('main').element().textContent).toContain('Spelling');
   });
 
   test('lists languages under editor, sorted by label, expanded when open', async () => {
@@ -174,13 +159,65 @@ describe('Settings', () => {
     await expect.element(sidebar().getByRole('link', { name: 'Editor' })).not.toHaveAttribute('data-active');
   });
 
+  test('keeps highlight on modifier key', async () => {
+    const router = await mount(['/settings/appearance/general?highlight=brightness']);
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+
+    for (const key of ['{Shift}', '{Meta}', '{Control}', '{Alt}']) {
+      await userEvent.keyboard(key);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(router.state.location.search).toEqual({ highlight: 'brightness' });
+  });
+
+  test('clears highlight on pointer or other key', async () => {
+    const router = await mount(['/settings/appearance/general?highlight=brightness']);
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+
+    await userEvent.keyboard('{Escape}');
+    await expect.poll(() => router.state.location.search).toEqual({});
+
+    await router.navigate({ to: '.', search: { highlight: 'font' } });
+    await expect.poll(() => router.state.location.search).toEqual({ highlight: 'font' });
+    await userEvent.click(page.getByRole('heading', { name: 'General' }));
+    await expect.poll(() => router.state.location.search).toEqual({});
+  });
+
+  test('returns to previous page', async () => {
+    const router = await mount(['/settings/appearance/terminal', '/settings/appearance/general']);
+    await userEvent.click(page.getByRole('button', { name: 'Back' }));
+    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+  });
+});
+
+describe('Item', () => {
+  test('lists panels in panel under it, expanded on demand or when open', async () => {
+    const router = await mount(['/settings'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
+
+    await userEvent.click(sidebar().getByRole('button', { name: 'Expand Words' }));
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toBeVisible();
+
+    await userEvent.dblClick(sidebar().getByRole('link', { name: 'Words' }));
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).not.toBeInTheDocument();
+
+    await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words.spelling' } });
+    await expect.element(sidebar().getByRole('link', { name: 'Spelling' })).toHaveAttribute('data-active');
+    await expect.poll(() => page.getByRole('main').element().textContent).toContain('Spelling');
+  });
+
   test('shows language page under editor when opened', async () => {
     await mount(['/settings/appearance/editor/Markdown'], [], LANGUAGES);
     await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
     await expect.element(sidebar().getByRole('link', { name: 'Markdown' })).toHaveAttribute('data-active');
   });
+});
 
-  test('adds language without override, excluding listed and those listed under another, and opens it', async () => {
+describe('AddLanguage', () => {
+  test('saves language without override, excluding listed and those listed under another, and opens it', async () => {
     const save = vi.fn(async () => {});
     window.bridge = {
       settings: { load: async () => LANGUAGES, save, loadPlugin: async () => ({}), savePlugin: async () => {} },
@@ -212,71 +249,10 @@ describe('Settings', () => {
     });
     window.bridge = undefined;
   });
+});
 
-  test('search shows panel in panel under its panel', async () => {
-    await mount(['/settings'], [PANELS]);
-    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
-    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'region');
-
-    await expect
-      .poll(() => page.getByRole('option', { name: /Locale/ }).element().textContent)
-      .toMatch(/Words.*Spelling/);
-  });
-
-  test('hides plugins group without panels', async () => {
-    await mount(['/settings']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(page.getByText('Plugins').elements()).toHaveLength(0);
-  });
-
-  test('opens panel, marking it active', async () => {
-    const router = await mount(['/settings'], [PANELS]);
-    await userEvent.click(sidebar().getByRole('link', { name: 'Words' }));
-    await expect.poll(() => page.getByRole('main').element().textContent).toContain('Dictionary');
-    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toHaveAttribute('data-active');
-    expect(router.state.location.pathname).toBe('/settings/plugins/io.example.words');
-  });
-
-  test('replaces throwing panel with why', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    await mount(['/settings'], [PANELS]);
-    await userEvent.click(sidebar().getByRole('link', { name: 'Broken' }));
-    await expect.element(page.getByRole('heading', { name: 'Could not show these settings' })).toBeVisible();
-    await expect.element(page.getByText('boom')).toBeVisible();
-  });
-
-  test('redirects unknown panel to general', async () => {
-    const router = await mount(['/settings/plugins/io.example.missing']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/general');
-  });
-
-  test('keeps highlight on modifier key', async () => {
-    const router = await mount(['/settings/appearance/general?highlight=brightness']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-
-    for (const key of ['{Shift}', '{Meta}', '{Control}', '{Alt}']) {
-      await userEvent.keyboard(key);
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    expect(router.state.location.search).toEqual({ highlight: 'brightness' });
-  });
-
-  test('clears highlight on pointer or other key', async () => {
-    const router = await mount(['/settings/appearance/general?highlight=brightness']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-
-    await userEvent.keyboard('{Escape}');
-    await expect.poll(() => router.state.location.search).toEqual({});
-
-    await router.navigate({ to: '.', search: { highlight: 'font' } });
-    await expect.poll(() => router.state.location.search).toEqual({ highlight: 'font' });
-    await userEvent.click(page.getByRole('heading', { name: 'General' }));
-    await expect.poll(() => router.state.location.search).toEqual({});
-  });
-
-  test('search opens setting it names, highlighted', async () => {
+describe('Search', () => {
+  test('opens setting it names, highlighted', async () => {
     const router = await mount(['/settings']);
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'crlf');
 
@@ -292,7 +268,7 @@ describe('Settings', () => {
     await expect.element(page.getByRole('combobox', { name: 'Search' })).toHaveValue('');
   });
 
-  test('search opens language setting, highlighted', async () => {
+  test('opens language setting, highlighted', async () => {
     const router = await mount(['/settings'], [], LANGUAGES);
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'markdown tab');
 
@@ -307,7 +283,7 @@ describe('Settings', () => {
     expect(router.state.location.search).toEqual({ highlight: 'tabSize' });
   });
 
-  test('search opens plugin panel', async () => {
+  test('opens plugin panel', async () => {
     const router = await mount(['/settings'], [PANELS]);
     await expect.element(sidebar().getByRole('link', { name: 'Hooks' })).toBeVisible();
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'spell');
@@ -321,24 +297,64 @@ describe('Settings', () => {
     expect(router.state.location.search).toEqual({ highlight: 'dictionary' });
   });
 
-  test('search says when nothing matches', async () => {
+  test('shows panel in panel under its panel', async () => {
+    await mount(['/settings'], [PANELS]);
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'region');
+
+    await expect
+      .poll(() => page.getByRole('option', { name: /Locale/ }).element().textContent)
+      .toMatch(/Words.*Spelling/);
+  });
+
+  test('says when nothing matches', async () => {
     await mount(['/settings']);
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'zzzz');
 
     await expect.element(page.getByText('No settings found')).toBeVisible();
   });
 
-  test('find shortcut focuses search', async () => {
+  test('finds option as meta on mac only', async () => {
+    await mount(['/settings']);
+    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'option as meta');
+
+    await expect
+      .element(
+        PLATFORM === 'mac' ? page.getByRole('option', { name: /Option as Meta/ }) : page.getByText('No settings found'),
+      )
+      .toBeVisible();
+  });
+
+  test('focuses on find shortcut', async () => {
     await mount(['/settings']);
     await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}f{/Meta}' : '{Control>}f{/Control}');
 
     await expect.element(page.getByPlaceholder('Search')).toHaveFocus();
   });
+});
 
-  test('returns to previous page', async () => {
-    const router = await mount(['/settings/appearance/terminal', '/settings/appearance/general']);
-    await userEvent.click(page.getByRole('button', { name: 'Back' }));
-    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+describe('PluginPanel', () => {
+  test('shows panel, marking it active', async () => {
+    const router = await mount(['/settings'], [PANELS]);
+    await userEvent.click(sidebar().getByRole('link', { name: 'Words' }));
+    await expect.poll(() => page.getByRole('main').element().textContent).toContain('Dictionary');
+    await expect.element(sidebar().getByRole('link', { name: 'Words' })).toHaveAttribute('data-active');
+    expect(router.state.location.pathname).toBe('/settings/plugins/io.example.words');
+  });
+
+  test('redirects unknown panel to general', async () => {
+    const router = await mount(['/settings/plugins/io.example.missing']);
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/appearance/general');
+  });
+});
+
+describe('PanelError', () => {
+  test('replaces throwing panel with why', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await mount(['/settings'], [PANELS]);
+    await userEvent.click(sidebar().getByRole('link', { name: 'Broken' }));
+    await expect.element(page.getByRole('heading', { name: 'Could not show these settings' })).toBeVisible();
+    await expect.element(page.getByText('boom')).toBeVisible();
   });
 });

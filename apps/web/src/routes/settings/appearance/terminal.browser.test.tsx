@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -135,6 +136,22 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(withTerminal({ copyOnSelect: true }));
+  });
+
+  test.runIf(PLATFORM === 'mac')('saves option as meta', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Option as Meta' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withTerminal({ macOptionIsMeta: true }));
+  });
+
+  test.skipIf(PLATFORM === 'mac')('hides option as meta', async () => {
+    await mount();
+    await expect.element(page.getByRole('switch', { name: 'Cursor blinking' })).toBeVisible();
+
+    expect(document.querySelector('[aria-label="Option as Meta"]')).toBeNull();
   });
 
   test('saves scrollback within limits', async () => {
