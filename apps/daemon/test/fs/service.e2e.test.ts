@@ -156,17 +156,19 @@ describe('WatchFiles', () => {
   });
 
   test('reports a deleted file and a directory as unavailable', async () => {
-    await fs.writeFile(harness.nativeAt('a.txt'), '');
     await fs.mkdir(harness.nativeAt('dir'));
     const call = harness.client.watchFiles();
     const { seen } = collect(call.responses);
     await call.send({ root, relativePaths: ['a.txt', 'dir'] });
+    await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
+    expect(fileHash(seen, 'dir')).toBe(FileReason.NOT_A_FILE);
+
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
     await expect.poll(() => fileHash(seen, 'a.txt')).toEqual(sha256(''));
 
     await fs.rm(harness.nativeAt('a.txt'));
 
     await expect.poll(() => fileHash(seen, 'a.txt')).toBe(FileReason.NOT_FOUND);
-    expect(fileHash(seen, 'dir')).toBe(FileReason.NOT_A_FILE);
     call.cancel();
   });
 
