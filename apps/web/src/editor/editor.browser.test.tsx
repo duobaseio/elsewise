@@ -247,6 +247,10 @@ describe('Editor', () => {
     expect(current.outlineStyle).toBe('solid');
     expect(current.outlineWidth).toBe('1px');
     expect(current.outlineOffset).toBe('0px');
+
+    const inner = style(view.dom.querySelector('.cm-searchMatch-selected .cm-searchMatch'));
+    expect(inner.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(inner.outlineStyle).toBe('none');
   });
 
   test('shows tooltips above search bar', async () => {

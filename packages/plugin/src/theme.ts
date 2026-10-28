@@ -263,6 +263,15 @@ export const ThemeVariant = z.lazy(() =>
         cursor: Color,
         cursorAccent: Color,
         selection: Color,
+        /**
+         * Transparency is blended onto the terminal's `background`.
+         */
+        searchMatch: Color,
+        /**
+         * Transparency is blended onto the terminal's `background`.
+         */
+        searchMatchSelected: Color,
+        searchMatchSelectedBorder: Color,
         black: Color,
         red: Color,
         green: Color,

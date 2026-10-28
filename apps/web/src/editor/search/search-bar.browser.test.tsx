@@ -95,6 +95,65 @@ describe('SearchBar', () => {
     expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
   });
 
+  test('keeps current match after cursor moves off it', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
+    await userEvent.keyboard('{Enter}');
+
+    view.dispatch({ selection: { anchor: view.state.doc.line(3).to } });
+    await expect.element(count()).toHaveTextContent('2/4');
+    const mark = view.dom.querySelector('.cm-searchMatch-selected') as HTMLElement;
+    expect(view.posAtDOM(mark)).toBe(view.state.doc.line(2).from);
+    expect(mark.textContent).toBe('let');
+  });
+
+  test('finds next match from cursor', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
+    await userEvent.keyboard('{Enter}');
+
+    view.dispatch({ selection: { anchor: view.state.doc.line(3).to } });
+    await userEvent.keyboard('{Enter}');
+    await expect.element(count()).toHaveTextContent('4/4');
+  });
+
+  test('moves current match under cursor', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
+
+    view.dispatch({ selection: { anchor: view.state.doc.line(3).from + 1 } });
+    await expect.element(count()).toHaveTextContent('3/4');
+  });
+
+  test('drops current match when edit breaks it', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
+    await userEvent.keyboard('{Enter}');
+
+    const line = view.state.doc.line(2);
+    view.dispatch({
+      changes: { from: line.from + 1, to: line.from + 2, insert: 'o' },
+      selection: { anchor: DOC.length },
+    });
+    await expect.element(count()).toHaveTextContent('3 results');
+    expect(view.dom.querySelector('.cm-searchMatch-selected')).toBeNull();
+  });
+
+  test('counts empty regexp matches', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.click(page.getByRole('button', { name: 'Regex' }));
+    await userEvent.fill(find(), '^');
+
+    await expect.element(count()).toHaveTextContent('1/5');
+    view.dispatch({ selection: { anchor: view.state.doc.line(2).from } });
+    await expect.element(count()).toHaveTextContent('2/5');
+  });
+
   test('marks matches on scrollbar while open', async () => {
     const view = await mount([diagnostics, scrollbarMarkers()]);
     openSearchPanel(view);
@@ -231,6 +290,31 @@ describe('SearchBar', () => {
 
     await userEvent.hover(page.getByRole('button', { name: 'Toggle replace' }));
     await expect.element(page.getByText('⌘E'), { timeout: 2000 }).toBeVisible();
+  });
+
+  test('replaces current match after cursor moves off it', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let ');
+    await userEvent.keyboard('{Enter}');
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+    await userEvent.fill(page.getByRole('textbox', { name: 'Replace' }), 'const ');
+
+    view.dispatch({ selection: { anchor: view.state.doc.line(3).to } });
+    await userEvent.click(page.getByRole('button', { name: 'Replace', exact: true }));
+    expect(view.state.doc.toString()).toBe('let a = 1;\nconst b = 2;\nLet c = 3;\nletter\n');
+  });
+
+  test('replaces current match under cursor', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let ');
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+    await userEvent.fill(page.getByRole('textbox', { name: 'Replace' }), 'const ');
+
+    view.dispatch({ selection: { anchor: view.state.doc.line(3).from + 1 } });
+    await userEvent.click(page.getByRole('button', { name: 'Replace', exact: true }));
+    expect(view.state.doc.toString()).toBe('let a = 1;\nlet b = 2;\nconst c = 3;\nletter\n');
   });
 
   test('replaces on Enter in replace field', async () => {

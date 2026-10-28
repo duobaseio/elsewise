@@ -62,6 +62,7 @@ function browserProject(
         '@xterm/addon-clipboard',
         '@xterm/addon-fit',
         '@xterm/addon-ligatures',
+        '@xterm/addon-search',
         '@xterm/addon-unicode11',
         '@xterm/addon-web-links',
         '@xterm/addon-webgl',
