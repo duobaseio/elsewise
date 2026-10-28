@@ -155,7 +155,7 @@ function resolve(
           shown = command.shown?.(commands.application);
           enabled = command.enabled?.(commands.application);
           active = command.active?.(commands.application);
-        } else if (view !== null) {
+        } else if (command.scope === 'editor' && view !== null) {
           shown = command.shown?.(commands.application, view);
           enabled = command.enabled?.(commands.application, view);
           active = command.active?.(commands.application, view);

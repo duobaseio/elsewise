@@ -7,10 +7,12 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { type ITerminalAddon, type ITheme, Terminal as XTerm } from '@xterm/xterm';
 import { type RefObject, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
+import { useCommandManager } from '@/command/command-manager';
+import { terminalKeymap } from '@/command/keymap';
 import { monoFontStack } from '@/settings/fonts';
 import { useSettings } from '@/settings/settings';
 import { useTerminalSearch } from '@/terminal/search/search-bar';
-import { COPY, PASTE, TerminalShortcuts } from '@/terminal/shortcuts';
+import { useTerminalManager } from '@/terminal/terminal-manager';
 
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
@@ -20,8 +22,10 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
   const host = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<{ xterm: XTerm; fit: FitAddon } | null>(null);
   const ligatures = useRef<LigaturesAddon>(null);
-  const [shortcuts] = useState(() => new TerminalShortcuts([COPY, PASTE]));
-  const { search, bar } = useTerminalSearch(shortcuts);
+  const commands = useCommandManager();
+  const terminals = useTerminalManager();
+  const [keymap] = useState(() => terminalKeymap(commands));
+  const { search, bar } = useTerminalSearch();
 
   const colors = useActiveTheme().terminal;
   const theme = useMemo<ITheme>(() => {
@@ -62,7 +66,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       new Unicode11Addon(),
       new WebLinksAddon((_event, uri) => window.open(uri, '_blank', 'noopener')),
       new ClipboardAddon(),
-      shortcuts,
+      keymap,
       search,
       session,
     ]) {
@@ -86,8 +90,13 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
     setTerminal({ xterm, fit });
     // DO NOT REORDER.
 
+    const activate = () => terminals.activate(xterm);
+    xterm.textarea?.addEventListener('focus', activate);
+
     return () => {
       observer.disconnect();
+      xterm.textarea?.removeEventListener('focus', activate);
+      terminals.deactivate(xterm);
       ligatures.current?.dispose();
       xterm.dispose();
       setTerminal(null);

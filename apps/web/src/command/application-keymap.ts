@@ -1,5 +1,5 @@
 import { PLATFORM, type Platform } from '@elsewise/components/lib/platform';
-import type { ActiveKeymap, ApplicationCommand, EditorCommand, Key, Keymap } from '@elsewise/plugin';
+import type { ActiveKeymap, ApplicationCommand, EditorCommand, Key, Keymap, TerminalCommand } from '@elsewise/plugin';
 import { normalizeKey } from '@/command/keys';
 
 /**
@@ -8,10 +8,12 @@ import { normalizeKey } from '@/command/keys';
 export class ApplicationKeymap implements ActiveKeymap {
   private currentName = '';
   private currentCommands: ReadonlyMap<string, readonly Key[]> = new Map();
-  private currentKeys: Readonly<Record<'editor' | 'application', ReadonlyMap<string, readonly string[]>>> = {
-    editor: new Map(),
-    application: new Map(),
-  };
+  private currentKeys: Readonly<Record<'application' | 'editor' | 'terminal', ReadonlyMap<string, readonly string[]>>> =
+    {
+      application: new Map(),
+      editor: new Map(),
+      terminal: new Map(),
+    };
 
   constructor(private readonly platform: Platform = PLATFORM) {}
 
@@ -30,16 +32,20 @@ export class ApplicationKeymap implements ActiveKeymap {
    * The keys as CodeMirror normalizes them for this platform, and their associated commands from the last added to the
    * first.
    */
-  get keys(): Readonly<Record<'editor' | 'application', ReadonlyMap<string, readonly string[]>>> {
+  get keys(): Readonly<Record<'application' | 'editor' | 'terminal', ReadonlyMap<string, readonly string[]>>> {
     return this.currentKeys;
   }
 
   /**
    * Updates the keys of `commands` under `keymap`.
    */
-  update(keymap: Keymap, commands: Iterable<ApplicationCommand | EditorCommand>) {
+  update(keymap: Keymap, commands: Iterable<ApplicationCommand | EditorCommand | TerminalCommand>) {
     const written = new Map<string, readonly string[]>();
-    const keys = { editor: new Map<string, string[]>(), application: new Map<string, string[]>() };
+    const keys = {
+      application: new Map<string, string[]>(),
+      editor: new Map<string, string[]>(),
+      terminal: new Map<string, string[]>(),
+    };
     for (const command of commands) {
       const entry = Object.hasOwn(keymap.keys, command.id) ? keymap.keys[command.id] : undefined;
       const own: string[] = [];

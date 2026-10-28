@@ -1,4 +1,11 @@
-export type { ActiveKeymap, ApplicationCommand, Command, Commands, EditorCommand } from './command.ts';
+export type {
+  ActiveKeymap,
+  ApplicationCommand,
+  Command,
+  Commands,
+  EditorCommand,
+  TerminalCommand,
+} from './command.ts';
 export { DEFAULT_COMMANDS, DEFAULT_KEYS } from './command.ts';
 export {
   type ContextMenuGroup,
@@ -64,4 +71,5 @@ export {
   type SettingsPanel,
   type SettingsSearchTerm,
 } from './settings.ts';
+export type { Terminal } from './terminal.ts';
 export { Color, TextStyle, Theme, ThemeVariant } from './theme.ts';

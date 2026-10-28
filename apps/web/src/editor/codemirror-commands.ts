@@ -41,7 +41,7 @@ const { caret, edit, fold, history, search } = DEFAULT_COMMANDS.editor;
 const keys = DEFAULT_KEYS.editor;
 
 // History
-export const UNDO: EditorCommand = {
+export const EDITOR_UNDO: EditorCommand = {
   scope: 'editor',
   id: history.undo,
   label: 'Undo',
@@ -50,7 +50,7 @@ export const UNDO: EditorCommand = {
   run: (_, view) => undo(view),
 };
 
-export const REDO: EditorCommand = {
+export const EDITOR_REDO: EditorCommand = {
   scope: 'editor',
   id: history.redo,
   label: 'Redo',
@@ -59,7 +59,7 @@ export const REDO: EditorCommand = {
   run: (_, view) => redo(view),
 };
 
-export const UNDO_SELECTION: EditorCommand = {
+export const EDITOR_UNDO_SELECTION: EditorCommand = {
   scope: 'editor',
   id: history.undoSelection,
   label: 'Undo selection',
@@ -67,7 +67,7 @@ export const UNDO_SELECTION: EditorCommand = {
   run: (_, view) => undoSelection(view),
 };
 
-export const REDO_SELECTION: EditorCommand = {
+export const EDITOR_REDO_SELECTION: EditorCommand = {
   scope: 'editor',
   id: history.redoSelection,
   label: 'Redo selection',
@@ -76,7 +76,7 @@ export const REDO_SELECTION: EditorCommand = {
 };
 
 // Search
-export const FIND: EditorCommand = {
+export const EDITOR_FIND: EditorCommand = {
   scope: 'editor',
   id: search.find,
   label: 'Find…',
@@ -88,7 +88,7 @@ export const FIND: EditorCommand = {
   },
 };
 
-export const REPLACE: EditorCommand = {
+export const EDITOR_REPLACE: EditorCommand = {
   scope: 'editor',
   id: search.replace,
   label: 'Replace…',
@@ -100,7 +100,7 @@ export const REPLACE: EditorCommand = {
   },
 };
 
-export const FIND_NEXT: EditorCommand = {
+export const EDITOR_FIND_NEXT: EditorCommand = {
   scope: 'editor',
   id: search.findNext,
   label: 'Find next',
@@ -108,7 +108,7 @@ export const FIND_NEXT: EditorCommand = {
   run: (_, view) => findNext(view),
 };
 
-export const FIND_PREVIOUS: EditorCommand = {
+export const EDITOR_FIND_PREVIOUS: EditorCommand = {
   scope: 'editor',
   id: search.findPrevious,
   label: 'Find previous',
@@ -116,7 +116,7 @@ export const FIND_PREVIOUS: EditorCommand = {
   run: (_, view) => findPrevious(view),
 };
 
-export const SELECT_NEXT_OCCURRENCE: EditorCommand = {
+export const EDITOR_SELECT_NEXT_OCCURRENCE: EditorCommand = {
   scope: 'editor',
   id: search.selectNextOccurrence,
   label: 'Select next occurrence',
@@ -124,7 +124,7 @@ export const SELECT_NEXT_OCCURRENCE: EditorCommand = {
   run: (_, view) => selectNextOccurrence(view),
 };
 
-export const SELECT_ALL_OCCURRENCES: EditorCommand = {
+export const EDITOR_SELECT_ALL_OCCURRENCES: EditorCommand = {
   scope: 'editor',
   id: search.selectAllOccurrences,
   label: 'Select all occurrences',
@@ -132,7 +132,7 @@ export const SELECT_ALL_OCCURRENCES: EditorCommand = {
   run: (_, view) => selectSelectionMatches(view),
 };
 
-export const GO_TO_LINE: EditorCommand = {
+export const EDITOR_GO_TO_LINE: EditorCommand = {
   scope: 'editor',
   id: search.goToLine,
   label: 'Go to line…',
@@ -142,7 +142,7 @@ export const GO_TO_LINE: EditorCommand = {
 
 // Fold
 // Folding always returns true since its default keys would otherwise zoom the window. Does nothing in a split diff view.
-export const FOLD: EditorCommand = {
+export const EDITOR_FOLD: EditorCommand = {
   scope: 'editor',
   id: fold.fold,
   label: 'Fold',
@@ -155,7 +155,7 @@ export const FOLD: EditorCommand = {
   },
 };
 
-export const UNFOLD: EditorCommand = {
+export const EDITOR_UNFOLD: EditorCommand = {
   scope: 'editor',
   id: fold.unfold,
   label: 'Unfold',
@@ -168,7 +168,7 @@ export const UNFOLD: EditorCommand = {
   },
 };
 
-export const FOLD_ALL: EditorCommand = {
+export const EDITOR_FOLD_ALL: EditorCommand = {
   scope: 'editor',
   id: fold.foldAll,
   label: 'Fold all',
@@ -181,7 +181,7 @@ export const FOLD_ALL: EditorCommand = {
   },
 };
 
-export const UNFOLD_ALL: EditorCommand = {
+export const EDITOR_UNFOLD_ALL: EditorCommand = {
   scope: 'editor',
   id: fold.unfoldAll,
   label: 'Unfold all',
@@ -195,7 +195,7 @@ export const UNFOLD_ALL: EditorCommand = {
 };
 
 // Edit
-export const INDENT: EditorCommand = {
+export const EDITOR_INDENT: EditorCommand = {
   scope: 'editor',
   id: edit.indent,
   label: 'Indent',
@@ -204,7 +204,7 @@ export const INDENT: EditorCommand = {
   run: (_, view) => insertTab(view),
 };
 
-export const UNINDENT: EditorCommand = {
+export const EDITOR_UNINDENT: EditorCommand = {
   scope: 'editor',
   id: edit.unindent,
   label: 'Unindent',
@@ -213,7 +213,7 @@ export const UNINDENT: EditorCommand = {
   run: (_, view) => indentLess(view),
 };
 
-export const AUTO_INDENT: EditorCommand = {
+export const EDITOR_AUTO_INDENT: EditorCommand = {
   scope: 'editor',
   id: edit.autoIndent,
   label: 'Auto-indent lines',
@@ -222,7 +222,7 @@ export const AUTO_INDENT: EditorCommand = {
   run: (_, view) => indentSelection(view),
 };
 
-export const TOGGLE_LINE_COMMENT: EditorCommand = {
+export const EDITOR_TOGGLE_LINE_COMMENT: EditorCommand = {
   scope: 'editor',
   id: edit.toggleLineComment,
   label: 'Toggle line comment',
@@ -231,7 +231,7 @@ export const TOGGLE_LINE_COMMENT: EditorCommand = {
   run: (_, view) => toggleComment(view),
 };
 
-export const TOGGLE_BLOCK_COMMENT: EditorCommand = {
+export const EDITOR_TOGGLE_BLOCK_COMMENT: EditorCommand = {
   scope: 'editor',
   id: edit.toggleBlockComment,
   label: 'Toggle block comment',
@@ -240,7 +240,7 @@ export const TOGGLE_BLOCK_COMMENT: EditorCommand = {
   run: (_, view) => toggleBlockComment(view),
 };
 
-export const DUPLICATE_LINE: EditorCommand = {
+export const EDITOR_DUPLICATE_LINE: EditorCommand = {
   scope: 'editor',
   id: edit.duplicateLine,
   label: 'Duplicate line',
@@ -249,7 +249,7 @@ export const DUPLICATE_LINE: EditorCommand = {
   run: (_, view) => copyLineDown(view),
 };
 
-export const DUPLICATE_LINE_UP: EditorCommand = {
+export const EDITOR_DUPLICATE_LINE_UP: EditorCommand = {
   scope: 'editor',
   id: edit.duplicateLineUp,
   label: 'Duplicate line up',
@@ -258,7 +258,7 @@ export const DUPLICATE_LINE_UP: EditorCommand = {
   run: (_, view) => copyLineUp(view),
 };
 
-export const DELETE_LINE: EditorCommand = {
+export const EDITOR_DELETE_LINE: EditorCommand = {
   scope: 'editor',
   id: edit.deleteLine,
   label: 'Delete line',
@@ -267,7 +267,7 @@ export const DELETE_LINE: EditorCommand = {
   run: (_, view) => deleteLine(view),
 };
 
-export const MOVE_LINE_UP: EditorCommand = {
+export const EDITOR_MOVE_LINE_UP: EditorCommand = {
   scope: 'editor',
   id: edit.moveLineUp,
   label: 'Move line up',
@@ -276,7 +276,7 @@ export const MOVE_LINE_UP: EditorCommand = {
   run: (_, view) => moveLineUp(view),
 };
 
-export const MOVE_LINE_DOWN: EditorCommand = {
+export const EDITOR_MOVE_LINE_DOWN: EditorCommand = {
   scope: 'editor',
   id: edit.moveLineDown,
   label: 'Move line down',
@@ -285,7 +285,7 @@ export const MOVE_LINE_DOWN: EditorCommand = {
   run: (_, view) => moveLineDown(view),
 };
 
-export const START_NEW_LINE: EditorCommand = {
+export const EDITOR_START_NEW_LINE: EditorCommand = {
   scope: 'editor',
   id: edit.startNewLine,
   label: 'Start new line',
@@ -294,7 +294,7 @@ export const START_NEW_LINE: EditorCommand = {
   run: (_, view) => insertBlankLine(view),
 };
 
-export const TOGGLE_TAB_FOCUS_MODE: EditorCommand = {
+export const EDITOR_TOGGLE_TAB_FOCUS_MODE: EditorCommand = {
   scope: 'editor',
   id: edit.toggleTabFocusMode,
   label: 'Toggle Tab focus mode',
@@ -303,7 +303,7 @@ export const TOGGLE_TAB_FOCUS_MODE: EditorCommand = {
 };
 
 // Caret
-export const ADD_CARET_ABOVE: EditorCommand = {
+export const EDITOR_ADD_CARET_ABOVE: EditorCommand = {
   scope: 'editor',
   id: caret.addCaretAbove,
   label: 'Add caret above',
@@ -311,7 +311,7 @@ export const ADD_CARET_ABOVE: EditorCommand = {
   run: (_, view) => addCursorAbove(view),
 };
 
-export const ADD_CARET_BELOW: EditorCommand = {
+export const EDITOR_ADD_CARET_BELOW: EditorCommand = {
   scope: 'editor',
   id: caret.addCaretBelow,
   label: 'Add caret below',
@@ -319,7 +319,7 @@ export const ADD_CARET_BELOW: EditorCommand = {
   run: (_, view) => addCursorBelow(view),
 };
 
-export const SELECT_LINE: EditorCommand = {
+export const EDITOR_SELECT_LINE: EditorCommand = {
   scope: 'editor',
   id: caret.selectLine,
   label: 'Select line',
@@ -327,7 +327,7 @@ export const SELECT_LINE: EditorCommand = {
   run: (_, view) => selectLine(view),
 };
 
-export const EXTEND_SELECTION: EditorCommand = {
+export const EDITOR_EXTEND_SELECTION: EditorCommand = {
   scope: 'editor',
   id: caret.extendSelection,
   label: 'Extend selection',
@@ -339,7 +339,7 @@ export const EXTEND_SELECTION: EditorCommand = {
   },
 };
 
-export const MOVE_TO_MATCHING_BRACKET: EditorCommand = {
+export const EDITOR_MOVE_TO_MATCHING_BRACKET: EditorCommand = {
   scope: 'editor',
   id: caret.moveToMatchingBracket,
   label: 'Move to matching bracket',
@@ -347,7 +347,7 @@ export const MOVE_TO_MATCHING_BRACKET: EditorCommand = {
   run: (_, view) => cursorMatchingBracket(view),
 };
 
-export const SYNTAX_LEFT: EditorCommand = {
+export const EDITOR_SYNTAX_LEFT: EditorCommand = {
   scope: 'editor',
   id: caret.syntaxLeft,
   label: 'Move left by syntax',
@@ -355,7 +355,7 @@ export const SYNTAX_LEFT: EditorCommand = {
   run: (_, view) => cursorSyntaxLeft(view),
 };
 
-export const SYNTAX_RIGHT: EditorCommand = {
+export const EDITOR_SYNTAX_RIGHT: EditorCommand = {
   scope: 'editor',
   id: caret.syntaxRight,
   label: 'Move right by syntax',
@@ -363,7 +363,7 @@ export const SYNTAX_RIGHT: EditorCommand = {
   run: (_, view) => cursorSyntaxRight(view),
 };
 
-export const SELECT_SYNTAX_LEFT: EditorCommand = {
+export const EDITOR_SELECT_SYNTAX_LEFT: EditorCommand = {
   scope: 'editor',
   id: caret.selectSyntaxLeft,
   label: 'Select left by syntax',
@@ -371,7 +371,7 @@ export const SELECT_SYNTAX_LEFT: EditorCommand = {
   run: (_, view) => selectSyntaxLeft(view),
 };
 
-export const SELECT_SYNTAX_RIGHT: EditorCommand = {
+export const EDITOR_SELECT_SYNTAX_RIGHT: EditorCommand = {
   scope: 'editor',
   id: caret.selectSyntaxRight,
   label: 'Select right by syntax',

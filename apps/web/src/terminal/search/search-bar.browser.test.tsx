@@ -6,9 +6,11 @@ import { useEffect, useRef, useState } from 'react';
 import { describe, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { CommandManagerContext } from '@/command/command-manager';
+import { terminalKeymap } from '@/command/keymap';
 import { settingsQuery } from '@/settings/settings';
 import { useTerminalSearch } from '@/terminal/search/search-bar';
-import { TerminalShortcuts } from '@/terminal/shortcuts';
+import { builtInCommands } from '../../../test/commands';
 
 import '@xterm/xterm/css/xterm.css';
 
@@ -20,8 +22,10 @@ const SETTINGS: Settings = {
   },
 };
 
-// Renders a bare terminal with the search add-on and its bar. Returns the settings' client and the terminal.
+// Renders a bare terminal with the commands' keymap, the search add-on and its bar. Returns the settings' client and the
+// terminal.
 async function mount() {
+  const commands = builtInCommands();
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
   let resolve!: (xterm: XTerm) => void;
@@ -29,8 +33,8 @@ async function mount() {
     resolve = r;
   });
   function Probe() {
-    const [shortcuts] = useState(() => new TerminalShortcuts([]));
-    const { search, bar } = useTerminalSearch(shortcuts);
+    const [keymap] = useState(() => terminalKeymap(commands));
+    const { search, bar } = useTerminalSearch();
     const host = useRef<HTMLDivElement>(null);
     useEffect(() => {
       if (host.current === null) {
@@ -38,12 +42,12 @@ async function mount() {
       }
       // The search add-on's highlights reach proposed API.
       const xterm = new XTerm({ allowProposedApi: true });
-      xterm.loadAddon(shortcuts);
+      xterm.loadAddon(keymap);
       xterm.loadAddon(search);
       xterm.open(host.current);
       resolve(xterm);
       return () => xterm.dispose();
-    }, [shortcuts, search]);
+    }, [keymap, search]);
     return (
       <div className="relative" style={{ height: 300, width: 600 }}>
         <div className="h-full" ref={host} />
@@ -53,7 +57,9 @@ async function mount() {
   }
   await render(
     <QueryClientProvider client={client}>
-      <Probe />
+      <CommandManagerContext value={commands}>
+        <Probe />
+      </CommandManagerContext>
     </QueryClientProvider>,
   );
   return { client, xterm: await ready };

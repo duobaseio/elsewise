@@ -47,7 +47,7 @@ const signatures = StateField.define<Signatures | null>({
 
 const setSignatures = StateEffect.define<{ data: SignatureHelp; pos: number } | null>();
 
-export const SHOW_SIGNATURE_HELP: EditorCommand = {
+export const EDITOR_SHOW_SIGNATURE_HELP: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.showSignatureHelp,
   label: 'Parameter info',

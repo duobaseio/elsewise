@@ -33,6 +33,7 @@ import {
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
@@ -114,6 +115,7 @@ async function mount(
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   let setSource: (source: EditorSource) => void = () => {};
   let setCode: (code: string) => void = () => {};

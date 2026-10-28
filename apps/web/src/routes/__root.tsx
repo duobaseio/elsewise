@@ -12,6 +12,7 @@ import { PluginLoader, usePlugins } from '@/plugins/loader';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager, SettingsPanelManagerContext } from '@/settings/settings-panel-manager';
+import { TerminalManager, TerminalManagerContext } from '@/terminal/terminal-manager';
 
 import '../styles.css';
 
@@ -42,11 +43,12 @@ function RootComponent() {
   const keymap = useKeymap();
   const router = useRouter();
 
-  const [{ appearance, commands, editor, settings, languageServers, loader }] = useState(() => {
+  const [{ appearance, commands, editor, settings, terminal, languageServers, loader }] = useState(() => {
     const appearance = new AppearanceManager(brightness, theme);
     const editor = new EditorManager();
     const settings = new SettingsPanelManager(Object.values(DEFAULT_PANELS));
-    const commands = new CommandManager({ appearance, editor, router, settings });
+    const terminal = new TerminalManager();
+    const commands = new CommandManager({ appearance, editor, router, settings, terminal });
 
     // TODO: Replace with actual diffs once git daemon is ready
     editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
@@ -56,6 +58,7 @@ function RootComponent() {
       commands,
       editor,
       settings,
+      terminal,
       languageServers: new LanguageServers(editor),
       loader: new PluginLoader(appearance, commands),
     };
@@ -87,15 +90,17 @@ function RootComponent() {
 
   return (
     <EditorManagerContext value={editor}>
-      <CommandManagerContext value={commands}>
-        <SettingsPanelManagerContext value={settings}>
-          <LanguageServersContext value={languageServers}>
-            <Toaster>
-              <Outlet />
-            </Toaster>
-          </LanguageServersContext>
-        </SettingsPanelManagerContext>
-      </CommandManagerContext>
+      <TerminalManagerContext value={terminal}>
+        <CommandManagerContext value={commands}>
+          <SettingsPanelManagerContext value={settings}>
+            <LanguageServersContext value={languageServers}>
+              <Toaster>
+                <Outlet />
+              </Toaster>
+            </LanguageServersContext>
+          </SettingsPanelManagerContext>
+        </CommandManagerContext>
+      </TerminalManagerContext>
     </EditorManagerContext>
   );
 }

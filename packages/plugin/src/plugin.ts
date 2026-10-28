@@ -2,6 +2,7 @@ import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command.ts';
 import type { Editor } from './editor/editor.ts';
 import type { Settings } from './settings.ts';
+import type { Terminal } from './terminal.ts';
 import type { ThemeVariant } from './theme.ts';
 
 /**
@@ -115,6 +116,11 @@ export interface Application {
    * The code editor.
    */
   readonly editor: Editor;
+
+  /**
+   * The terminal.
+   */
+  readonly terminal: Terminal;
 }
 
 /**

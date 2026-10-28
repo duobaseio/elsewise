@@ -1,12 +1,14 @@
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
-import type { EditorCommand, Keys } from '@elsewise/plugin';
+import type { EditorCommand, Keys, TerminalCommand } from '@elsewise/plugin';
+import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
@@ -14,10 +16,20 @@ const APPEARANCE = new AppearanceManager(
   resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
 );
 
-// Returns the commands of an application whose editor is `editor`, on `platform`.
-function commands(editor = new EditorManager(), platform: Platform = 'linux'): CommandManager {
+// Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
+function commands(
+  editor = new EditorManager(),
+  platform: Platform = 'linux',
+  terminals = new TerminalManager(),
+): CommandManager {
   return new CommandManager(
-    { appearance: APPEARANCE, editor, router: memoryRouter(), settings: new SettingsPanelManager() },
+    {
+      appearance: APPEARANCE,
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: terminals,
+    },
     platform,
   );
 }
@@ -35,6 +47,10 @@ function bound(keys: Record<string, Keys>, platform: Platform = 'linux'): Comman
 // Returns a view that stands in for an editor, named `name`, without a language server.
 function view(name: string): EditorView {
   return { name, plugin: () => null } as unknown as EditorView;
+}
+
+function terminal(name: string): XTerm {
+  return { name, buffer: {} } as unknown as XTerm;
 }
 
 let error: ReturnType<typeof vi.spyOn>;
@@ -178,6 +194,39 @@ describe('run', () => {
 
     expect(manager.run('c', target)).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(target);
+  });
+
+  test('runs terminal command against terminal, else active terminal', () => {
+    const terminals = new TerminalManager();
+    const manager = commands(new EditorManager(), 'linux', terminals);
+    const run = vi.fn<TerminalCommand['run']>(() => true);
+    manager.add([{ id: 'c', label: 'C', scope: 'terminal', run }]);
+    const active = terminal('active');
+    const target = terminal('target');
+
+    expect(manager.run('c')).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+
+    terminals.activate(active);
+    expect(manager.run('c')).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(active);
+
+    expect(manager.run('c', target)).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(target);
+  });
+
+  test('refuses target of other surface', () => {
+    const manager = commands();
+    const run = vi.fn(() => true);
+    manager.add([
+      { id: 'editor', label: 'Editor', scope: 'editor', run },
+      { id: 'terminal', label: 'Terminal', scope: 'terminal', run },
+    ]);
+
+    expect(manager.run('editor', terminal('a'))).toBe(false);
+    expect(manager.run('terminal', view('a'))).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 
   test('runs application command regardless of view', () => {

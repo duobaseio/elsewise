@@ -5,6 +5,7 @@ import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { PluginLoader } from '@/plugins/loader';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../test/commands';
 
 // Returns a loader over its own managers.
@@ -19,6 +20,7 @@ function setUp() {
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   return { appearance, editor, commands, loader: new PluginLoader(appearance, commands) };
 }

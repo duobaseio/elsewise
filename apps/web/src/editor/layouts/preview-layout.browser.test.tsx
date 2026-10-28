@@ -12,6 +12,7 @@ import { PreviewLayout } from '@/editor/layouts/preview-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { memoryRouter } from '../../../test/commands';
 
 const CODE = ['alpha', 'beta', 'gamma'].join('\n');
@@ -28,6 +29,7 @@ async function mount(editor = new EditorManager()) {
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   const screen = await render(
     <QueryClientProvider client={client}>

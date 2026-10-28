@@ -5,7 +5,7 @@ import type { EditorActionSource, EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';
-import { closeHoverOnClick, hover, SHOW_HOVER } from '@/editor/hover';
+import { closeHoverOnClick, EDITOR_SHOW_HOVER, hover } from '@/editor/hover';
 import { commandsExtension } from '../../test/commands';
 
 const DOC = 'let channel = attach(1);';
@@ -295,11 +295,11 @@ describe('hover', () => {
   });
 });
 
-describe('SHOW_HOVER', () => {
+describe('EDITOR_SHOW_HOVER', () => {
   // Puts the cursor at `pos`, runs the command, and returns the hover that opens.
   async function show(view: EditorView, pos: number): Promise<HTMLElement> {
     view.dispatch({ selection: { anchor: pos } });
-    expect(view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view)).toBe(true);
+    expect(view.state.facet(COMMANDS)?.run(EDITOR_SHOW_HOVER.id, view)).toBe(true);
     return opened(view);
   }
 
@@ -358,7 +358,7 @@ describe('SHOW_HOVER', () => {
     const view = open([]);
 
     view.dispatch({ selection: { anchor: DIAGNOSTIC.from + 1 } });
-    view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view);
+    view.state.facet(COMMANDS)?.run(EDITOR_SHOW_HOVER.id, view);
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();

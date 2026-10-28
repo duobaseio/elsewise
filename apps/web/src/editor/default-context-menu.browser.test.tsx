@@ -3,7 +3,7 @@ import type { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { actions } from '@/editor/actions';
-import { COPY, CUT, PASTE } from '@/editor/default-context-menu';
+import { EDITOR_COPY, EDITOR_CUT, EDITOR_PASTE } from '@/editor/default-context-menu';
 import { diagnostics } from '@/editor/diagnostics';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
@@ -293,13 +293,13 @@ describe('DEFAULT_CONTEXT_MENU', () => {
   });
 });
 
-describe('CUT', () => {
+describe('EDITOR_CUT', () => {
   test('asks bridge to cut', async () => {
     const called = bridge();
     const view = await mountBuiltIn();
     view.dispatch({ selection: { anchor: 0, head: 2 } });
 
-    builtInCommands().run(CUT.id, view);
+    builtInCommands().run(EDITOR_CUT.id, view);
 
     expect(called).toEqual(['cut']);
   });
@@ -309,30 +309,30 @@ describe('CUT', () => {
     const view = await mountBuiltIn(EditorState.readOnly.of(true));
     view.dispatch({ selection: { anchor: 0, head: 2 } });
 
-    expect(builtInCommands().run(CUT.id, view)).toBe(false);
+    expect(builtInCommands().run(EDITOR_CUT.id, view)).toBe(false);
     expect(called).toEqual([]);
   });
 });
 
-describe('COPY', () => {
+describe('EDITOR_COPY', () => {
   test('asks bridge to copy, without selection too', async () => {
     const called = bridge();
     const view = await mountBuiltIn();
     view.dispatch({ selection: { anchor: 0, head: 2 } });
 
-    builtInCommands().run(COPY.id, view);
+    builtInCommands().run(EDITOR_COPY.id, view);
     view.dispatch({ selection: { anchor: 0 } });
-    builtInCommands().run(COPY.id, view);
+    builtInCommands().run(EDITOR_COPY.id, view);
 
     expect(called).toEqual(['copy', 'copy']);
   });
 });
 
-describe('PASTE', () => {
+describe('EDITOR_PASTE', () => {
   test('asks bridge to paste', async () => {
     const called = bridge();
 
-    builtInCommands().run(PASTE.id, await mountBuiltIn());
+    builtInCommands().run(EDITOR_PASTE.id, await mountBuiltIn());
 
     expect(called).toEqual(['paste']);
   });
@@ -340,7 +340,7 @@ describe('PASTE', () => {
   test('disables in read-only document', async () => {
     const called = bridge();
 
-    expect(builtInCommands().run(PASTE.id, await mountBuiltIn(EditorState.readOnly.of(true)))).toBe(false);
+    expect(builtInCommands().run(EDITOR_PASTE.id, await mountBuiltIn(EditorState.readOnly.of(true)))).toBe(false);
     expect(called).toEqual([]);
   });
 });

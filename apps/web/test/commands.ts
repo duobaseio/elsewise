@@ -7,8 +7,9 @@ import { CommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap';
 import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 
-export function builtInCommands(editor = new EditorManager()): CommandManager {
+export function builtInCommands(editor = new EditorManager(), terminal = new TerminalManager()): CommandManager {
   return new CommandManager({
     appearance: new AppearanceManager(
       'light',
@@ -17,6 +18,7 @@ export function builtInCommands(editor = new EditorManager()): CommandManager {
     editor,
     router: memoryRouter(),
     settings: new SettingsPanelManager(),
+    terminal,
   });
 }
 

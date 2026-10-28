@@ -83,7 +83,7 @@ const message = StateField.define<Tooltip | null>({
 
 const showMessage = StateEffect.define<number | null>();
 
-export const APPLY_TOP_FIX: EditorCommand = {
+export const EDITOR_APPLY_TOP_FIX: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.actions.applyTopFix,
   label: 'Apply top fix',
@@ -102,7 +102,7 @@ export const APPLY_TOP_FIX: EditorCommand = {
   },
 };
 
-export const SHOW_ACTIONS: EditorCommand = {
+export const EDITOR_SHOW_ACTIONS: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.actions.show,
   label: 'Show context actions',
@@ -128,8 +128,8 @@ export const SHOW_ACTIONS: EditorCommand = {
 };
 
 /**
- * Returns the extension that shows the `actions` language data's actions on {@link SHOW_ACTIONS}, and applies the top
- * fix on {@link APPLY_TOP_FIX}.
+ * Returns the extension that shows the `actions` language data's actions on {@link EDITOR_SHOW_ACTIONS}, and applies the top
+ * fix on {@link EDITOR_APPLY_TOP_FIX}.
  */
 export function actions(): Extension {
   return [

@@ -37,7 +37,7 @@ function open(anchor: number, doc = DOC): EditorView {
   return view;
 }
 
-describe('UNDO', () => {
+describe('EDITOR_UNDO', () => {
   test('reverts typing', async () => {
     const view = open(0);
     await userEvent.keyboard('x');
@@ -47,7 +47,7 @@ describe('UNDO', () => {
   });
 });
 
-describe('REDO', () => {
+describe('EDITOR_REDO', () => {
   test('reapplies undone typing', async () => {
     const view = open(0);
     await userEvent.keyboard('x');
@@ -58,7 +58,7 @@ describe('REDO', () => {
   });
 });
 
-describe('FOLD', () => {
+describe('EDITOR_FOLD', () => {
   test('collapses block at caret', async () => {
     const view = open(0);
 
@@ -67,7 +67,7 @@ describe('FOLD', () => {
   });
 });
 
-describe('UNFOLD', () => {
+describe('EDITOR_UNFOLD', () => {
   test('expands block at caret', async () => {
     const view = open(0);
     await userEvent.keyboard('{Meta>}-{/Meta}');
@@ -77,7 +77,7 @@ describe('UNFOLD', () => {
   });
 });
 
-describe('FOLD_ALL', () => {
+describe('EDITOR_FOLD_ALL', () => {
   test('collapses every block', async () => {
     const view = open(0, `${DOC}fn other() {\n    let b = 2;\n}\n`);
 
@@ -86,7 +86,7 @@ describe('FOLD_ALL', () => {
   });
 });
 
-describe('UNFOLD_ALL', () => {
+describe('EDITOR_UNFOLD_ALL', () => {
   test('expands every block', async () => {
     const view = open(0, `${DOC}fn other() {\n    let b = 2;\n}\n`);
     await userEvent.keyboard('{Meta>}{Shift>}-{/Shift}{/Meta}');
@@ -96,7 +96,7 @@ describe('UNFOLD_ALL', () => {
   });
 });
 
-describe('INDENT', () => {
+describe('EDITOR_INDENT', () => {
   test('shifts selected line right on Tab', async () => {
     const view = open(DOC.indexOf('let'));
     view.dispatch({ selection: { anchor: view.state.doc.line(2).from, head: view.state.doc.line(2).to } });
@@ -115,7 +115,7 @@ describe('INDENT', () => {
   });
 });
 
-describe('UNINDENT', () => {
+describe('EDITOR_UNINDENT', () => {
   test('shifts selected line left on Shift-Tab', async () => {
     const view = open(DOC.indexOf('let'));
     view.dispatch({ selection: { anchor: view.state.doc.line(2).from, head: view.state.doc.line(2).to } });
@@ -125,7 +125,7 @@ describe('UNINDENT', () => {
   });
 });
 
-describe('DUPLICATE_LINE', () => {
+describe('EDITOR_DUPLICATE_LINE', () => {
   test('copies line below', async () => {
     const view = open(DOC.indexOf('let'));
 
@@ -134,7 +134,7 @@ describe('DUPLICATE_LINE', () => {
   });
 });
 
-describe('TOGGLE_LINE_COMMENT', () => {
+describe('EDITOR_TOGGLE_LINE_COMMENT', () => {
   test('comments out line', async () => {
     const view = open(DOC.indexOf('let'));
 
@@ -143,7 +143,7 @@ describe('TOGGLE_LINE_COMMENT', () => {
   });
 });
 
-describe('EXTEND_SELECTION', () => {
+describe('EDITOR_EXTEND_SELECTION', () => {
   test('selects word at caret', async () => {
     const view = open(DOC.indexOf('a ='));
 

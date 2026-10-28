@@ -105,7 +105,7 @@ const pending = StateField.define<boolean>({
 
 const setPending = StateEffect.define<boolean>();
 
-export const FIND_USAGES: EditorCommand = {
+export const EDITOR_FIND_USAGES: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.findUsages,
   label: 'Find usages',

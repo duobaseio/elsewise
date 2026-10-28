@@ -1,4 +1,5 @@
 import type { EditorView } from '@codemirror/view';
+import type { Terminal } from '@xterm/xterm';
 import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
 
@@ -90,6 +91,15 @@ export const DEFAULT_COMMANDS = {
       findUsages: 'elsewise.editor.lsp.findUsages',
       rename: 'elsewise.editor.lsp.rename',
       showSignatureHelp: 'elsewise.editor.lsp.showSignatureHelp',
+    },
+  },
+  terminal: {
+    clipboard: {
+      copy: 'elsewise.terminal.clipboard.copy',
+      paste: 'elsewise.terminal.clipboard.paste',
+    },
+    search: {
+      find: 'elsewise.terminal.search.find',
     },
   },
 } as const;
@@ -187,6 +197,15 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       showSignatureHelp: ['Mod-p'],
     },
   },
+  terminal: {
+    clipboard: {
+      copy: [{ key: 'Ctrl-Shift-c', mac: 'Mod-c' }],
+      paste: [{ key: 'Ctrl-Shift-v', mac: 'Mod-v' }],
+    },
+    search: {
+      find: [{ key: 'Ctrl-Shift-f', mac: 'Mod-f' }],
+    },
+  },
 };
 
 type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<T[K]> };
@@ -208,16 +227,17 @@ export interface Commands {
    *
    * Returns a disposable that removes the added `commands`.
    */
-  add(commands: readonly (ApplicationCommand | EditorCommand)[]): Disposable;
+  add(commands: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): Disposable;
 
   /**
-   * Runs the command with `id` against an optional `target`.
+   * Runs the command with `id` against an optional `target`, an editor for an editor command or a terminal for a
+   * terminal command. Without `target`, it runs against the active editor or terminal.
    *
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
    *
    * Returns whether the command ran and applied.
    */
-  run(id: string, target?: EditorView): boolean;
+  run(id: string, target?: EditorView | Terminal): boolean;
 }
 
 /**
@@ -245,7 +265,7 @@ export interface Command {
   /**
    * The surface the command runs in.
    */
-  readonly scope: 'application' | 'editor';
+  readonly scope: 'application' | 'editor' | 'terminal';
 
   /**
    * The command's id, namespaced by the plugin's, e.g. `io.example.rename`.
@@ -327,4 +347,39 @@ export interface EditorCommand extends Command {
    * Returns whether the command applied. If it did not, its keys fall through to the next command.
    */
   run(application: Application, view: EditorView): boolean;
+}
+
+/**
+ * A command that runs in an active terminal.
+ *
+ * Its keys fire while a terminal has focus, instead of being sent to the shell.
+ */
+export interface TerminalCommand extends Command {
+  readonly scope: 'terminal';
+
+  /**
+   * Returns whether the command can run. Defaults to true.
+   *
+   * A disabled command is greyed out in menus, and pressing its keys does not run it.
+   */
+  enabled?(application: Application, terminal: Terminal): boolean;
+
+  /**
+   * Returns whether the command is shown in menus. Defaults to true.
+   */
+  shown?(application: Application, terminal: Terminal): boolean;
+
+  /**
+   * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
+   * a command that is neither.
+   */
+  active?(application: Application, terminal: Terminal): boolean;
+
+  /**
+   * Runs the command against `terminal`.
+   *
+   * Returns whether the command applied. If it did not, its keys fall through to the next command, and then to the
+   * shell.
+   */
+  run(application: Application, terminal: Terminal): boolean;
 }

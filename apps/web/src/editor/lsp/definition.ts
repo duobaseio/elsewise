@@ -33,7 +33,7 @@ const SERVER: EditorNavigationSource = {
 /**
  * Replaces `@codemirror/lsp-client`'s `jumpToDefinitionKeymap`.
  */
-export const GO_TO_DEFINITION: EditorCommand = {
+export const EDITOR_GO_TO_DEFINITION: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.goToDefinition,
   label: 'Go to definition',
