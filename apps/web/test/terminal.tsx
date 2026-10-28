@@ -35,7 +35,7 @@ export function session() {
   return fake;
 }
 
-export async function mount(fake: ITerminalAddon, settings = SETTINGS) {
+export async function mount(fake: ITerminalAddon, settings = SETTINGS, preview = false) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
   const terminals = new TerminalManager();
@@ -46,7 +46,7 @@ export async function mount(fake: ITerminalAddon, settings = SETTINGS) {
       <TerminalManagerContext value={terminals}>
         <CommandManagerContext value={commands}>
           <div data-testid="frame" style={{ height: 300, width: 600 }}>
-            <Terminal ref={ref} session={fake} />
+            <Terminal ref={ref} session={fake} preview={preview} />
           </div>
         </CommandManagerContext>
       </TerminalManagerContext>

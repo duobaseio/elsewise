@@ -12,21 +12,32 @@ import { terminalKeymap } from '@/command/keymap';
 import { monoFontStack } from '@/settings/fonts';
 import { useSettings } from '@/settings/settings';
 import { TerminalContextMenu } from '@/terminal/context-menu/context-menu';
-import { useTerminalSearch } from '@/terminal/search/search-bar';
+import { TerminalSearch } from '@/terminal/search/search-bar';
 import { useTerminalManager } from '@/terminal/terminal-manager';
 
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
 
-/** `session` is the shell on the far side: an addon that reads the terminal's input and writes its output. */
-export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefObject<XTerm | null> }) {
+/**
+ * `session` is the shell on the far side: an addon that reads the terminal's input and writes its output.
+ *
+ * A `preview`, e.g. in the settings, has no find, context menu or command keys, and never becomes the active terminal.
+ */
+export function Terminal({
+  session,
+  ref,
+  preview = false,
+}: {
+  session: ITerminalAddon;
+  ref?: RefObject<XTerm | null>;
+  preview?: boolean;
+}) {
   const host = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<{ xterm: XTerm; fit: FitAddon } | null>(null);
   const ligatures = useRef<LigaturesAddon>(null);
   const commands = useCommandManager();
   const terminals = useTerminalManager();
   const [keymap] = useState(() => terminalKeymap(commands));
-  const { search, bar } = useTerminalSearch();
 
   const colors = useActiveTheme().terminal;
   const theme = useMemo<ITheme>(() => {
@@ -71,8 +82,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       new Unicode11Addon(),
       new WebLinksAddon((_event, uri) => window.open(uri, '_blank', 'noopener')),
       new ClipboardAddon(),
-      keymap,
-      search,
+      ...(preview ? [] : [keymap]),
       session,
     ]) {
       xterm.loadAddon(addon);
@@ -89,17 +99,26 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       console.warn('terminal: WebGL unavailable, using the DOM renderer', error);
     }
 
+    // Fitting clears and repaints the canvas a frame later, causing flickers when fitting on every resize.
     fit.fit();
-    const observer = new ResizeObserver(() => fit.fit());
+    let settle: ReturnType<typeof setTimeout> | undefined;
+    const observer = new ResizeObserver(() => {
+      clearTimeout(settle);
+      settle = setTimeout(() => fit.fit(), 100);
+    });
+
     observer.observe(host.current);
     setTerminal({ xterm, fit });
     // DO NOT REORDER.
 
     const activate = () => terminals.activate(xterm);
-    xterm.textarea?.addEventListener('focus', activate);
+    if (!preview) {
+      xterm.textarea?.addEventListener('focus', activate);
+    }
 
     return () => {
       observer.disconnect();
+      clearTimeout(settle);
       xterm.textarea?.removeEventListener('focus', activate);
       terminals.deactivate(xterm);
       ligatures.current?.dispose();
@@ -203,12 +222,14 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
     scrollback,
   ]);
 
-  return (
+  return preview ? (
+    <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
+  ) : (
     <div className="relative h-full">
       <TerminalContextMenu terminal={terminal?.xterm ?? null}>
         <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
       </TerminalContextMenu>
-      {bar}
+      <TerminalSearch terminal={terminal?.xterm ?? null} />
     </div>
   );
 }

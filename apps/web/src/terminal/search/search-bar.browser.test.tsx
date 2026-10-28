@@ -9,7 +9,7 @@ import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap';
 import { settingsQuery } from '@/settings/settings';
-import { useTerminalSearch } from '@/terminal/search/search-bar';
+import { TerminalSearch } from '@/terminal/search/search-bar';
 import { builtInCommands } from '../../../test/commands';
 
 import '@xterm/xterm/css/xterm.css';
@@ -22,8 +22,7 @@ const SETTINGS: Settings = {
   },
 };
 
-// Renders a bare terminal with the commands' keymap, the search add-on and its bar. Returns the settings' client and the
-// terminal.
+// Renders a bare terminal with the commands' keymap and its search. Returns the settings' client and the terminal.
 async function mount() {
   const commands = builtInCommands();
   const client = new QueryClient();
@@ -34,7 +33,7 @@ async function mount() {
   });
   function Probe() {
     const [keymap] = useState(() => terminalKeymap(commands));
-    const { search, bar } = useTerminalSearch();
+    const [terminal, setTerminal] = useState<XTerm | null>(null);
     const host = useRef<HTMLDivElement>(null);
     useEffect(() => {
       if (host.current === null) {
@@ -43,15 +42,15 @@ async function mount() {
       // The search add-on's highlights reach proposed API.
       const xterm = new XTerm({ allowProposedApi: true });
       xterm.loadAddon(keymap);
-      xterm.loadAddon(search);
       xterm.open(host.current);
+      setTerminal(xterm);
       resolve(xterm);
       return () => xterm.dispose();
-    }, [keymap, search]);
+    }, [keymap]);
     return (
       <div className="relative" style={{ height: 300, width: 600 }}>
         <div className="h-full" ref={host} />
-        {bar}
+        <TerminalSearch terminal={terminal} />
       </div>
     );
   }
@@ -75,7 +74,7 @@ async function find(xterm: XTerm, text: string) {
   return field;
 }
 
-describe('useTerminalSearch', () => {
+describe('TerminalSearch', () => {
   test('opens with selected line', async () => {
     const { xterm } = await mount();
     await new Promise<void>((resolve) => xterm.write('hello world\r\nhello again', resolve));

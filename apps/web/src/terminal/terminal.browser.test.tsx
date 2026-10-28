@@ -1,11 +1,12 @@
 import type { Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { resolveActiveTheme, THEMES } from '@/appearance/themes';
 import { settingsQuery } from '@/settings/settings';
-import { mount, SETTINGS, session } from '../../test/terminal';
+import { mount, rightClick, SETTINGS, session } from '../../test/terminal';
 
 // Drags the mouse across `text`, the first thing on the first row.
 async function select(xterm: XTerm, text: string) {
@@ -293,5 +294,41 @@ describe('Terminal', () => {
     expect(xterm.options.macOptionIsMeta).toBe(true);
     expect(xterm.options.scrollback).toBe(2000);
     expect(xterm.options.theme).toEqual({ ...dracula, selectionBackground: selection });
+  });
+
+  describe('preview', () => {
+    test('skips activation', async () => {
+      const { terminals, xterm } = await mount(session(), SETTINGS, true);
+
+      xterm.focus();
+
+      expect(terminals.active).toBeNull();
+    });
+
+    test('skips command keys', async () => {
+      const readText = vi.spyOn(navigator.clipboard, 'readText').mockResolvedValue('pasted');
+      const { xterm } = await mount(session(), SETTINGS, true);
+      xterm.focus();
+
+      await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}v{/Meta}' : '{Control>}{Shift>}v{/Shift}{/Control}');
+
+      expect(readText).not.toHaveBeenCalled();
+    });
+
+    test('skips search', async () => {
+      const { commands, xterm } = await mount(session(), SETTINGS, true);
+
+      expect(commands.run(DEFAULT_COMMANDS.terminal.search.find, xterm)).toBe(false);
+      expect(page.getByRole('textbox', { name: 'Find' }).query()).toBeNull();
+    });
+
+    test('skips context menu', async () => {
+      const { xterm } = await mount(session(), SETTINGS, true);
+
+      await rightClick(xterm);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      expect(page.getByRole('menu').query()).toBeNull();
+    });
   });
 });
