@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import type { ContextMenuGroup, ContextMenuItem, EditorToolbarItem } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
+import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { EditorManager } from '@/editor/editor-manager';
 
 // Returns an item that runs the command with `id`.
@@ -99,71 +99,6 @@ describe('addContextMenu', () => {
     dispose();
 
     expect(editor.contextMenu).toEqual(DEFAULT_CONTEXT_MENU);
-  });
-
-  test('appends same-group items in order added', () => {
-    const editor = new EditorManager();
-    editor.addContextMenu([group('a', [item('first')])]);
-    editor.addContextMenu([group('a', [item('second')])]);
-
-    expect(editor.contextMenu).toContainEqual(group('a', [item('first'), item('second')]));
-  });
-
-  test('removes only disposed items from group', () => {
-    const editor = new EditorManager();
-    const dispose = editor.addContextMenu([group('a', [item('first')])]);
-    editor.addContextMenu([group('a', [item('second')])]);
-    dispose();
-
-    expect(editor.contextMenu).toContainEqual(group('a', [item('second')]));
-  });
-
-  test('removes only disposed addition when added twice', () => {
-    const editor = new EditorManager();
-    const added = [group('a', [item('first')])];
-    const dispose = editor.addContextMenu(added);
-    editor.addContextMenu(added);
-    dispose();
-
-    expect(editor.contextMenu).toContainEqual(group('a', [item('first')]));
-  });
-
-  test('takes first defined order and submenu', () => {
-    const editor = new EditorManager();
-    editor.addContextMenu([group('a', [item('first')])]);
-    editor.addContextMenu([group('a', [item('second')], { order: 1, in: 'menu' })]);
-
-    expect(editor.contextMenu).toContainEqual(group('a', [item('first'), item('second')], { order: 1, in: 'menu' }));
-  });
-
-  test('keeps first order and submenu and warns on differing', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const editor = new EditorManager();
-    editor.addContextMenu([group('a', [], { order: 1, in: 'menu' })]);
-    editor.addContextMenu([group('a', [], { order: 2, in: 'other' })]);
-
-    expect(editor.contextMenu).toContainEqual(group('a', [], { order: 1, in: 'menu' }));
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ignoring 2'));
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ignoring other'));
-  });
-
-  test('ignores repeated order and submenu', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const editor = new EditorManager();
-    editor.addContextMenu([group('a', [], { order: 1, in: 'menu' })]);
-    editor.addContextMenu([group('a', [], { order: 1, in: 'menu' })]);
-
-    expect(warn).not.toHaveBeenCalled();
-  });
-
-  test('takes later order once first disposed', () => {
-    const editor = new EditorManager();
-    const dispose = editor.addContextMenu([group('a', [], { order: 1 })]);
-    editor.addContextMenu([group('a', [], { order: 2 })]);
-    dispose();
-
-    expect(editor.contextMenu).toContainEqual(group('a', [], { order: 2 }));
   });
 });
 

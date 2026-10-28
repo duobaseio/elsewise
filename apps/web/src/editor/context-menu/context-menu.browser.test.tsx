@@ -3,8 +3,8 @@ import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
-import { builtInCommands } from '../../test/commands';
-import { group, item, labels, menuitem, mount, open, submenu } from '../../test/context-menu';
+import { builtInCommands } from '../../../test/commands';
+import { group, item, labels, menuitem, mount, open, submenu } from '../../../test/context-menu';
 
 // Returns an editor command with `id` whose label is `id`, with `run` and the `rest` of its fields.
 function command(id: string, run: EditorCommand['run'] = () => true): EditorCommand {
@@ -28,7 +28,7 @@ describe('EditorContextMenu', () => {
 
     await open(view, 0);
     await userEvent.click(menuitem('Item'));
-    expect(run).toHaveBeenCalledWith(commands.application, view);
+    await vi.waitFor(() => expect(run).toHaveBeenCalledWith(commands.application, view));
   });
 
   test('focuses editor before running item', async () => {

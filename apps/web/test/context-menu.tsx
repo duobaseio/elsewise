@@ -9,7 +9,7 @@ import { expect } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
-import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
+import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu/context-menu';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { builtInCommands } from './commands';
 

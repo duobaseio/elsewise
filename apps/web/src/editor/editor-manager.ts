@@ -3,15 +3,14 @@ import type { EditorView } from '@codemirror/view';
 import type {
   Commands,
   ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSubmenuItem,
   Disposable,
   Editor,
   EditorDocument,
   EditorToolbarItem,
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
+import { ContextMenuManager } from '@/command/context-menu-manager';
+import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { DiffManager } from '@/editor/diff/diff-manager';
 import { LanguageManager } from '@/editor/language-manager';
 
@@ -30,8 +29,7 @@ export class EditorManager implements Editor {
   private current: EditorView | null = null;
   private addedExtensions: readonly (readonly (Extension | ((document: EditorDocument) => Extension))[])[] = [];
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
-  private addedContextMenu: readonly (readonly ContextMenuGroup[])[] = [DEFAULT_CONTEXT_MENU];
-  private currentContextMenu: readonly ContextMenuGroup[] = this.merge(this.addedContextMenu.flat());
+  private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
   private addedToolbarItems: readonly (readonly EditorToolbarItem[])[] = [];
   private currentToolbarItems: readonly EditorToolbarItem[] = [];
 
@@ -76,22 +74,14 @@ export class EditorManager implements Editor {
   }
 
   /**
-   * The context menu's groups, one per id, in order of first addition.
+   * The context menu's deduplicated groups, one per id, in order of first addition.
    */
   get contextMenu(): readonly ContextMenuGroup[] {
-    return this.currentContextMenu;
+    return this.contextMenus.groups;
   }
 
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
-    const added = [...groups];
-    this.addedContextMenu = [...this.addedContextMenu, added];
-    this.currentContextMenu = this.merge(this.addedContextMenu.flat());
-    this.notify();
-    return () => {
-      this.addedContextMenu = this.addedContextMenu.filter((other) => other !== added);
-      this.currentContextMenu = this.merge(this.addedContextMenu.flat());
-      this.notify();
-    };
+    return this.contextMenus.add(groups);
   }
 
   /**
@@ -111,46 +101,6 @@ export class EditorManager implements Editor {
       this.currentToolbarItems = this.addedToolbarItems.flat();
       this.notify();
     };
-  }
-
-  // Returns `groups` with those of an id as one: their items in order of addition, and the first defined `order` and
-  // `in`.
-  private merge(groups: readonly ContextMenuGroup[]): ContextMenuGroup[] {
-    const merged = new Map<
-      string,
-      { order?: number; in?: string; items: (ContextMenuItem | ContextMenuSubmenuItem)[] }
-    >();
-    for (const group of groups) {
-      const existing = merged.get(group.id);
-      if (existing === undefined) {
-        merged.set(group.id, {
-          ...(group.order === undefined ? {} : { order: group.order }),
-          ...(group.in === undefined ? {} : { in: group.in }),
-          items: [...group.items],
-        });
-        continue;
-      }
-
-      if (group.order !== undefined) {
-        if (existing.order === undefined) {
-          existing.order = group.order;
-        } else if (existing.order !== group.order) {
-          console.warn(`Context menu group ${group.id} already has order ${existing.order}, ignoring ${group.order}`);
-        }
-      }
-
-      if (group.in !== undefined) {
-        if (existing.in === undefined) {
-          existing.in = group.in;
-        } else if (existing.in !== group.in) {
-          console.warn(`Context menu group ${group.id} is already in ${existing.in}, ignoring ${group.in}`);
-        }
-      }
-
-      existing.items.push(...group.items);
-    }
-
-    return [...merged].map(([id, group]) => ({ id, ...group }));
   }
 
   /**

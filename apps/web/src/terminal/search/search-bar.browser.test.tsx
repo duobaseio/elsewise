@@ -87,6 +87,19 @@ describe('useTerminalSearch', () => {
     await expect.element(page.getByRole('status')).toHaveTextContent('1/2');
   });
 
+  test('replaces query with selected line when open', async () => {
+    const { xterm } = await mount();
+    const field = await find(xterm, 'hello world');
+    await userEvent.fill(field, 'hello');
+    await expect.element(page.getByRole('status')).toHaveTextContent('1/1');
+    xterm.select(6, 0, 5);
+
+    await find(xterm, '');
+
+    await expect.element(field).toHaveValue('world');
+    await expect.element(page.getByRole('status')).toHaveTextContent('1/1');
+  });
+
   test('moves between matches', async () => {
     const { xterm } = await mount();
     const field = await find(xterm, 'one two one');

@@ -138,6 +138,15 @@ describe('Terminal', () => {
     expect(save).toHaveBeenCalledWith(withTerminal({ copyOnSelect: true }));
   });
 
+  test.runIf(PLATFORM === 'mac')('saves option-click to select', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Option-click to select' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withTerminal({ macOptionClickForcesSelection: true }));
+  });
+
   test.runIf(PLATFORM === 'mac')('saves option as meta', async () => {
     const save = await mount();
 
@@ -147,10 +156,11 @@ describe('Terminal', () => {
     expect(save).toHaveBeenCalledWith(withTerminal({ macOptionIsMeta: true }));
   });
 
-  test.skipIf(PLATFORM === 'mac')('hides option as meta', async () => {
+  test.skipIf(PLATFORM === 'mac')('hides macOS options', async () => {
     await mount();
     await expect.element(page.getByRole('switch', { name: 'Cursor blinking' })).toBeVisible();
 
+    expect(document.querySelector('[aria-label="Option-click to select"]')).toBeNull();
     expect(document.querySelector('[aria-label="Option as Meta"]')).toBeNull();
   });
 

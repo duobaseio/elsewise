@@ -101,6 +101,12 @@ export const DEFAULT_COMMANDS = {
     search: {
       find: 'elsewise.terminal.search.find',
     },
+    selection: {
+      selectAll: 'elsewise.terminal.selection.selectAll',
+    },
+    buffer: {
+      clear: 'elsewise.terminal.buffer.clear',
+    },
   },
 } as const;
 
@@ -204,6 +210,12 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
     search: {
       find: [{ key: 'Ctrl-Shift-f', mac: 'Mod-f' }],
+    },
+    selection: {
+      selectAll: [{ key: 'Ctrl-Shift-a', mac: 'Mod-a' }],
+    },
+    buffer: {
+      clear: [{ mac: 'Mod-k' }],
     },
   },
 };

@@ -12,6 +12,7 @@ export {
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
+  DEFAULT_TERMINAL_CONTEXT_MENU,
 } from './context-menu.ts';
 export {
   DEFAULT_DIFF_SOURCES,

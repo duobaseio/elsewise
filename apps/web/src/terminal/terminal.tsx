@@ -11,6 +11,7 @@ import { useCommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap';
 import { monoFontStack } from '@/settings/fonts';
 import { useSettings } from '@/settings/settings';
+import { TerminalContextMenu } from '@/terminal/context-menu/context-menu';
 import { useTerminalSearch } from '@/terminal/search/search-bar';
 import { useTerminalManager } from '@/terminal/terminal-manager';
 
@@ -37,6 +38,9 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
   const cursorInactiveStyle = cursorStyle === 'block' ? 'outline' : cursorStyle;
   const cursorBlink = useSettings((settings) => settings.appearance.terminal.cursorBlink);
   const copyOnSelect = useSettings((settings) => settings.appearance.terminal.copyOnSelect);
+  const macOptionClickForcesSelection = useSettings(
+    (settings) => settings.appearance.terminal.macOptionClickForcesSelection,
+  );
   const macOptionIsMeta = useSettings((settings) => settings.appearance.terminal.macOptionIsMeta);
   const scrollback = useSettings((settings) => settings.appearance.terminal.scrollback);
 
@@ -54,6 +58,7 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       cursorStyle,
       cursorInactiveStyle,
       cursorBlink,
+      macOptionClickForcesSelection,
       macOptionIsMeta,
       scrollback,
       theme,
@@ -157,15 +162,16 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
     const listener = terminal.xterm.onSelectionChange(() => {
       changed = true;
     });
-
     const copy = () => {
       if (changed && terminal.xterm.hasSelection()) {
         void navigator.clipboard.writeText(terminal.xterm.getSelection());
       }
     };
-    const select = () => {
-      changed = false;
-      document.addEventListener('mouseup', copy, { once: true });
+    const select = (event: MouseEvent) => {
+      if (event.button === 0) {
+        changed = false;
+        document.addEventListener('mouseup', copy, { once: true });
+      }
     };
     element.addEventListener('mousedown', select);
 
@@ -182,14 +188,26 @@ export function Terminal({ session, ref }: { session: ITerminalAddon; ref?: RefO
       terminal.xterm.options.cursorStyle = cursorStyle;
       terminal.xterm.options.cursorInactiveStyle = cursorInactiveStyle;
       terminal.xterm.options.cursorBlink = cursorBlink;
+      terminal.xterm.options.macOptionClickForcesSelection = macOptionClickForcesSelection;
       terminal.xterm.options.macOptionIsMeta = macOptionIsMeta;
       terminal.xterm.options.scrollback = scrollback;
     }
-  }, [terminal, theme, cursorStyle, cursorInactiveStyle, cursorBlink, macOptionIsMeta, scrollback]);
+  }, [
+    terminal,
+    theme,
+    cursorStyle,
+    cursorInactiveStyle,
+    cursorBlink,
+    macOptionClickForcesSelection,
+    macOptionIsMeta,
+    scrollback,
+  ]);
 
   return (
     <div className="relative h-full">
-      <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
+      <TerminalContextMenu terminal={terminal?.xterm ?? null}>
+        <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
+      </TerminalContextMenu>
       {bar}
     </div>
   );

@@ -13,15 +13,23 @@ import {
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
 import type { ContextMenuGroup } from '@elsewise/plugin';
+import type { Terminal as XTerm } from '@xterm/xterm';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
-import { type CommandManager, useCommandManager } from '@/command/command-manager';
+import { type CommandManager, isTerminal, useCommandManager } from '@/command/command-manager';
 
 export interface CommandContextMenuProps {
   /**
    * The menu's groups, one per id.
    */
   menu: readonly ContextMenuGroup[];
-  view?: RefObject<EditorView | null>;
+  /**
+   * The editor or terminal that the menu's commands run against.
+   */
+  target?: RefObject<EditorView | XTerm | null>;
+  /**
+   * Returns whether the menu opens for `event`, e.g. a right-click or a touch's long-press. Defaults to true.
+   */
+  opens?: (event: Event) => boolean;
   /**
    * Called once the menu has closed, before the clicked item runs, e.g. to give the focus back.
    */
@@ -54,18 +62,25 @@ type Entry =
       readonly groups: readonly Group[];
     };
 
-export function CommandContextMenu({ menu, view, onClosed, className, children }: CommandContextMenuProps) {
+export function CommandContextMenu({ menu, target, opens, onClosed, className, children }: CommandContextMenuProps) {
   const [groups, setGroups] = useState<readonly Group[]>([]);
   const commands = useCommandManager();
   const clicked = useRef<(() => void) | null>(null);
+  const refocused = useRef(false);
 
-  // Opens only when there is something to show.
-  function onOpenChange(open: boolean, details: { cancel(): void }): void {
+  // Opens only when `opens` allows it and there is something to show.
+  function onOpenChange(open: boolean, details: { event: Event; cancel(): void }): void {
     if (!open) {
       return;
     }
 
-    const resolved = resolve(menu, commands, view?.current ?? null, []);
+    if (opens?.(details.event) === false) {
+      details.cancel();
+      return;
+    }
+
+    refocused.current = false;
+    const resolved = resolve(menu, commands, target?.current ?? null, []);
     if (resolved.length === 0) {
       details.cancel();
       return;
@@ -84,14 +99,18 @@ export function CommandContextMenu({ menu, view, onClosed, className, children }
       return;
     }
 
-    onClosed?.();
+    if (onClosed !== undefined) {
+      onClosed();
+      refocused.current = true;
+    }
     run();
   }
 
   return (
     <ContextMenu onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
       <ContextMenuTrigger className={className}>{children}</ContextMenuTrigger>
-      <ContextMenuContent>
+      {/* Base UI refocuses on the trigger after running a command, stealing focus from whatever the command focused. */}
+      <ContextMenuContent finalFocus={() => !refocused.current}>
         <Groups groups={groups} onClick={(run) => (clicked.current = run)} />
       </ContextMenuContent>
     </ContextMenu>
@@ -103,7 +122,7 @@ export function CommandContextMenu({ menu, view, onClosed, className, children }
 function resolve(
   menu: readonly ContextMenuGroup[],
   commands: CommandManager,
-  view: EditorView | null,
+  target: EditorView | XTerm | null,
   path: readonly string[],
 ): Group[] {
   const groups: Group[] = [];
@@ -129,7 +148,7 @@ function resolve(
           continue;
         }
 
-        const inner = resolve(menu, commands, view, [...path, item.submenu]);
+        const inner = resolve(menu, commands, target, [...path, item.submenu]);
         if (inner.length > 0) {
           entries.push({
             type: 'submenu',
@@ -155,10 +174,14 @@ function resolve(
           shown = command.shown?.(commands.application);
           enabled = command.enabled?.(commands.application);
           active = command.active?.(commands.application);
-        } else if (command.scope === 'editor' && view !== null) {
-          shown = command.shown?.(commands.application, view);
-          enabled = command.enabled?.(commands.application, view);
-          active = command.active?.(commands.application, view);
+        } else if (command.scope === 'editor' && target !== null && !isTerminal(target)) {
+          shown = command.shown?.(commands.application, target);
+          enabled = command.enabled?.(commands.application, target);
+          active = command.active?.(commands.application, target);
+        } else if (command.scope === 'terminal' && target !== null && isTerminal(target)) {
+          shown = command.shown?.(commands.application, target);
+          enabled = command.enabled?.(commands.application, target);
+          active = command.active?.(commands.application, target);
         } else {
           continue;
         }
@@ -175,7 +198,7 @@ function resolve(
           disabled: enabled === false,
           active,
           order: item.order ?? Number.POSITIVE_INFINITY,
-          run: () => commands.run(command.id, view ?? undefined),
+          run: () => commands.run(command.id, target ?? undefined),
         });
       } catch (error) {
         console.error(`Command ${command.label} failed`, error);

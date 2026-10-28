@@ -25,3 +25,25 @@ export const TERMINAL_PASTE: TerminalCommand = {
     return true;
   },
 };
+
+export const TERMINAL_SELECT_ALL: TerminalCommand = {
+  scope: 'terminal',
+  id: DEFAULT_COMMANDS.terminal.selection.selectAll,
+  label: 'Select all',
+  defaultKeys: DEFAULT_KEYS.terminal.selection.selectAll,
+  run: (_, terminal) => {
+    terminal.selectAll();
+    return true;
+  },
+};
+
+export const TERMINAL_CLEAR: TerminalCommand = {
+  scope: 'terminal',
+  id: DEFAULT_COMMANDS.terminal.buffer.clear,
+  label: 'Clear terminal',
+  defaultKeys: DEFAULT_KEYS.terminal.buffer.clear,
+  run: (_, terminal) => {
+    terminal.clear();
+    return true;
+  },
+};

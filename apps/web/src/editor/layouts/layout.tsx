@@ -27,7 +27,7 @@ import { editorKeymap } from '@/command/keymap';
 import { actions } from '@/editor/actions';
 import { drawActiveLine } from '@/editor/active-line';
 import { completion } from '@/editor/completion';
-import { RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu';
+import { RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu/context-menu';
 import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
 import { format } from '@/editor/format';

@@ -9,7 +9,7 @@ import { useEditorManager } from '@/editor/editor-manager';
 export function EditorContextMenu({ view, children }: { view: RefObject<EditorView | null>; children: ReactNode }) {
   const menu = useEditorManager((editor) => editor.contextMenu);
   return (
-    <CommandContextMenu menu={menu} view={view} onClosed={() => view.current?.focus()} className="h-full select-auto">
+    <CommandContextMenu menu={menu} target={view} onClosed={() => view.current?.focus()} className="h-full select-auto">
       {children}
     </CommandContextMenu>
   );

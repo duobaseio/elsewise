@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { EditorContextMenu } from '@/editor/context-menu';
+import { EditorContextMenu } from '@/editor/context-menu/context-menu';
 import { drawDiffs, revertGutter } from '@/editor/diff/diff';
 import { useRevertButtons } from '@/editor/diff/revert-buttons';
 import { useEditorManager } from '@/editor/editor-manager';

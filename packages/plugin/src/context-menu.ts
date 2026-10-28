@@ -35,9 +35,22 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
 } as const;
 
 /**
+ * The terminal context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_TERMINAL_CONTEXT_MENU = {
+  search: { id: 'io.duobase.elsewise.terminal.contextMenu.search', order: 10, items: { find: 10 } },
+  clipboard: {
+    id: 'io.duobase.elsewise.terminal.contextMenu.clipboard',
+    order: 20,
+    items: { copy: 10, paste: 20, selectAll: 30 },
+  },
+  buffer: { id: 'io.duobase.elsewise.terminal.contextMenu.buffer', order: 30, items: { clear: 10 } },
+} as const;
+
+/**
  * A group of items, separated from other groups in a context menu.
  *
- * Groups with the same id in a scope, e.g. the editor, are merged. `order`, `in` and items with duplicate ids all use
+ * Groups with the same id in a scope, e.g. the editor or the terminal, are merged. `order`, `in` and items with duplicate ids all use
  * the first defined values.
  *
  * ```ts

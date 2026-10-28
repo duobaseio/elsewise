@@ -175,6 +175,14 @@ export const Settings = z.lazy(() =>
             cursorStyle: CursorStyle.catch('block'),
             cursorBlink: z.boolean().catch(true),
             copyOnSelect: z.boolean().catch(false),
+            /**
+             * Whether Option-click selects text on macOS while a program tracks the mouse, e.g. tmux, instead of sending
+             * the click to it.
+             */
+            macOptionClickForcesSelection: z.boolean().catch(false),
+            /**
+             * Whether Option represents Meta on macOS instead of typing special characters.
+             */
             macOptionIsMeta: z.boolean().catch(false),
             /**
              * The number of lines kept above the screen.

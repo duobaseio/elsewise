@@ -41,7 +41,8 @@ test.each(THEMES)('terminal search bar (%s)', async (theme) => {
         <SearchBar
           decorations={{ matchOverviewRuler: '#000000', activeMatchColorOverviewRuler: '#000000' }}
           field={createRef()}
-          initial={{ query: 'session', caseSensitive: false, wholeWord: false, regex: false }}
+          query={{ query: 'session', caseSensitive: false, wholeWord: false, regex: false }}
+          onChange={() => {}}
           onClose={() => {}}
           search={search}
         />

@@ -4,7 +4,7 @@ import { EditorView } from '@codemirror/view';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
 import type { EditorDocumentLayout } from '@elsewise/plugin';
 import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef } from 'react';
-import { EditorContextMenu } from '@/editor/context-menu';
+import { EditorContextMenu } from '@/editor/context-menu/context-menu';
 import { drawDiffs, revertGutter } from '@/editor/diff/diff';
 import { type RevertButtons, useRevertButtons } from '@/editor/diff/revert-buttons';
 import { useEditorManager } from '@/editor/editor-manager';
