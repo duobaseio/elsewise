@@ -28,9 +28,7 @@ export function migrate(database: DatabaseSync, migrations: readonly Migration[]
   for (const revision of applied) {
     const expected = known.get(revision.version as string);
     if (expected === undefined) {
-      throw new Error(
-        `The database has an unknown migration ${revision.version}_${revision.description}.`,
-      );
+      throw new Error(`The database has an unknown migration ${revision.version}_${revision.description}.`);
     }
     if (expected !== revision.hash) {
       throw new Error(`Migration ${revision.version}_${revision.description} has changed since it was applied.`);
