@@ -44,11 +44,11 @@ await fs.writeFile(
 const db = openDatabase(':memory:', migrations);
 try {
   await generate({
-    db,
+    db: db.database,
     dialect: new SqliteDialect(),
     outFile: path.join(gen, 'database.ts'),
     excludePattern: 'schema_revision',
   });
 } finally {
-  await db.destroy();
+  await db.close();
 }

@@ -44,7 +44,7 @@ export interface DaemonOptions {
 export function createDaemon(options: DaemonOptions): Daemon {
   const data = dataDirectory(options.dataDirectory);
   fs.mkdirSync(data.root, { recursive: true });
-  const database = openDatabase(data.database, MIGRATIONS);
+  const { database, close } = openDatabase(data.database, MIGRATIONS);
 
   const watcher = new DirectoryWatcher({
     ignore: ['**/.git/objects/**', '**/node_modules/**', TEMPORARY_FILE_PATTERN],
@@ -77,8 +77,6 @@ export function createDaemon(options: DaemonOptions): Daemon {
       serve(channel, GitService, git);
       serve(channel, ProjectService, project);
     },
-    close() {
-      return database.destroy();
-    },
+    close,
   };
 }
