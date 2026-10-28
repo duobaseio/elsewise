@@ -4,9 +4,7 @@ import path from 'node:path';
 const ORGANIZATION = 'duobase';
 const APPLICATION = 'elsewise';
 
-/**
- * Returns the directory where the user-facing settings and configuration live.
- */
+/** Returns the directory where the user-facing settings and configuration live. */
 export function configLocalDir(): string {
   switch (process.platform) {
     case 'win32':
@@ -18,9 +16,7 @@ export function configLocalDir(): string {
   }
 }
 
-/**
- * Returns the directory where the application's state lives, next to the host's database and worktrees.
- */
+/** Returns the directory where the application's state lives. */
 export function dataLocalDir(): string {
   switch (process.platform) {
     case 'win32':
@@ -30,6 +26,16 @@ export function dataLocalDir(): string {
     default:
       return path.join(xdg('XDG_DATA_HOME', '.local/share'), APPLICATION);
   }
+}
+
+/** Returns the directory where the daemon's state lives. */
+export function daemonDataDir(): string {
+  return path.join(dataLocalDir(), 'daemon');
+}
+
+/** Returns the directory where the projects and workspaces are saved. */
+export function codeDir(): string {
+  return path.join(os.homedir(), APPLICATION);
 }
 
 function localAppData(): string {

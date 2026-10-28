@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
-import { errnoOf } from '../fs/error';
+import { refuseOccupiedPath } from '../fs/directory';
 import { isBinary } from '../fs/file';
 import { toNativeRoot } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
@@ -877,18 +877,6 @@ async function refuseExistingBranch(git: Git, name: string): Promise<void> {
 async function refuseExistingRemote(git: Git, name: string): Promise<void> {
   if ((await readRemotes(git)).some((remote) => remote.name === name)) {
     throw new TransportError(Code.ALREADY_EXISTS, `remote ${name} already exists`);
-  }
-}
-
-async function refuseOccupiedPath(absoluteNativePath: string, acceptable: 'empty' | 'missing'): Promise<void> {
-  const entries = await fs.readdir(absoluteNativePath).catch((error: unknown) => {
-    if (errnoOf(error) === 'ENOENT') {
-      return undefined;
-    }
-    return ['?']; // Unknown error occurred.
-  });
-  if (entries !== undefined && (acceptable === 'missing' || entries.length > 0)) {
-    throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the path');
   }
 }
 
