@@ -53,7 +53,7 @@ import {
   EDITOR_UNFOLD_ALL,
   EDITOR_UNINDENT,
 } from '@/editor/codemirror-commands';
-import { EDITOR_COPY, EDITOR_CUT, EDITOR_PASTE } from '@/editor/default-context-menu';
+import { EDITOR_COPY, EDITOR_CUT, EDITOR_PASTE } from '@/editor/context-menu/default-context-menu';
 import { EDITOR_NEXT_DIAGNOSTIC, EDITOR_PREVIOUS_DIAGNOSTIC } from '@/editor/diagnostics';
 import {
   EDITOR_BRANCH_DIFF,
@@ -72,7 +72,7 @@ import { EDITOR_FIND_USAGES } from '@/editor/lsp/references';
 import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
 import { OPEN_SETTINGS } from '@/settings/settings';
-import { TERMINAL_COPY, TERMINAL_PASTE } from '@/terminal/commands';
+import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
 import { TERMINAL_FIND } from '@/terminal/search/search-bar';
 
 export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[] = [
@@ -142,6 +142,8 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | Te
   TERMINAL_COPY,
   TERMINAL_PASTE,
   TERMINAL_FIND,
+  TERMINAL_SELECT_ALL,
+  TERMINAL_CLEAR,
 ];
 
 /**
@@ -302,7 +304,7 @@ export class CommandManager implements Commands {
   }
 }
 
-function isTerminal(target: EditorView | XTerm): target is XTerm {
+export function isTerminal(target: EditorView | XTerm): target is XTerm {
   return 'buffer' in target;
 }
 

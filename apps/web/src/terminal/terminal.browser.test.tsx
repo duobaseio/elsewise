@@ -1,65 +1,11 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import type { Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
-import { createRef } from 'react';
+import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
-import { render } from 'vitest-browser-react';
 import { resolveActiveTheme, THEMES } from '@/appearance/themes';
-import { CommandManagerContext } from '@/command/command-manager';
-import { EditorManager } from '@/editor/editor-manager';
 import { settingsQuery } from '@/settings/settings';
-import { Terminal } from '@/terminal/terminal';
-import { TerminalManager, TerminalManagerContext } from '@/terminal/terminal-manager';
-import { builtInCommands } from '../../test/commands';
-
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
-  appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
-  },
-};
-
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-function session() {
-  const fake = {
-    write: vi.fn<(data: string) => void>(),
-    resize: vi.fn<(cols: number, rows: number) => void>(),
-    terminal: null as XTerm | null,
-    activate(terminal: XTerm) {
-      fake.terminal = terminal;
-      terminal.onData(fake.write);
-      terminal.onResize(({ cols, rows }) => fake.resize(cols, rows));
-    },
-    dispose() {},
-  };
-  return fake;
-}
-
-async function mount(fake: ITerminalAddon, settings = SETTINGS) {
-  const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, settings);
-  const terminals = new TerminalManager();
-  const ref = createRef<XTerm | null>();
-  const screen = await render(
-    <QueryClientProvider client={client}>
-      <TerminalManagerContext value={terminals}>
-        <CommandManagerContext value={builtInCommands(new EditorManager(), terminals)}>
-          <div data-testid="frame" style={{ height: 300, width: 600 }}>
-            <Terminal ref={ref} session={fake} />
-          </div>
-        </CommandManagerContext>
-      </TerminalManagerContext>
-    </QueryClientProvider>,
-  );
-  await expect.poll(() => ref.current).not.toBeNull();
-  return { client, screen, terminals, xterm: ref.current as XTerm };
-}
+import { mount, SETTINGS, session } from '../../test/terminal';
 
 // Drags the mouse across `text`, the first thing on the first row.
 async function select(xterm: XTerm, text: string) {
@@ -89,6 +35,10 @@ async function find(xterm: XTerm, text: string) {
 function line(xterm: XTerm, row: number): string {
   return xterm.buffer.active.getLine(row)?.translateToString(true) ?? '';
 }
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('Terminal', () => {
   test('activates session', async () => {
@@ -309,6 +259,7 @@ describe('Terminal', () => {
     await expect.poll(() => xterm.options.fontSize).toBe(12);
     expect(xterm.options.lineHeight).toBe(1.0625);
     expect(xterm.options.cursorStyle).toBe('block');
+    expect(xterm.options.macOptionClickForcesSelection).toBe(false);
     expect(xterm.options.macOptionIsMeta).toBe(false);
     expect(xterm.options.theme?.background).toBe(elsewise.background);
 
@@ -322,6 +273,7 @@ describe('Terminal', () => {
           cursorStyle: 'bar',
           cursorBlink: false,
           copyOnSelect: false,
+          macOptionClickForcesSelection: true,
           macOptionIsMeta: true,
           scrollback: 2000,
         },
@@ -337,6 +289,7 @@ describe('Terminal', () => {
     expect(xterm.options.lineHeight).toBe(1.2);
     expect(xterm.options.cursorStyle).toBe('bar');
     expect(xterm.options.cursorBlink).toBe(false);
+    expect(xterm.options.macOptionClickForcesSelection).toBe(true);
     expect(xterm.options.macOptionIsMeta).toBe(true);
     expect(xterm.options.scrollback).toBe(2000);
     expect(xterm.options.theme).toEqual({ ...dracula, selectionBackground: selection });

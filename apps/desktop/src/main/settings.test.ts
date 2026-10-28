@@ -285,6 +285,7 @@ describe('settings:load', () => {
       cursorStyle: 'bar',
       cursorBlink: false,
       copyOnSelect: true,
+      macOptionClickForcesSelection: true,
       macOptionIsMeta: true,
       scrollback: 50000,
     };
@@ -295,6 +296,7 @@ describe('settings:load', () => {
       { cursorStyle: 'beam' },
       { cursorBlink: 'yes' },
       { copyOnSelect: 'yes' },
+      { macOptionClickForcesSelection: 'yes' },
       { macOptionIsMeta: 'yes' },
       { scrollback: 999 },
       { scrollback: 100001 },

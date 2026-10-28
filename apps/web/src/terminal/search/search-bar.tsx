@@ -23,7 +23,7 @@ const FIND = 'elsewise-terminal-find';
 export const TERMINAL_FIND: TerminalCommand = {
   scope: 'terminal',
   id: DEFAULT_COMMANDS.terminal.search.find,
-  label: 'Find',
+  label: 'Find…',
   defaultKeys: DEFAULT_KEYS.terminal.search.find,
   run: (_, terminal) =>
     terminal.element !== undefined && !terminal.element.dispatchEvent(new Event(FIND, { cancelable: true })),
@@ -84,7 +84,7 @@ export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } 
     const find = (event: Event) => {
       event.preventDefault();
       const selection = active.terminal.getSelection();
-      if (!open && selection !== '' && !selection.includes('\n')) {
+      if (selection !== '' && !selection.includes('\n')) {
         setQuery((query) => ({ ...query, query: selection }));
       }
       setOpen(true);
@@ -95,15 +95,15 @@ export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } 
     element.addEventListener(FIND, find);
 
     return () => element.removeEventListener(FIND, find);
-  }, [active, open]);
+  }, [active]);
 
   const bar = open && active !== null && (
     <SearchBar
       decorations={decorations}
       field={field}
-      initial={query}
-      onClose={(query) => {
-        setQuery(query);
+      query={query}
+      onChange={setQuery}
+      onClose={() => {
         setOpen(false);
         active.terminal.focus();
       }}
@@ -140,29 +140,37 @@ function channels(color: string): [number, number, number, number] {
 
 export function SearchBar({
   search,
-  initial,
+  query: current,
+  onChange,
   decorations,
   field,
   onClose,
 }: {
   search: SearchAddon;
-  initial: Query;
+  query: Query;
+  onChange: (query: Query) => void;
   decorations: NonNullable<ISearchOptions['decorations']>;
   field: RefObject<HTMLInputElement | null>;
-  onClose: (query: Query) => void;
+  onClose: () => void;
 }) {
-  const [query, setQuery] = useState(initial.query);
-  const [caseSensitive, setCaseSensitive] = useState(initial.caseSensitive);
-  const [wholeWord, setWholeWord] = useState(initial.wholeWord);
-  const [regex, setRegex] = useState(initial.regex);
+  const { query, caseSensitive, wholeWord, regex } = current;
   const [results, setResults] = useState({ resultIndex: -1, resultCount: 0 });
   const keys = useCommandManager((commands) => commands.keymap.keys.terminal);
   const options: ISearchOptions = { caseSensitive, wholeWord, regex, decorations };
   const valid = !regex || isRegex(query);
+  const typed = useRef<string | null>(null);
+
+  // Focuses the field when the bar opens, and selects its text whenever the query changes from outside the field.
+  useEffect(() => {
+    field.current?.focus();
+  }, [field]);
 
   useEffect(() => {
-    field.current?.select();
-  }, [field]);
+    if (typed.current !== query && document.activeElement === field.current) {
+      field.current?.select();
+    }
+    typed.current = null;
+  }, [field, query]);
 
   useEffect(() => {
     const listener = search.onDidChangeResults(setResults);
@@ -195,7 +203,7 @@ export function SearchBar({
       field.current?.select();
     } else if (event.key === 'Escape') {
       event.preventDefault();
-      onClose({ query, caseSensitive, wholeWord, regex });
+      onClose();
     } else if (event.key === 'Enter' && event.target === field.current && query !== '' && valid) {
       event.preventDefault();
       if (event.shiftKey) {
@@ -220,16 +228,27 @@ export function SearchBar({
           aria-label="Find"
           aria-invalid={valid ? undefined : true}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            typed.current = event.target.value;
+            onChange({ ...current, query: event.target.value });
+          }}
         />
         <div className="absolute inset-y-0 right-0.5 flex items-center gap-0.5">
-          <SearchOption label="Match case" pressed={caseSensitive} onChange={setCaseSensitive}>
+          <SearchOption
+            label="Match case"
+            pressed={caseSensitive}
+            onChange={(caseSensitive) => onChange({ ...current, caseSensitive })}
+          >
             Cc
           </SearchOption>
-          <SearchOption label="Whole word" pressed={wholeWord} onChange={setWholeWord}>
+          <SearchOption
+            label="Whole word"
+            pressed={wholeWord}
+            onChange={(wholeWord) => onChange({ ...current, wholeWord })}
+          >
             W
           </SearchOption>
-          <SearchOption label="Regex" pressed={regex} onChange={setRegex}>
+          <SearchOption label="Regex" pressed={regex} onChange={(regex) => onChange({ ...current, regex })}>
             .*
           </SearchOption>
         </div>
@@ -265,7 +284,7 @@ export function SearchBar({
         label="Close"
         hint={CLOSE}
         className="text-muted-foreground hover:text-foreground"
-        onClick={() => onClose({ query, caseSensitive, wholeWord, regex })}
+        onClick={onClose}
       >
         <Icon name="close" />
       </SearchAction>

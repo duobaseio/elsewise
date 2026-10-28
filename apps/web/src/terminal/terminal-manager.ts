@@ -1,6 +1,8 @@
-import type { Disposable, Terminal } from '@elsewise/plugin';
+import type { ContextMenuGroup, Disposable, Terminal } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { ContextMenuManager } from '@/command/context-menu-manager';
+import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
 
 /**
  * The terminal as plugins see it.
@@ -8,6 +10,7 @@ import { createContext, useCallback, useContext, useSyncExternalStore } from 're
 export class TerminalManager implements Terminal {
   private readonly listeners = new Set<() => void>();
   private current: XTerm | null = null;
+  private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
 
   get active(): XTerm | null {
     return this.current;
@@ -31,6 +34,17 @@ export class TerminalManager implements Terminal {
       this.current = null;
       this.notify();
     }
+  }
+
+  /**
+   * The context menu's deduplicated groups, in order of first addition.
+   */
+  get contextMenu(): readonly ContextMenuGroup[] {
+    return this.contextMenus.groups;
+  }
+
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    return this.contextMenus.add(groups);
   }
 
   subscribe(listener: () => void): Disposable {

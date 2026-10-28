@@ -1,5 +1,7 @@
+import type { ContextMenuGroup } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
 import { TerminalManager } from '@/terminal/terminal-manager';
 
 // Returns a terminal that stands in for xterm's, named `name`.
@@ -47,6 +49,30 @@ describe('deactivate', () => {
 
     expect(terminals.active).toBe(a);
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('addContextMenu', () => {
+  test('adds groups until disposed', () => {
+    const terminals = new TerminalManager();
+    const added: ContextMenuGroup[] = [{ id: 'reactions', order: 50, items: [{ order: 10, command: 'shrug' }] }];
+    const dispose = terminals.addContextMenu(added);
+
+    expect(terminals.contextMenu).toEqual([...DEFAULT_CONTEXT_MENU, ...added]);
+
+    dispose();
+
+    expect(terminals.contextMenu).toEqual(DEFAULT_CONTEXT_MENU);
+  });
+
+  test('notifies on change', () => {
+    const terminals = new TerminalManager();
+    const listener = vi.fn();
+    terminals.subscribe(listener);
+
+    terminals.addContextMenu([{ id: 'reactions', items: [] }])();
+
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });
 

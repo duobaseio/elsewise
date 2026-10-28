@@ -1,5 +1,7 @@
+import type { EditorView } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { ApplicationCommand, ContextMenuGroup, EditorCommand } from '@elsewise/plugin';
+import type { ApplicationCommand, ContextMenuGroup, EditorCommand, TerminalCommand } from '@elsewise/plugin';
+import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -33,7 +35,7 @@ function command(
 }
 
 // Returns commands that include `added`.
-function setUp(added: readonly (ApplicationCommand | EditorCommand)[]): CommandManager {
+function setUp(added: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): CommandManager {
   const commands = builtInCommands();
   commands.add(added);
   return commands;
@@ -100,6 +102,20 @@ describe('CommandContextMenu', () => {
 
     await open();
     expect(labels()).toEqual(['Other']);
+  });
+
+  test.each([
+    ['editor', { state: {} } as unknown as EditorView, 'Editor'],
+    ['terminal', { buffer: {} } as unknown as XTerm, 'Terminal'],
+  ])('shows commands of %s target only', async (_, target, shown) => {
+    const commands = setUp([
+      { scope: 'editor', id: 'Editor', label: 'Editor', run: () => true },
+      { scope: 'terminal', id: 'Terminal', label: 'Terminal', run: () => true },
+    ]);
+    await mount([group('a', [item('Editor'), item('Terminal')])], commands, { target: { current: target } });
+
+    await open();
+    expect(labels()).toEqual([shown]);
   });
 
   test('hides item of hidden or unknown command', async () => {
@@ -172,6 +188,24 @@ describe('CommandContextMenu', () => {
     expect(page.getByRole('menu').query()).toBeNull();
   });
 
+  test('returns focus to trigger without onClosed', async () => {
+    const commands = setUp([command('Item')]);
+    await render(
+      <CommandManagerContext value={commands}>
+        <CommandContextMenu menu={[group('a', [item('Item')])]}>
+          {/* biome-ignore lint/a11y/noNoninteractiveTabindex: a target that can take the focus back. */}
+          <div data-testid="target" style={{ width: 200, height: 100 }} tabIndex={0} />
+        </CommandContextMenu>
+      </CommandManagerContext>,
+    );
+    await userEvent.click(page.getByTestId('target'));
+    await open();
+
+    await userEvent.click(menuitem('Item'));
+
+    await expect.element(page.getByTestId('target')).toHaveFocus();
+  });
+
   test('runs item in nested submenu', async () => {
     const run = vi.fn();
     const commands = setUp([command('Nested item', run)]);
@@ -188,7 +222,7 @@ describe('CommandContextMenu', () => {
     await userEvent.click(menuitem('More'));
     await userEvent.click(menuitem('Deeper'));
     await userEvent.click(menuitem('Nested item'));
-    expect(run).toHaveBeenCalledWith(commands.application);
+    await vi.waitFor(() => expect(run).toHaveBeenCalledWith(commands.application));
   });
 
   test('shows submenu in several groups, with own labels', async () => {

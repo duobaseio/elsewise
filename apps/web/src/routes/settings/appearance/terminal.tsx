@@ -27,6 +27,10 @@ export const TERMINAL_TERMS = {
   cursorBlink: { label: 'Cursor blinking', keywords: ['caret', 'blink', 'flash'] },
   copyOnSelect: { label: 'Copy on select', keywords: ['clipboard', 'selection', 'auto copy'] },
   ...(PLATFORM === 'mac' && {
+    macOptionClickForcesSelection: {
+      label: 'Option-click to select',
+      keywords: ['alt', 'mouse', 'selection', 'tmux', 'vim'],
+    },
     macOptionIsMeta: { label: 'Option as Meta', keywords: ['alt', 'keyboard', 'emacs', 'readline'] },
   }),
   scrollback: { label: 'Scrollback', keywords: ['history', 'lines', 'buffer', 'scroll'] },
@@ -158,6 +162,20 @@ export function Terminal() {
           onCheckedChange={(copyOnSelect) => set({ copyOnSelect })}
         />
       </Row>
+
+      {TERMINAL_TERMS.macOptionClickForcesSelection && (
+        <Row
+          id="macOptionClickForcesSelection"
+          label={TERMINAL_TERMS.macOptionClickForcesSelection.label}
+          description="Hold Option to select text and open the context menu in programs that use the mouse, e.g. tmux."
+        >
+          <Switch
+            aria-label={TERMINAL_TERMS.macOptionClickForcesSelection.label}
+            checked={terminal.macOptionClickForcesSelection}
+            onCheckedChange={(macOptionClickForcesSelection) => set({ macOptionClickForcesSelection })}
+          />
+        </Row>
+      )}
 
       {TERMINAL_TERMS.macOptionIsMeta && (
         <Row

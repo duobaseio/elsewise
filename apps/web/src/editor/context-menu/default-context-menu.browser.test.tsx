@@ -3,13 +3,13 @@ import type { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, test } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { actions } from '@/editor/actions';
-import { EDITOR_COPY, EDITOR_CUT, EDITOR_PASTE } from '@/editor/default-context-menu';
+import { EDITOR_COPY, EDITOR_CUT, EDITOR_PASTE } from '@/editor/context-menu/default-context-menu';
 import { diagnostics } from '@/editor/diagnostics';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
-import { builtInCommands, commandsExtension } from '../../test/commands';
-import { DOC, labels, menuitem, mount, open } from '../../test/context-menu';
-import { StubTransport } from '../../test/stub-transport';
+import { builtInCommands, commandsExtension } from '../../../test/commands';
+import { DOC, labels, menuitem, mount, open } from '../../../test/context-menu';
+import { StubTransport } from '../../../test/stub-transport';
 
 // Returns a view with the built-in menu and commands, and `extensions`, e.g. a language server's.
 function mountBuiltIn(extensions: Extension = []): Promise<EditorView> {
