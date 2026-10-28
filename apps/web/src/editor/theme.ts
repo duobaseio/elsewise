@@ -137,6 +137,7 @@ export const METRICS = EditorView.theme({
   '.cm-panels': { backgroundColor: 'transparent', color: 'inherit', zIndex: 'auto' },
   '.cm-panels-top': { borderBottom: 'none' },
   '.cm-searchMatch-selected, .cm-lsp-rename-field': { outline: '1px solid transparent', outlineOffset: '0' },
+  '.cm-searchMatch-selected .cm-searchMatch': { backgroundColor: 'transparent', outline: 'none' },
 
   '.cm-content': { paddingBottom: '8rem' },
 

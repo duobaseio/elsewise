@@ -24,4 +24,6 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/web <script>`.
   belong in `test/visual/`**: `test:visual`. Both run in headless Chromium and follow the components' tests, whose
   baselines are likewise byte-exact and blessed on macOS; see `packages/components/AGENTS.md`. A test that brings a new
   dependency adds it to `optimizeDeps.include` in `vitest.config.ts`. `test:all` runs every project.
-- **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.
+- **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand. Write plain
+  sentences. A colon that introduces a list ends the line, with a `*` markdown item on each line below, not the items run
+  on after it as in `Returns the current match: the selected one, else …`.
