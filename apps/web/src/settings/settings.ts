@@ -11,7 +11,7 @@ export const OPEN_SETTINGS: ApplicationCommand = {
   defaultKeys: DEFAULT_KEYS.application.settings.open,
   run: ({ router }) => {
     if (!router.state.location.pathname.startsWith('/settings')) {
-      void router.navigate({ to: DEFAULT_ROUTES.settings.general });
+      void router.navigate({ to: DEFAULT_ROUTES.settings.last });
     }
 
     return true;

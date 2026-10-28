@@ -52,8 +52,8 @@ describe('OPEN_SETTINGS', () => {
     return router.history.location.pathname;
   }
 
-  test('opens general', async () => {
-    await expect(open('/Elsewise/Singapore')).resolves.toBe('/settings/appearance/general');
+  test('opens settings', async () => {
+    await expect(open('/Elsewise/Singapore')).resolves.toBe('/settings');
   });
 
   test('keeps open settings page', async () => {

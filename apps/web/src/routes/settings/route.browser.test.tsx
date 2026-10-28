@@ -82,6 +82,41 @@ describe('Settings', () => {
     expect(router.state.location.pathname).toBe('/settings/appearance/general');
   });
 
+  test('reopens last page', async () => {
+    const router = await mount(['/settings/appearance/terminal']);
+    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
+
+    await router.navigate({ to: '/settings' });
+
+    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+  });
+
+  test('reopens last page after leaving', async () => {
+    const router = await mount(['/elsewhere', '/settings/appearance/terminal']);
+    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
+    router.history.back();
+    await expect.poll(() => router.state.location.pathname).toBe('/elsewhere');
+
+    await router.navigate({ to: '/settings' });
+
+    expect(router.state.location.pathname).toBe('/settings/appearance/terminal');
+  });
+
+  test('saves page without highlight', async () => {
+    await mount(['/settings/appearance/terminal?highlight=scrollback']);
+    await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
+
+    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/appearance/terminal');
+  });
+
+  test('redirects last page gone to general', async () => {
+    localStorage.setItem('elsewise.settings.page', '/settings/plugins/io.example.missing');
+    const router = await mount(['/settings']);
+
+    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/appearance/general');
+  });
+
   test('shows page of each link, marking it active', async () => {
     await mount(['/settings']);
     for (const name of ['Editor', 'Terminal', 'General']) {

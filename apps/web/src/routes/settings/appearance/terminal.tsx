@@ -160,7 +160,6 @@ export function Terminal() {
       >
         <ScrollbackInput onChange={(scrollback) => set({ scrollback })} value={terminal.scrollback} />
       </Row>
-
     </SplitPage>
   );
 }
