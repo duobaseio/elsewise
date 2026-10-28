@@ -77,7 +77,7 @@ describe('NEXT_CHUNK', () => {
     expect(line(view)).toBe(2);
   });
 
-  test('is disabled without changes', () => {
+  test('disables without chunks', () => {
     const { view, commands } = open();
 
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: BASE } });
@@ -96,7 +96,7 @@ describe('PREVIOUS_CHUNK', () => {
     expect(line(view)).toBe(4);
   });
 
-  test('is disabled without changes', () => {
+  test('disables without chunks', () => {
     const { view, commands } = open();
 
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: BASE } });
@@ -113,14 +113,14 @@ describe('UNSTAGED_DIFF', () => {
     expect(UNCOMMITTED_DIFF.active?.(commands.application, view)).toBe(false);
   });
 
-  test('is hidden and disabled on base side', () => {
+  test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
     expect(UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(false);
     expect(UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
-  test('is shown and enabled on target side and in editor', () => {
+  test('shows and enables on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
       expect(UNSTAGED_DIFF.shown?.(commands.application, view)).toBe(true);
       expect(UNSTAGED_DIFF.enabled?.(commands.application, view)).toBe(true);
@@ -129,14 +129,14 @@ describe('UNSTAGED_DIFF', () => {
 });
 
 describe('UNCOMMITTED_DIFF', () => {
-  test('is hidden and disabled on base side', () => {
+  test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
     expect(UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(false);
     expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
-  test('is shown and enabled on target side and in editor', () => {
+  test('shows and enables on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
       expect(UNCOMMITTED_DIFF.shown?.(commands.application, view)).toBe(true);
       expect(UNCOMMITTED_DIFF.enabled?.(commands.application, view)).toBe(true);
@@ -145,14 +145,14 @@ describe('UNCOMMITTED_DIFF', () => {
 });
 
 describe('BRANCH_DIFF', () => {
-  test('is hidden and disabled on base side', () => {
+  test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
     expect(BRANCH_DIFF.shown?.(commands.application, view)).toBe(false);
     expect(BRANCH_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
-  test('is shown and enabled on target side and in editor', () => {
+  test('shows and enables on target side and in editor', () => {
     for (const { view, commands } of [open('test.source', 'split', SPLIT_TARGET), open(null, 'unified', PLAIN)]) {
       expect(BRANCH_DIFF.shown?.(commands.application, view)).toBe(true);
       expect(BRANCH_DIFF.enabled?.(commands.application, view)).toBe(true);
@@ -161,27 +161,27 @@ describe('BRANCH_DIFF', () => {
 });
 
 describe('CLOSE_DIFF', () => {
-  test('is hidden without source', () => {
+  test('hides without source', () => {
     const { view, commands } = open(null);
 
     expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
   });
 
-  test('is hidden and disabled on base side', () => {
+  test('hides and disables on base side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_BASE);
 
     expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(false);
     expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(false);
   });
 
-  test('is shown and enabled on target side', () => {
+  test('shows and enables on target side', () => {
     const { view, commands } = open('test.source', 'split', SPLIT_TARGET);
 
     expect(CLOSE_DIFF.shown?.(commands.application, view)).toBe(true);
     expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);
   });
 
-  test('is enabled in editor', () => {
+  test('enables in editor', () => {
     const { view, commands } = open(null, 'unified', PLAIN);
 
     expect(CLOSE_DIFF.enabled?.(commands.application, view)).toBe(true);

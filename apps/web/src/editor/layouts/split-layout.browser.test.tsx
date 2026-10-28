@@ -20,12 +20,6 @@ const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
 const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
 
-// Puts the document's layout into the content's `data-layout`, or `loading` while it is null.
-const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
-  const layout = state.facet(EDITOR_DOCUMENT)?.layout;
-  return { 'data-layout': layout === undefined ? 'loading' : layout.type === 'split' ? layout.side : layout.type };
-});
-
 // Renders a `SplitLayout` with `props` in the app's contexts, and returns its sides' views and a way to render it
 // again.
 async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManager()) {
@@ -109,7 +103,7 @@ describe('SplitLayout', () => {
     expect(base().dom.getBoundingClientRect().right).toBeLessThanOrEqual(target().dom.getBoundingClientRect().left);
   });
 
-  test('marks changes on both sides', async () => {
+  test('marks changed lines on both sides', async () => {
     const { base, target } = await mount({});
 
     await expect.poll(() => changedLines(target())).toBe(1);
@@ -118,7 +112,15 @@ describe('SplitLayout', () => {
 
   test('describes sides to plugins', async () => {
     const editor = new EditorManager();
-    editor.addExtensions([LAYOUT_ATTRIBUTE]);
+    // Puts the document's layout into the content's `data-layout`, or `loading` while it is null.
+    editor.addExtensions([
+      EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
+        const layout = state.facet(EDITOR_DOCUMENT)?.layout;
+        return {
+          'data-layout': layout === undefined ? 'loading' : layout.type === 'split' ? layout.side : layout.type,
+        };
+      }),
+    ]);
     const { base, target } = await mount({}, editor);
 
     await expect.poll(() => base().contentDOM.dataset.layout).toBe('base');

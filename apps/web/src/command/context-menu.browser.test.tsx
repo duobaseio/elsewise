@@ -71,7 +71,7 @@ describe('CommandContextMenu', () => {
     expect(labels()).toEqual(['First', 'Apple', 'Zebra', '-', 'Last']);
   });
 
-  test("shows command's label and first key", async () => {
+  test('shows command label and first key', async () => {
     const commands = setUp([command('a.rename', () => true, { label: 'Rename…', defaultKeys: ['Shift-F6', 'F2'] })]);
     await mount([group('a', [item('a.rename')])], commands);
 
@@ -126,7 +126,7 @@ describe('CommandContextMenu', () => {
     await expect.element(menuitem('Item')).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('hides item whose command throws on shown', async () => {
+  test('hides item of command throwing in shown', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const commands = setUp([
       command('Broken', () => true, {
@@ -172,7 +172,7 @@ describe('CommandContextMenu', () => {
     expect(page.getByRole('menu').query()).toBeNull();
   });
 
-  test("runs nested submenu's item", async () => {
+  test('runs item in nested submenu', async () => {
     const run = vi.fn();
     const commands = setUp([command('Nested item', run)]);
     await mount(

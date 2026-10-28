@@ -109,7 +109,7 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(0));
   });
 
-  test('jumps to usage from its marker, keeping highlights', async () => {
+  test('jumps to usage from marker, keeping highlights', async () => {
     const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, scrollbarMarkers()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
     const marker = await vi.waitFor(() => {
@@ -140,7 +140,7 @@ describe('serverHighlights', () => {
     expect(asked).toHaveLength(1);
   });
 
-  test('clears highlights at once when caret leaves them, and asks again', async () => {
+  test('clears highlights at once on leaving them, and asks again', async () => {
     const { view, asked } = await open();
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -163,7 +163,7 @@ describe('serverHighlights', () => {
     expect(asked).toEqual([]);
   });
 
-  test('clears highlights when document changes', async () => {
+  test('clears highlights on edit', async () => {
     const { view } = await open();
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -184,7 +184,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test("doesn't ask server that can't highlight", async () => {
+  test('skips server without capability', async () => {
     const { view, asked } = await open({});
 
     view.dispatch({ selection: { anchor: 6 } });
@@ -194,7 +194,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test('highlights nothing when turned off', async () => {
+  test('highlights nothing while off', async () => {
     const { view, asked } = await open(undefined, 0, highlightUsages.of(false));
 
     view.dispatch({ selection: { anchor: 6 } });
@@ -204,7 +204,7 @@ describe('serverHighlights', () => {
     expect(asked).toEqual([]);
   });
 
-  test('clears when turned off, highlights again when turned on', async () => {
+  test('clears once off, highlights again once on', async () => {
     const setting = new Compartment();
     const { view } = await open(undefined, 0, setting.of(highlightUsages.of(true)));
     view.dispatch({ selection: { anchor: 6 } });
@@ -217,7 +217,7 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
   });
 
-  describe('with a grammar', () => {
+  describe('with grammar', () => {
     test('highlights name', async () => {
       const { view, asked } = await open(undefined, 0, rust);
 
@@ -239,7 +239,7 @@ describe('serverHighlights', () => {
       expect(asked).toEqual([]);
     });
 
-    test('clears highlights at once when caret moves from name onto keyword', async () => {
+    test('clears highlights at once on moving onto keyword', async () => {
       const { view, asked } = await open(undefined, 0, rust);
       view.dispatch({ selection: { anchor: 6 } });
       await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));

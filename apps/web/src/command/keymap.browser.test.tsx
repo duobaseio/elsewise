@@ -102,7 +102,7 @@ describe('editorKeymap', () => {
     expect(fallback).toHaveBeenCalledOnce();
   });
 
-  test('falls through command that did not apply', () => {
+  test('falls through command returning false', () => {
     const first = vi.fn(() => false);
     const second = vi.fn(() => false);
     const fallback = vi.fn(() => true);

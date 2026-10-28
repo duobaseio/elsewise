@@ -106,7 +106,7 @@ afterEach(() => {
 });
 
 describe('serverDiagnostics', () => {
-  test('requests diagnostics for file that opens on running server, and shows them by severity', async () => {
+  test('requests diagnostics for file opened on running server, showing severities', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -340,7 +340,7 @@ describe('serverDiagnostics', () => {
     expect(shown(view)).toEqual([[6, 9, 'error']]);
   });
 
-  test('never requests diagnostics from server without them', async () => {
+  test('skips server without diagnostics', async () => {
     const fake = transport(false);
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -356,7 +356,7 @@ describe('serverDiagnostics', () => {
     expect(fake.requests).toEqual([]);
   });
 
-  test('shows diagnostics server pushes, keeping originals', async () => {
+  test('shows pushed diagnostics, keeping originals', async () => {
     const fake = transport(false);
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -379,7 +379,7 @@ describe('serverDiagnostics', () => {
     expect(served(view)).toEqual([[item, 4, 7]]);
   });
 
-  test('syncs edit for server that pushes, without asking it', async () => {
+  test('syncs edit to pushing server, without requesting', async () => {
     const fake = transport(false);
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -395,7 +395,7 @@ describe('serverDiagnostics', () => {
     expect(fake.requests).toEqual([]);
   });
 
-  test('maps pushed diagnostics through edits, keeping originals', async () => {
+  test('maps diagnostics through edits, keeping originals', async () => {
     const fake = transport();
     const instance = new LanguageServerInstance(
       server(() => fake),
@@ -413,89 +413,89 @@ describe('serverDiagnostics', () => {
     expect([from, to]).toEqual([6, 9]);
     expect(item?.range).toEqual({ start: { line: 0, character: 4 }, end: { line: 0, character: 7 } });
   });
-});
 
-describe('serverDiagnostics with linter', () => {
-  // The plugin linter's diagnostic, on `let`.
-  const LINTED: LintDiagnostic = { from: 0, to: 3, severity: 'info', message: 'plugin' };
+  describe('beside linter', () => {
+    // The plugin linter's diagnostic, on `let`.
+    const LINTED: LintDiagnostic = { from: 0, to: 3, severity: 'info', message: 'plugin' };
 
-  // The server's diagnostic on `bad`, pushed as `message`.
-  const item = (message: string) => ({
-    range: { start: { line: 0, character: 4 }, end: { line: 0, character: 7 } },
-    severity: 2,
-    message,
-  });
+    // The server's diagnostic on `bad`, pushed as `message`.
+    const item = (message: string) => ({
+      range: { start: { line: 0, character: 4 }, end: { line: 0, character: 7 } },
+      severity: 2,
+      message,
+    });
 
-  // Opens the file on a server that pushes diagnostics, beside a plugin linter that finds `linted`.
-  async function start(linted: { current: LintDiagnostic[] }) {
-    const fake = transport(false);
-    const instance = new LanguageServerInstance(
-      server(() => fake),
-      ROOT,
-    );
-    const view = open(
-      instance,
-      URI,
-      'let bad = 1',
-      linter(() => linted.current, { delay: 10 }),
-    );
-    await instance.start();
-    await instance.client.initializing;
-    return { fake, view };
-  }
+    // Opens the file on a server that pushes diagnostics, beside a plugin linter that finds `linted`.
+    async function start(linted: { current: LintDiagnostic[] }) {
+      const fake = transport(false);
+      const instance = new LanguageServerInstance(
+        server(() => fake),
+        ROOT,
+      );
+      const view = open(
+        instance,
+        URI,
+        'let bad = 1',
+        linter(() => linted.current, { delay: 10 }),
+      );
+      await instance.start();
+      await instance.client.initializing;
+      return { fake, view };
+    }
 
-  // Returns the messages of the diagnostics shown in `view`.
-  const messages = (view: EditorView) => {
-    const result: string[] = [];
-    forEachDiagnostic(view.state, (diagnostic) => result.push(diagnostic.message));
-    return result;
-  };
+    // Returns the messages of the diagnostics shown in `view`.
+    const messages = (view: EditorView) => {
+      const result: string[] = [];
+      forEachDiagnostic(view.state, (diagnostic) => result.push(diagnostic.message));
+      return result;
+    };
 
-  test('keeps linter diagnostics on server report', async () => {
-    const { fake, view } = await start({ current: [LINTED] });
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+    test('keeps linter diagnostics on server report', async () => {
+      const { fake, view } = await start({ current: [LINTED] });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
 
-    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
+      fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
 
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'server']));
-  });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'server']));
+    });
 
-  test('keeps server diagnostics on linter rerun', async () => {
-    const linted = { current: [] as LintDiagnostic[] };
-    const { fake, view } = await start(linted);
-    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
-    await vi.waitFor(() => expect(messages(view)).toEqual(['server']));
+    test('keeps server diagnostics on linter rerun', async () => {
+      const linted: { current: LintDiagnostic[] } = { current: [] };
+      const { fake, view } = await start(linted);
+      fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['server']));
 
-    linted.current = [{ ...LINTED, from: 1, to: 4 }];
-    view.dispatch({ changes: { from: 0, insert: ' ' } });
+      linted.current = [{ ...LINTED, from: 1, to: 4 }];
+      view.dispatch({ changes: { from: 0, insert: ' ' } });
 
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'server']));
-    expect(shown(view)).toEqual([
-      [1, 4, 'info'],
-      [5, 8, 'warning'],
-    ]);
-  });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'server']));
+      expect(shown(view)).toEqual([
+        [1, 4, 'info'],
+        [5, 8, 'warning'],
+      ]);
+    });
 
-  test('replaces only server diagnostics on report', async () => {
-    const { fake, view } = await start({ current: [LINTED] });
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+    test('replaces only server diagnostics on report', async () => {
+      const { fake, view } = await start({ current: [LINTED] });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
 
-    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('first')] });
-    await vi.waitFor(() => expect(messages(view)).toContain('first'));
-    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('second')] });
+      fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('first')] });
+      await vi.waitFor(() => expect(messages(view)).toContain('first'));
+      fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('second')] });
 
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'second']));
-  });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin', 'second']));
+    });
 
-  test('clears only server diagnostics on empty report', async () => {
-    const { fake, view } = await start({ current: [LINTED] });
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
-    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
-    await vi.waitFor(() => expect(messages(view)).toContain('server'));
+    test('clears only server diagnostics on empty report', async () => {
+      const { fake, view } = await start({ current: [LINTED] });
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+      fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [item('server')] });
+      await vi.waitFor(() => expect(messages(view)).toContain('server'));
 
-    fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [] });
+      fake.notify('textDocument/publishDiagnostics', { uri: URI, diagnostics: [] });
 
-    await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+      await vi.waitFor(() => expect(messages(view)).toEqual(['plugin']));
+    });
   });
 });
 

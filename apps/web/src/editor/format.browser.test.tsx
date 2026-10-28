@@ -77,7 +77,7 @@ function press(view: EditorView): boolean {
 }
 
 describe('FORMAT', () => {
-  test("applies formatter's changes in one undo step", async () => {
+  test('applies formatter changes in one undo step', async () => {
     const view = open([
       {
         format: async () => [
@@ -219,7 +219,7 @@ describe('FORMAT', () => {
     expect(whole).not.toHaveBeenCalled();
   });
 
-  test('leaves key when no formatter is enabled', () => {
+  test('leaves key without enabled formatter', () => {
     const formatter = vi.fn(async () => []);
     const view = open([{ enabled: () => false, format: formatter }]);
 
@@ -227,7 +227,7 @@ describe('FORMAT', () => {
     expect(formatter).not.toHaveBeenCalled();
   });
 
-  test("doesn't format read-only document", () => {
+  test('skips read-only document', () => {
     const formatter = vi.fn(async () => []);
     const view = open([{ format: formatter }]);
     view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });

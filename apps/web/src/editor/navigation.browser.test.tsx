@@ -7,7 +7,7 @@ import { formatKey, PLATFORM } from '@elsewise/components/lib/platform';
 import type { EditorNavigation, EditorNavigationSource } from '@elsewise/plugin';
 import { tags } from '@lezer/highlight';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { navigation } from '@/editor/navigation.ts';
+import { navigation } from '@/editor/navigation';
 
 const URL = 'https://example.com/a?b=c#d';
 
@@ -63,16 +63,6 @@ function at(pos: number): { clientX: number; clientY: number } {
     throw new Error(`no character at ${pos}`);
   }
   return { clientX: (box.left + box.right) / 2, clientY: (box.top + box.bottom) / 2 };
-}
-
-// The center of the space past the end of `line`.
-function pastEnd(line: number): { clientX: number; clientY: number } {
-  const { to } = view.state.doc.line(line);
-  const box = view.coordsAtPos(to);
-  if (box === null) {
-    throw new Error(`no line ${line}`);
-  }
-  return { clientX: box.right + 4 * view.defaultCharacterWidth, clientY: (box.top + box.bottom) / 2 };
 }
 
 // The color of the underline drawn last, by the innermost element, under the character at `pos`.
@@ -243,15 +233,13 @@ describe('navigation', () => {
 
   test('shows key in tooltip over URL', async () => {
     move(at(DOC.indexOf(URL) + 5));
-    const tooltip = await vi.waitFor(
-      () => {
-        const hint = view.dom.querySelector('.cm-tooltip-hover .cm-link-hint');
-        expect(hint).not.toBeNull();
-        return hint as HTMLElement;
-      },
+    await vi.waitFor(
+      () =>
+        expect(view.dom.querySelector('.cm-tooltip-hover .cm-link-hint')?.textContent).toBe(
+          `${formatKey('Mod-Click')} open in browser`,
+        ),
       { timeout: 2000 },
     );
-    expect(tooltip.textContent).toBe(`${formatKey('Mod-Click')} open in browser`);
   });
 
   test('opens URL on click while key held', async () => {
@@ -277,8 +265,13 @@ describe('navigation', () => {
 
   test('opens nothing past line ending in URL', async () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
-    click(pastEnd(3), KEY);
-    move(pastEnd(3), KEY);
+    const end = view.coordsAtPos(view.state.doc.line(3).to);
+    if (end === null) {
+      throw new Error('no line 3');
+    }
+    const pastEnd = { clientX: end.right + 4 * view.defaultCharacterWidth, clientY: (end.top + end.bottom) / 2 };
+    click(pastEnd, KEY);
+    move(pastEnd, KEY);
     await settle();
     expect(open).not.toHaveBeenCalled();
     expect(texts('cm-link-active')).toEqual([]);
@@ -293,12 +286,12 @@ describe('navigation', () => {
   });
 
   test('shows error of failed navigation', async () => {
-    const add_ = vi.spyOn(toast, 'add');
+    const toastAdd = vi.spyOn(toast, 'add');
     add({ order: 5, navigation: () => ({ from: 0, to: 2, navigate: () => Promise.reject(new Error('gone')) }) });
     move(at(0), KEY);
     await settle();
     click(at(0), KEY);
-    await vi.waitFor(() => expect(add_).toHaveBeenCalledWith(expect.objectContaining({ description: 'gone' })));
+    await vi.waitFor(() => expect(toastAdd).toHaveBeenCalledWith(expect.objectContaining({ description: 'gone' })));
   });
 
   test('shows no link once document changes, and underlines URLs at new positions', async () => {

@@ -840,7 +840,6 @@ describe('useLanguage', () => {
     expect(latest()).toEqual({ name: 'Toy', language: null });
   });
 });
-
 const LAYOUT: EditorDocumentLayout = { type: 'editor' };
 const VALUES = Facet.define<string>();
 
@@ -951,7 +950,6 @@ describe('applyPlugins', () => {
     view.destroy();
   });
 });
-
 const COMPARTMENT = new Compartment();
 
 function Compartmented({ view, value }: { view: RefObject<EditorView | null>; value: Extension }) {

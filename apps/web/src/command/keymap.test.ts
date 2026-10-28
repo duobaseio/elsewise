@@ -3,10 +3,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
+import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from '@/command/keymap';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { memoryRouter } from '../../test/commands';
-import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from './keymap';
 
 const APPEARANCE = new AppearanceManager(
   'dark',

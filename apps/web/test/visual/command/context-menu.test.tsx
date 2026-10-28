@@ -1,5 +1,5 @@
 import type { ApplicationCommand, ContextMenuGroup } from '@elsewise/plugin';
-import { describe, expect, onTestFinished, test } from 'vitest';
+import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
@@ -60,40 +60,37 @@ const MENU: readonly ContextMenuGroup[] = [
   },
 ];
 
-describe.each(THEMES)('context menu (%s)', (theme) => {
-  test('open submenu', async () => {
-    // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
-    document.documentElement.dataset.brightness = theme;
-    onTestFinished(() => {
-      delete document.documentElement.dataset.brightness;
-    });
-    const editor = new EditorManager();
-    const commands = new CommandManager({
-      appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-    });
-    commands.add(COMMANDS);
-    render(
-      <CommandManagerContext value={commands}>
-        <div
-          className="bg-background font-sans text-foreground"
-          data-brightness={theme}
-          data-testid="sheet"
-          style={{ width: 560, height: 240 }}
-        >
-          <CommandContextMenu menu={MENU} className="block size-full">
-            <div className="size-full" data-testid="target" />
-          </CommandContextMenu>
-        </div>
-      </CommandManagerContext>,
-    );
-
-    await userEvent.click(page.getByTestId('target'), { button: 'right', position: { x: 8, y: 8 } });
-    await userEvent.click(page.getByRole('menuitem', { name: 'Refactor' }));
-    await expect.element(page.getByRole('menuitem', { name: /^Extract function/ })).toBeVisible();
-
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`context-menu-${theme}`);
+test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
   });
+  const commands = new CommandManager({
+    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
+    editor: new EditorManager(),
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+  });
+  commands.add(COMMANDS);
+  render(
+    <CommandManagerContext value={commands}>
+      <div
+        className="bg-background font-sans text-foreground"
+        data-brightness={theme}
+        data-testid="sheet"
+        style={{ width: 560, height: 240 }}
+      >
+        <CommandContextMenu menu={MENU} className="block size-full">
+          <div className="size-full" data-testid="target" />
+        </CommandContextMenu>
+      </div>
+    </CommandManagerContext>,
+  );
+
+  await userEvent.click(page.getByTestId('target'), { button: 'right', position: { x: 8, y: 8 } });
+  await userEvent.click(page.getByRole('menuitem', { name: 'Refactor' }));
+  await expect.element(page.getByRole('menuitem', { name: /^Extract function/ })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`context-menu-${theme}`);
 });

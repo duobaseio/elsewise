@@ -26,25 +26,6 @@ const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT],
   'data-layout': state.facet(EDITOR_DOCUMENT)?.layout.type ?? 'loading',
 }));
 
-// Returns a language for `.late` files whose support loads when `loaded` resolves.
-function lateLanguage(loaded: Promise<void>): LanguageDescription {
-  return LanguageDescription.of({
-    name: 'Late',
-    extensions: ['late'],
-    load: async () => {
-      await loaded;
-      return new LanguageSupport(
-        StreamLanguage.define({
-          token: (stream) => {
-            stream.skipToEnd();
-            return null;
-          },
-        }),
-      );
-    },
-  });
-}
-
 // Renders a `UnifiedLayout` with `props` in the app's contexts, and returns its view and a way to render it again.
 async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
@@ -172,7 +153,23 @@ describe('UnifiedLayout', () => {
       load = resolve;
     });
     const editor = new EditorManager();
-    editor.languages.add([lateLanguage(loaded)]);
+    editor.languages.add([
+      LanguageDescription.of({
+        name: 'Late',
+        extensions: ['late'],
+        load: async () => {
+          await loaded;
+          return new LanguageSupport(
+            StreamLanguage.define({
+              token: (stream) => {
+                stream.skipToEnd();
+                return null;
+              },
+            }),
+          );
+        },
+      }),
+    ]);
     const { view } = await mount({ relativePath: 'main.late', base: BASE }, editor);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(changedLines(view())).toBe(0);

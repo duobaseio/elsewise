@@ -1,6 +1,6 @@
 import { history, undo } from '@codemirror/commands';
 import { forEachDiagnostic, setDiagnostics } from '@codemirror/lint';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer } from '@elsewise/plugin';
@@ -59,7 +59,6 @@ async function open(
   capabilities: object = {},
   handlers: ConstructorParameters<typeof StubTransport>[1] = {},
   commandHandlers: LanguageServer['commandHandlers'] = {},
-  extensions: Extension = [],
 ): Promise<{ view: EditorView; stub: StubTransport }> {
   const stub = new StubTransport(
     { textDocumentSync: 2, diagnosticProvider: {}, codeActionProvider: true, ...capabilities },
@@ -91,7 +90,6 @@ async function open(
         editorActions(),
         commandsExtension(),
         history(),
-        extensions,
       ],
     }),
     parent: document.body,
@@ -166,7 +164,7 @@ describe('serverActions', () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe(IMPORT + DOC));
   });
 
-  test("runs action's command on server", async () => {
+  test('runs action command on server', async () => {
     const { view, stub } = await open(
       () => [{ title: 'Run it', command: 'fix.run', arguments: [1] }],
       {},
@@ -186,7 +184,7 @@ describe('serverActions', () => {
     });
   });
 
-  test("runs action's command with plugin's handler instead", async () => {
+  test('runs action command with plugin handler instead', async () => {
     const run = vi.fn();
     const { view, stub } = await open(
       () => [{ title: 'Run it', command: 'fix.run', arguments: [1] }],
@@ -202,7 +200,7 @@ describe('serverActions', () => {
     expect(stub.methods).not.toContain('workspace/executeCommand');
   });
 
-  test("applies command's edit in one undo step", async () => {
+  test('applies command edit in one undo step', async () => {
     let server: StubTransport | undefined;
     let response: Promise<unknown> | undefined;
     const { view, stub } = await open(

@@ -90,7 +90,7 @@ describe('scrollbarMarkers', () => {
     expect(layer.offsetHeight).toBe(scrollDOM.clientHeight);
   });
 
-  test('scales markers to track when document is taller', async () => {
+  test('scales markers to track in taller document', async () => {
     const view = open([at(100)]);
     const [marker] = await markers(view, 'error');
 
@@ -101,7 +101,7 @@ describe('scrollbarMarkers', () => {
     expect(scale).toBeLessThan(1);
   });
 
-  test('lays markers at lines when document fits, two pixels high on one line', async () => {
+  test('lays markers at lines in fitting document, two pixels high on one line', async () => {
     const short = 'one\ntwo\nthree';
     const view = open([{ from: 4, to: 7, severity: 'error', message: 'two' }], short);
     const [marker] = await markers(view, 'error');
@@ -135,7 +135,6 @@ describe('scrollbarMarkers', () => {
   test('merges touching markers of kind, keeping kinds apart with higher severity above', async () => {
     const view = open([at(100), at(101), at(100, 'warning')]);
     expect(view.scrollDOM.scrollHeight).toBeGreaterThan(view.scrollDOM.clientHeight);
-    await markers(view);
 
     const all = await markers(view);
     expect(all.map((marker) => marker.className)).toEqual([
@@ -164,7 +163,7 @@ describe('scrollbarMarkers', () => {
     );
   });
 
-  test('follows document edits', async () => {
+  test('follows diagnostics', async () => {
     const view = open([at(1)]);
     await markers(view);
 
@@ -175,7 +174,7 @@ describe('scrollbarMarkers', () => {
     await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker')).toHaveLength(0));
   });
 
-  test('marks sources, by their layer', async () => {
+  test('marks sources by layer', async () => {
     const source = { update: () => false, markers: () => [{ ...at(100), kind: 'searchMatch' as const }] };
     const view = open([at(100)], DOC, scrollbarMarkerSources.of(source));
     const all = await markers(view);
@@ -186,7 +185,7 @@ describe('scrollbarMarkers', () => {
     ]);
   });
 
-  test('asks only sources that changed', async () => {
+  test('asks only changed sources', async () => {
     const asked = { still: 0, moving: 0 };
     const view = open([], DOC, [
       scrollbarMarkerSources.of({
@@ -263,7 +262,7 @@ describe('scrollbarMarkers', () => {
     await vi.waitFor(() => expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBeNull());
   });
 
-  test('hides tooltip when diagnostics change', async () => {
+  test('hides tooltip on diagnostics change', async () => {
     const view = open([at(100)]);
     const [marker] = await markers(view, 'error');
     point(marker);
@@ -274,7 +273,7 @@ describe('scrollbarMarkers', () => {
     expect(view.dom.querySelector('.cm-scrollbar-marker-tooltip')).toBeNull();
   });
 
-  test('hides tooltip on its actions', async () => {
+  test('hides tooltip on actions', async () => {
     const view = open([{ ...at(100), actions: [{ name: 'Fix', type: 'fix', apply: () => {} }] }]);
     const [marker] = await markers(view, 'error');
     point(marker);

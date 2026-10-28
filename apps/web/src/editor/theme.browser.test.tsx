@@ -4,8 +4,8 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, showTooltip } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { type ReactNode, useEffect, useRef } from 'react';
-import { expect, onTestFinished, test, vi } from 'vitest';
+import { useEffect, useRef } from 'react';
+import { describe, expect, onTestFinished, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { drawActiveLine } from '@/editor/active-line';
@@ -67,12 +67,6 @@ const SETTINGS: Settings = {
   },
 };
 
-function shell(children: ReactNode) {
-  const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, SETTINGS);
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
-}
-
 // A probe mounts an editor with whatever `useThemeExtension` resolves.
 function mount(doc: string, extensions: Extension[]): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
@@ -92,7 +86,13 @@ function mount(doc: string, extensions: Extension[]): Promise<EditorView> {
     }, [themeExtension]);
     return <div ref={host} />;
   }
-  render(shell(<Probe />));
+  const client = new QueryClient();
+  client.setQueryData(settingsQuery.queryKey, SETTINGS);
+  render(
+    <QueryClientProvider client={client}>
+      <Probe />
+    </QueryClientProvider>,
+  );
   return ready;
 }
 
@@ -108,270 +108,278 @@ function rgb(hex: string): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
-test('scrollbar markers take theme colors', async () => {
-  const source = { update: () => false, markers: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
-  const view = await mount('x', [diagnostics, scrollbarMarkers(), scrollbarMarkerSources.of(source)]);
-  view.dispatch(setDiagnostics(view.state, [{ from: 0, to: 1, severity: 'error', message: 'x' }]));
-  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker')).toHaveLength(2));
+describe('useThemeExtension', () => {
+  test('colors scrollbar markers', async () => {
+    const source = { update: () => false, markers: () => [{ from: 0, to: 1, kind: 'searchMatch' as const }] };
+    const view = await mount('x', [diagnostics, scrollbarMarkers(), scrollbarMarkerSources.of(source)]);
+    view.dispatch(setDiagnostics(view.state, [{ from: 0, to: 1, severity: 'error', message: 'x' }]));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker')).toHaveLength(2));
 
-  const painted = (kind: string) =>
-    getComputedStyle(view.dom.querySelector(`.cm-scrollbar-marker-${kind}`) as Element, '::before').backgroundColor;
-  expect(painted('error')).toBe(rgb('#F0B0A0'));
-  expect(painted('searchMatch')).toBe(rgb('#A0F0B0'));
-});
-
-test('diff lines, text and gutters take theme colors', async () => {
-  const view = await mount(['one', 'TWO', 'three'].join('\n'), [unifiedDiff(['one', 'two', 'three'].join('\n'))]);
-  await vi.waitFor(() => expect(view.dom.querySelector('.cm-diffDeletedText')).not.toBeNull());
-
-  expect(style(view.dom.querySelector('.cm-changedLine')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-  expect(style(view.dom.querySelector('.cm-deletedChunk')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
-  expect(style(view.dom.querySelector('.cm-diffAddedLine')).backgroundColor).toBe(rgb('#B0F0A0'));
-  expect(style(view.dom.querySelector('.cm-diffAddedText')).backgroundColor).toBe(rgb('#A0E0B0'));
-  expect(style(view.dom.querySelector('.cm-changedLineGutter')).backgroundColor).toBe(rgb('#90D0A0'));
-  expect(style(view.dom.querySelector('.cm-diffDeletedLine')).backgroundColor).toBe(rgb('#F0A0B0'));
-  expect(style(view.dom.querySelector('.cm-diffDeletedText')).backgroundColor).toBe(rgb('#E0B0A0'));
-  expect(style(view.dom.querySelector('.cm-deletedLineGutter')).backgroundColor).toBe(rgb('#D0A090'));
-});
-
-test("active line takes theme's color", async () => {
-  const view = await mount('one', [drawActiveLine()]);
-  await vi.waitFor(() => expect(view.dom.querySelector('.cm-activeLine')).not.toBeNull());
-
-  expect(style(view.dom.querySelector('.cm-activeLine')).backgroundColor).toBe(rgb(EDITOR.activeLine));
-});
-
-test("visual guide takes theme's color", async () => {
-  const view = await mount('x', [visualGuides([1])]);
-  await new Promise(requestAnimationFrame);
-  expect(style(view.dom.querySelector('.cm-visual-guide')).borderLeftColor).toBe(rgb(EDITOR.visualGuide));
-});
-
-test("deprecated code is struck through at font's strikeout position", async () => {
-  const view = await mount('let x', []);
-  view.dispatch(
-    setDiagnostics(view.state, [
-      { from: 0, to: 3, severity: 'hint', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
-    ]),
-  );
-  const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
-  const size = Number.parseFloat(mark.fontSize);
-  // JetBrains Mono's ascent is 1.02em, and its strikeout 0.05em thick, 0.32em above the baseline.
-  expect(Number.parseFloat(mark.backgroundPositionY)).toBeCloseTo(Math.round(1.02 * size) - 0.32 * size);
-  expect(Number.parseFloat(mark.backgroundSize.split(' ')[1])).toBeCloseTo(0.05 * size);
-  expect(mark.textDecorationLine).toBe('none');
-});
-
-test('unnecessary code is faded without underline, unless plain diagnostic shares it', async () => {
-  const view = await mount('let a = 1', []);
-  const unused = {
-    from: 4,
-    to: 5,
-    severity: 'warning',
-    markClass: 'cm-lintRange-unnecessary',
-    message: 'unused',
-  } as const;
-  view.dispatch(setDiagnostics(view.state, [unused]));
-  expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toBe('none');
-
-  const wrong = { from: 4, to: 5, severity: 'error', markClass: 'cm-lintRange-plain', message: 'wrong type' } as const;
-  view.dispatch(setDiagnostics(view.state, [unused, wrong]));
-  expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toContain('data:image/svg+xml');
-});
-
-test('deprecated code is struck through by Chrome in font whose strikeout is unknown', async () => {
-  document.documentElement.style.setProperty('--font-mono', 'Menlo, monospace');
-  onTestFinished(() => {
-    document.documentElement.style.removeProperty('--font-mono');
-  });
-  const view = await mount('let x', []);
-  view.dispatch(
-    setDiagnostics(view.state, [
-      { from: 0, to: 3, severity: 'hint', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
-    ]),
-  );
-  const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
-  expect(mark.textDecorationLine).toBe('line-through');
-  expect(mark.backgroundImage).toBe('none');
-});
-
-test('selected completion keeps text color, and list shows whole rows', async () => {
-  const options = Array.from({ length: 20 }, (_, i) => ({ label: `option${i}` }));
-  const view = await mount('', [autocompletion({ override: [() => ({ from: 0, options })] })]);
-  startCompletion(view);
-  const selected = await vi.waitFor(() => {
-    const selected = view.dom.querySelector('.cm-tooltip-autocomplete li[aria-selected]');
-    expect(selected).not.toBeNull();
-    return selected;
-  });
-  const tooltip = view.dom.querySelector('.cm-tooltip-autocomplete');
-  expect(style(selected).color).toBe(style(tooltip).color);
-  expect(style(selected).color).not.toBe('rgb(255, 255, 255)');
-  const list = style(tooltip?.querySelector('ul') ?? null);
-  expect(Number.parseFloat(list.maxHeight)).toBe(10 * 24 + 8);
-});
-
-test("completion's documentation is hidden when setting is off", async () => {
-  const options = [{ label: 'send', info: 'Sends a message.' }];
-  const source = () => ({ from: 0, options });
-  const view = await mount('', [
-    completion(),
-    completionDocumentation.of(false),
-    EditorState.languageData.of(() => [{ autocomplete: source }]),
-  ]);
-  view.focus();
-  startCompletion(view);
-
-  const info = await vi.waitFor(() => {
-    const info = view.dom.querySelector('.cm-completionInfo');
-    expect(info).not.toBeNull();
-    return info;
-  });
-  expect(style(info).display).toBe('none');
-});
-
-test('hovered row of completions, usages and actions takes hover color, unless selected', async () => {
-  const options = Array.from({ length: 3 }, (_, i) => ({ label: `option${i}` }));
-  const popup = document.createElement('div');
-  popup.innerHTML =
-    '<ul><li class="cm-lsp-reference" aria-selected="true">a</li><li class="cm-lsp-reference">b</li></ul>' +
-    '<ul><li class="cm-action" aria-selected="true">a</li><li class="cm-action">b</li></ul>';
-  const view = await mount('', [
-    autocompletion({ override: [() => ({ from: 0, options })] }),
-    showTooltip.of({ pos: 0, create: () => ({ dom: popup }) }),
-  ]);
-  startCompletion(view);
-  const completions = await vi.waitFor(() => {
-    const rows = [...view.dom.querySelectorAll('.cm-tooltip-autocomplete li')];
-    expect(rows).toHaveLength(3);
-    return rows;
+    const painted = (kind: string) =>
+      getComputedStyle(view.dom.querySelector(`.cm-scrollbar-marker-${kind}`) as Element, '::before').backgroundColor;
+    expect(painted('error')).toBe(rgb('#F0B0A0'));
+    expect(painted('searchMatch')).toBe(rgb('#A0F0B0'));
   });
 
-  for (const [selected, other] of [
-    completions,
-    [...popup.querySelectorAll('.cm-lsp-reference')],
-    [...popup.querySelectorAll('.cm-action')],
-  ]) {
-    await userEvent.hover(other);
-    await vi.waitFor(() => expect(style(other).backgroundColor).toBe(rgb(EDITOR.completionHovered)));
-    await userEvent.hover(selected);
-    await vi.waitFor(() => expect(style(other).backgroundColor).toBe('rgba(0, 0, 0, 0)'));
-    expect(style(selected).backgroundColor).toBe(rgb(EDITOR.completionSelected));
-  }
-});
+  test('colors diff lines, text and gutters', async () => {
+    const view = await mount(['one', 'TWO', 'three'].join('\n'), [unifiedDiff(['one', 'two', 'three'].join('\n'))]);
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-diffDeletedText')).not.toBeNull());
 
-test('signatures are parted by dividers, and wrap with hanging indent', async () => {
-  const dom = document.createElement('div');
-  dom.className = 'cm-lsp-signatures';
-  dom.innerHTML = '<ul><li>fn send()</li><li>fn send(bytes: Bytes)</li></ul>';
-  await mount('send(', [showTooltip.of({ pos: 5, above: true, create: () => ({ dom }) })]);
-  const [first, second] = dom.querySelectorAll('li');
+    expect(style(view.dom.querySelector('.cm-changedLine')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(style(view.dom.querySelector('.cm-deletedChunk')).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(style(view.dom.querySelector('.cm-diffAddedLine')).backgroundColor).toBe(rgb('#B0F0A0'));
+    expect(style(view.dom.querySelector('.cm-diffAddedText')).backgroundColor).toBe(rgb('#A0E0B0'));
+    expect(style(view.dom.querySelector('.cm-changedLineGutter')).backgroundColor).toBe(rgb('#90D0A0'));
+    expect(style(view.dom.querySelector('.cm-diffDeletedLine')).backgroundColor).toBe(rgb('#F0A0B0'));
+    expect(style(view.dom.querySelector('.cm-diffDeletedText')).backgroundColor).toBe(rgb('#E0B0A0'));
+    expect(style(view.dom.querySelector('.cm-deletedLineGutter')).backgroundColor).toBe(rgb('#D0A090'));
+  });
 
-  expect(style(first).borderTopWidth).toBe('0px');
-  expect(style(second).borderTopWidth).toBe('1px');
-  expect(Number.parseFloat(style(first).textIndent)).toBeLessThan(0);
-});
+  test('colors active line', async () => {
+    const view = await mount('one', [drawActiveLine()]);
+    await vi.waitFor(() => expect(view.dom.querySelector('.cm-activeLine')).not.toBeNull());
 
-test('usages of symbol at caret, writes included, take selection match color', async () => {
-  const view = await mount('total + total', [
-    EditorView.decorations.of(
-      Decoration.set([
-        Decoration.mark({ class: 'cm-lsp-highlight cm-lsp-highlight-write' }).range(0, 5),
-        Decoration.mark({ class: 'cm-lsp-highlight' }).range(8, 13),
+    expect(style(view.dom.querySelector('.cm-activeLine')).backgroundColor).toBe(rgb(EDITOR.activeLine));
+  });
+
+  test('colors visual guide', async () => {
+    const view = await mount('x', [visualGuides([1])]);
+    await new Promise(requestAnimationFrame);
+    expect(style(view.dom.querySelector('.cm-visual-guide')).borderLeftColor).toBe(rgb(EDITOR.visualGuide));
+  });
+
+  test('strikes deprecated code through at font strikeout position', async () => {
+    const view = await mount('let x', []);
+    view.dispatch(
+      setDiagnostics(view.state, [
+        { from: 0, to: 3, severity: 'hint', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
       ]),
-    ),
-  ]);
-  const [write, read] = [...view.dom.querySelectorAll('.cm-lsp-highlight')].map((mark) => style(mark));
+    );
+    const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
+    const size = Number.parseFloat(mark.fontSize);
+    // JetBrains Mono's ascent is 1.02em, and its strikeout 0.05em thick, 0.32em above the baseline.
+    expect(Number.parseFloat(mark.backgroundPositionY)).toBeCloseTo(Math.round(1.02 * size) - 0.32 * size);
+    expect(Number.parseFloat(mark.backgroundSize.split(' ')[1])).toBeCloseTo(0.05 * size);
+    expect(mark.textDecorationLine).toBe('none');
+  });
 
-  expect(read.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
-  expect(write.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
-});
+  test('fades unnecessary code without underline, unless plain diagnostic shares it', async () => {
+    const view = await mount('let a = 1', []);
+    const unused = {
+      from: 4,
+      to: 5,
+      severity: 'warning',
+      markClass: 'cm-lintRange-unnecessary',
+      message: 'unused',
+    } as const;
+    view.dispatch(setDiagnostics(view.state, [unused]));
+    expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toBe('none');
 
-test('renamed symbol and occurrences take search match colors', async () => {
-  const view = await mount('total + total', [
-    EditorView.decorations.of(
-      Decoration.set([
-        Decoration.mark({ class: 'cm-lsp-rename-field' }).range(0, 5),
-        Decoration.mark({ class: 'cm-lsp-rename-occurrence' }).range(8, 13),
+    const wrong = {
+      from: 4,
+      to: 5,
+      severity: 'error',
+      markClass: 'cm-lintRange-plain',
+      message: 'wrong type',
+    } as const;
+    view.dispatch(setDiagnostics(view.state, [unused, wrong]));
+    expect(style(view.dom.querySelector('.cm-lintRange')).backgroundImage).toContain('data:image/svg+xml');
+  });
+
+  test('strikes deprecated code through natively in unknown font', async () => {
+    document.documentElement.style.setProperty('--font-mono', 'Menlo, monospace');
+    onTestFinished(() => {
+      document.documentElement.style.removeProperty('--font-mono');
+    });
+    const view = await mount('let x', []);
+    view.dispatch(
+      setDiagnostics(view.state, [
+        { from: 0, to: 3, severity: 'hint', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
       ]),
-    ),
-  ]);
-  const field = style(view.dom.querySelector('.cm-lsp-rename-field'));
+    );
+    const mark = style(view.dom.querySelector('.cm-lintRange-deprecated'));
+    expect(mark.textDecorationLine).toBe('line-through');
+    expect(mark.backgroundImage).toBe('none');
+  });
 
-  expect(field.backgroundColor).toBe(rgb(EDITOR.searchMatchSelected));
-  expect(field.outlineColor).toBe(rgb(EDITOR.searchMatchSelectedBorder));
-  expect(field.outlineWidth).toBe('1px');
-  expect(style(view.dom.querySelector('.cm-lsp-rename-occurrence')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
-});
+  test('keeps selected completion text color, showing whole rows', async () => {
+    const options = Array.from({ length: 20 }, (_, i) => ({ label: `option${i}` }));
+    const view = await mount('', [autocompletion({ override: [() => ({ from: 0, options })] })]);
+    startCompletion(view);
+    const selected = await vi.waitFor(() => {
+      const selected = view.dom.querySelector('.cm-tooltip-autocomplete li[aria-selected]');
+      expect(selected).not.toBeNull();
+      return selected;
+    });
+    const tooltip = view.dom.querySelector('.cm-tooltip-autocomplete');
+    expect(style(selected).color).toBe(style(tooltip).color);
+    expect(style(selected).color).not.toBe('rgb(255, 255, 255)');
+    const list = style(tooltip?.querySelector('ul') ?? null);
+    expect(Number.parseFloat(list.maxHeight)).toBe(10 * 24 + 8);
+  });
 
-test("only keys of rename hint are muted, like completion's", async () => {
-  const hint = document.createElement('div');
-  hint.className = 'cm-lsp-rename-hint';
-  hint.innerHTML = '<kbd>↩</kbd> rename';
-  await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: hint }) })]);
-  const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
+  test('hides disabled completion documentation', async () => {
+    const options = [{ label: 'send', info: 'Sends a message.' }];
+    const source = () => ({ from: 0, options });
+    const view = await mount('', [
+      completion(),
+      completionDocumentation.of(false),
+      EditorState.languageData.of(() => [{ autocomplete: source }]),
+    ]);
+    view.focus();
+    startCompletion(view);
 
-  expect(style(hint.querySelector('kbd')).color).toBe(text3);
-  expect(style(hint).color).not.toBe(text3);
-});
+    const info = await vi.waitFor(() => {
+      const info = view.dom.querySelector('.cm-completionInfo');
+      expect(info).not.toBeNull();
+      return info;
+    });
+    expect(style(info).display).toBe('none');
+  });
 
-test('usages are listed like completions, each in search match color', async () => {
-  const popup = document.createElement('div');
-  popup.className = 'cm-lsp-references';
-  const rows = Array.from(
-    { length: 12 },
-    (_, i) =>
-      `<li class="cm-lsp-reference"><span class="cm-lsp-reference-preview">let <mark class="cm-lsp-reference-match">total</mark> = ${i};</span><span class="cm-lsp-reference-location">main.rs<span class="cm-lsp-reference-line">${i + 1}</span></span></li>`,
-  );
-  popup.innerHTML = `<ul class="cm-lsp-references-list">${rows.join('')}</ul><div class="cm-lsp-references-hint"><kbd>↩</kbd> open</div>`;
-  popup.querySelector('li')?.setAttribute('aria-selected', 'true');
-  await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: popup }) })]);
-  const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
-  const list = popup.querySelector('ul') as HTMLElement;
+  test('colors hovered row of completions, usages and actions, unless selected', async () => {
+    const options = Array.from({ length: 3 }, (_, i) => ({ label: `option${i}` }));
+    const popup = document.createElement('div');
+    popup.innerHTML =
+      '<ul><li class="cm-lsp-reference" aria-selected="true">a</li><li class="cm-lsp-reference">b</li></ul>' +
+      '<ul><li class="cm-action" aria-selected="true">a</li><li class="cm-action">b</li></ul>';
+    const view = await mount('', [
+      autocompletion({ override: [() => ({ from: 0, options })] }),
+      showTooltip.of({ pos: 0, create: () => ({ dom: popup }) }),
+    ]);
+    startCompletion(view);
+    const completions = await vi.waitFor(() => {
+      const rows = [...view.dom.querySelectorAll('.cm-tooltip-autocomplete li')];
+      expect(rows).toHaveLength(3);
+      return rows;
+    });
 
-  expect(style(popup.querySelector('[aria-selected]')).backgroundColor).toBe(rgb(EDITOR.completionSelected));
-  expect(style(popup.querySelector('mark')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
-  expect(style(popup.querySelector('.cm-lsp-reference-location')).color).toBe(text3);
-  expect(style(popup.querySelector('.cm-lsp-references-hint kbd')).color).toBe(text3);
-  expect(style(popup.querySelector('.cm-lsp-references-hint')).color).not.toBe(text3);
-  expect(style(popup.querySelector('.cm-lsp-reference')).cursor).toBe('default');
-  expect(list.clientHeight).toBe(10 * 24 + 8);
-  expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
-});
+    for (const [selected, other] of [
+      completions,
+      [...popup.querySelectorAll('.cm-lsp-reference')],
+      [...popup.querySelectorAll('.cm-action')],
+    ]) {
+      await userEvent.hover(other);
+      await vi.waitFor(() => expect(style(other).backgroundColor).toBe(rgb(EDITOR.completionHovered)));
+      await userEvent.hover(selected);
+      await vi.waitFor(() => expect(style(other).backgroundColor).toBe('rgba(0, 0, 0, 0)'));
+      expect(style(selected).backgroundColor).toBe(rgb(EDITOR.completionSelected));
+    }
+  });
 
-test("diagnostic's fixes are links underlined only on hover", async () => {
-  const tooltip = document.createElement('div');
-  tooltip.className = 'cm-tooltip-hover';
-  tooltip.innerHTML = '<div class="cm-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
-  await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: tooltip }) })]);
-  const button = tooltip.querySelector('button') as HTMLElement;
-  const color = (name: string) => rgb(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+  test('parts signatures by dividers, wrapping with hanging indent', async () => {
+    const dom = document.createElement('div');
+    dom.className = 'cm-lsp-signatures';
+    dom.innerHTML = '<ul><li>fn send()</li><li>fn send(bytes: Bytes)</li></ul>';
+    await mount('send(', [showTooltip.of({ pos: 5, above: true, create: () => ({ dom }) })]);
+    const [first, second] = dom.querySelectorAll('li');
 
-  expect(style(button).color).toBe(color('--link'));
-  expect(style(button).textDecorationLine).toBe('none');
-  expect(style(button).cursor).toBe('pointer');
+    expect(style(first).borderTopWidth).toBe('0px');
+    expect(style(second).borderTopWidth).toBe('1px');
+    expect(Number.parseFloat(style(first).textIndent)).toBeLessThan(0);
+  });
 
-  await userEvent.hover(button);
+  test('colors usages of symbol at caret, writes included, as selection matches', async () => {
+    const view = await mount('total + total', [
+      EditorView.decorations.of(
+        Decoration.set([
+          Decoration.mark({ class: 'cm-lsp-highlight cm-lsp-highlight-write' }).range(0, 5),
+          Decoration.mark({ class: 'cm-lsp-highlight' }).range(8, 13),
+        ]),
+      ),
+    ]);
+    const [write, read] = [...view.dom.querySelectorAll('.cm-lsp-highlight')].map((mark) => style(mark));
 
-  await vi.waitFor(() => expect(style(button).textDecorationLine).toBe('underline'));
-  expect(style(button).color).toBe(color('--link-hover'));
-  expect(style(button).textDecorationColor).toBe(color('--link-hover'));
-  expect(style(button).textUnderlineOffset).toBe('4px');
-});
+    expect(read.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
+    expect(write.backgroundColor).toBe(rgb(EDITOR.selectionMatch));
+  });
 
-test('keeps scroller width when horizontal scrollbar appears', async () => {
-  const line = 'x'.repeat(40);
-  const view = await mount(Array.from({ length: 10 }, () => line).join('\n'), []);
-  const host = view.dom.parentElement as HTMLElement;
-  const scroller = view.scrollDOM;
-  const width = line.length * view.defaultCharacterWidth;
-  host.style.width = `${2 * width}px`;
-  // The content falls within the horizontal scrollbar's height of filling the editor.
-  host.style.height = `${scroller.scrollHeight + 3}px`;
-  const reserved = scroller.offsetWidth - scroller.clientWidth;
+  test('colors renamed symbol and occurrences as search matches', async () => {
+    const view = await mount('total + total', [
+      EditorView.decorations.of(
+        Decoration.set([
+          Decoration.mark({ class: 'cm-lsp-rename-field' }).range(0, 5),
+          Decoration.mark({ class: 'cm-lsp-rename-occurrence' }).range(8, 13),
+        ]),
+      ),
+    ]);
+    const field = style(view.dom.querySelector('.cm-lsp-rename-field'));
 
-  host.style.width = `${width / 2}px`;
+    expect(field.backgroundColor).toBe(rgb(EDITOR.searchMatchSelected));
+    expect(field.outlineColor).toBe(rgb(EDITOR.searchMatchSelectedBorder));
+    expect(field.outlineWidth).toBe('1px');
+    expect(style(view.dom.querySelector('.cm-lsp-rename-occurrence')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
+  });
 
-  await expect.poll(() => scroller.offsetHeight - scroller.clientHeight).toBe(6);
-  expect(scroller.offsetWidth - scroller.clientWidth).toBe(reserved);
+  test('mutes only keys of rename hint, like completion', async () => {
+    const hint = document.createElement('div');
+    hint.className = 'cm-lsp-rename-hint';
+    hint.innerHTML = '<kbd>↩</kbd> rename';
+    await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: hint }) })]);
+    const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
+
+    expect(style(hint.querySelector('kbd')).color).toBe(text3);
+    expect(style(hint).color).not.toBe(text3);
+  });
+
+  test('lists usages like completions, each in search match color', async () => {
+    const popup = document.createElement('div');
+    popup.className = 'cm-lsp-references';
+    const rows = Array.from(
+      { length: 12 },
+      (_, i) =>
+        `<li class="cm-lsp-reference"><span class="cm-lsp-reference-preview">let <mark class="cm-lsp-reference-match">total</mark> = ${i};</span><span class="cm-lsp-reference-location">main.rs<span class="cm-lsp-reference-line">${i + 1}</span></span></li>`,
+    );
+    popup.innerHTML = `<ul class="cm-lsp-references-list">${rows.join('')}</ul><div class="cm-lsp-references-hint"><kbd>↩</kbd> open</div>`;
+    popup.querySelector('li')?.setAttribute('aria-selected', 'true');
+    await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: popup }) })]);
+    const text3 = rgb(getComputedStyle(document.documentElement).getPropertyValue('--text-3').trim());
+    const list = popup.querySelector('ul') as HTMLElement;
+
+    expect(style(popup.querySelector('[aria-selected]')).backgroundColor).toBe(rgb(EDITOR.completionSelected));
+    expect(style(popup.querySelector('mark')).backgroundColor).toBe(rgb(EDITOR.searchMatch));
+    expect(style(popup.querySelector('.cm-lsp-reference-location')).color).toBe(text3);
+    expect(style(popup.querySelector('.cm-lsp-references-hint kbd')).color).toBe(text3);
+    expect(style(popup.querySelector('.cm-lsp-references-hint')).color).not.toBe(text3);
+    expect(style(popup.querySelector('.cm-lsp-reference')).cursor).toBe('default');
+    expect(list.clientHeight).toBe(10 * 24 + 8);
+    expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+  });
+
+  test('styles diagnostic fixes as links, underlined only on hover', async () => {
+    const tooltip = document.createElement('div');
+    tooltip.className = 'cm-tooltip-hover';
+    tooltip.innerHTML = '<div class="cm-actions-hover"><button type="button">Add import</button> <kbd>⇧⌥↩</kbd></div>';
+    await mount('total', [showTooltip.of({ pos: 0, create: () => ({ dom: tooltip }) })]);
+    const button = tooltip.querySelector('button') as HTMLElement;
+    const color = (name: string) => rgb(getComputedStyle(document.documentElement).getPropertyValue(name).trim());
+
+    expect(style(button).color).toBe(color('--link'));
+    expect(style(button).textDecorationLine).toBe('none');
+    expect(style(button).cursor).toBe('pointer');
+
+    await userEvent.hover(button);
+
+    await vi.waitFor(() => expect(style(button).textDecorationLine).toBe('underline'));
+    expect(style(button).color).toBe(color('--link-hover'));
+    expect(style(button).textDecorationColor).toBe(color('--link-hover'));
+    expect(style(button).textUnderlineOffset).toBe('4px');
+  });
+
+  test('keeps scroller width as horizontal scrollbar appears', async () => {
+    const line = 'x'.repeat(40);
+    const view = await mount(Array.from({ length: 10 }, () => line).join('\n'), []);
+    const host = view.dom.parentElement as HTMLElement;
+    const scroller = view.scrollDOM;
+    const width = line.length * view.defaultCharacterWidth;
+    host.style.width = `${2 * width}px`;
+    // The content falls within the horizontal scrollbar's height of filling the editor.
+    host.style.height = `${scroller.scrollHeight + 3}px`;
+    const reserved = scroller.offsetWidth - scroller.clientWidth;
+
+    host.style.width = `${width / 2}px`;
+
+    await expect.poll(() => scroller.offsetHeight - scroller.clientHeight).toBe(6);
+    expect(scroller.offsetWidth - scroller.clientWidth).toBe(reserved);
+  });
 });

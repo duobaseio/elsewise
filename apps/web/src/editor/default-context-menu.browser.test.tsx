@@ -49,17 +49,17 @@ function range(text: string) {
 
 // Returns the actions asked of the bridge, which records them instead of running them.
 function bridge(): string[] {
-  const actions: string[] = [];
+  const called: string[] = [];
   window.bridge = {
     window: {
-      cut: () => actions.push('cut'),
-      copy: () => actions.push('copy'),
-      paste: () => actions.push('paste'),
+      cut: () => called.push('cut'),
+      copy: () => called.push('copy'),
+      paste: () => called.push('paste'),
       setBrightness: () => {},
       setBackground: () => {},
     },
   };
-  return actions;
+  return called;
 }
 
 afterEach(() => {
@@ -67,7 +67,7 @@ afterEach(() => {
 });
 
 describe('DEFAULT_CONTEXT_MENU', () => {
-  test("shows language server's items in navigate and refactor groups", async () => {
+  test('shows language server items in navigate and refactor groups', async () => {
     const view = await mountBuiltIn(await server(CAPABILITIES));
 
     await open(view, DOC.indexOf('main'));
@@ -135,7 +135,7 @@ describe('DEFAULT_CONTEXT_MENU', () => {
     await expect.element(menuitem('Paste')).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test("hides what language server can't do", async () => {
+  test('hides unsupported items', async () => {
     const view = await mountBuiltIn(await server({ ...CAPABILITIES, renameProvider: false }));
 
     await open(view, DOC.indexOf('main'));
@@ -295,28 +295,28 @@ describe('DEFAULT_CONTEXT_MENU', () => {
 
 describe('CUT', () => {
   test('asks bridge to cut', async () => {
-    const actions = bridge();
+    const called = bridge();
     const view = await mountBuiltIn();
     view.dispatch({ selection: { anchor: 0, head: 2 } });
 
     builtInCommands().run(CUT.id, view);
 
-    expect(actions).toEqual(['cut']);
+    expect(called).toEqual(['cut']);
   });
 
   test('disables in read-only document', async () => {
-    const actions = bridge();
+    const called = bridge();
     const view = await mountBuiltIn(EditorState.readOnly.of(true));
     view.dispatch({ selection: { anchor: 0, head: 2 } });
 
     expect(builtInCommands().run(CUT.id, view)).toBe(false);
-    expect(actions).toEqual([]);
+    expect(called).toEqual([]);
   });
 });
 
 describe('COPY', () => {
   test('asks bridge to copy, without selection too', async () => {
-    const actions = bridge();
+    const called = bridge();
     const view = await mountBuiltIn();
     view.dispatch({ selection: { anchor: 0, head: 2 } });
 
@@ -324,23 +324,23 @@ describe('COPY', () => {
     view.dispatch({ selection: { anchor: 0 } });
     builtInCommands().run(COPY.id, view);
 
-    expect(actions).toEqual(['copy', 'copy']);
+    expect(called).toEqual(['copy', 'copy']);
   });
 });
 
 describe('PASTE', () => {
   test('asks bridge to paste', async () => {
-    const actions = bridge();
+    const called = bridge();
 
     builtInCommands().run(PASTE.id, await mountBuiltIn());
 
-    expect(actions).toEqual(['paste']);
+    expect(called).toEqual(['paste']);
   });
 
   test('disables in read-only document', async () => {
-    const actions = bridge();
+    const called = bridge();
 
     expect(builtInCommands().run(PASTE.id, await mountBuiltIn(EditorState.readOnly.of(true)))).toBe(false);
-    expect(actions).toEqual([]);
+    expect(called).toEqual([]);
   });
 });

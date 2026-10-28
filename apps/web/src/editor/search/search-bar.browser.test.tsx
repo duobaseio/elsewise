@@ -4,7 +4,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
 import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { useEffect, useRef } from 'react';
-import { afterEach, expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
@@ -14,12 +14,6 @@ import { useSearchExtension } from '@/editor/search/search-bar';
 import { builtInCommands, commandsExtension } from '../../../test/commands';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
-
-let view: EditorView | null = null;
-
-afterEach(() => {
-  view = null;
-});
 
 function mount(extensions: Extension[] = [], commands = builtInCommands()): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
@@ -37,7 +31,6 @@ function mount(extensions: Extension[] = [], commands = builtInCommands()): Prom
         }),
         parent: host.current as HTMLDivElement,
       });
-      view = created;
       resolve(created);
       return () => created.destroy();
     }, [search]);
@@ -53,260 +46,262 @@ function mount(extensions: Extension[] = [], commands = builtInCommands()): Prom
 }
 
 const find = () => page.getByRole('textbox', { name: 'Find' });
+
 const count = () => page.getByRole('status');
-const selected = () =>
-  (view as EditorView).state.sliceDoc(view?.state.selection.main.from, view?.state.selection.main.to);
 
-test('Mod-f opens seeded from selection', async () => {
-  const view = await mount();
-  view.dispatch({ selection: { anchor: 4, head: 5 } });
-  view.focus();
-  await userEvent.keyboard('{Meta>}f{/Meta}');
+const selected = (view: EditorView) =>
+  view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to);
 
-  await expect.element(find()).toHaveValue('a');
-  await expect.element(find()).toHaveFocus();
-  const input = find().element() as HTMLInputElement;
-  expect([input.selectionStart, input.selectionEnd]).toEqual([0, 1]);
-});
+describe('SearchBar', () => {
+  test('opens on Mod-f, seeded from selection', async () => {
+    const view = await mount();
+    view.dispatch({ selection: { anchor: 4, head: 5 } });
+    view.focus();
+    await userEvent.keyboard('{Meta>}f{/Meta}');
 
-test('Mod-f while open re-seeds', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await userEvent.fill(find(), 'stale');
+    await expect.element(find()).toHaveValue('a');
+    await expect.element(find()).toHaveFocus();
+    await expect.element(find()).toHaveSelection('a');
+  });
 
-  view.dispatch({ selection: { anchor: 15, head: 16 } });
-  view.focus();
-  await userEvent.keyboard('{Meta>}f{/Meta}');
+  test('reseeds on Mod-f while open', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'stale');
 
-  await expect.element(find()).toHaveValue('b');
-  await expect.element(find()).toHaveFocus();
-  const input = find().element() as HTMLInputElement;
-  expect([input.selectionStart, input.selectionEnd]).toEqual([0, 1]);
-});
+    view.dispatch({ selection: { anchor: 15, head: 16 } });
+    view.focus();
+    await userEvent.keyboard('{Meta>}f{/Meta}');
 
-test('live search, Enter walks matches', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await userEvent.fill(find(), 'let');
+    await expect.element(find()).toHaveValue('b');
+    await expect.element(find()).toHaveFocus();
+    await expect.element(find()).toHaveSelection('b');
+  });
 
-  await expect.element(count()).toHaveTextContent('1/4');
-  expect(view.dom.querySelectorAll('.cm-searchMatch')).toHaveLength(4);
+  test('counts matches live, stepping on Enter', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
 
-  await userEvent.keyboard('{Enter}');
-  await expect.element(count()).toHaveTextContent('2/4');
-  await userEvent.keyboard('{Enter}');
-  await expect.element(count()).toHaveTextContent('3/4');
-  await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
-  await expect.element(count()).toHaveTextContent('2/4');
-  expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
-});
+    await expect.element(count()).toHaveTextContent('1/4');
+    expect(view.dom.querySelectorAll('.cm-searchMatch')).toHaveLength(4);
 
-test('marks matches on scrollbar while open', async () => {
-  const view = await mount([diagnostics, scrollbarMarkers()]);
-  openSearchPanel(view);
-  await userEvent.fill(find(), 'let');
+    await userEvent.keyboard('{Enter}');
+    await expect.element(count()).toHaveTextContent('2/4');
+    await userEvent.keyboard('{Enter}');
+    await expect.element(count()).toHaveTextContent('3/4');
+    await userEvent.keyboard('{Shift>}{Enter}{/Shift}');
+    await expect.element(count()).toHaveTextContent('2/4');
+    expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
+  });
 
-  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-searchMatch')).toHaveLength(4));
+  test('marks matches on scrollbar while open', async () => {
+    const view = await mount([diagnostics, scrollbarMarkers()]);
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
 
-  await userEvent.keyboard('{Escape}');
-  await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-searchMatch')).toHaveLength(0));
-});
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-searchMatch')).toHaveLength(4));
 
-test('typing selects first match from cursor on', async () => {
-  const view = await mount();
-  view.dispatch({ selection: { anchor: view.state.doc.line(2).to } });
-  openSearchPanel(view);
+    await userEvent.keyboard('{Escape}');
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-searchMatch')).toHaveLength(0));
+  });
 
-  await userEvent.fill(find(), 'let');
-  await expect.element(count()).toHaveTextContent('3/4');
-  expect(view.state.selection.main.from).toBe(view.state.doc.line(3).from);
+  test('selects first match from cursor on typing, wrapping', async () => {
+    const view = await mount();
+    view.dispatch({ selection: { anchor: view.state.doc.line(2).to } });
+    openSearchPanel(view);
 
-  await userEvent.fill(find(), 'lett');
-  await expect.element(count()).toHaveTextContent('1/1');
-  expect(view.state.selection.main.from).toBe(view.state.doc.line(4).from);
+    await userEvent.fill(find(), 'let');
+    await expect.element(count()).toHaveTextContent('3/4');
+    expect(view.state.selection.main.from).toBe(view.state.doc.line(3).from);
 
-  // Wraps around.
-  await userEvent.fill(find(), 'a = ');
-  await expect.element(count()).toHaveTextContent('1/1');
-  expect(view.state.selection.main.from).toBe(4);
+    await userEvent.fill(find(), 'lett');
+    await expect.element(count()).toHaveTextContent('1/1');
+    expect(view.state.selection.main.from).toBe(view.state.doc.line(4).from);
 
-  await userEvent.fill(find(), 'nothing');
-  await expect.element(count()).toHaveTextContent('No results');
-  expect(view.state.selection.main.from).toBe(4);
-});
+    // Wraps around.
+    await userEvent.fill(find(), 'a = ');
+    await expect.element(count()).toHaveTextContent('1/1');
+    expect(view.state.selection.main.from).toBe(4);
 
-test('centers off-screen match', async () => {
-  const view = await mount([EditorView.theme({ '&': { height: '200px' }, '.cm-scroller': { overflow: 'auto' } })]);
-  view.dispatch({ changes: { from: 0, insert: '\n'.repeat(100) }, selection: { anchor: 0 } });
-  openSearchPanel(view);
-  const middle = () => {
-    const bounds = view.scrollDOM.getBoundingClientRect();
-    const match = view.coordsAtPos(view.state.selection.main.from) as DOMRect;
-    return Math.abs((match.top + match.bottom) / 2 - (bounds.top + bounds.bottom) / 2);
-  };
+    await userEvent.fill(find(), 'nothing');
+    await expect.element(count()).toHaveTextContent('No results');
+    expect(view.state.selection.main.from).toBe(4);
+  });
 
-  await userEvent.fill(find(), 'let b');
-  await expect.poll(middle).toBeLessThan(20);
+  test('centers off-screen match', async () => {
+    const view = await mount([EditorView.theme({ '&': { height: '200px' }, '.cm-scroller': { overflow: 'auto' } })]);
+    view.dispatch({ changes: { from: 0, insert: '\n'.repeat(100) }, selection: { anchor: 0 } });
+    openSearchPanel(view);
+    const middle = () => {
+      const bounds = view.scrollDOM.getBoundingClientRect();
+      const match = view.coordsAtPos(view.state.selection.main.from) as DOMRect;
+      return Math.abs((match.top + match.bottom) / 2 - (bounds.top + bounds.bottom) / 2);
+    };
 
-  // A match in view stays put.
-  const top = view.scrollDOM.scrollTop;
-  await userEvent.fill(find(), 'let a');
-  await expect.poll(() => view.state.selection.main.from).toBe(view.state.doc.line(101).from);
-  expect(view.scrollDOM.scrollTop).toBe(top);
-});
+    await userEvent.fill(find(), 'let b');
+    await expect.poll(middle).toBeLessThan(20);
 
-test('toggles and invalid regexp', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await userEvent.fill(find(), 'let');
+    // A match in view stays put.
+    const top = view.scrollDOM.scrollTop;
+    await userEvent.fill(find(), 'let a');
+    await expect.poll(() => view.state.selection.main.from).toBe(view.state.doc.line(101).from);
+    expect(view.scrollDOM.scrollTop).toBe(top);
+  });
 
-  await userEvent.click(page.getByRole('button', { name: 'Match case' }));
-  await expect.element(count()).toHaveTextContent('1/3');
+  test('narrows by case and word, flagging invalid regexp', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
 
-  await userEvent.click(page.getByRole('button', { name: 'Whole word' }));
-  await expect.element(count()).toHaveTextContent('1/2');
+    await userEvent.click(page.getByRole('button', { name: 'Match case' }));
+    await expect.element(count()).toHaveTextContent('1/3');
 
-  await userEvent.click(page.getByRole('button', { name: 'Regex' }));
-  await userEvent.fill(find(), '[');
-  await expect.element(find()).toHaveAttribute('aria-invalid', 'true');
-  await expect.element(count()).toHaveTextContent('');
+    await userEvent.click(page.getByRole('button', { name: 'Whole word' }));
+    await expect.element(count()).toHaveTextContent('1/2');
 
-  await userEvent.fill(find(), 'nothing');
-  await expect.element(count()).toHaveTextContent('No results');
-});
+    await userEvent.click(page.getByRole('button', { name: 'Regex' }));
+    await userEvent.fill(find(), '[');
+    await expect.element(find()).toHaveAttribute('aria-invalid', 'true');
+    await expect.element(count()).toHaveTextContent('');
 
-test('replace row', async () => {
-  const view = await mount();
-  view.focus();
-  await userEvent.keyboard('{Meta>}r{/Meta}');
-  await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
+    await userEvent.fill(find(), 'nothing');
+    await expect.element(count()).toHaveTextContent('No results');
+  });
 
-  await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
-  await expect.element(page.getByRole('textbox', { name: 'Replace' })).not.toBeInTheDocument();
-  await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+  test('replaces match, then all', async () => {
+    const view = await mount();
+    view.focus();
+    await userEvent.keyboard('{Meta>}r{/Meta}');
+    await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 
-  await userEvent.fill(find(), 'let ');
-  await userEvent.fill(page.getByRole('textbox', { name: 'Replace' }), 'const ');
-  // Typing the replacement leaves the selected match alone.
-  expect(view.state.selection.main.from).toBe(0);
-  expect(selected()).toBe('let ');
-  await userEvent.click(page.getByRole('button', { name: 'Replace', exact: true }));
-  expect(view.state.doc.line(1).text).toBe('const a = 1;');
-  expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+    await expect.element(page.getByRole('textbox', { name: 'Replace' })).not.toBeInTheDocument();
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
 
-  await userEvent.click(page.getByRole('button', { name: 'Replace all' }));
-  expect(view.state.doc.toString()).toBe('const a = 1;\nconst b = 2;\nconst c = 3;\nletter\n');
-});
+    await userEvent.fill(find(), 'let ');
+    await userEvent.fill(page.getByRole('textbox', { name: 'Replace' }), 'const ');
+    // Typing the replacement leaves the selected match alone.
+    expect(view.state.selection.main.from).toBe(0);
+    expect(selected(view)).toBe('let ');
+    await userEvent.click(page.getByRole('button', { name: 'Replace', exact: true }));
+    expect(view.state.doc.line(1).text).toBe('const a = 1;');
+    expect(view.state.selection.main.from).toBe(view.state.doc.line(2).from);
 
-test('find hides replace row', async () => {
-  const view = await mount();
-  const replace = () => page.getByRole('textbox', { name: 'Replace' });
-  view.focus();
-  await userEvent.keyboard('{Meta>}r{/Meta}');
-  await expect.element(replace()).toBeVisible();
+    await userEvent.click(page.getByRole('button', { name: 'Replace all' }));
+    expect(view.state.doc.toString()).toBe('const a = 1;\nconst b = 2;\nconst c = 3;\nletter\n');
+  });
 
-  await userEvent.keyboard('{Meta>}f{/Meta}');
-  await expect.element(replace()).not.toBeInTheDocument();
+  test('hides replace row on Mod-f', async () => {
+    const view = await mount();
+    const replace = () => page.getByRole('textbox', { name: 'Replace' });
+    view.focus();
+    await userEvent.keyboard('{Meta>}r{/Meta}');
+    await expect.element(replace()).toBeVisible();
 
-  await userEvent.keyboard('{Meta>}r{/Meta}');
-  await userEvent.keyboard('{Escape}');
-  await userEvent.keyboard('{Meta>}f{/Meta}');
-  await expect.element(find()).toBeVisible();
-  await expect.element(replace()).not.toBeInTheDocument();
-});
+    await userEvent.keyboard('{Meta>}f{/Meta}');
+    await expect.element(replace()).not.toBeInTheDocument();
 
-test('runs search commands from field', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await userEvent.fill(find(), 'let');
+    await userEvent.keyboard('{Meta>}r{/Meta}');
+    await userEvent.keyboard('{Escape}');
+    await userEvent.keyboard('{Meta>}f{/Meta}');
+    await expect.element(find()).toBeVisible();
+    await expect.element(replace()).not.toBeInTheDocument();
+  });
 
-  await userEvent.keyboard('{Meta>}g{/Meta}');
-  await expect.element(count()).toHaveTextContent('2/4');
-  await userEvent.keyboard('{Meta>}{Shift>}g{/Shift}{/Meta}');
-  await expect.element(count()).toHaveTextContent('1/4');
+  test('runs search commands from field', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let');
 
-  await userEvent.keyboard('{Meta>}r{/Meta}');
-  await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
-});
+    await userEvent.keyboard('{Meta>}g{/Meta}');
+    await expect.element(count()).toHaveTextContent('2/4');
+    await userEvent.keyboard('{Meta>}{Shift>}g{/Shift}{/Meta}');
+    await expect.element(count()).toHaveTextContent('1/4');
 
-test('toggle replace shows keymap key', async () => {
-  const commands = builtInCommands();
-  const view = await mount([], commands);
-  openSearchPanel(view);
-  commands.selected = { name: 'Test', keys: { [DEFAULT_COMMANDS.editor.search.replace]: ['Mod-e'] } };
+    await userEvent.keyboard('{Meta>}r{/Meta}');
+    await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
+  });
 
-  await userEvent.hover(page.getByRole('button', { name: 'Toggle replace' }));
-  await expect.element(page.getByText('⌘E'), { timeout: 2000 }).toBeVisible();
-});
+  test('shows selected keymap key on toggle replace', async () => {
+    const commands = builtInCommands();
+    const view = await mount([], commands);
+    openSearchPanel(view);
+    commands.selected = { name: 'Test', keys: { [DEFAULT_COMMANDS.editor.search.replace]: ['Mod-e'] } };
 
-test('Enter in replace field', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await userEvent.fill(find(), 'let ');
-  expect(selected()).toBe('let ');
+    await userEvent.hover(page.getByRole('button', { name: 'Toggle replace' }));
+    await expect.element(page.getByText('⌘E'), { timeout: 2000 }).toBeVisible();
+  });
 
-  await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
-  await userEvent.fill(page.getByRole('textbox', { name: 'Replace' }), 'const ');
-  await userEvent.keyboard('{Enter}');
-  expect(view.state.doc.line(1).text).toBe('const a = 1;');
-});
+  test('replaces on Enter in replace field', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.fill(find(), 'let ');
+    expect(selected(view)).toBe('let ');
 
-test('Escape closes and refocuses editor', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await expect.element(find()).toHaveFocus();
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+    await userEvent.fill(page.getByRole('textbox', { name: 'Replace' }), 'const ');
+    await userEvent.keyboard('{Enter}');
+    expect(view.state.doc.line(1).text).toBe('const a = 1;');
+  });
 
-  await userEvent.keyboard('{Escape}');
-  await expect.element(find()).not.toBeInTheDocument();
-  expect(searchPanelOpen(view.state)).toBe(false);
-  expect(view.hasFocus).toBe(true);
-});
+  test('closes on Escape, refocusing editor', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await expect.element(find()).toHaveFocus();
 
-test('read-only hides replace', async () => {
-  const view = await mount([EditorState.readOnly.of(true)]);
-  openSearchPanel(view);
-  await expect.element(find()).toBeVisible();
-  expect(page.getByRole('button', { name: 'Toggle replace' }).elements()).toHaveLength(0);
-});
+    await userEvent.keyboard('{Escape}');
+    await expect.element(find()).not.toBeInTheDocument();
+    expect(searchPanelOpen(view.state)).toBe(false);
+    expect(view.hasFocus).toBe(true);
+  });
 
-test('field width follows text', async () => {
-  const view = await mount();
-  view.dom.parentElement?.style.setProperty('width', '800px');
-  openSearchPanel(view);
-  const width = () => find().element().getBoundingClientRect().width;
-  const bar = () => (find().element().closest('search') as HTMLElement).getBoundingClientRect();
-  const close = () => page.getByRole('button', { name: 'Close' }).element().getBoundingClientRect();
+  test('hides replace in read-only document', async () => {
+    const view = await mount([EditorState.readOnly.of(true)]);
+    openSearchPanel(view);
+    await expect.element(find()).toBeVisible();
+    expect(page.getByRole('button', { name: 'Toggle replace' }).elements()).toHaveLength(0);
+  });
 
-  await userEvent.fill(find(), 'short');
-  expect(width()).toBe(320);
-  const rest = width();
+  test('grows fields with text, within bar', async () => {
+    const view = await mount();
+    view.dom.parentElement?.style.setProperty('width', '800px');
+    openSearchPanel(view);
+    const width = () => find().element().getBoundingClientRect().width;
+    const bar = () => (find().element().closest('search') as HTMLElement).getBoundingClientRect();
+    const close = () => page.getByRole('button', { name: 'Close' }).element().getBoundingClientRect();
 
-  await userEvent.fill(find(), 'x'.repeat(50));
-  expect(width()).toBeGreaterThan(rest);
-  expect(close().right).toBeLessThanOrEqual(bar().right);
+    await userEvent.fill(find(), 'short');
+    expect(width()).toBe(320);
+    const rest = width();
 
-  await userEvent.fill(find(), 'x'.repeat(400));
-  expect(close().right).toBeLessThanOrEqual(bar().right);
-  expect(find().element().getBoundingClientRect().right).toBeLessThan(close().left);
+    await userEvent.fill(find(), 'x'.repeat(50));
+    expect(width()).toBeGreaterThan(rest);
+    expect(close().right).toBeLessThanOrEqual(bar().right);
 
-  await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
-  expect(page.getByRole('textbox', { name: 'Replace' }).element().getBoundingClientRect().width).toBe(width());
-});
+    await userEvent.fill(find(), 'x'.repeat(400));
+    expect(close().right).toBeLessThanOrEqual(bar().right);
+    expect(find().element().getBoundingClientRect().right).toBeLessThan(close().left);
 
-test('every label in bar is sentence case', async () => {
-  const view = await mount();
-  openSearchPanel(view);
-  await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
-  await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+    expect(page.getByRole('textbox', { name: 'Replace' }).element().getBoundingClientRect().width).toBe(width());
+  });
 
-  const bar = document.querySelector('search') as HTMLElement;
-  const labels = [
-    ...[...bar.querySelectorAll('[aria-label]')].map((node) => node.getAttribute('aria-label')),
-    ...[...bar.querySelectorAll('[placeholder]')].map((node) => node.getAttribute('placeholder')),
-    ...[...bar.querySelectorAll('button:not([aria-label])')].map((node) => node.textContent),
-  ];
-  expect(labels.length).toBeGreaterThan(0);
-  for (const label of labels) {
-    expect(label).toMatch(/^[A-Z][^A-Z]*$/);
-  }
+  test('labels in sentence case', async () => {
+    const view = await mount();
+    openSearchPanel(view);
+    await userEvent.click(page.getByRole('button', { name: 'Toggle replace' }));
+    await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
+
+    const bar = document.querySelector('search') as HTMLElement;
+    const labels = [
+      ...[...bar.querySelectorAll('[aria-label]')].map((node) => node.getAttribute('aria-label')),
+      ...[...bar.querySelectorAll('[placeholder]')].map((node) => node.getAttribute('placeholder')),
+      ...[...bar.querySelectorAll('button:not([aria-label])')].map((node) => node.textContent),
+    ];
+    expect(labels.length).toBeGreaterThan(0);
+    for (const label of labels) {
+      expect(label).toMatch(/^[A-Z][^A-Z]*$/);
+    }
+  });
 });

@@ -1,13 +1,13 @@
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
-import type { EditorCommand, Keymap, Keys } from '@elsewise/plugin';
+import type { EditorCommand, Keys } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
+import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { memoryRouter } from '../../test/commands';
-import { CommandManager } from './command-manager';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
@@ -30,11 +30,6 @@ function bound(keys: Record<string, Keys>, platform: Platform = 'linux'): Comman
   }
 
   return manager;
-}
-
-// Returns Eclipse's keymap with `keys`.
-function eclipse(keys: Keymap['keys']): Keymap {
-  return { name: 'Eclipse', keys };
 }
 
 // Returns a view that stands in for an editor, named `name`, without a language server.
@@ -64,7 +59,7 @@ describe('add', () => {
     expect(manager.commands.get('rename')).toBeUndefined();
   });
 
-  test('rejects already existing id', () => {
+  test('rejects existing id', () => {
     const manager = commands();
     manager.add([{ id: 'rename', label: 'First', scope: 'editor', run: () => true }]);
     manager.add([{ id: 'rename', label: 'Second', scope: 'editor', run: () => true }]);
@@ -73,7 +68,7 @@ describe('add', () => {
     expect(warn).toHaveBeenCalledWith('Command rename already exists');
   });
 
-  test('rejects already existing id in same plugin', () => {
+  test('rejects existing id in same addition', () => {
     const manager = commands();
     manager.add([
       { id: 'rename', label: 'First', scope: 'editor', run: () => true },
@@ -155,7 +150,7 @@ describe('run', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  test('returns false for command that did not apply', () => {
+  test('returns false for unapplied command', () => {
     const manager = commands();
     manager.add([
       { id: 'application', label: 'Application', scope: 'application', run: () => false },
@@ -216,7 +211,7 @@ describe('run', () => {
 describe('keymap', () => {
   test('follows selected keymap', () => {
     const manager = bound({ rename: ['Shift-F6'] });
-    manager.selected = eclipse({ rename: ['Alt-r'] });
+    manager.selected = { name: 'Eclipse', keys: { rename: ['Alt-r'] } };
 
     expect(manager.keymap.name).toBe('Eclipse');
     expect(manager.keymap.commands.get('rename')).toEqual(['Alt-r']);
@@ -244,7 +239,7 @@ describe('keymap', () => {
 });
 
 describe('onKeymapChange', () => {
-  test('calls listener with keymap on change', () => {
+  test('calls listener with changed keymap', () => {
     const manager = commands();
     const listener = vi.fn();
     manager.onKeymapChange(listener);
@@ -254,7 +249,7 @@ describe('onKeymapChange', () => {
     expect(manager.keymap.commands.get('rename')).toEqual(['Mod-r']);
   });
 
-  test('skips unchanged', () => {
+  test('ignores unchanged keymap', () => {
     const manager = bound({ format: ['Shift-F6'] });
     const listener = vi.fn();
     manager.onKeymapChange(listener);

@@ -130,7 +130,7 @@ describe('Language', () => {
     expect(router.state.location.pathname).toBe('/settings/appearance/editor/JavaScript');
   });
 
-  test("previews plugin's language, and built-in one with plugin's snippet", async () => {
+  test('previews plugin language, and built-in language with plugin snippet', async () => {
     await mount('Toy', SETTINGS, 'Toy', [PREVIEWS]);
     await expect.element(page.getByText('toy sample')).toBeVisible();
 
@@ -138,7 +138,7 @@ describe('Language', () => {
     await expect.element(page.getByText('fn plugin() {}')).toBeVisible();
   });
 
-  test("previews language with plugin's snippet keyed by name it is listed as", async () => {
+  test('previews language with plugin snippet keyed by name it is listed as', async () => {
     await mount('JavaScript', SETTINGS, 'JavaScript/JSX', [PREVIEWS]);
     await expect.element(page.getByText('const jsx = <p />;')).toBeVisible();
   });
