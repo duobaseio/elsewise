@@ -4,8 +4,8 @@ import { createMemoryHistory, createRootRoute, createRouter } from '@tanstack/re
 import { describe, expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { OPEN_SETTINGS, settingsQuery, useEditorSettings } from '@/settings/settings';
 import { builtInCommands } from '../../test/commands';
-import { OPEN_SETTINGS, settingsQuery, useEditorSettings } from './settings';
 
 describe('useEditorSettings', () => {
   // Renders the setting `key` of `language` into the page.

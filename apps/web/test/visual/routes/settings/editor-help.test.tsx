@@ -25,13 +25,19 @@ test.each(THEMES)('editor help (%s)', async (theme) => {
   await render(
     <QueryClientProvider client={client}>
       <div
-        className="flex w-fit flex-col gap-4 rounded-md bg-popover px-3 py-3 font-sans text-sm text-popover-foreground"
+        className="flex w-fit flex-col gap-4 bg-background p-3 font-sans text-sm text-popover-foreground *:overflow-hidden *:rounded-md *:bg-popover *:ring-1 *:ring-foreground/10"
         data-brightness={theme}
         data-testid="sheet"
       >
-        <CompletionDocumentationHelp>Documentation may require a language server.</CompletionDocumentationHelp>
-        <HighlightUsagesHelp>Requires a language server.</HighlightUsagesHelp>
-        <ScrollbarMarkersHelp>Diagnostics may require a language server.</ScrollbarMarkersHelp>
+        <div>
+          <CompletionDocumentationHelp>Documentation may require a language server.</CompletionDocumentationHelp>
+        </div>
+        <div>
+          <HighlightUsagesHelp>Requires a language server.</HighlightUsagesHelp>
+        </div>
+        <div>
+          <ScrollbarMarkersHelp>Diagnostics may require a language server.</ScrollbarMarkersHelp>
+        </div>
       </div>
     </QueryClientProvider>,
   );

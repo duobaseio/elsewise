@@ -47,7 +47,7 @@ function select(view: EditorView, text: string): void {
 const marked = (view: EditorView) => view.dom.querySelectorAll('.cm-scrollbar-marker-usage').length;
 
 describe('selectionMatches', () => {
-  test('marks other occurrences of selection, until it is cleared', async () => {
+  test('marks other occurrences of selection until cleared', async () => {
     const view = open();
 
     select(view, 'total');

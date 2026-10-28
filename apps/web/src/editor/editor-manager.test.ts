@@ -2,7 +2,7 @@ import { EditorView } from '@codemirror/view';
 import type { ContextMenuGroup, ContextMenuItem, EditorToolbarItem } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
-import { EditorManager } from './editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 
 // Returns an item that runs the command with `id`.
 function item(id: string): ContextMenuItem {
@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe('activate', () => {
-  test('does not notify when view is already active', () => {
+  test('ignores active view', () => {
     const editor = new EditorManager();
     const listener = vi.fn();
     const a = view('a');
@@ -37,7 +37,7 @@ describe('activate', () => {
 });
 
 describe('deactivate', () => {
-  test('clears and notifies when view is active', () => {
+  test('clears and notifies for active view', () => {
     const editor = new EditorManager();
     const listener = vi.fn();
     const a = view('a');
@@ -101,7 +101,7 @@ describe('addContextMenu', () => {
     expect(editor.contextMenu).toEqual(DEFAULT_CONTEXT_MENU);
   });
 
-  test('appends items of group in order of addition', () => {
+  test('appends same-group items in order added', () => {
     const editor = new EditorManager();
     editor.addContextMenu([group('a', [item('first')])]);
     editor.addContextMenu([group('a', [item('second')])]);
@@ -148,7 +148,7 @@ describe('addContextMenu', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('ignoring other'));
   });
 
-  test('does not warn on same order and submenu', () => {
+  test('ignores repeated order and submenu', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const editor = new EditorManager();
     editor.addContextMenu([group('a', [], { order: 1, in: 'menu' })]);
@@ -157,7 +157,7 @@ describe('addContextMenu', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
-  test('takes later order when first is disposed', () => {
+  test('takes later order once first disposed', () => {
     const editor = new EditorManager();
     const dispose = editor.addContextMenu([group('a', [], { order: 1 })]);
     editor.addContextMenu([group('a', [], { order: 2 })]);

@@ -1,7 +1,7 @@
 import type { SettingsPanel, SettingsSearchTerm } from '@elsewise/plugin';
 import { describe, expect, test } from 'vitest';
-import { DEFAULT_PANELS } from './default-panels';
-import { type SettingsSearchHit, search } from './search';
+import { DEFAULT_PANELS } from '@/settings/default-panels';
+import { type SettingsSearchHit, search } from '@/settings/search';
 
 // Returns a panel with `id` and `terms`.
 function panel(id: string, terms: Record<string, SettingsSearchTerm>): SettingsPanel {
@@ -78,7 +78,7 @@ describe('search', () => {
     expect(hit?.term.label).toBe('Scrollback');
   });
 
-  test('searches language named by word, its settings only', () => {
+  test('searches only settings of language named by word', () => {
     expect(ids(search('markdown guides', PANELS, ['Markdown', 'Rust']))).toEqual(['Markdown.visualGuides']);
     expect(ids(search('mark', PANELS, ['Markdown']))).toEqual([
       'Markdown.tabSize',

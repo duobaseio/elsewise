@@ -1,3 +1,4 @@
+import { Icon } from '@elsewise/components/components/icon';
 import { letterformClass } from '@elsewise/components/components/letter-icon';
 import { cn } from '@elsewise/components/lib/utils';
 import type { ActiveTheme } from '@elsewise/plugin';
@@ -175,7 +176,7 @@ export function CompletionDocumentationHelp({ children }: { children: ReactNode 
   const { editor } = useActiveTheme();
   const method = editor.tokens.method?.color ?? editor.foreground;
   return (
-    <Illustration caption={children}>
+    <Illustration note={children}>
       <div className="pt-2">
         <Code lines={COMPLETION} active={1} />
       </div>
@@ -231,7 +232,7 @@ export function CompletionDocumentationHelp({ children }: { children: ReactNode 
  */
 export function HighlightUsagesHelp({ children }: { children: ReactNode }) {
   return (
-    <Illustration caption={children}>
+    <Illustration note={children}>
       <div className="py-2">
         <Code lines={USAGES} active={2} />
       </div>
@@ -251,7 +252,7 @@ export function ScrollbarMarkersHelp({ children }: { children: ReactNode }) {
   });
 
   return (
-    <Illustration caption={children}>
+    <Illustration note={children}>
       <div className="relative py-2">
         <Code lines={MARKED} active={4} />
         <div className="absolute inset-y-0 right-0" style={{ width: SCROLLBAR_WIDTH }}>
@@ -273,21 +274,24 @@ export function ScrollbarMarkersHelp({ children }: { children: ReactNode }) {
 }
 
 /**
- * An illustration of the editor, in its theme, above a caption.
+ * An illustration of the editor, in its theme, filling the tooltip above a note.
  */
-function Illustration({ caption, children }: { caption: ReactNode; children: ReactNode }) {
+function Illustration({ note, children }: { note: ReactNode; children: ReactNode }) {
   const { editor } = useActiveTheme();
   return (
-    <figure className="flex w-96 flex-col gap-2">
+    <div className="flex w-96 flex-col">
       <div
         aria-hidden
-        className="overflow-hidden rounded-lg font-mono text-code ring-1 ring-foreground/10 select-none"
+        className="font-mono text-code select-none"
         style={{ backgroundColor: editor.background, color: editor.foreground }}
       >
         {children}
       </div>
-      <figcaption>{caption}</figcaption>
-    </figure>
+      <p className="flex items-center gap-1.5 border-foreground/10 border-t px-3 py-2 text-text-2">
+        <Icon className="shrink-0 text-text-3" name="info" />
+        {note}
+      </p>
+    </div>
   );
 }
 

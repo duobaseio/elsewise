@@ -332,7 +332,7 @@ describe('actions', () => {
     });
   });
 
-  test("doesn't show or apply actions in read-only document", async () => {
+  test('ignores read-only document', async () => {
     const found = source([ADD_IMPORT]);
     const view = open([found]);
     view.dispatch({ effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)) });

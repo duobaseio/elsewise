@@ -1,4 +1,4 @@
-import type { ApplicationCommand, EditorCommand } from '@elsewise/plugin';
+import type { EditorCommand } from '@elsewise/plugin';
 import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { CommandManager } from '@/command/command-manager';
@@ -7,12 +7,12 @@ import { builtInCommands } from '../../test/commands';
 import { group, item, labels, menuitem, mount, open, submenu } from '../../test/context-menu';
 
 // Returns an editor command with `id` whose label is `id`, with `run` and the `rest` of its fields.
-function command(id: string, run: EditorCommand['run'] = () => true, rest: Partial<EditorCommand> = {}): EditorCommand {
-  return { scope: 'editor', id, label: id, run, ...rest };
+function command(id: string, run: EditorCommand['run'] = () => true): EditorCommand {
+  return { scope: 'editor', id, label: id, run };
 }
 
 // Returns an editor whose commands are `commands`, and the commands.
-function setUp(commands: readonly (ApplicationCommand | EditorCommand)[]): [EditorManager, CommandManager] {
+function setUp(commands: readonly EditorCommand[]): [EditorManager, CommandManager] {
   const editor = new EditorManager();
   const manager = builtInCommands(editor);
   manager.add(commands);
@@ -30,6 +30,7 @@ describe('EditorContextMenu', () => {
     await userEvent.click(menuitem('Item'));
     expect(run).toHaveBeenCalledWith(commands.application, view);
   });
+
   test('focuses editor before running item', async () => {
     let focused: boolean | undefined;
     const [editor, commands] = setUp([command('Item', (_, view) => (focused = view.hasFocus))]);
@@ -41,7 +42,7 @@ describe('EditorContextMenu', () => {
     await vi.waitFor(() => expect(focused).toBe(true));
   });
 
-  test('fills submenu from several additions, and keeps it when first is disposed', async () => {
+  test('fills submenu from several additions, until item disposed', async () => {
     const [editor, commands] = setUp([command('A'), command('B'), command('Item')]);
     editor.addContextMenu([group('base', [item('Item')], 0)]);
     const dispose = editor.addContextMenu([
@@ -62,7 +63,6 @@ describe('EditorContextMenu', () => {
     await open(view, 0);
     expect(labels()).toEqual(['Item', '-', 'Show context actions', '-', 'Paste', '-', 'Compare with…']);
     expect(menuitem('More').query()).toBeNull();
-    expect(menuitem('Other').query()).toBeNull();
   });
 });
 

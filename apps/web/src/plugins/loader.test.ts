@@ -3,9 +3,9 @@ import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
+import { PluginLoader } from '@/plugins/loader';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { memoryRouter } from '../../test/commands';
-import { PluginLoader } from './loader';
 
 // Returns a loader over its own managers.
 function setUp() {
@@ -231,7 +231,7 @@ describe('load', () => {
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('reimports module that failed to evaluate', async () => {
+  test('reimports failed module', async () => {
     const url = plugin(`
       if (broken) throw new Error('broken');
       export default function ({ id }) {
@@ -259,13 +259,13 @@ describe('load', () => {
     expect(error.mock.calls[0]?.[0]).toContain('has no default function');
   });
 
-  test('logs default function that throws', async () => {
+  test('logs throwing default function', async () => {
     await setUp().loader.load('a', plugin("export default function () { throw new Error('failed'); }"));
 
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('logs onEnable that throws', async () => {
+  test('logs throwing onEnable', async () => {
     await setUp().loader.load(
       'a',
       plugin(`
@@ -300,7 +300,7 @@ describe('load', () => {
     expect(events).toEqual(['evaluate', 'evaluate']);
   });
 
-  test('does not wait for another plugin', async () => {
+  test('loads alongside pending plugin', async () => {
     vi.stubGlobal('gate', Promise.withResolvers<void>().promise);
     const { loader } = setUp();
 
@@ -342,7 +342,7 @@ describe('unload', () => {
     expect(events).toEqual(['disable', 'dispose']);
   });
 
-  test('disposes when onDisable throws', async () => {
+  test('disposes past throwing onDisable', async () => {
     const { loader } = setUp();
     await loader.load(
       'a',
@@ -361,7 +361,7 @@ describe('unload', () => {
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('ignores plugin not loaded', async () => {
+  test('ignores unloaded plugin', async () => {
     const { loader } = setUp();
     await loader.unload('a');
     await loader.load('a', RECORDING);
@@ -416,7 +416,7 @@ describe('unload', () => {
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('skips disposable that times out', async () => {
+  test('skips timed-out disposable', async () => {
     const { loader } = setUp();
     await loader.load(
       'a',
@@ -436,7 +436,7 @@ describe('unload', () => {
     expect(error.mock.calls[0]?.[0]).toContain('Plugin a failed to dispose');
   });
 
-  test('loads again after failed unload', async () => {
+  test('reloads after failed unload', async () => {
     const url = plugin(`
       export default function ({ id }) {
         return {

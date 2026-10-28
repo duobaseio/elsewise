@@ -1,6 +1,6 @@
 import type { SettingsPanel } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { SettingsPanelManager } from './settings-panel-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 
 // Returns a panel with `id`, listed in the group or panel `in`.
 function panel(id: string, inside = 'appearance'): SettingsPanel {
@@ -11,17 +11,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('constructor', () => {
-  test('starts with defaults', () => {
-    const a = panel('a');
-    const settings = new SettingsPanelManager([a]);
-
-    expect(settings.panels).toEqual([a]);
-  });
-});
-
 describe('add', () => {
-  test('appends after defaults, omitting their ids', () => {
+  test('appends after defaults, omitting default ids', () => {
     const settings = new SettingsPanelManager([panel('a')]);
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const b = panel('b');
@@ -57,7 +48,7 @@ describe('add', () => {
     expect(warn).toHaveBeenCalledWith('Settings panel a already exists');
   });
 
-  test('frees id when disposed', () => {
+  test('frees disposed id', () => {
     const settings = new SettingsPanelManager();
     const dispose = settings.add([panel('a')]);
     dispose();

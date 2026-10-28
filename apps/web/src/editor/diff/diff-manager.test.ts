@@ -1,6 +1,6 @@
 import type { EditorDiffSource } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { DiffManager } from './diff-manager';
+import { DiffManager } from '@/editor/diff/diff-manager';
 
 // Returns a source with `id` whose base is empty.
 function source(id: string): EditorDiffSource {
@@ -26,7 +26,7 @@ describe('add', () => {
     expect(manager.sources).toEqual(second);
   });
 
-  test('rejects source with existing id and warns', () => {
+  test('rejects existing id, warning', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const manager = new DiffManager(() => {});
     const original = source('same');

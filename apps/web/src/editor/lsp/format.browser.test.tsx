@@ -87,7 +87,7 @@ function press(view: EditorView): boolean {
 const CAPABILITIES = { documentFormattingProvider: true, documentRangeFormattingProvider: true };
 
 describe('serverFormat', () => {
-  test("applies server's edits", async () => {
+  test('applies server edits', async () => {
     const formatDocument = vi.fn(() => [
       { range: { start: { line: 0, character: 3 }, end: { line: 0, character: 5 } }, newText: ' ' },
       { range: { start: { line: 0, character: 10 }, end: { line: 0, character: 11 } }, newText: ' = ' },
@@ -103,7 +103,7 @@ describe('serverFormat', () => {
     });
   });
 
-  test("doesn't ask server that can't format", async () => {
+  test('skips server unable to format', async () => {
     const formatDocument = vi.fn(() => []);
     const view = await open({}, formatDocument);
 
@@ -136,7 +136,7 @@ describe('serverFormat', () => {
     expect(formatDocument).not.toHaveBeenCalled();
   });
 
-  test('formats document as one range when server formats only ranges', async () => {
+  test('formats document as one range for range-only server', async () => {
     const formatRange = vi.fn(formatLines);
     const view = await open({ documentRangeFormattingProvider: true }, () => [], formatRange, LINES);
 
@@ -149,7 +149,7 @@ describe('serverFormat', () => {
     });
   });
 
-  test("doesn't format selection when server can't format ranges", async () => {
+  test('skips selection for server unable to format ranges', async () => {
     const formatDocument = vi.fn(() => []);
     const formatRange = vi.fn(formatLines);
     const view = await open({ documentFormattingProvider: true }, formatDocument, formatRange);

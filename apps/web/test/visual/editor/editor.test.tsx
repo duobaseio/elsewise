@@ -9,7 +9,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
 import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { describe, expect, onTestFinished, test, vi } from 'vitest';
+import { expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import type {
@@ -339,7 +339,7 @@ async function mount(
             <div
               className="bg-background font-sans text-foreground"
               data-brightness={theme}
-              data-testid="editor"
+              data-testid="sheet"
               style={{ width: 1040, height: hovered ? 420 : 300 }}
             >
               {hovered ? (
@@ -369,6 +369,9 @@ async function mount(
       throw new Error('not highlighted');
     }
   });
+  if (hovered) {
+    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
+  }
   const view = EditorView.findFromDOM(document.querySelector('.cm-editor') as HTMLElement);
   if (view === null) {
     throw new Error('no editor');
@@ -385,9 +388,7 @@ async function hover(view: EditorView, text: string, sections: number, init: Mou
     ?.dispatchEvent(new MouseEvent('mousemove', { ...init, clientX: x, clientY: y, bubbles: true }));
   await vi.waitFor(
     () => expect(document.querySelectorAll('.cm-tooltip-hover .cm-tooltip-section')).toHaveLength(sections),
-    {
-      timeout: 2000,
-    },
+    { timeout: 2000 },
   );
 }
 
@@ -420,276 +421,252 @@ async function sign(view: EditorView, line: string, rows: number): Promise<void>
   });
 }
 
-describe.each(THEMES)('code editor (%s)', (theme) => {
-  test('plain', async () => {
-    await mount(theme);
+test.each(THEMES)('editor (%s)', async (theme) => {
+  await mount(theme);
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-${theme}`);
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-${theme}`);
+});
+
+test.each(THEMES)('editor search and replace (%s)', async (theme) => {
+  const view = await mount(theme);
+  openSearchPanel(view);
+  view.dispatch({
+    effects: [setSearchQuery.of(new SearchQuery({ search: 'session', replace: 'channel' })), toggleReplaceRow.of(true)],
   });
+  findNext(view);
+  await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
 
-  test('search and replace', async () => {
-    const view = await mount(theme);
-    openSearchPanel(view);
-    view.dispatch({
-      effects: [
-        setSearchQuery.of(new SearchQuery({ search: 'session', replace: 'channel' })),
-        toggleReplaceRow.of(true),
-      ],
-    });
-    findNext(view);
-    await expect.element(page.getByRole('textbox', { name: 'Replace' })).toBeVisible();
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-search-${theme}`);
+});
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-search-${theme}`);
+test.each(THEMES)('editor unified diff (%s)', async (theme) => {
+  await mount(theme, false, CODE, [], 'unified');
+  await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diff-unified-${theme}`);
+});
+
+test.each(THEMES)('editor split diff (%s)', async (theme) => {
+  await mount(theme, false, CODE, [], 'split');
+  await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diff-split-${theme}`);
+});
+
+// Selects from the middle of the line before the deleted ones to the middle of the added line, so the selection crosses
+// deleted, changed and added lines, and the active line shows on the added line's unselected part.
+const select = (view: EditorView) =>
+  view.dispatch({ selection: { anchor: CODE.indexOf('self.sessions'), head: CODE.indexOf('.await') } });
+
+test.each(THEMES)('editor unified diff with selection (%s)', async (theme) => {
+  const view = await mount(theme, false, CODE, [], 'unified');
+  await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
+  select(view);
+  await expect.poll(() => document.querySelector('.cm-selectionBackground')).not.toBeNull();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diff-unified-selection-${theme}`);
+});
+
+test.each(THEMES)('editor split diff with selection (%s)', async (theme) => {
+  await mount(theme, false, CODE, [], 'split');
+  await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+  select(EditorView.findFromDOM(document.querySelector('.cm-merge-b') as HTMLElement) as EditorView);
+  await expect.poll(() => document.querySelector('.cm-merge-b .cm-selectionBackground')).not.toBeNull();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diff-split-selection-${theme}`);
+});
+
+test.each(THEMES)('editor unified diff with cursor below deleted lines (%s)', async (theme) => {
+  const view = await mount(theme, false, CODE, [], 'unified');
+  await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
+  view.dispatch({ selection: { anchor: CODE.indexOf('let (tx') } });
+  await expect.poll(() => document.querySelector('.cm-activeLine')).not.toBeNull();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diff-unified-active-line-${theme}`);
+});
+
+test.each(THEMES)('editor compare menu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the editor's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
   });
+  await mount(theme);
+  await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
+  await expect.element(page.getByRole('menuitemradio', { name: 'Branch main' })).toBeVisible();
 
-  test('unified diff', async () => {
-    await mount(theme, false, CODE, [], 'unified');
-    await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-compare-menu-${theme}`);
+});
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-${theme}`);
+test.each(THEMES)('editor diff source menu (%s)', async (theme) => {
+  document.documentElement.dataset.brightness = theme;
+  // The click leaves the pointer on the button, which later tests would show hovered, so it moves right of the editor.
+  onTestFinished(async () => {
+    delete document.documentElement.dataset.brightness;
+    await userEvent.hover(page.elementLocator(document.documentElement), { position: { x: 1300, y: 20 } });
   });
+  await mount(theme, false, CODE, [], 'unified');
+  await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
+  await userEvent.click(page.getByRole('button', { name: 'Compared with Base' }));
+  await expect.element(page.getByRole('menuitemradio', { name: 'Base' })).toHaveAttribute('aria-checked', 'true');
 
-  test('split diff', async () => {
-    await mount(theme, false, CODE, [], 'split');
-    await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diff-source-menu-${theme}`);
+});
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-${theme}`);
+test.each(THEMES)('editor folded (%s)', async (theme) => {
+  const view = await mount(theme);
+  view.dispatch({ selection: { anchor: view.state.doc.line(2).from } });
+  foldCode(view);
+  await expect.poll(() => document.querySelector('.cm-foldPlaceholder')).not.toBeNull();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-folded-${theme}`);
+});
+
+test.each(THEMES)('editor diagnostics (%s)', async (theme) => {
+  const view = await mount(theme);
+  // Returns the range of the first `text` in `CODE`.
+  const at = (text: string) => ({ from: CODE.indexOf(text), to: CODE.indexOf(text) + text.length });
+  view.dispatch(
+    setDiagnostics(view.state, [
+      { ...at('SessionId'), severity: 'error', message: 'error' },
+      { ...at('ok_or'), severity: 'warning', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
+      { ...at('let (tx, rx)'), severity: 'warning', markClass: 'cm-lintRange-unnecessary', message: 'unnecessary' },
+      { ...at('subscribe'), severity: 'warning', message: 'warning' },
+      { ...at('Channel::new'), severity: 'hint', message: 'hint' },
+      // A diagnostic with nothing to underline.
+      { from: at('Ok(Channel::new(rx))').to, to: at('Ok(Channel::new(rx))').to, severity: 'info', message: 'point' },
+    ]),
+  );
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-diagnostics-${theme}`);
+});
+
+test.each(THEMES)('editor hover over symbol (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await hover(view, 'attach(id', 1);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-hover-${theme}`);
+});
+
+test.each(THEMES)('editor hover over diagnostic (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await hover(view, 'undefined_name', 1);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-hover-diagnostic-${theme}`);
+});
+
+test.each(THEMES)('editor hover over diagnostic with documentation (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await hover(view, 'send_raw', 2);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-hover-diagnostic-documentation-${theme}`);
+});
+
+test.each(THEMES)('editor links at rest (%s)', async (theme) => {
+  await mount(theme, false, LINKED);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-links-${theme}`);
+});
+
+test.each(THEMES)('editor links hovered (%s)', async (theme) => {
+  const view = await mount(theme, false, LINKED);
+  await hover(view, 'https://example.com/retries', 1);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-links-hover-${theme}`);
+});
+
+test.each(THEMES)('editor links hovered with key held (%s)', async (theme) => {
+  const view = await mount(theme, false, LINKED);
+  await hover(view, 'https://example.com/retries', 1, PLATFORM === 'mac' ? { metaKey: true } : { ctrlKey: true });
+  await vi.waitFor(() => expect(document.querySelector('.cm-link-active')).not.toBeNull());
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-links-active-${theme}`);
+});
+
+test.each(THEMES)('editor completion with documentation (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await complete(view, '    channel.se', true);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-completion-documentation-${theme}`);
+});
+
+test.each(THEMES)('editor completion of statement (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await complete(view, '    ma', false);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-completion-statement-${theme}`);
+});
+
+test.each(THEMES)('editor completion with icons (%s)', async (theme) => {
+  const view = await mount(theme, false, CODE, [EditorState.languageData.of(() => [{ autocomplete: ICONS }])]);
+  const end = view.state.doc.lineAt(CODE.indexOf('let (tx, rx)')).to;
+  view.dispatch({ changes: { from: end, insert: '\n    se' }, selection: { anchor: end + 7 } });
+  view.focus();
+  startCompletion(view);
+  await vi.waitFor(() => expect(document.querySelectorAll('.cm-tooltip-autocomplete li')).toHaveLength(6));
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-completion-icons-${theme}`);
+});
+
+test.each(THEMES)('editor signature help of one signature (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await sign(view, '    channel.send_timeout(b"ping", ', 1);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-signature-help-${theme}`);
+});
+
+test.each(THEMES)('editor signature help of overloads (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  await sign(view, '    attach(id, ', 3);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-signature-help-overloads-${theme}`);
+});
+
+test.each(THEMES)('editor rename (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  view.focus();
+  view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel =') + 2 } });
+  await userEvent.keyboard('{Shift>}{F6}{/Shift}');
+  const input = await vi.waitFor(() => {
+    const input = document.querySelector<HTMLInputElement>('.cm-lsp-rename-field input');
+    expect(document.activeElement).toBe(input);
+    return input as HTMLInputElement;
   });
+  await userEvent.keyboard('stream');
+  // Hides the caret, which blinks.
+  input.style.caretColor = 'transparent';
 
-  // Selects from the middle of the line before the deleted ones to the middle of the added line, so the selection crosses
-  // deleted, changed and added lines, and the active line shows on the added line's unselected part.
-  const select = (view: EditorView) =>
-    view.dispatch({ selection: { anchor: CODE.indexOf('self.sessions'), head: CODE.indexOf('.await') } });
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-rename-${theme}`);
+});
 
-  test('unified diff with selection', async () => {
-    const view = await mount(theme, false, CODE, [], 'unified');
-    await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
-    select(view);
-    await expect.poll(() => document.querySelector('.cm-selectionBackground')).not.toBeNull();
+test.each(THEMES)('editor references (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  view.focus();
+  view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
+  await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
+  await userEvent.keyboard(
+    PLATFORM === 'mac' ? '{Meta>}{Alt>}{F7}{/Alt}{/Meta}' : '{Control>}{Alt>}{F7}{/Alt}{/Control}',
+  );
+  await vi.waitFor(() => expect(document.querySelector('.cm-lsp-references')).not.toBeNull());
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-selection-${theme}`);
-  });
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-references-${theme}`);
+});
 
-  test('split diff with selection', async () => {
-    await mount(theme, false, CODE, [], 'split');
-    await expect.poll(() => document.querySelector('.cm-mergeView .cm-changedLine')).not.toBeNull();
-    select(EditorView.findFromDOM(document.querySelector('.cm-merge-b') as HTMLElement) as EditorView);
-    await expect.poll(() => document.querySelector('.cm-merge-b .cm-selectionBackground')).not.toBeNull();
+test.each(THEMES)('editor symbol highlights (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  view.focus();
+  view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
+  await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-split-selection-${theme}`);
-  });
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-highlights-${theme}`);
+});
 
-  test('unified diff with cursor below deleted lines', async () => {
-    const view = await mount(theme, false, CODE, [], 'unified');
-    await expect.poll(() => document.querySelector('.cm-deletedChunk')).not.toBeNull();
-    view.dispatch({ selection: { anchor: CODE.indexOf('let (tx') } });
-    await expect.poll(() => document.querySelector('.cm-activeLine')).not.toBeNull();
+test.each(THEMES)('editor context actions (%s)', async (theme) => {
+  const view = await mount(theme, true);
+  view.focus();
+  view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('undefined_name') + 2 } });
+  await userEvent.keyboard('{Alt>}{Enter}{/Alt}');
+  await vi.waitFor(() => expect(document.querySelector('.cm-actions')).not.toBeNull());
 
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-unified-active-line-${theme}`);
-  });
-
-  test('compare menu', async () => {
-    // The menu is portalled to the body, outside the editor's brightness, so the page takes it as the app does.
-    document.documentElement.dataset.brightness = theme;
-    onTestFinished(() => {
-      delete document.documentElement.dataset.brightness;
-    });
-    await mount(theme);
-    await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
-    await expect.element(page.getByRole('menuitemradio', { name: 'Branch main' })).toBeVisible();
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-compare-menu-${theme}`);
-  });
-
-  test('diff source menu', async () => {
-    document.documentElement.dataset.brightness = theme;
-    // The click leaves the pointer on the button, which later tests would show hovered, so it moves right of the editor.
-    onTestFinished(async () => {
-      delete document.documentElement.dataset.brightness;
-      await userEvent.hover(page.elementLocator(document.documentElement), { position: { x: 1300, y: 20 } });
-    });
-    await mount(theme, false, CODE, [], 'unified');
-    await expect.poll(() => document.querySelector('.cm-changedLine')).not.toBeNull();
-    await userEvent.click(page.getByRole('button', { name: 'Compared with Base' }));
-    await expect.element(page.getByRole('menuitemradio', { name: 'Base' })).toHaveAttribute('aria-checked', 'true');
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diff-source-menu-${theme}`);
-  });
-
-  test('folded', async () => {
-    const view = await mount(theme);
-    view.dispatch({ selection: { anchor: view.state.doc.line(2).from } });
-    foldCode(view);
-    await expect.poll(() => document.querySelector('.cm-foldPlaceholder')).not.toBeNull();
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-folded-${theme}`);
-  });
-
-  test('diagnostics', async () => {
-    const view = await mount(theme);
-    // Returns the range of the first `text` in `CODE`.
-    const at = (text: string) => ({ from: CODE.indexOf(text), to: CODE.indexOf(text) + text.length });
-    view.dispatch(
-      setDiagnostics(view.state, [
-        { ...at('SessionId'), severity: 'error', message: 'error' },
-        { ...at('ok_or'), severity: 'warning', markClass: 'cm-lintRange-deprecated', message: 'deprecated' },
-        { ...at('let (tx, rx)'), severity: 'warning', markClass: 'cm-lintRange-unnecessary', message: 'unnecessary' },
-        { ...at('subscribe'), severity: 'warning', message: 'warning' },
-        { ...at('Channel::new'), severity: 'hint', message: 'hint' },
-        // A diagnostic with nothing to underline.
-        { from: at('Ok(Channel::new(rx))').to, to: at('Ok(Channel::new(rx))').to, severity: 'info', message: 'point' },
-      ]),
-    );
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-diagnostics-${theme}`);
-  });
-
-  describe('hover', () => {
-    test('over symbol', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await hover(view, 'attach(id', 1);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-${theme}`);
-    });
-
-    test('over diagnostic', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await hover(view, 'undefined_name', 1);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-diagnostic-${theme}`);
-    });
-
-    test('over diagnostic with documentation', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await hover(view, 'send_raw', 2);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-hover-diagnostic-documentation-${theme}`);
-    });
-  });
-
-  describe('links', () => {
-    test('at rest', async () => {
-      await mount(theme, false, LINKED);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-links-${theme}`);
-    });
-
-    test('hovered', async () => {
-      const view = await mount(theme, false, LINKED);
-      await hover(view, 'https://example.com/retries', 1);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-links-hover-${theme}`);
-    });
-
-    test('hovered with key held', async () => {
-      const view = await mount(theme, false, LINKED);
-      await hover(view, 'https://example.com/retries', 1, PLATFORM === 'mac' ? { metaKey: true } : { ctrlKey: true });
-      await vi.waitFor(() => expect(document.querySelector('.cm-link-active')).not.toBeNull());
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-links-active-${theme}`);
-    });
-  });
-
-  describe('completion', () => {
-    test('with documentation', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await complete(view, '    channel.se', true);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-completion-documentation-${theme}`);
-    });
-
-    test('of statement', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await complete(view, '    ma', false);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-completion-statement-${theme}`);
-    });
-
-    test('with icons', async () => {
-      const view = await mount(theme, false, CODE, [EditorState.languageData.of(() => [{ autocomplete: ICONS }])]);
-      const end = view.state.doc.lineAt(CODE.indexOf('let (tx, rx)')).to;
-      view.dispatch({ changes: { from: end, insert: '\n    se' }, selection: { anchor: end + 7 } });
-      view.focus();
-      startCompletion(view);
-      await vi.waitFor(() => expect(document.querySelectorAll('.cm-tooltip-autocomplete li')).toHaveLength(6));
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-completion-icons-${theme}`);
-    });
-  });
-
-  describe('signature help', () => {
-    test('of one signature', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await sign(view, '    channel.send_timeout(b"ping", ', 1);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-signature-help-${theme}`);
-    });
-
-    test('of overloads', async () => {
-      const view = await mount(theme, true);
-      await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-      await sign(view, '    attach(id, ', 3);
-
-      await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-signature-help-overloads-${theme}`);
-    });
-  });
-
-  test('rename', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    view.focus();
-    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel =') + 2 } });
-    await userEvent.keyboard('{Shift>}{F6}{/Shift}');
-    const input = await vi.waitFor(() => {
-      const input = document.querySelector<HTMLInputElement>('.cm-lsp-rename-field input');
-      expect(document.activeElement).toBe(input);
-      return input as HTMLInputElement;
-    });
-    await userEvent.keyboard('stream');
-    // Hides the caret, which blinks.
-    input.style.caretColor = 'transparent';
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-rename-${theme}`);
-  });
-
-  test('references', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    view.focus();
-    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
-    await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
-    await userEvent.keyboard(
-      PLATFORM === 'mac' ? '{Meta>}{Alt>}{F7}{/Alt}{/Meta}' : '{Control>}{Alt>}{F7}{/Alt}{/Control}',
-    );
-    await vi.waitFor(() => expect(document.querySelector('.cm-lsp-references')).not.toBeNull());
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-references-${theme}`);
-  });
-
-  test('symbol highlights', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    view.focus();
-    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('channel.send_raw') + 2 } });
-    await vi.waitFor(() => expect(document.querySelectorAll('.cm-lsp-highlight')).toHaveLength(3));
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-highlights-${theme}`);
-  });
-
-  test('context actions', async () => {
-    const view = await mount(theme, true);
-    await vi.waitFor(() => expect(document.querySelector('.cm-lintRange-error')).not.toBeNull());
-    view.focus();
-    view.dispatch({ selection: { anchor: view.state.doc.toString().indexOf('undefined_name') + 2 } });
-    await userEvent.keyboard('{Alt>}{Enter}{/Alt}');
-    await vi.waitFor(() => expect(document.querySelector('.cm-actions')).not.toBeNull());
-
-    await expect(page.getByTestId('editor')).toMatchScreenshot(`editor-context-actions-${theme}`);
-  });
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-context-actions-${theme}`);
 });

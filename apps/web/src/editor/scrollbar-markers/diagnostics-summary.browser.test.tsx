@@ -127,7 +127,7 @@ describe('DiagnosticsSummary', () => {
     expect(next.element().getBoundingClientRect().left).toBe(before);
   });
 
-  test('skips animation when opened', async () => {
+  test('skips animation on open', async () => {
     await mount();
     await expect.element(status()).toHaveAccessibleName('No diagnostics');
 
@@ -184,7 +184,7 @@ describe('DiagnosticsSummary', () => {
     expect(view.hasFocus).toBe(true);
   });
 
-  test('hidden with scrollbar markers', async () => {
+  test('hides with scrollbar markers off', async () => {
     await mount({
       ...DEFAULT_SETTINGS,
       appearance: {
@@ -197,7 +197,7 @@ describe('DiagnosticsSummary', () => {
     expect(document.querySelector('[data-slot=diagnostics-summary]')).toBeNull();
   });
 
-  test('hidden when read-only', async () => {
+  test('hides in read-only document', async () => {
     await mount(DEFAULT_SETTINGS, EditorState.readOnly.of(true));
 
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());

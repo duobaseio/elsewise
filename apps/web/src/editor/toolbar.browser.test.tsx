@@ -97,7 +97,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('useToolbar', () => {
+describe('useToolbarExtension', () => {
   test('orders items from right edge, unordered left', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);
@@ -155,7 +155,7 @@ describe('useToolbar', () => {
     await expect.element(page.getByRole('button', { name: 'a' })).toBeDisabled();
   });
 
-  test('presses command that is active', async () => {
+  test('presses active command', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);
     command(commands, 'a', { active: () => true });
@@ -233,7 +233,7 @@ describe('useToolbar', () => {
     await expect.element(page.getByText('Wave', { exact: true })).toHaveAttribute('data-instant');
   });
 
-  test('removes items when disposed', async () => {
+  test('removes items once disposed', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);
     command(commands, 'a');

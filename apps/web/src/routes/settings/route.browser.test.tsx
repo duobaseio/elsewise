@@ -53,6 +53,7 @@ const LANGUAGES: Settings = {
 };
 
 afterEach(() => {
+  window.bridge = undefined;
   vi.restoreAllMocks();
 });
 
@@ -209,7 +210,7 @@ describe('Item', () => {
     await expect.poll(() => page.getByRole('main').element().textContent).toContain('Spelling');
   });
 
-  test('shows language page under editor when opened', async () => {
+  test('shows open language page under editor', async () => {
     await mount(['/settings/appearance/editor/Markdown'], [], LANGUAGES);
     await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
     await expect.element(sidebar().getByRole('link', { name: 'Markdown' })).toHaveAttribute('data-active');
@@ -247,7 +248,6 @@ describe('AddLanguage', () => {
         editor: { ...LANGUAGES.appearance.editor, languages: { ...LANGUAGES.appearance.editor.languages, Java: {} } },
       },
     });
-    window.bridge = undefined;
   });
 });
 
@@ -297,7 +297,7 @@ describe('Search', () => {
     expect(router.state.location.search).toEqual({ highlight: 'dictionary' });
   });
 
-  test('shows panel in panel under its panel', async () => {
+  test('shows nested panel under parent', async () => {
     await mount(['/settings'], [PANELS]);
     await expect.element(sidebar().getByRole('link', { name: 'Words' })).toBeVisible();
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'region');
@@ -307,7 +307,7 @@ describe('Search', () => {
       .toMatch(/Words.*Spelling/);
   });
 
-  test('says when nothing matches', async () => {
+  test('shows no-match message', async () => {
     await mount(['/settings']);
     await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'zzzz');
 

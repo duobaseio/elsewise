@@ -1,7 +1,7 @@
 import type { Platform } from '@elsewise/components/lib/platform';
 import { type ApplicationCommand, type EditorCommand, Keymap, type Keys } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ApplicationKeymap } from './application-keymap';
+import { ApplicationKeymap } from '@/command/application-keymap';
 
 const ELSEWISE: Keymap = { name: 'Elsewise', keys: {} };
 
@@ -110,7 +110,7 @@ describe('commands', () => {
     expect([...keymap.keys.editor]).toEqual([['Ctrl-r', ['rename']]]);
   });
 
-  test('keeps commands when unchanged', () => {
+  test('keeps unchanged commands', () => {
     const keymap = updated(editor({ rename: ['Mod-r'] }));
     const commands = keymap.commands;
     keymap.update({ name: 'Elsewise', keys: { rename: ['Mod-r'] } }, [
@@ -121,7 +121,7 @@ describe('commands', () => {
     expect(keymap.keys.editor.size).toBe(0);
   });
 
-  test('replaces commands on change', () => {
+  test('replaces changed commands', () => {
     const keymap = updated(editor({ rename: ['Mod-r'] }));
     const initial = keymap.commands;
     keymap.update(ELSEWISE, editor({ rename: ['Mod-r'], format: ['Shift-F6'] }));

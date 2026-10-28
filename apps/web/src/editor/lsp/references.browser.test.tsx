@@ -25,20 +25,6 @@ const location = ([line, character]: number[], uri = URI) => ({
   range: { start: { line, character }, end: { line, character: character + 'total'.length } },
 });
 
-// Returns a transport to a server that finds `locations` as the usages of `total` in `DOC`, counting its requests in
-// `requests`.
-function transport(locations: unknown[], requests: unknown[]): StubTransport {
-  return new StubTransport(
-    { textDocumentSync: 2, referencesProvider: true },
-    {
-      'textDocument/references': (params: unknown) => {
-        requests.push(params);
-        return locations;
-      },
-    },
-  );
-}
-
 const views: EditorView[] = [];
 
 afterEach(() => {
@@ -59,7 +45,16 @@ async function open(
       id: 'rust',
       name: 'Rust',
       languages: { Rust: 'rust' },
-      start: () => transport(locations, requests),
+      start: () =>
+        new StubTransport(
+          { textDocumentSync: 2, referencesProvider: true },
+          {
+            'textDocument/references': (params: unknown) => {
+              requests.push(params);
+              return locations;
+            },
+          },
+        ),
     } satisfies LanguageServer,
     ROOT,
   );

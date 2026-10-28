@@ -67,7 +67,7 @@ describe('scroll', () => {
     expect(offCenter(view, cut.from)).toBeLessThan(10);
   });
 
-  test("doesn't scroll visible range", () => {
+  test('ignores visible range', () => {
     const view = open();
 
     view.dispatch({ effects: scroll(range('line 3'), view) });

@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
-import { describe, expect, onTestFinished, test } from 'vitest';
+import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { pluginsQuery } from '@/plugins/loader';
@@ -40,85 +40,83 @@ const WORDS: InstalledPlugin = {
 // A few languages under the editor, for the sidebar to fit.
 const LANGUAGES: Settings['appearance']['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
 
-describe.each(THEMES)('settings (%s)', (theme) => {
-  async function mount(languages = DEFAULT_SETTINGS.appearance.editor.languages) {
-    // The app sets the page's brightness from the settings, which the search results, portalled to the body, take.
-    onTestFinished(() => {
-      delete document.documentElement.dataset.brightness;
-    });
-    const client = new QueryClient();
-    client.setQueryData(settingsQuery.queryKey, {
-      ...DEFAULT_SETTINGS,
-      appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
-      },
-    });
-    client.setQueryData(pluginsQuery.queryKey, [WORDS]);
-    const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ['/settings'] }) });
-    await render(
-      <div className="font-sans" data-brightness={theme} data-testid="sheet" style={{ width: 900, height: 480 }}>
-        <QueryClientProvider client={client}>
-          <RouterProvider router={router} />
-        </QueryClientProvider>
-      </div>,
-    );
-
-    await expect.element(page.getByRole('link', { name: 'Words' })).toBeVisible();
-    await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words' } });
-    await expect.element(page.getByRole('heading', { name: 'General' })).not.toBeInTheDocument();
-    await userEvent.hover(page.getByRole('main'));
-  }
-
-  test('panel in panel', async () => {
-    await mount();
-    await userEvent.click(page.getByRole('button', { name: 'Expand Words' }));
-    await expect.element(page.getByRole('link', { name: 'Spelling' })).toBeVisible();
-    await userEvent.hover(page.getByRole('main'));
-
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-nested-${theme}`);
+async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appearance.editor.languages) {
+  // The app sets the page's brightness from the settings, which the search results, portalled to the body, take.
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
   });
-
-  test('languages under editor', async () => {
-    await mount(LANGUAGES);
-    await userEvent.click(page.getByRole('button', { name: 'Expand Editor' }));
-    await expect.element(page.getByRole('link', { name: 'Rust' })).toBeVisible();
-    await expect.element(page.getByRole('combobox', { name: 'Add language' })).toBeVisible();
-    await userEvent.hover(page.getByRole('main'));
-
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-languages-${theme}`);
+  const client = new QueryClient();
+  client.setQueryData(settingsQuery.queryKey, {
+    ...DEFAULT_SETTINGS,
+    appearance: {
+      ...DEFAULT_SETTINGS.appearance,
+      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
+      editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
+    },
   });
+  client.setQueryData(pluginsQuery.queryKey, [WORDS]);
+  const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ['/settings'] }) });
+  await render(
+    <div className="font-sans" data-brightness={theme} data-testid="sheet" style={{ width: 900, height: 480 }}>
+      <QueryClientProvider client={client}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </div>,
+  );
 
-  test('search results', async () => {
-    await mount();
-    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'col');
-    await expect.poll(() => page.getByRole('option').elements().length).toBe(5);
+  await expect.element(page.getByRole('link', { name: 'Words' })).toBeVisible();
+  await router.navigate({ to: '/settings/plugins/$id', params: { id: 'io.example.words' } });
+  await expect.element(page.getByRole('heading', { name: 'General' })).not.toBeInTheDocument();
+  await userEvent.hover(page.getByRole('main'));
+}
 
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-results-${theme}`);
-  });
+test.each(THEMES)('settings panel in panel (%s)', async (theme) => {
+  await mount(theme);
+  await userEvent.click(page.getByRole('button', { name: 'Expand Words' }));
+  await expect.element(page.getByRole('link', { name: 'Spelling' })).toBeVisible();
+  await userEvent.hover(page.getByRole('main'));
 
-  test('search result in panel', async () => {
-    await mount();
-    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'region');
-    await expect.element(page.getByRole('option', { name: /Locale/ })).toBeVisible();
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-nested-${theme}`);
+});
 
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-nested-${theme}`);
-  });
+test.each(THEMES)('settings languages under editor (%s)', async (theme) => {
+  await mount(theme, LANGUAGES);
+  await userEvent.click(page.getByRole('button', { name: 'Expand Editor' }));
+  await expect.element(page.getByRole('link', { name: 'Rust' })).toBeVisible();
+  await expect.element(page.getByRole('combobox', { name: 'Add language' })).toBeVisible();
+  await userEvent.hover(page.getByRole('main'));
 
-  test('search result for language', async () => {
-    await mount(LANGUAGES);
-    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'markdown tab');
-    await expect.element(page.getByRole('option', { name: /Tab width/ })).toBeVisible();
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-languages-${theme}`);
+});
 
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-language-${theme}`);
-  });
+test.each(THEMES)('settings search results (%s)', async (theme) => {
+  await mount(theme);
+  await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'col');
+  await expect.poll(() => page.getByRole('option').elements().length).toBe(5);
 
-  test('search without results', async () => {
-    await mount();
-    await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'zzzz');
-    await expect.element(page.getByText('No settings found')).toBeVisible();
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-results-${theme}`);
+});
 
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-empty-${theme}`);
-  });
+test.each(THEMES)('settings search result in panel (%s)', async (theme) => {
+  await mount(theme);
+  await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'region');
+  await expect.element(page.getByRole('option', { name: /Locale/ })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-nested-${theme}`);
+});
+
+test.each(THEMES)('settings search result for language (%s)', async (theme) => {
+  await mount(theme, LANGUAGES);
+  await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'markdown tab');
+  await expect.element(page.getByRole('option', { name: /Tab width/ })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-language-${theme}`);
+});
+
+test.each(THEMES)('settings search without results (%s)', async (theme) => {
+  await mount(theme);
+  await userEvent.fill(page.getByRole('combobox', { name: 'Search' }), 'zzzz');
+  await expect.element(page.getByText('No settings found')).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`search-empty-${theme}`);
 });

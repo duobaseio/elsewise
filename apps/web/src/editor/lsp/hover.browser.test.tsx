@@ -244,7 +244,7 @@ describe('serverHover', () => {
     expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
   });
 
-  test('never asks server without hovers', async () => {
+  test('skips server without hovers', async () => {
     const fake = transport(undefined);
     const view = await open(fake);
 
@@ -321,7 +321,7 @@ describe('serverHover', () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('let channel = connect(1);'));
   });
 
-  test("hints commands' keys", async () => {
+  test('hints command keys', async () => {
     const commands = builtInCommands();
     commands.selected = { name: 'Test', keys: { [APPLY_TOP_FIX.id]: ['Mod-k'], [SHOW_ACTIONS.id]: [] } };
     const view = await open(
@@ -347,7 +347,7 @@ describe('serverHover', () => {
     expect(view.state.selection.main.head).toBe(DOC.indexOf('attach'));
   });
 
-  test('omits fix line when server has none', async () => {
+  test('omits fix line without fixes', async () => {
     const view = await open(transport(null, [DIAGNOSTIC]));
 
     const { tooltip } = await hoverDiagnostic(view);
@@ -356,7 +356,7 @@ describe('serverHover', () => {
     expect(tooltip.querySelector('.cm-actions-hover')).toBeNull();
   });
 
-  test('shows diagnostic without fixes when server stalls', async () => {
+  test('shows diagnostic without fixes from stalled server', async () => {
     const view = await open(transport(null, [DIAGNOSTIC], () => new Promise(() => {})));
 
     const { tooltip } = await hoverDiagnostic(view);
@@ -365,7 +365,7 @@ describe('serverHover', () => {
     expect(tooltip.querySelector('.cm-actions-hover')).toBeNull();
   });
 
-  test("renders diagnostic's markdown message", async () => {
+  test('renders markdown diagnostic message', async () => {
     const view = await open(
       transport(null, [
         { ...DIAGNOSTIC, message: { kind: 'markdown', value: 'use `send`, see [docs](https://example.com)' } },
@@ -391,7 +391,7 @@ describe('serverHover', () => {
     expect(message?.textContent).toBe('expected *const T, found <b>_x_</b> and an odd `');
   });
 
-  test("shows diagnostic's source and code, linking code to description", async () => {
+  test('shows diagnostic source and code, linking code to description', async () => {
     const view = await open(
       transport(null, [
         {
@@ -418,7 +418,7 @@ describe('serverHover', () => {
     expect(metas[2]?.querySelector('a')).toBeNull();
   });
 
-  describe('on a click', () => {
+  describe('on click', () => {
     test('closes', async () => {
       const view = await open(transport(markdown('Attaches.')));
       await hover(view);
@@ -428,7 +428,7 @@ describe('serverHover', () => {
       await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull());
     });
 
-    test("doesn't open, nor ask server", async () => {
+    test('stays closed, without requesting', async () => {
       const fake = transport(markdown('Attaches.'));
       const view = await open(fake);
 
@@ -451,7 +451,7 @@ describe('serverHover', () => {
       await vi.waitFor(() => expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull(), { timeout: 2000 });
     });
 
-    test("doesn't reopen on move at click position", async () => {
+    test('stays closed on move at click position', async () => {
       const view = await open(transport(markdown('Attaches.')));
       point(view, DOC.indexOf('attach') + 1);
       press(view, DOC.indexOf('attach') + 1);
@@ -462,7 +462,7 @@ describe('serverHover', () => {
       expect(view.dom.querySelector('.cm-tooltip-hover')).toBeNull();
     });
 
-    test("doesn't open again while dragging", async () => {
+    test('stays closed while dragging', async () => {
       const view = await open(transport(markdown('Attaches.')));
       point(view, DOC.indexOf('attach') + 1);
       press(view, DOC.indexOf('attach') + 1);
@@ -483,7 +483,7 @@ describe('serverHover', () => {
       expect(view.dom.querySelector('.cm-tooltip-hover')).not.toBeNull();
     });
 
-    test("doesn't show diagnostics either", async () => {
+    test('hides diagnostics too', async () => {
       const from = DOC.indexOf('attach');
       const range = { start: { line: 0, character: from }, end: { line: 0, character: from + 6 } };
       const view = await open(transport(null, [{ range, severity: 1, message: 'cannot find `attach`' }]));
@@ -497,7 +497,7 @@ describe('serverHover', () => {
     });
   });
 
-  describe('on a click, with usages not highlighted', () => {
+  describe('on click without usage highlights', () => {
     test('stays open', async () => {
       const view = await open(transport(markdown('Attaches.')), highlightUsages.of(false));
       await hover(view);
@@ -535,11 +535,13 @@ describe('serverHover', () => {
 });
 
 describe('SHOW_HOVER', () => {
-  // Puts the cursor at `pos`, runs the command, and returns the hover that opens.
-  async function show(view: EditorView, pos: number): Promise<HTMLElement> {
-    view.dispatch({ selection: { anchor: pos } });
+  test('opens documentation at cursor', async () => {
+    const fake = transport(markdown('Attaches.'));
+    const view = await open(fake);
+
+    view.dispatch({ selection: { anchor: DOC.indexOf('attach') + 1 } });
     expect(view.state.facet(COMMANDS)?.run(SHOW_HOVER.id, view)).toBe(true);
-    return vi.waitFor(
+    const tooltip = await vi.waitFor(
       () => {
         const tooltip = view.dom.querySelector<HTMLElement>('.cm-tooltip-hover');
         expect(tooltip).not.toBeNull();
@@ -547,13 +549,6 @@ describe('SHOW_HOVER', () => {
       },
       { timeout: 2000 },
     );
-  }
-
-  test('opens documentation at cursor', async () => {
-    const fake = transport(markdown('Attaches.'));
-    const view = await open(fake);
-
-    const tooltip = await show(view, DOC.indexOf('attach') + 1);
 
     expect(tooltip.querySelector('.cm-lsp-content')?.textContent).toContain('Attaches.');
     expect(fake.sent.find(({ method }) => method === 'textDocument/hover')?.params).toMatchObject({

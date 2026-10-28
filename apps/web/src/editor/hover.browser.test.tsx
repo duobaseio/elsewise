@@ -165,7 +165,7 @@ describe('hover', () => {
     expect(filtered.every(Array.isArray)).toBe(true);
   });
 
-  test("renders diagnostic's own message", async () => {
+  test('renders custom message', async () => {
     const view = open([
       { ...DIAGNOSTIC, renderMessage: () => Object.assign(document.createElement('b'), { textContent: 'own' }) },
     ]);

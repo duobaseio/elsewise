@@ -1,5 +1,6 @@
 .terminal-host .xterm {
-  padding-left: 8px;
+  /* FitAddon subtracts the padding of `.xterm` when it sizes the grid. */
+  padding: 4px 0 4px 8px;
 }
 
 /* xterm's stylesheet paints the viewport black and it spans the padding; the host already carries the theme background. */
