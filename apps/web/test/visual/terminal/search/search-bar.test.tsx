@@ -5,9 +5,9 @@ import { expect, onTestFinished, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { THEMES as LOADED, resolveActiveTheme } from '@/appearance/themes';
-import { TerminalSearchBar } from '@/terminal/terminal-search-bar';
+import { TerminalSearchBar } from '@/terminal/search/search-bar';
 
-import { THEMES } from '../../sheet';
+import { THEMES } from '../../../sheet';
 
 test.each(THEMES)('terminal search bar (%s)', async (theme) => {
   // A terminal outside the sheet, whose buffer the bar searches.

@@ -1,9 +1,12 @@
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { cn } from '@elsewise/components/lib/utils';
-import type { ISearchOptions, ISearchResultChangeEvent, SearchAddon } from '@xterm/addon-search';
-import { type KeyboardEvent, type RefObject, useEffect, useState } from 'react';
+import { type ISearchOptions, type ISearchResultChangeEvent, SearchAddon } from '@xterm/addon-search';
+import type { IDisposable, ITerminalAddon, Terminal } from '@xterm/xterm';
+import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import { useActiveTheme } from '@/appearance/themes';
 import { SearchAction, SearchOption } from '@/components/search-controls';
+import { isShortcut, type TerminalShortcuts } from '@/terminal/shortcuts';
 
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
@@ -11,14 +14,115 @@ const CLOSE = 'Escape';
 
 export const LIMIT = 1000;
 
-export interface TerminalSearch {
+interface Query {
   query: string;
   caseSensitive: boolean;
   wholeWord: boolean;
   regex: boolean;
 }
 
-export function TerminalSearchBar({
+/**
+ * Returns the terminal's search add-on, which adds the find shortcut to `shortcuts`, and the search bar it opens.
+ */
+export function useTerminalSearch(shortcuts: TerminalShortcuts): { search: ITerminalAddon; bar: ReactNode } {
+  const [active, setActive] = useState<{ terminal: Terminal; addon: SearchAddon } | null>(null);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState<Query>({
+    query: '',
+    caseSensitive: false,
+    wholeWord: false,
+    regex: false,
+  });
+  const field = useRef<HTMLInputElement>(null);
+  // Read by the shortcut, which outlives the render it was created in.
+  const opened = useRef(false);
+  opened.current = open;
+
+  const colors = useActiveTheme().terminal;
+  const decorations = useMemo(() => {
+    const { background, searchMatch, searchMatchSelected, searchMatchSelectedBorder } = colors;
+    return {
+      matchBackground: opaque(searchMatch, background),
+      matchOverviewRuler: opaque(searchMatch, background),
+      activeMatchBackground: opaque(searchMatchSelected, background),
+      activeMatchBorder: searchMatchSelectedBorder,
+      activeMatchColorOverviewRuler: opaque(searchMatchSelected, background),
+    };
+  }, [colors]);
+
+  const search = useMemo<ITerminalAddon>(() => {
+    let disposables: IDisposable[] = [];
+    return {
+      activate(terminal) {
+        const addon = new SearchAddon({ highlightLimit: LIMIT + 1 });
+        terminal.loadAddon(addon);
+        // Opens the search bar, seeded with the selected line, or focuses it when open.
+        const find = {
+          key: 'f',
+          run: () => {
+            const selection = terminal.getSelection();
+            if (!opened.current && selection !== '' && !selection.includes('\n')) {
+              setQuery((query) => ({ ...query, query: selection }));
+            }
+            setOpen(true);
+            field.current?.select();
+          },
+        };
+        disposables = [addon, shortcuts.add([find])];
+        setActive({ terminal, addon });
+      },
+      dispose() {
+        for (const disposable of disposables) {
+          disposable.dispose();
+        }
+        disposables = [];
+        setActive(null);
+      },
+    };
+  }, [shortcuts]);
+
+  const bar = open && active !== null && (
+    <SearchBar
+      decorations={decorations}
+      field={field}
+      initial={query}
+      onClose={(query) => {
+        setQuery(query);
+        setOpen(false);
+        active.terminal.focus();
+      }}
+      search={active.addon}
+    />
+  );
+  return { search, bar };
+}
+
+// Returns `color` laid over `background` as `#RRGGBB`, the only form xterm's decorations take.
+function opaque(color: string, background: string): string {
+  const [r, g, b, alpha] = channels(color);
+  const under = channels(background);
+  return `#${[r, g, b]
+    .map((channel, index) =>
+      Math.round(channel * alpha + (under[index] ?? 0) * (1 - alpha))
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
+}
+
+// Returns the red, green, blue and alpha of a `#RGB[A]`, `#RRGGBB[AA]` or `rgb[a]()` color.
+function channels(color: string): [number, number, number, number] {
+  const hex = /^#([0-9a-f]+)$/i.exec(color)?.[1];
+  if (hex !== undefined) {
+    const full = hex.length <= 4 ? [...hex].map((digit) => digit + digit).join('') : hex;
+    const [r = 0, g = 0, b = 0, a = 255] = (full.match(/../g) ?? []).map((pair) => Number.parseInt(pair, 16));
+    return [r, g, b, a / 255];
+  }
+  const [r = 0, g = 0, b = 0, a = 1] = (color.match(/[\d.]+/g) ?? []).map(Number);
+  return [r, g, b, a];
+}
+
+export function SearchBar({
   search,
   initial,
   decorations,
@@ -26,10 +130,10 @@ export function TerminalSearchBar({
   onClose,
 }: {
   search: SearchAddon;
-  initial: TerminalSearch;
+  initial: Query;
   decorations: NonNullable<ISearchOptions['decorations']>;
   field: RefObject<HTMLInputElement | null>;
-  onClose: (query: TerminalSearch) => void;
+  onClose: (query: Query) => void;
 }) {
   const [query, setQuery] = useState(initial.query);
   const [caseSensitive, setCaseSensitive] = useState(initial.caseSensitive);
@@ -65,7 +169,10 @@ export function TerminalSearchBar({
   }, [search, query, caseSensitive, wholeWord, regex, decorations, valid]);
 
   function keydown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === 'Escape') {
+    if (isShortcut(event.nativeEvent, 'f')) {
+      event.preventDefault();
+      field.current?.select();
+    } else if (event.key === 'Escape') {
       event.preventDefault();
       onClose({ query, caseSensitive, wholeWord, regex });
     } else if (event.key === 'Enter' && event.target === field.current && query !== '' && valid) {
