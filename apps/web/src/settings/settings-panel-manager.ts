@@ -43,12 +43,12 @@ export class SettingsPanelManager implements Settings {
         return false;
       }
 
-      const parent = panel.in === undefined || GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
-      if (panel.in !== undefined && !GROUPS.includes(panel.in) && parent === undefined) {
+      const parent = GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
+      if (!GROUPS.includes(panel.in) && parent === undefined) {
         console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
         return false;
       }
-      if (parent?.in !== undefined && !GROUPS.includes(parent.in)) {
+      if (parent !== undefined && !GROUPS.includes(parent.in)) {
         console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
         return false;
       }
@@ -63,7 +63,7 @@ export class SettingsPanelManager implements Settings {
       const removed = new Set(added.map((panel) => panel.id));
       this.addedPanels = this.addedPanels
         .filter((other) => other !== added)
-        .map((other) => other.filter((panel) => panel.in === undefined || !removed.has(panel.in)));
+        .map((other) => other.filter((panel) => !removed.has(panel.in)));
       this.currentPanels = this.addedPanels.flat();
       this.notify();
     };

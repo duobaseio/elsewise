@@ -4,11 +4,10 @@ import type { Disposable } from './plugin.ts';
 /**
  * The ids of the settings sidebar's built-in groups.
  *
- * See {@link SettingsPanel.group}.
+ * See {@link SettingsPanel.in}.
  */
 export const DEFAULT_SETTINGS_GROUPS = {
   appearance: 'appearance',
-  plugins: 'plugins',
 } as const;
 
 /**
@@ -28,6 +27,7 @@ export interface Settings {
    *   {
    *     id: 'io.example.words',
    *     label: 'Words',
+   *     in: 'appearance',
    *     terms: { dictionary: { label: 'Dictionary', keywords: ['spelling', 'language'] } },
    *     component: Words,
    *   },
@@ -81,12 +81,11 @@ export interface SettingsPanel {
   readonly id: string;
 
   /**
-   * The id of the group or panel it is listed in. Defaults to `plugins`. Omitted if the panel does not exist or is
-   * itself in a panel.
+   * The id of the group or panel it is listed in. Omitted if the panel does not exist or is itself in a panel.
    *
    * See {@link DEFAULT_SETTINGS_GROUPS} for the groups.
    */
-  readonly in?: SettingsGroup | (string & {});
+  readonly in: SettingsGroup | (string & {});
 
   /**
    * The panel's label in the sidebar.

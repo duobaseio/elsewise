@@ -55,10 +55,7 @@ export const Route = createFileRoute('/settings')({
 
 const MODIFIERS = ['Shift', 'Meta', 'Control', 'Alt'];
 
-const GROUPS = [
-  { id: DEFAULT_SETTINGS_GROUPS.appearance, label: 'Appearance & Behavior' },
-  { id: DEFAULT_SETTINGS_GROUPS.plugins, label: 'Plugins' },
-];
+const GROUPS = [{ id: DEFAULT_SETTINGS_GROUPS.appearance, label: 'Appearance & Behavior' }];
 
 function Settings() {
   const router = useRouter();
@@ -115,7 +112,7 @@ function Settings() {
 
         <SidebarContent>
           {GROUPS.map((group) => {
-            const members = panels.filter((panel) => (panel.in ?? DEFAULT_SETTINGS_GROUPS.plugins) === group.id);
+            const members = panels.filter((panel) => panel.in === group.id);
             if (members.length === 0) {
               return null;
             }

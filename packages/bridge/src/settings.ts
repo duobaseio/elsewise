@@ -175,6 +175,7 @@ export const Settings = z.lazy(() =>
             cursorStyle: CursorStyle.catch('block'),
             cursorBlink: z.boolean().catch(true),
             copyOnSelect: z.boolean().catch(false),
+            macOptionIsMeta: z.boolean().catch(false),
             /**
              * The number of lines kept above the screen.
              */

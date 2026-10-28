@@ -5,7 +5,7 @@ import { type SettingsSearchHit, search } from './search';
 
 // Returns a panel with `id` and `terms`.
 function panel(id: string, terms: Record<string, SettingsSearchTerm>): SettingsPanel {
-  return { id, label: id, terms, component: () => null };
+  return { id, label: id, in: 'appearance', terms, component: () => null };
 }
 
 const PANELS = [
