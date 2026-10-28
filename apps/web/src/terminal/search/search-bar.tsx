@@ -4,8 +4,8 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
 import { DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
 import { type ISearchOptions, type ISearchResultChangeEvent, SearchAddon } from '@xterm/addon-search';
-import type { ITerminalAddon, Terminal } from '@xterm/xterm';
-import { type KeyboardEvent, type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
+import type { Terminal } from '@xterm/xterm';
+import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keys';
@@ -36,8 +36,8 @@ interface Query {
   regex: boolean;
 }
 
-export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } {
-  const [active, setActive] = useState<{ terminal: Terminal; addon: SearchAddon } | null>(null);
+export function TerminalSearch({ terminal }: { terminal: Terminal | null }) {
+  const [search, setSearch] = useState<SearchAddon | null>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState<Query>({
     query: '',
@@ -59,31 +59,29 @@ export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } 
     };
   }, [colors]);
 
-  const search = useMemo<ITerminalAddon>(() => {
-    let loaded: SearchAddon | null = null;
-    return {
-      activate(terminal) {
-        loaded = new SearchAddon({ highlightLimit: LIMIT + 1 });
-        terminal.loadAddon(loaded);
-        setActive({ terminal, addon: loaded });
-      },
-      dispose() {
-        loaded?.dispose();
-        loaded = null;
-        setActive(null);
-      },
+  useEffect(() => {
+    if (terminal === null) {
+      return;
+    }
+
+    const addon = new SearchAddon({ highlightLimit: LIMIT + 1 });
+    terminal.loadAddon(addon);
+    setSearch(addon);
+    return () => {
+      addon.dispose();
+      setSearch(null);
     };
-  }, []);
+  }, [terminal]);
 
   // Handles the find command.
   useEffect(() => {
-    if (active?.terminal.element === undefined) {
+    if (terminal?.element === undefined) {
       return;
     }
 
     const find = (event: Event) => {
       event.preventDefault();
-      const selection = active.terminal.getSelection();
+      const selection = terminal.getSelection();
       if (selection !== '' && !selection.includes('\n')) {
         setQuery((query) => ({ ...query, query: selection }));
       }
@@ -91,13 +89,17 @@ export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } 
       field.current?.select();
     };
 
-    const element = active.terminal.element;
+    const element = terminal.element;
     element.addEventListener(FIND, find);
 
     return () => element.removeEventListener(FIND, find);
-  }, [active]);
+  }, [terminal]);
 
-  const bar = open && active !== null && (
+  if (!open || terminal === null || search === null) {
+    return null;
+  }
+
+  return (
     <SearchBar
       decorations={decorations}
       field={field}
@@ -105,12 +107,11 @@ export function useTerminalSearch(): { search: ITerminalAddon; bar: ReactNode } 
       onChange={setQuery}
       onClose={() => {
         setOpen(false);
-        active.terminal.focus();
+        terminal.focus();
       }}
-      search={active.addon}
+      search={search}
     />
   );
-  return { search, bar };
 }
 
 // Returns `color` laid over `background` as `#RRGGBB`, the only form xterm's decorations take.

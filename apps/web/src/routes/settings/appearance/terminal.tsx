@@ -79,7 +79,7 @@ export function Terminal() {
     }));
 
   return (
-    <SplitPage preview={<TerminalView session={PREVIEW} />} title="Terminal">
+    <SplitPage preview={<TerminalView session={PREVIEW} preview />} title="Terminal">
       <Row
         id="theme"
         label={TERMINAL_TERMS.theme.label}
