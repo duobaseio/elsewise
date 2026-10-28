@@ -39,7 +39,6 @@ await fs.writeFile(
   ].join('\n'),
 );
 
-
 /** Generate kysely types with kysely-codegen. Stored in `src/gen/database.ts`. */
 
 const db = openDatabase(':memory:', migrations);

@@ -1,7 +1,5 @@
-import fs from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { expect, test } from 'vitest';
-import { MIGRATIONS } from '../gen/migrations';
 import { migrate } from './migrate';
 
 const FIRST = {
