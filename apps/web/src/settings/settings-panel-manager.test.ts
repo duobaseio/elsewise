@@ -1,10 +1,13 @@
-import type { LocalSettingsPanel } from '@elsewise/plugin';
+import type { LocalSettingsPanel, RemoteSettingsPanel } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 
-// Returns a local panel with `id`, listed in the group or panel `in`.
-function panel(id: string, inside = 'appearance'): LocalSettingsPanel {
+function localPanel(id: string, inside = 'appearance'): LocalSettingsPanel {
   return { scope: 'local', id, label: id, in: inside, terms: {}, component: () => null };
+}
+
+function remotePanel(id: string, inside = 'appearance'): RemoteSettingsPanel {
+  return { scope: 'remote', id, label: id, in: inside, terms: {}, component: () => null };
 }
 
 afterEach(() => {
@@ -13,103 +16,131 @@ afterEach(() => {
 
 describe('add', () => {
   test('appends after defaults, omitting default ids', () => {
-    const settings = new SettingsPanelManager([panel('a')]);
+    const settings = new SettingsPanelManager([localPanel('a')]);
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const b = panel('b');
-    settings.add([panel('a'), b]);
+    const b = localPanel('b');
+    settings.add([localPanel('a'), b]);
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b']);
-    expect(settings.panels[1]).toBe(b);
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'b']);
+    expect(settings.localPanels[1]).toBe(b);
   });
 
   test('appends panels until disposed', () => {
     const settings = new SettingsPanelManager();
-    const first = [panel('a')];
-    const second = [panel('b')];
+    const first = [localPanel('a')];
+    const second = [localPanel('b')];
     const dispose = settings.add(first);
     settings.add(second);
 
-    expect(settings.panels).toEqual([...first, ...second]);
+    expect(settings.localPanels).toEqual([...first, ...second]);
 
     dispose();
 
-    expect(settings.panels).toEqual(second);
+    expect(settings.localPanels).toEqual(second);
   });
 
   test('omits existing id, warning', () => {
     const settings = new SettingsPanelManager();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const a = panel('a');
+    const a = localPanel('a');
     settings.add([a]);
-    settings.add([panel('a'), panel('b')]);
+    settings.add([localPanel('a'), localPanel('b')]);
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b']);
-    expect(settings.panels[0]).toBe(a);
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'b']);
+    expect(settings.localPanels[0]).toBe(a);
     expect(warn).toHaveBeenCalledWith('Settings panel a already exists');
   });
 
   test('frees disposed id', () => {
     const settings = new SettingsPanelManager();
-    const dispose = settings.add([panel('a')]);
+    const dispose = settings.add([localPanel('a')]);
     dispose();
-    const again = panel('a');
+    const again = localPanel('a');
     settings.add([again]);
 
-    expect(settings.panels).toEqual([again]);
+    expect(settings.localPanels).toEqual([again]);
   });
 
   test('accepts panel in group or earlier panel', () => {
-    const settings = new SettingsPanelManager([panel('a', 'appearance')]);
-    settings.add([panel('b'), panel('c', 'a'), panel('d', 'b')]);
+    const settings = new SettingsPanelManager([localPanel('a', 'appearance')]);
+    settings.add([localPanel('b'), localPanel('c', 'a'), localPanel('d', 'b')]);
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'b', 'c', 'd']);
   });
 
   test('omits panel in unknown panel, warning', () => {
     const settings = new SettingsPanelManager();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    settings.add([panel('a', 'missing')]);
+    settings.add([localPanel('a', 'missing')]);
 
-    expect(settings.panels).toEqual([]);
+    expect(settings.localPanels).toEqual([]);
     expect(warn).toHaveBeenCalledWith('Settings panel a is in unknown panel missing');
   });
 
   test('omits panel in nested panel, warning', () => {
-    const settings = new SettingsPanelManager([panel('a'), panel('b', 'a')]);
+    const settings = new SettingsPanelManager([localPanel('a'), localPanel('b', 'a')]);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    settings.add([panel('c', 'b')]);
+    settings.add([localPanel('c', 'b')]);
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['a', 'b']);
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'b']);
     expect(warn).toHaveBeenCalledWith('Settings panel c is in b, which is itself in a panel');
   });
 
-  test('omits panel in panel of other scope, warning', () => {
-    const settings = new SettingsPanelManager([panel('a')]);
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    settings.add([{ scope: 'remote', id: 'b', label: 'b', in: 'a', terms: {}, component: () => null }]);
+  test('separates panels by scope', () => {
+    const settings = new SettingsPanelManager([localPanel('a')]);
+    const b = remotePanel('b');
+    settings.add([b, localPanel('c')]);
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['a']);
-    expect(warn).toHaveBeenCalledWith('Settings panel b is remote, but a is local');
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'c']);
+    expect(settings.remotePanels).toEqual([b]);
+  });
+
+  test('accepts existing id in other scope', () => {
+    const settings = new SettingsPanelManager([localPanel('a')]);
+    const warn = vi.spyOn(console, 'warn');
+    const a = remotePanel('a');
+    settings.add([a]);
+
+    expect(settings.remotePanels).toEqual([a]);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  test('omits panel in panel of other scope, warning', () => {
+    const settings = new SettingsPanelManager([localPanel('a')]);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    settings.add([remotePanel('b', 'a')]);
+
+    expect(settings.remotePanels).toEqual([]);
+    expect(warn).toHaveBeenCalledWith('Settings panel b is in unknown panel a');
   });
 
   test('removes panels in disposed panel', () => {
     const settings = new SettingsPanelManager();
-    const dispose = settings.add([panel('a')]);
-    settings.add([panel('b', 'a'), panel('c')]);
+    const dispose = settings.add([localPanel('a')]);
+    settings.add([localPanel('b', 'a'), localPanel('c')]);
     dispose();
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['c']);
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['c']);
 
-    settings.add([panel('a')]);
+    settings.add([localPanel('a')]);
 
-    expect(settings.panels.map((panel) => panel.id)).toEqual(['c', 'a']);
+    expect(settings.localPanels.map((panel) => panel.id)).toEqual(['c', 'a']);
+  });
+
+  test('keeps panels in panel of other scope with disposed id', () => {
+    const settings = new SettingsPanelManager();
+    const dispose = settings.add([localPanel('a')]);
+    settings.add([remotePanel('a'), remotePanel('b', 'a')]);
+    dispose();
+
+    expect(settings.remotePanels.map((panel) => panel.id)).toEqual(['a', 'b']);
   });
 
   test('notifies on add and dispose', () => {
     const settings = new SettingsPanelManager();
     const listener = vi.fn();
     settings.subscribe(listener);
-    const dispose = settings.add([panel('a')]);
+    const dispose = settings.add([localPanel('a')]);
     dispose();
 
     expect(listener).toHaveBeenCalledTimes(2);

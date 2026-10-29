@@ -10,8 +10,8 @@ export const Route = createFileRoute('/settings/remote/$remote/$id')({
 
 function RemotePanel() {
   const { remote, id } = Route.useParams();
-  const panel = useSettingsPanels((settings) => settings.panels.find((panel) => panel.id === id));
-  if (panel?.scope !== 'remote') {
+  const panel = useSettingsPanels((settings) => settings.remotePanels.find((panel) => panel.id === id));
+  if (panel === undefined) {
     return <Navigate replace to={DEFAULT_ROUTES.settings.general} />;
   }
 

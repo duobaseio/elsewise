@@ -7,8 +7,8 @@ export const Route = createFileRoute('/settings/local/$id')({ component: LocalPa
 
 function LocalPanel() {
   const { id } = Route.useParams();
-  const panel = useSettingsPanels((settings) => settings.panels.find((panel) => panel.id === id));
-  if (panel?.scope !== 'local') {
+  const panel = useSettingsPanels((settings) => settings.localPanels.find((panel) => panel.id === id));
+  if (panel === undefined) {
     return <Navigate replace to={DEFAULT_ROUTES.settings.general} />;
   }
 

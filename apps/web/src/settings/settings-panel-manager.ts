@@ -16,35 +16,43 @@ const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
  */
 export class SettingsPanelManager implements Settings {
   private readonly listeners = new Set<() => void>();
-  private addedPanels: readonly (readonly (LocalSettingsPanel | RemoteSettingsPanel)[])[];
-  private currentPanels: readonly (LocalSettingsPanel | RemoteSettingsPanel)[];
+  private addedPanels: readonly (readonly (LocalSettingsPanel | RemoteSettingsPanel)[])[] = [];
+  private currentLocalPanels: readonly LocalSettingsPanel[] = [];
+  private currentRemotePanels: readonly RemoteSettingsPanel[] = [];
   private addedPreviews: readonly (readonly SettingsLanguagePreview[])[] = [];
   private currentPreviews: Readonly<Record<string, SettingsLanguagePreview>> = {};
 
   constructor(defaults: readonly (LocalSettingsPanel | RemoteSettingsPanel)[] = []) {
     this.addedPanels = [defaults];
-    this.currentPanels = defaults;
+    this.updatePanels();
   }
 
   /**
-   * The built-in panels, then those plugins added in order of addition.
+   * The built-in local panels, then those plugins added in order of addition.
    */
-  get panels(): readonly (LocalSettingsPanel | RemoteSettingsPanel)[] {
-    return this.currentPanels;
+  get localPanels(): readonly LocalSettingsPanel[] {
+    return this.currentLocalPanels;
+  }
+
+  /**
+   * The built-in remote panels, then those plugins added in order of addition.
+   */
+  get remotePanels(): readonly RemoteSettingsPanel[] {
+    return this.currentRemotePanels;
   }
 
   /**
    * {@inheritDoc}
    */
   add(panels: readonly (LocalSettingsPanel | RemoteSettingsPanel)[]): Disposable {
-    const known = new Map(this.addedPanels.flat().map((panel) => [panel.id, panel]));
+    const known = new Map(this.addedPanels.flat().map((panel) => [`${panel.scope}/${panel.id}`, panel]));
     const added = panels.filter((panel) => {
-      if (known.has(panel.id)) {
+      if (known.has(`${panel.scope}/${panel.id}`)) {
         console.warn(`Settings panel ${panel.id} already exists`);
         return false;
       }
 
-      const parent = GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
+      const parent = GROUPS.includes(panel.in) ? undefined : known.get(`${panel.scope}/${panel.in}`);
       if (!GROUPS.includes(panel.in) && parent === undefined) {
         console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
         return false;
@@ -55,25 +63,25 @@ export class SettingsPanelManager implements Settings {
         return false;
       }
 
-      if (parent !== undefined && parent.scope !== panel.scope) {
-        console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
-        return false;
-      }
-
-      known.set(panel.id, panel);
+      known.set(`${panel.scope}/${panel.id}`, panel);
       return true;
     });
     this.addedPanels = [...this.addedPanels, added];
-    this.currentPanels = this.addedPanels.flat();
-    this.notify();
+    this.updatePanels();
     return () => {
-      const removed = new Set(added.map((panel) => panel.id));
+      const removed = new Set(added.map((panel) => `${panel.scope}/${panel.id}`));
       this.addedPanels = this.addedPanels
         .filter((other) => other !== added)
-        .map((other) => other.filter((panel) => !removed.has(panel.in)));
-      this.currentPanels = this.addedPanels.flat();
-      this.notify();
+        .map((other) => other.filter((panel) => !removed.has(`${panel.scope}/${panel.in}`)));
+      this.updatePanels();
     };
+  }
+
+  private updatePanels() {
+    const panels = this.addedPanels.flat();
+    this.currentLocalPanels = panels.filter((panel) => panel.scope === 'local');
+    this.currentRemotePanels = panels.filter((panel) => panel.scope === 'remote');
+    this.notify();
   }
 
   /**

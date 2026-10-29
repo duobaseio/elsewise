@@ -62,8 +62,7 @@ function Settings() {
   const router = useRouter();
   const navigate = Route.useNavigate();
   const { remote } = useParams({ strict: false });
-  const all = useSettingsPanels((settings) => settings.panels);
-  const panels = all.filter((panel) => panel.scope === (remote === undefined ? 'local' : 'remote'));
+  const panels = useSettingsPanels((settings) => (remote === undefined ? settings.localPanels : settings.remotePanels));
   const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const { highlight } = Route.useSearch();
   const pathname = useLocation({ select: (location) => location.pathname });
