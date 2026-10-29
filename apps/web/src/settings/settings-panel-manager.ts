@@ -45,14 +45,14 @@ export class SettingsPanelManager implements Settings {
    * {@inheritDoc}
    */
   add(panels: readonly (LocalSettingsPanel | RemoteSettingsPanel)[]): Disposable {
-    const known = new Map(this.addedPanels.flat().map((panel) => [`${panel.scope}/${panel.id}`, panel]));
+    const known = new Map(this.addedPanels.flat().map((panel) => [panel.id, panel]));
     const added = panels.filter((panel) => {
-      if (known.has(`${panel.scope}/${panel.id}`)) {
+      if (known.has(panel.id)) {
         console.warn(`Settings panel ${panel.id} already exists`);
         return false;
       }
 
-      const parent = GROUPS.includes(panel.in) ? undefined : known.get(`${panel.scope}/${panel.in}`);
+      const parent = GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
       if (!GROUPS.includes(panel.in) && parent === undefined) {
         console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
         return false;
@@ -63,16 +63,21 @@ export class SettingsPanelManager implements Settings {
         return false;
       }
 
-      known.set(`${panel.scope}/${panel.id}`, panel);
+      if (parent !== undefined && parent.scope !== panel.scope) {
+        console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
+        return false;
+      }
+
+      known.set(panel.id, panel);
       return true;
     });
     this.addedPanels = [...this.addedPanels, added];
     this.updatePanels();
     return () => {
-      const removed = new Set(added.map((panel) => `${panel.scope}/${panel.id}`));
+      const removed = new Set(added.map((panel) => panel.id));
       this.addedPanels = this.addedPanels
         .filter((other) => other !== added)
-        .map((other) => other.filter((panel) => !removed.has(`${panel.scope}/${panel.in}`)));
+        .map((other) => other.filter((panel) => !removed.has(panel.in)));
       this.updatePanels();
     };
   }
