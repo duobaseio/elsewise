@@ -32,11 +32,14 @@
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
     "@lezer/highlight": "^1.2.5",
+    "@tanstack/react-router": "^1.170.38",
+    "@xterm/xterm": "^6.0.0",
     "react": "^19.3.0",
     "vscode-languageserver-protocol": "^3.18.4"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
+    "@tanstack/react-router": "^1.170.38",
     "@types/react": "^19.3.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"

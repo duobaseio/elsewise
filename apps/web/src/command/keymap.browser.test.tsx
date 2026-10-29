@@ -1,12 +1,16 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import type { EditorCommand } from '@elsewise/plugin';
+import type { EditorCommand, TerminalCommand } from '@elsewise/plugin';
+import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
-import { editorKeymap } from '@/command/keymap';
+import { editorKeymap, terminalKeymap } from '@/command/keymap';
 import { EditorManager } from '@/editor/editor-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
@@ -14,16 +18,26 @@ const APPEARANCE = new AppearanceManager(
 );
 
 const views: EditorView[] = [];
+const terminals: XTerm[] = [];
 
 afterEach(() => {
   for (const view of views.splice(0)) {
     view.destroy();
   }
+  for (const terminal of terminals.splice(0)) {
+    terminal.dispose();
+  }
 });
 
 // Opens an editor with the keys of `added`, which are added in order, above a keymap that binds Ctrl-k to `fallback`.
 function open(fallback: () => boolean, ...added: EditorCommand[]): EditorView {
-  const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+  const commands = new CommandManager({
+    appearance: APPEARANCE,
+    editor: new EditorManager(),
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
+  });
   for (const command of added) {
     commands.add([command]);
   }
@@ -95,7 +109,7 @@ describe('editorKeymap', () => {
     expect(fallback).toHaveBeenCalledOnce();
   });
 
-  test('falls through command that did not apply', () => {
+  test('falls through command returning false', () => {
     const first = vi.fn(() => false);
     const second = vi.fn(() => false);
     const fallback = vi.fn(() => true);
@@ -108,5 +122,88 @@ describe('editorKeymap', () => {
 
     expect(second).toHaveBeenCalledBefore(first);
     expect(first).toHaveBeenCalledBefore(fallback);
+  });
+});
+
+// Opens a terminal with the keys of `added`, which are added in order. Returns it and what it sends to the shell.
+function openTerminal(...added: TerminalCommand[]) {
+  const commands = new CommandManager({
+    appearance: APPEARANCE,
+    editor: new EditorManager(),
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
+  });
+  for (const command of added) {
+    commands.add([command]);
+  }
+  const terminal = new XTerm();
+  terminal.loadAddon(terminalKeymap(commands));
+  terminal.open(document.body);
+  terminals.push(terminal);
+  const sent = vi.fn<(data: string) => void>();
+  terminal.onData(sent);
+  return { terminal, sent };
+}
+
+// Presses Ctrl-k in `terminal`.
+function pressTerminal(terminal: XTerm) {
+  terminal.textarea?.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'k',
+      code: 'KeyK',
+      keyCode: 75,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  );
+}
+
+describe('terminalKeymap', () => {
+  test('runs command against terminal, keeping key from shell', () => {
+    const run = vi.fn<TerminalCommand['run']>(() => true);
+    const { terminal, sent } = openTerminal({ id: 'a', label: 'A', scope: 'terminal', defaultKeys: ['Ctrl-k'], run });
+    pressTerminal(terminal);
+
+    expect(run).toHaveBeenCalledOnce();
+    expect(run.mock.lastCall?.[1]).toBe(terminal);
+    expect(sent).not.toHaveBeenCalled();
+  });
+
+  test('sends unbound key to shell', () => {
+    const { terminal, sent } = openTerminal();
+    pressTerminal(terminal);
+
+    expect(sent).toHaveBeenCalledWith('\x0b');
+  });
+
+  test('sends key of disabled command to shell', () => {
+    const run = vi.fn(() => true);
+    const { terminal, sent } = openTerminal({
+      id: 'a',
+      label: 'A',
+      scope: 'terminal',
+      defaultKeys: ['Ctrl-k'],
+      enabled: () => false,
+      run,
+    });
+    pressTerminal(terminal);
+
+    expect(run).not.toHaveBeenCalled();
+    expect(sent).toHaveBeenCalledWith('\x0b');
+  });
+
+  test('sends key of commands returning false to shell', () => {
+    const first = vi.fn(() => false);
+    const second = vi.fn(() => false);
+    const { terminal, sent } = openTerminal(
+      { id: 'first', label: 'First', scope: 'terminal', defaultKeys: ['Ctrl-k'], run: first },
+      { id: 'second', label: 'Second', scope: 'terminal', defaultKeys: ['Ctrl-k'], run: second },
+    );
+    pressTerminal(terminal);
+
+    expect(second).toHaveBeenCalledBefore(first);
+    expect(sent).toHaveBeenCalledWith('\x0b');
   });
 });

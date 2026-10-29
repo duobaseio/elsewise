@@ -97,9 +97,9 @@ const NAVIGATION = ViewPlugin.fromClass(
     // while the pointer stays in it.
     private region: { from: number; to: number } | null = null;
     private navigation: EditorNavigation | null = null;
-    // The lookups so far, to drop the answers of those that the pointer has moved on from.
+    // The lookups so far, to drop the results of those that the pointer has moved on from.
     private request = 0;
-    // The click that came before its lookup answered, replayed once it has.
+    // The click that came before its lookup returned, replayed once it has.
     private clicked: MouseEvent | null = null;
 
     constructor(private readonly view: EditorView) {}

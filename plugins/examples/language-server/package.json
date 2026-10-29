@@ -22,6 +22,7 @@
   },
   "peerDependencies": {
     "@codemirror/language": "^6.12.4",
+    "@elsewise/plugin": "workspace:*",
     "vscode-languageserver-protocol": "^3.18.4"
   },
   "devDependencies": {

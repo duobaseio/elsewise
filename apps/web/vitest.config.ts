@@ -59,11 +59,21 @@ function browserProject(
         '@lezer/highlight',
         'vscode-languageserver-protocol',
         'w3c-keyname',
+        '@xterm/addon-clipboard',
+        '@xterm/addon-fit',
+        '@xterm/addon-ligatures',
+        '@xterm/addon-search',
+        '@xterm/addon-unicode11',
+        '@xterm/addon-web-links',
+        '@xterm/addon-webgl',
+        '@xterm/xterm',
         // The languages the tests load, which `language-data` imports on demand.
         '@codemirror/language-data > @codemirror/lang-html',
         '@codemirror/language-data > @codemirror/lang-rust',
+        '@base-ui/react/combobox',
         // The components' own dependencies, which the app cannot resolve by name.
         '@elsewise/components > @base-ui/react/*',
+        '@elsewise/components > dockview-react',
         '@elsewise/components > @phosphor-icons/react',
         '@elsewise/components > @pierre/trees',
         '@elsewise/components > @pierre/trees/react',
@@ -83,6 +93,7 @@ function browserProject(
         provider: playwright({
           launchOptions: {
             args: ['--disable-gpu', '--force-color-profile=srgb', '--disable-lcd-text'],
+            ...(frozenMotion ? {} : { ignoreDefaultArgs: ['--hide-scrollbars'] }),
           },
           contextOptions: {
             deviceScaleFactor: 2,

@@ -16,7 +16,7 @@ export default defineConfig({
   },
   plugins: [
     tailwindcss(),
-    tanstackRouter({ target: 'react', autoCodeSplitting: false }),
+    tanstackRouter({ target: 'react', autoCodeSplitting: false, routeFileIgnorePattern: '\\.test\\.' }),
     viteReact(),
     peerModules(PEER_MODULES),
     // TODO: Remove once the daemon's git service reads files at a revision.

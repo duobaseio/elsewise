@@ -98,21 +98,35 @@ const message = StateField.define<Tooltip | null>({
   provide: (field) => showTooltip.from(field),
 });
 
-export const FIND_USAGES: EditorCommand = {
+const pending = StateField.define<boolean>({
+  create: () => false,
+  update: (value, tr) => tr.effects.find((effect) => effect.is(setPending))?.value ?? value,
+});
+
+const setPending = StateEffect.define<boolean>();
+
+export const EDITOR_FIND_USAGES: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.findUsages,
   label: 'Find usages',
   defaultKeys: DEFAULT_KEYS.editor.lsp.findUsages,
-  enabled: (_, _view, lsp) => Boolean(lsp?.client.serverCapabilities?.referencesProvider),
-  shown: (_, view, lsp) => Boolean(lsp?.client.serverCapabilities?.referencesProvider) && navigable(view.state),
+  enabled: (_, view) => Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.referencesProvider),
+  shown: (_, view) =>
+    Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.referencesProvider) && navigable(view.state),
   // Based on `@codemirror/lsp-client`'s `findReferences`, which lists the references in a panel.
-  run(_, view, lsp) {
+  run(_, view) {
+    const lsp = LSPPlugin.get(view);
     if (lsp === null) {
       return false;
     }
 
+    if (view.state.field(pending, false)) {
+      return true;
+    }
+
     const { doc } = view.state;
     const pos = view.state.selection.main.head;
+    view.dispatch({ effects: setPending.of(true) });
     lsp.client.sync();
     lsp.client.withMapping(async (mapping) => {
       try {
@@ -191,6 +205,8 @@ export const FIND_USAGES: EditorCommand = {
             effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
           });
         }
+      } finally {
+        view.dispatch({ effects: setPending.of(false) });
       }
     });
     return true;
@@ -208,6 +224,7 @@ export function serverReferences(): LSPClientExtension {
     editorExtension: [
       usages,
       message,
+      pending,
       Prec.high(
         keymap.of([
           { key: 'ArrowDown', run: (view) => move(view, (selected) => selected + 1, true) },

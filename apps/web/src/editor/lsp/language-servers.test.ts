@@ -3,8 +3,8 @@ import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { EditorManager } from '@/editor/editor-manager';
+import { LanguageServerInstance, LanguageServers, serverUri } from '@/editor/lsp/language-servers';
 import { StubTransport } from '../../../test/stub-transport';
-import { LanguageServerInstance, LanguageServers, serverUri } from './language-servers';
 
 const ROOT = new URL('file:///worktree');
 const URI = new URL('file:///worktree/main.toy');
@@ -168,7 +168,7 @@ describe('connect', () => {
     });
   });
 
-  test('tells server it can ask for settings when handled', async () => {
+  test('tells server it can ask for settings with handler', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
     editor.languages.addServers([server(() => fake, { requestHandlers: { 'workspace/configuration': () => [] } })]);
@@ -181,7 +181,7 @@ describe('connect', () => {
     });
   });
 
-  test("doesn't tell server it can ask for settings when unhandled", async () => {
+  test('withholds settings capability without handler', async () => {
     const editor = new EditorManager();
     const fake = new StubTransport();
     editor.languages.addServers([server(() => fake)]);
@@ -269,7 +269,7 @@ describe('connect', () => {
     ]);
   });
 
-  test('restarts server whose connection closed, and says it stopped', async () => {
+  test('restarts closed server, warning it stopped', async () => {
     const add = vi.spyOn(toast, 'add');
     const editor = new EditorManager();
     const servers = new LanguageServers(editor);
@@ -286,7 +286,7 @@ describe('connect', () => {
     expect(fakes[1].sent[0]).toMatchObject({ method: 'initialize' });
   });
 
-  test('restarts server that failed to start, and says it failed', async () => {
+  test('restarts failed server, reporting failure', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const add = vi.spyOn(toast, 'add');
     const editor = new EditorManager();
@@ -348,7 +348,7 @@ describe('LanguageServerInstance.start', () => {
     expect(start).not.toHaveBeenCalled();
   });
 
-  test("shows server's messages, but not logs", async () => {
+  test('shows server messages, except logs', async () => {
     const add = vi.spyOn(toast, 'add');
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
@@ -392,7 +392,7 @@ describe('LanguageServerInstance.start', () => {
     expect(add).not.toHaveBeenCalled();
   });
 
-  test('answers requests with request handlers', async () => {
+  test('handles requests with request handlers', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
@@ -411,7 +411,7 @@ describe('LanguageServerInstance.start', () => {
     expect(await fake.request('toy/ignore', {})).toEqual({ result: null });
   });
 
-  test('answers requests with error when handler fails', async () => {
+  test('returns error for failing request handler', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, {
@@ -430,7 +430,7 @@ describe('LanguageServerInstance.start', () => {
     expect(await fake.request('toy/reject', {})).toEqual({ error: { code: -32603, message: 'Rejected' } });
   });
 
-  test('answers requests with request handlers ahead of core', async () => {
+  test('handles requests with request handlers ahead of core', async () => {
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(
       server(() => fake, { requestHandlers: { 'workspace/applyEdit': () => ({ applied: false }) } }),
@@ -440,8 +440,10 @@ describe('LanguageServerInstance.start', () => {
 
     expect(await fake.request('workspace/applyEdit', { edit: {} })).toEqual({ result: { applied: false } });
   });
+});
 
-  test("doesn't say server that was stopped stopped", async () => {
+describe('LanguageServerInstance.stop', () => {
+  test('closes connection silently', async () => {
     const add = vi.spyOn(toast, 'add');
     const fake = new StubTransport();
     const instance = new LanguageServerInstance(

@@ -1,20 +1,37 @@
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
-import type { EditorCommand, Keymap, Keys } from '@elsewise/plugin';
+import type { EditorCommand, Keys, TerminalCommand } from '@elsewise/plugin';
+import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
+import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
-import { CommandManager } from './command-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
   resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
 );
 
-// Returns the commands of an application whose editor is `editor`, on `platform`.
-function commands(editor = new EditorManager(), platform: Platform = 'linux'): CommandManager {
-  return new CommandManager({ appearance: APPEARANCE, editor }, platform);
+// Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
+function commands(
+  editor = new EditorManager(),
+  platform: Platform = 'linux',
+  terminals = new TerminalManager(),
+): CommandManager {
+  return new CommandManager(
+    {
+      appearance: APPEARANCE,
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: terminals,
+    },
+    platform,
+  );
 }
 
 // Returns commands on `platform` with an editor command for each id in `keys`, with those default keys, added in order.
@@ -27,14 +44,13 @@ function bound(keys: Record<string, Keys>, platform: Platform = 'linux'): Comman
   return manager;
 }
 
-// Returns Eclipse's keymap with `keys`.
-function eclipse(keys: Keymap['keys']): Keymap {
-  return { name: 'Eclipse', keys };
-}
-
 // Returns a view that stands in for an editor, named `name`, without a language server.
 function view(name: string): EditorView {
   return { name, plugin: () => null } as unknown as EditorView;
+}
+
+function terminal(name: string): XTerm {
+  return { name, buffer: {} } as unknown as XTerm;
 }
 
 let error: ReturnType<typeof vi.spyOn>;
@@ -59,7 +75,7 @@ describe('add', () => {
     expect(manager.commands.get('rename')).toBeUndefined();
   });
 
-  test('rejects already existing id', () => {
+  test('rejects existing id', () => {
     const manager = commands();
     manager.add([{ id: 'rename', label: 'First', scope: 'editor', run: () => true }]);
     manager.add([{ id: 'rename', label: 'Second', scope: 'editor', run: () => true }]);
@@ -68,7 +84,7 @@ describe('add', () => {
     expect(warn).toHaveBeenCalledWith('Command rename already exists');
   });
 
-  test('rejects already existing id in same plugin', () => {
+  test('rejects existing id in same addition', () => {
     const manager = commands();
     manager.add([
       { id: 'rename', label: 'First', scope: 'editor', run: () => true },
@@ -150,7 +166,7 @@ describe('run', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  test('returns false for command that did not apply', () => {
+  test('returns false for unapplied command', () => {
     const manager = commands();
     manager.add([
       { id: 'application', label: 'Application', scope: 'application', run: () => false },
@@ -175,10 +191,42 @@ describe('run', () => {
     editor.activate(active);
     expect(manager.run('c')).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(active);
-    expect(run.mock.lastCall?.[2]).toBeNull();
 
     expect(manager.run('c', target)).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(target);
+  });
+
+  test('runs terminal command against terminal, else active terminal', () => {
+    const terminals = new TerminalManager();
+    const manager = commands(new EditorManager(), 'linux', terminals);
+    const run = vi.fn<TerminalCommand['run']>(() => true);
+    manager.add([{ id: 'c', label: 'C', scope: 'terminal', run }]);
+    const active = terminal('active');
+    const target = terminal('target');
+
+    expect(manager.run('c')).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+
+    terminals.activate(active);
+    expect(manager.run('c')).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(active);
+
+    expect(manager.run('c', target)).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(target);
+  });
+
+  test('refuses target of other surface', () => {
+    const manager = commands();
+    const run = vi.fn(() => true);
+    manager.add([
+      { id: 'editor', label: 'Editor', scope: 'editor', run },
+      { id: 'terminal', label: 'Terminal', scope: 'terminal', run },
+    ]);
+
+    expect(manager.run('editor', terminal('a'))).toBe(false);
+    expect(manager.run('terminal', view('a'))).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(2);
   });
 
   test('runs application command regardless of view', () => {
@@ -212,7 +260,7 @@ describe('run', () => {
 describe('keymap', () => {
   test('follows selected keymap', () => {
     const manager = bound({ rename: ['Shift-F6'] });
-    manager.selected = eclipse({ rename: ['Alt-r'] });
+    manager.selected = { name: 'Eclipse', keys: { rename: ['Alt-r'] } };
 
     expect(manager.keymap.name).toBe('Eclipse');
     expect(manager.keymap.commands.get('rename')).toEqual(['Alt-r']);
@@ -240,7 +288,7 @@ describe('keymap', () => {
 });
 
 describe('onKeymapChange', () => {
-  test('calls listener with keymap on change', () => {
+  test('calls listener with changed keymap', () => {
     const manager = commands();
     const listener = vi.fn();
     manager.onKeymapChange(listener);
@@ -250,7 +298,7 @@ describe('onKeymapChange', () => {
     expect(manager.keymap.commands.get('rename')).toEqual(['Mod-r']);
   });
 
-  test('skips unchanged', () => {
+  test('ignores unchanged keymap', () => {
     const manager = bound({ format: ['Shift-F6'] });
     const listener = vi.fn();
     manager.onKeymapChange(listener);

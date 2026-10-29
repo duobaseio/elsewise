@@ -62,6 +62,7 @@ export function completion(): Extension {
         { position: 51, render: tail },
       ],
       optionClass: (completion: EditorCompletion) => (completion.deprecated ? 'cm-completion-deprecated' : ''),
+      tooltipClass: (state) => (state.facet(completionDocumentation) ? '' : 'cm-completion-undocumented'),
     }),
     replacing,
     // Adds the hint below the list, once the tooltip is drawn.

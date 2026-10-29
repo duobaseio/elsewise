@@ -9,36 +9,34 @@ import {
   setSearchQuery,
 } from '@codemirror/search';
 import { EditorSelection, type Extension } from '@codemirror/state';
-import { type EditorView, keymap, type Panel, runScopeHandlers } from '@codemirror/view';
+import { Decoration, EditorView, keymap, type Panel, runScopeHandlers } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
-import { Kbd } from '@elsewise/components/components/kbd';
-import { Toggle } from '@elsewise/components/components/toggle';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
 import { DEFAULT_COMMANDS } from '@elsewise/plugin';
-import {
-  type ComponentProps,
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keys';
+import { SearchAction, SearchOption } from '@/components/search-controls';
 import { scroll } from '@/editor/scroll';
-import { describe, matches, replaceRow, toggleReplaceRow, useSearchBarQuery } from '@/editor/search/search-bar-query';
-import { stripeMarks } from '@/editor/stripe/stripe';
+import { scrollbarMarkerSources } from '@/editor/scrollbar-markers/scrollbar-markers';
+import {
+  currentMatch,
+  describe,
+  matches,
+  replaceRow,
+  toggleReplaceRow,
+  useSearchBarQuery,
+} from '@/editor/search/search-bar-query';
 
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
 const CLOSE = 'Escape';
+
+const SELECTED = Decoration.mark({ class: 'cm-searchMatch-selected' });
 
 // The commands whose keys also fire in the search bar.
 const PANEL: readonly string[] = [
@@ -87,9 +85,14 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
     return [
       search({ top: true, createPanel, scrollToMatch: scroll }),
       matches,
-      stripeMarks.of({
+      currentMatch,
+      EditorView.outerDecorations.compute([currentMatch], (state) => {
+        const match = state.field(currentMatch);
+        return match && match.from < match.to ? Decoration.set(SELECTED.range(match.from, match.to)) : Decoration.none;
+      }),
+      scrollbarMarkerSources.of({
         update: (update) => update.state.field(matches) !== update.startState.field(matches),
-        marks: (view) => view.state.field(matches).ranges.map(({ from, to }) => ({ from, to, kind: 'searchMatch' })),
+        markers: (view) => view.state.field(matches).ranges.map(({ from, to }) => ({ from, to, kind: 'searchMatch' })),
       }),
       replaceRow,
       keymap.of([{ key: CLOSE, scope: 'editor search-panel', run: closeSearchPanel }]),
@@ -120,6 +123,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
   useEffect(() => {
     field.current?.focus();
   }, []);
+
   useEffect(() => {
     if (typed.current !== query.search && document.activeElement === field.current) {
       field.current?.select();
@@ -159,6 +163,17 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
     }
   }
 
+  // CodeMirror's built-in `replaceNext` uses the current selection instead of current match. We first update the
+  // selection so that `replaceNext` starts from the correct position.
+  function replaceCurrent() {
+    const match = view.state.field(currentMatch);
+    const { from, to } = view.state.selection.main;
+    if (match && (match.from !== from || match.to !== to)) {
+      view.dispatch({ selection: EditorSelection.range(match.from, match.to) });
+    }
+    replaceNext(view);
+  }
+
   function keydown(event: KeyboardEvent<HTMLElement>) {
     // Runs the search commands bound to the key since the editor's keys only fire in the document.
     const ran = eventKeys(event.nativeEvent, PLATFORM).some((key) =>
@@ -171,7 +186,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
       (event.shiftKey ? findPrevious : findNext)(view);
     } else if (event.key === 'Enter' && (event.target as HTMLElement).id === replaceId) {
       event.preventDefault();
-      replaceNext(view);
+      replaceCurrent();
     }
   }
 
@@ -182,7 +197,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
       onKeyDown={keydown}
     >
       {!state.readOnly && (
-        <Action
+        <SearchAction
           label="Toggle replace"
           hint={openReplace}
           aria-expanded={replace}
@@ -190,7 +205,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
           onClick={() => view.dispatch({ effects: toggleReplaceRow.of(!replace) })}
         >
           <Icon className={cn('transition-transform', !replace && '-rotate-90')} name="expand" />
-        </Action>
+        </SearchAction>
       )}
       <div className="relative col-start-2 min-w-0">
         <Input
@@ -207,19 +222,19 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
           }}
         />
         <div className="absolute inset-y-0 right-0.5 flex items-center gap-0.5">
-          <Option
+          <SearchOption
             label="Match case"
             pressed={query.caseSensitive}
             onChange={(caseSensitive) => update({ caseSensitive })}
           >
             Cc
-          </Option>
-          <Option label="Whole word" pressed={query.wholeWord} onChange={(wholeWord) => update({ wholeWord })}>
+          </SearchOption>
+          <SearchOption label="Whole word" pressed={query.wholeWord} onChange={(wholeWord) => update({ wholeWord })}>
             W
-          </Option>
-          <Option label="Regex" pressed={query.regexp} onChange={(regexp) => update({ regexp })}>
+          </SearchOption>
+          <SearchOption label="Regex" pressed={query.regexp} onChange={(regexp) => update({ regexp })}>
             .*
-          </Option>
+          </SearchOption>
         </div>
       </div>
       <div className="flex items-center gap-0.5">
@@ -232,30 +247,30 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
         >
           {describe(matches, query)}
         </span>
-        <Action
+        <SearchAction
           label="Previous match"
           hint={PREVIOUS}
           className="text-muted-foreground hover:text-foreground"
           onClick={() => findPrevious(view)}
         >
           <Icon name="previous" />
-        </Action>
-        <Action
+        </SearchAction>
+        <SearchAction
           label="Next match"
           hint={NEXT}
           className="text-muted-foreground hover:text-foreground"
           onClick={() => findNext(view)}
         >
           <Icon name="next" />
-        </Action>
-        <Action
+        </SearchAction>
+        <SearchAction
           label="Close"
           hint={CLOSE}
           className="ml-auto text-muted-foreground hover:text-foreground"
           onClick={() => closeSearchPanel(view)}
         >
           <Icon name="close" />
-        </Action>
+        </SearchAction>
       </div>
       {replace && !state.readOnly && (
         <>
@@ -268,7 +283,7 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
             onChange={(event) => update({ replace: event.target.value })}
           />
           <div className="flex items-center gap-1 pl-2">
-            <Button variant="outline" size="xs" disabled={!query.valid} onClick={() => replaceNext(view)}>
+            <Button variant="outline" size="xs" disabled={!query.valid} onClick={replaceCurrent}>
               Replace
             </Button>
             <Button variant="outline" size="xs" disabled={!query.valid} onClick={() => replaceAll(view)}>
@@ -278,52 +293,5 @@ export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mo
         </>
       )}
     </search>
-  );
-}
-
-function Option({
-  label,
-  pressed,
-  onChange,
-  children,
-}: {
-  label: string;
-  pressed: boolean;
-  onChange: (pressed: boolean) => void;
-  children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Toggle size="xs" className="font-mono" aria-label={label} pressed={pressed} onPressedChange={onChange} />
-        }
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function Action({
-  label,
-  hint,
-  className,
-  children,
-  ...props
-}: ComponentProps<typeof Button> & { label: string; hint?: string }) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={<Button variant="ghost" size="icon-xs" className={className} aria-label={label} {...props} />}
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side="bottom">
-        {label}
-        {hint && <Kbd binding={hint} />}
-      </TooltipContent>
-    </Tooltip>
   );
 }

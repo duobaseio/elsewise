@@ -1,5 +1,5 @@
 /**
- * The editor context menu's built-in groups, and the items and submenus in them.
+ * The editor context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_EDITOR_CONTEXT_MENU = {
   actions: { id: 'io.duobase.elsewise.editor.contextMenu.actions', order: 5, items: { show: 10 } },
@@ -18,14 +18,16 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
     order: 30,
     items: {
       compare: {
-        id: 'io.duobase.elsewise.editor.contextMenu.diff.submenu',
+        id: 'io.duobase.elsewise.editor.contextMenu.diff.compare',
         order: 10,
-        items: {
-          unstaged: 10,
-          uncommitted: 20,
-          branch: 30,
+        groups: {
+          changes: {
+            id: 'io.duobase.elsewise.editor.contextMenu.diff.compare.changes',
+            order: 10,
+            items: { unstaged: 10, uncommitted: 20, branch: 30 },
+          },
+          none: { id: 'io.duobase.elsewise.editor.contextMenu.diff.compare.none', order: 20, items: { none: 10 } },
         },
-        none: { id: 'io.duobase.elsewise.editor.contextMenu.diff.none', order: 20, items: { none: 10 } },
       },
     },
   },
@@ -33,82 +35,75 @@ export const DEFAULT_EDITOR_CONTEXT_MENU = {
 } as const;
 
 /**
- * A plugin's additions to a context menu.
+ * The terminal context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_TERMINAL_CONTEXT_MENU = {
+  search: { id: 'io.duobase.elsewise.terminal.contextMenu.search', order: 10, items: { find: 10 } },
+  clipboard: {
+    id: 'io.duobase.elsewise.terminal.contextMenu.clipboard',
+    order: 20,
+    items: { copy: 10, paste: 20, selectAll: 30 },
+  },
+  buffer: { id: 'io.duobase.elsewise.terminal.contextMenu.buffer', order: 30, items: { clear: 10 } },
+} as const;
+
+/**
+ * A group of items, separated from other groups in a context menu.
  *
- * A submenu with no shown items is hidden.
+ * Groups with the same id in a scope, e.g. the editor or the terminal, are merged. `order`, `in` and items with duplicate ids all use
+ * the first defined values.
  *
  * ```ts
- * editor.addContextMenus([
- *   {
- *     submenus: { 'example.tone': 'Tone of voice' },
- *     groups: {
- *       'example.reactions': { order: 50 }, // In the menu, after the built-in groups.
- *       'example.tone': { order: 60 },
- *       'example.tones': { menu: 'example.tone' }, // In the submenu.
- *     },
- *     items: {
- *       [DEFAULT_EDITOR_CONTEXT_MENU.refactor.id]: [{ type: 'item', order: 20, command: 'example.excuse' }],
- *       'example.reactions': [{ type: 'item', order: 10, command: 'example.shrug' }],
- *       'example.tone': [{ type: 'submenu', submenu: 'example.tone' }], // Opens the submenu.
- *       'example.tones': [{ type: 'item', order: 10, command: 'example.uwu' }],
- *     },
- *   },
+ * editor.addContextMenu([
+ *   // Items in a built-in group
+ *   { id: DEFAULT_EDITOR_CONTEXT_MENU.refactor.id, items: [{ order: 20, command: 'example.excuse' }] },
+ *
+ *   // After the built-in groups.
+ *   { id: 'example.reactions', order: 50, items: [{ order: 10, command: 'example.shrug' }] },
+ *
+ *   // Submenu trigger
+ *   { id: 'example.tone', order: 60, items: [{ label: 'Tone of voice', submenu: 'example.tone' }] },
+ *   // Submenu content
+ *   { id: 'example.tones', in: 'example.tone', items: [{ order: 10, command: 'example.uwu' }] },
  * ]);
  * ```
  */
-export interface ContextMenu {
-  /**
-   * The labels of the submenus this menu declares, by id. A submenu is omitted if its id already exists. Its label
-   * cannot be blank.
-   *
-   * See {@link ContextMenuGroup.menu} for adding a group to a submenu, and {@link ContextMenuSubmenuItem.submenu} for
-   * opening it.
-   */
-  // TODO: This might need to change to support localization in the future.
-  readonly submenus: Readonly<Record<string, string>>;
-
-  /**
-   * The groups this menu declares, by id. A group is omitted if its id already exists.
-   *
-   * See {@link ContextMenuGroup}.
-   */
-  readonly groups: Readonly<Record<string, ContextMenuGroup>>;
-
-  /**
-   * The items this menu adds to groups, by the group's id. The items of a group whose id is invalid or missing are
-   * omitted.
-   *
-   * See {@link ContextMenuGroup} for declaring a group, and {@link ContextMenuItem} and
-   * {@link ContextMenuSubmenuItem} for the items.
-   */
-  readonly items: Readonly<Record<string, readonly (ContextMenuItem | ContextMenuSubmenuItem)[]>>;
-}
-
-/**
- * A group of items, separated from other groups in the menu.
- *
- * See {@link ContextMenu} for adding items to it.
- */
 export interface ContextMenuGroup {
   /**
-   * The id of the submenu this group is in, or none for the menu itself. Omitted if the id is invalid or missing.
+   * The id of this group, e.g. `DEFAULT_EDITOR_CONTEXT_MENU.refactor.id`.
    *
-   * See {@link ContextMenu} for declaring a submenu.
+   * Groups with the same id in the same scope, e.g. the editor, are merged.
+   *
+   * See {@link DEFAULT_EDITOR_CONTEXT_MENU} for the built-in groups.
    */
-  readonly menu?: string;
+  readonly id: string;
 
   /**
    * The order of this group in its menu, shown lowest first and by id when equal. Groups without one are shown last.
+   *
+   * A differing order added later is ignored.
    */
   readonly order?: number;
+
+  /**
+   * The id of the submenu this group is in, or none for the menu itself.
+   *
+   * A differing submenu added later is ignored.
+   *
+   * See {@link ContextMenuSubmenuItem} for opening a submenu.
+   */
+  readonly in?: string;
+
+  /**
+   * The items in this group. An item whose command or submenu already exists in the group is ignored.
+   */
+  readonly items: readonly (ContextMenuItem | ContextMenuSubmenuItem)[];
 }
 
 /**
  * An item that runs a command.
  */
 export interface ContextMenuItem {
-  readonly type: 'item';
-
   /**
    * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
@@ -120,8 +115,7 @@ export interface ContextMenuItem {
   readonly label?: string;
 
   /**
-   * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Omitted if the id is invalid, missing or
-   * already exists in the group.
+   * The id of the command it runs, e.g. `DEFAULT_COMMANDS.editor.lsp.rename`. Ignored if the id is invalid or missing.
    *
    * See {@link DEFAULT_COMMANDS} for the built-in commands.
    */
@@ -129,20 +123,25 @@ export interface ContextMenuItem {
 }
 
 /**
- * An item that opens a submenu.
+ * An item that opens a submenu: the groups whose `in` is its id. It is hidden when none of them has an item to show.
  */
 export interface ContextMenuSubmenuItem {
-  readonly type: 'submenu';
-
   /**
    * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
    */
   readonly order?: number;
 
   /**
-   * The id of the submenu it opens. Omitted if the id is invalid, missing or already exists in the group.
+   * The label shown.
    *
-   * See {@link ContextMenu} for declaring a submenu.
+   * It is possible for there to be multiple submenu items with different labels in different groups.
+   */
+  readonly label: string;
+
+  /**
+   * The id of the submenu it opens, e.g. `DEFAULT_EDITOR_CONTEXT_MENU.diff.items.compare.id`.
+   *
+   * See {@link ContextMenuGroup.in} for adding a group to it.
    */
   readonly submenu: string;
 }

@@ -3,8 +3,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
+import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from '@/command/keymap';
 import { EditorManager } from '@/editor/editor-manager';
-import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from './keymap';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
@@ -29,7 +32,13 @@ afterEach(() => {
 // Returns a window with application keys installed for `added`, which are added in order.
 function install(...added: ApplicationCommand[]) {
   const window = new EventTarget() as Window;
-  const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+  const commands = new CommandManager({
+    appearance: APPEARANCE,
+    editor: new EditorManager(),
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
+  });
   for (const command of added) {
     commands.add([command]);
   }
@@ -104,7 +113,13 @@ describe('installApplicationKeys', () => {
     const run = vi.fn(() => true);
     const window = new EventTarget() as Window;
     window.addEventListener('keydown', (event) => event.preventDefault());
-    const commands = new CommandManager({ appearance: APPEARANCE, editor: new EditorManager() });
+    const commands = new CommandManager({
+      appearance: APPEARANCE,
+      editor: new EditorManager(),
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    });
     commands.add([command('a', run)]);
     installApplicationKeys(window, commands);
     window.dispatchEvent(press());

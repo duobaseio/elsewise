@@ -40,6 +40,7 @@ function browserProject(
         '@pierre/trees/react',
         'class-variance-authority',
         'clsx',
+        'dockview-react',
         'tailwind-merge',
       ],
     },

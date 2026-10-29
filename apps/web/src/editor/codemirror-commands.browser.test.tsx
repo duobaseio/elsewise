@@ -37,47 +37,72 @@ function open(anchor: number, doc = DOC): EditorView {
   return view;
 }
 
-describe('HISTORY', () => {
-  test('undoes and redoes', async () => {
+describe('EDITOR_UNDO', () => {
+  test('reverts typing', async () => {
     const view = open(0);
     await userEvent.keyboard('x');
 
     await userEvent.keyboard('{Meta>}z{/Meta}');
     expect(view.state.doc.toString()).toBe(DOC);
+  });
+});
+
+describe('EDITOR_REDO', () => {
+  test('reapplies undone typing', async () => {
+    const view = open(0);
+    await userEvent.keyboard('x');
+    await userEvent.keyboard('{Meta>}z{/Meta}');
+
     await userEvent.keyboard('{Meta>}{Shift>}z{/Shift}{/Meta}');
     expect(view.state.doc.toString()).toBe(`x${DOC}`);
   });
 });
 
-describe('FOLD', () => {
-  test('folds and unfolds', async () => {
+describe('EDITOR_FOLD', () => {
+  test('collapses block at caret', async () => {
     const view = open(0);
 
     await userEvent.keyboard('{Meta>}-{/Meta}');
     expect(view.dom.querySelectorAll('.cm-foldPlaceholder')).toHaveLength(1);
+  });
+});
+
+describe('EDITOR_UNFOLD', () => {
+  test('expands block at caret', async () => {
+    const view = open(0);
+    await userEvent.keyboard('{Meta>}-{/Meta}');
+
     await userEvent.keyboard('{Meta>}={/Meta}');
     expect(view.dom.querySelectorAll('.cm-foldPlaceholder')).toHaveLength(0);
   });
+});
 
-  test('folds and unfolds all', async () => {
+describe('EDITOR_FOLD_ALL', () => {
+  test('collapses every block', async () => {
     const view = open(0, `${DOC}fn other() {\n    let b = 2;\n}\n`);
 
     await userEvent.keyboard('{Meta>}{Shift>}-{/Shift}{/Meta}');
     expect(view.dom.querySelectorAll('.cm-foldPlaceholder')).toHaveLength(2);
+  });
+});
+
+describe('EDITOR_UNFOLD_ALL', () => {
+  test('expands every block', async () => {
+    const view = open(0, `${DOC}fn other() {\n    let b = 2;\n}\n`);
+    await userEvent.keyboard('{Meta>}{Shift>}-{/Shift}{/Meta}');
+
     await userEvent.keyboard('{Meta>}{Shift>}={/Shift}{/Meta}');
     expect(view.dom.querySelectorAll('.cm-foldPlaceholder')).toHaveLength(0);
   });
 });
 
-describe('EDIT', () => {
-  test('indents and unindents', async () => {
+describe('EDITOR_INDENT', () => {
+  test('shifts selected line right on Tab', async () => {
     const view = open(DOC.indexOf('let'));
     view.dispatch({ selection: { anchor: view.state.doc.line(2).from, head: view.state.doc.line(2).to } });
 
     await userEvent.keyboard('{Tab}');
     expect(view.state.doc.line(2).text).toBe('      let a = 1;');
-    await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
-    expect(view.state.doc.line(2).text).toBe('    let a = 1;');
   });
 
   test('leaves Tab to browser in read-only document', () => {
@@ -88,19 +113,38 @@ describe('EDIT', () => {
 
     expect(event.defaultPrevented).toBe(false);
   });
+});
 
-  test('duplicates line and toggles line comment', async () => {
+describe('EDITOR_UNINDENT', () => {
+  test('shifts selected line left on Shift-Tab', async () => {
+    const view = open(DOC.indexOf('let'));
+    view.dispatch({ selection: { anchor: view.state.doc.line(2).from, head: view.state.doc.line(2).to } });
+
+    await userEvent.keyboard('{Shift>}{Tab}{/Shift}');
+    expect(view.state.doc.line(2).text).toBe('  let a = 1;');
+  });
+});
+
+describe('EDITOR_DUPLICATE_LINE', () => {
+  test('copies line below', async () => {
     const view = open(DOC.indexOf('let'));
 
     await userEvent.keyboard('{Meta>}d{/Meta}');
     expect(view.state.doc.line(3).text).toBe('    let a = 1;');
-    await userEvent.keyboard('{Meta>}/{/Meta}');
-    expect(view.state.doc.line(3).text).toBe('    // let a = 1;');
   });
 });
 
-describe('CARET', () => {
-  test('extends selection', async () => {
+describe('EDITOR_TOGGLE_LINE_COMMENT', () => {
+  test('comments out line', async () => {
+    const view = open(DOC.indexOf('let'));
+
+    await userEvent.keyboard('{Meta>}/{/Meta}');
+    expect(view.state.doc.line(2).text).toBe('    // let a = 1;');
+  });
+});
+
+describe('EDITOR_EXTEND_SELECTION', () => {
+  test('selects word at caret', async () => {
     const view = open(DOC.indexOf('a ='));
 
     await userEvent.keyboard('{Alt>}{ArrowUp}{/Alt}');

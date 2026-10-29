@@ -9,7 +9,7 @@ import {
 } from '@elsewise/plugin';
 import { EDITOR_DIFF } from '@/editor/diff/diff';
 
-export const UNSTAGED_DIFF: EditorCommand = {
+export const EDITOR_UNSTAGED_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.unstaged,
   label: 'Unstaged',
@@ -23,7 +23,7 @@ export const UNSTAGED_DIFF: EditorCommand = {
   },
 };
 
-export const UNCOMMITTED_DIFF: EditorCommand = {
+export const EDITOR_UNCOMMITTED_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.uncommitted,
   label: 'Uncommitted',
@@ -37,7 +37,7 @@ export const UNCOMMITTED_DIFF: EditorCommand = {
   },
 };
 
-export const BRANCH_DIFF: EditorCommand = {
+export const EDITOR_BRANCH_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.branch,
   label: 'Branch',
@@ -51,7 +51,7 @@ export const BRANCH_DIFF: EditorCommand = {
   },
 };
 
-export const CLOSE_DIFF: EditorCommand = {
+export const EDITOR_CLOSE_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.close,
   label: 'Close comparison',
@@ -69,7 +69,7 @@ export const CLOSE_DIFF: EditorCommand = {
   },
 };
 
-export const NEXT_CHUNK: EditorCommand = {
+export const EDITOR_NEXT_CHUNK: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.next,
   label: 'Next change',
@@ -79,7 +79,7 @@ export const NEXT_CHUNK: EditorCommand = {
   run: (_, view) => goToNextChunk(view),
 };
 
-export const PREVIOUS_CHUNK: EditorCommand = {
+export const EDITOR_PREVIOUS_CHUNK: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.previous,
   label: 'Previous change',
@@ -89,7 +89,7 @@ export const PREVIOUS_CHUNK: EditorCommand = {
   run: (_, view) => goToPreviousChunk(view),
 };
 
-export const UNIFIED_DIFF: EditorCommand = {
+export const EDITOR_UNIFIED_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.unified,
   label: 'Unified',
@@ -107,7 +107,7 @@ export const UNIFIED_DIFF: EditorCommand = {
   },
 };
 
-export const SPLIT_DIFF: EditorCommand = {
+export const EDITOR_SPLIT_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.split,
   label: 'Split',

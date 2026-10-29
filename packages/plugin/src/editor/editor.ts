@@ -5,7 +5,7 @@ import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Tag } from '@lezer/highlight';
 import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol';
-import type { ContextMenu } from '../context-menu.ts';
+import type { ContextMenuGroup } from '../context-menu.ts';
 import type { Disposable } from '../plugin.ts';
 import type { EditorDiffs } from './diff.ts';
 import type { EditorLanguages } from './language.ts';
@@ -61,11 +61,13 @@ export const EDITOR_DOCUMENT = Facet.define<EditorDocument, EditorDocument | nul
 /**
  * How an editor shows its document:
  * * `editor`: the default view.
+ * * `preview`: a stripped down view for previewing code.
  * * `unified`: diffed, with the base's deleted lines inline.
  * * `split`: as one side of a side-by-side diff, the `base` on the left or the `target` on the right.
  */
 export type EditorDocumentLayout =
   | { readonly type: 'editor' }
+  | { readonly type: 'preview' }
   | { readonly type: 'unified' }
   | { readonly type: 'split'; readonly side: 'base' | 'target' };
 
@@ -130,11 +132,13 @@ export interface Editor {
   addToolbarItems(items: readonly EditorToolbarItem[]): Disposable;
 
   /**
-   * Adds `menus` to the context menu.
+   * Adds `groups`, and their items, to the context menu.
    *
-   * Returns a disposable that removes the `menus`.
+   * See {@link ContextMenuGroup} for adding to a built-in group or submenu.
+   *
+   * Returns a disposable that removes the `groups`.
    */
-  addContextMenus(menus: readonly Partial<ContextMenu>[]): Disposable;
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
 }
 
 /**

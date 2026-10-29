@@ -39,7 +39,7 @@ describe('DiffState', () => {
     await expect.poll(() => listener.mock.calls.length).toBe(1);
   });
 
-  test('notifies on edit that changes chunks', () => {
+  test('notifies on edit changing chunks', () => {
     const diff = new DiffState('test.source', 'unified');
     const view = new EditorView({
       state: EditorState.create({ doc: DOC, extensions: [unifiedDiff(BASE), diff.extension] }),

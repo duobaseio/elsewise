@@ -32,6 +32,9 @@ import {
 } from '@/editor/layouts/layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { memoryRouter } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const BASE: EditorDocumentLayout = { type: 'split', side: 'base' };
@@ -110,6 +113,9 @@ async function mount(
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   let setSource: (source: EditorSource) => void = () => {};
   let setCode: (code: string) => void = () => {};
@@ -273,6 +279,20 @@ describe('useEditorExtensions', () => {
       settings(monospace);
 
       await expect.poll(() => view().defaultCharacterWidth).toBe(width);
+    });
+
+    test('remeasures line height', async () => {
+      notifyManager.setScheduler((callback) => callback());
+      document.documentElement.style.setProperty('--text-code--line-height', '18px');
+      const { view, settings } = await mount('workingTree', { code: 'fn main() {}' });
+      await expect.poll(() => view().defaultLineHeight).toBe(18);
+
+      // Changes the CSS variable that the editor's theme reads the line height from along with the settings, as the
+      // app does.
+      document.documentElement.style.setProperty('--text-code--line-height', '30px');
+      settings(withSettings({}, { font: { ...DEFAULT_SETTINGS.appearance.editor.font, lineHeight: 2.5 } }));
+
+      await expect.poll(() => view().defaultLineHeight).toBe(30);
     });
 
     test('edits with undo history', async () => {
@@ -822,7 +842,6 @@ describe('useLanguage', () => {
     expect(latest()).toEqual({ name: 'Toy', language: null });
   });
 });
-
 const LAYOUT: EditorDocumentLayout = { type: 'editor' };
 const VALUES = Facet.define<string>();
 
@@ -840,7 +859,7 @@ function Plugins({
   document: EditorDocument | null;
   onPlugins: (plugins: Extension) => void;
 }) {
-  onPlugins(usePlugins(view, document));
+  onPlugins(usePlugins(view, document, LAYOUT));
   return null;
 }
 
@@ -933,7 +952,6 @@ describe('applyPlugins', () => {
     view.destroy();
   });
 });
-
 const COMPARTMENT = new Compartment();
 
 function Compartmented({ view, value }: { view: RefObject<EditorView | null>; value: Extension }) {

@@ -1,4 +1,4 @@
-import { type Diagnostic, forEachDiagnostic, linter } from '@codemirror/lint';
+import { type Diagnostic, linter } from '@codemirror/lint';
 import { CharCategory, type Extension, Facet, Prec, StateEffect, StateField } from '@codemirror/state';
 import {
   closeHoverTooltips,
@@ -18,7 +18,8 @@ import {
   type EditorDiagnostic,
   type EditorHoverSource,
 } from '@elsewise/plugin';
-import { APPLY_TOP_FIX, actionsAt, apply, SHOW_ACTIONS } from '@/editor/actions';
+import { actionsAt, apply, EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
+import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';
 import { appendCode } from '@/editor/tooltip';
 
@@ -65,7 +66,7 @@ const clicks = EditorView.domEventHandlers({
   },
 });
 
-// The hover that `SHOW_HOVER` opened at the cursor, until the cursor moves.
+// The hover that `EDITOR_SHOW_HOVER` opened at the cursor, until the cursor moves.
 const cursorHover = StateField.define<Tooltip | null>({
   create: () => null,
   update(value, tr) {
@@ -84,7 +85,7 @@ const cursorHover = StateField.define<Tooltip | null>({
 
 const setCursorHover = StateEffect.define<Tooltip | null>();
 
-export const SHOW_HOVER: EditorCommand = {
+export const EDITOR_SHOW_HOVER: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.hover.show,
   label: 'Quick documentation',
@@ -121,7 +122,7 @@ export const SHOW_HOVER: EditorCommand = {
 
 /**
  * Returns the extension that shows the diagnostics and the `hover` language data's sections for the code under the
- * pointer, or under the cursor on {@link SHOW_HOVER}. The diagnostics are at
+ * pointer, or under the cursor on {@link EDITOR_SHOW_HOVER}. The diagnostics are at
  * {@link DEFAULT_HOVER_SECTIONS.diagnostics}.
  */
 export function hover(): Extension {
@@ -158,13 +159,8 @@ export function hover(): Extension {
  * arrive.
  */
 async function lookUp(view: EditorView, pos: number, side: -1 | 1): Promise<Tooltip[] | null> {
-  const found: EditorDiagnostic[] = [];
   // Includes the diagnostics that only touch `pos`, whichever `side` the pointer is on, as servers' documentation does.
-  forEachDiagnostic(view.state, (diagnostic, from, to) => {
-    if (pos >= from && pos <= to) {
-      found.push({ ...diagnostic, from, to });
-    }
-  });
+  const found = view.state.field(diagnostics).filter(({ from, to }) => pos >= from && pos <= to);
 
   const sources = view.state.languageDataAt<EditorHoverSource>('hover', pos, side);
   const [dom, tooltips] = await Promise.all([
@@ -272,13 +268,13 @@ export async function diagnosticsSection(
 
       const fix = fixes[i].find((action) => action.type !== undefined);
       if (fix) {
-        append(fix.label, APPLY_TOP_FIX.id, () => void apply(view, fix));
+        append(fix.label, EDITOR_APPLY_TOP_FIX.id, () => void apply(view, fix));
       }
       // Shows the actions at the diagnostic rather than wherever the cursor is.
-      append('More actions', SHOW_ACTIONS.id, () => {
+      append('More actions', EDITOR_SHOW_ACTIONS.id, () => {
         view.dispatch({ selection: { anchor: diagnostic.from } });
         view.focus();
-        view.state.facet(COMMANDS)?.run(SHOW_ACTIONS.id, view);
+        view.state.facet(COMMANDS)?.run(EDITOR_SHOW_ACTIONS.id, view);
       });
     }
   }

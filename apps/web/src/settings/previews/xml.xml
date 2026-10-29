@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Daemon configuration: sessions are kept alive and attached to channels. -->
+<daemon xmlns="https://elsewise.dev/schema/daemon" xmlns:ew="https://elsewise.dev/schema/editor"
+	name="elsewise-daemon" version="0.4.1">
+	<listen host="127.0.0.1" port="7331" tls="false"/>
+	<limits sessions="64" pendingEdits="4096" idleTimeoutMs="300000" backoffFactor="1.5"/>
+
+	<channels>
+		<channel name="editor.sessions" subscribe="true" retries="3">
+			<filter>pending</filter>
+			<filter>attached</filter>
+			<filter>detached</filter>
+			<description>Session lifecycle events: attach, detach &amp; replay.</description>
+		</channel>
+
+		<channel name="editor.edits" subscribe="false" retries="0">
+			<description>Raw edit stream; events arrive &lt; 16ms apart.</description>
+			<ew:transform lang="js"><![CDATA[
+				if (edit.pending > 0 && edit.bytes < 65536) { replay(edit); }
+			]]></ew:transform>
+		</channel>
+	</channels>
+
+	<ew:sessions>
+		<ew:session id="s-4f2a" worktree="feature/menu" pending="12" attached="2026-09-17T08:41:03Z">
+			<ew:edit seq="1" op="insert" offset="120">fn attach(</ew:edit>
+			<ew:edit seq="2" op="delete" offset="118" length="2"/>
+		</ew:session>
+
+		<ew:session id="s-9c10" worktree="main" pending="0"/>
+	</ew:sessions>
+
+	<?elsewise-reload interval="30s"?>
+
+	<retries enabled="true" ew:policy="exponential">
+		<attempt delay="250ms"/>
+		<attempt delay="500ms"/>
+		<attempt delay="1s"/>
+	</retries>
+</daemon>

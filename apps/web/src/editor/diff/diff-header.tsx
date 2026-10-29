@@ -1,4 +1,3 @@
-import { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Icon, type IconName } from '@elsewise/components/components/icon';
@@ -53,7 +52,6 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
       const editor = view.current;
       const next = new Map<string, Control>();
       if (editor !== null) {
-        const lsp = LSPPlugin.get(editor);
         for (const [id] of GROUPS.flat()) {
           const command = commands.commands.get(id);
           if (command?.scope !== 'editor') {
@@ -61,11 +59,11 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
           }
 
           try {
-            if (command.shown?.(commands.application, editor, lsp) !== false) {
+            if (command.shown?.(commands.application, editor) !== false) {
               next.set(id, {
                 label: command.label,
-                enabled: command.enabled?.(commands.application, editor, lsp) !== false,
-                active: command.active?.(commands.application, editor, lsp),
+                enabled: command.enabled?.(commands.application, editor) !== false,
+                active: command.active?.(commands.application, editor),
               });
             }
           } catch (error) {

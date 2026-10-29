@@ -14,6 +14,9 @@ import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { UnifiedLayout, type UnifiedLayoutProps } from '@/editor/layouts/unified-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { memoryRouter } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -23,25 +26,6 @@ const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
 const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => ({
   'data-layout': state.facet(EDITOR_DOCUMENT)?.layout.type ?? 'loading',
 }));
-
-// Returns a language for `.late` files whose support loads when `loaded` resolves.
-function lateLanguage(loaded: Promise<void>): LanguageDescription {
-  return LanguageDescription.of({
-    name: 'Late',
-    extensions: ['late'],
-    load: async () => {
-      await loaded;
-      return new LanguageSupport(
-        StreamLanguage.define({
-          token: (stream) => {
-            stream.skipToEnd();
-            return null;
-          },
-        }),
-      );
-    },
-  });
-}
 
 // Renders a `UnifiedLayout` with `props` in the app's contexts, and returns its view and a way to render it again.
 async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorManager()) {
@@ -53,6 +37,9 @@ async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorMana
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   const servers = new LanguageServers(editor);
   const session = { current: null };
@@ -168,7 +155,23 @@ describe('UnifiedLayout', () => {
       load = resolve;
     });
     const editor = new EditorManager();
-    editor.languages.add([lateLanguage(loaded)]);
+    editor.languages.add([
+      LanguageDescription.of({
+        name: 'Late',
+        extensions: ['late'],
+        load: async () => {
+          await loaded;
+          return new LanguageSupport(
+            StreamLanguage.define({
+              token: (stream) => {
+                stream.skipToEnd();
+                return null;
+              },
+            }),
+          );
+        },
+      }),
+    ]);
     const { view } = await mount({ relativePath: 'main.late', base: BASE }, editor);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(changedLines(view())).toBe(0);

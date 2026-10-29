@@ -10,8 +10,8 @@ It evokes divergence, possibility, lateral thinking. There's something inherentl
 ## Color
 
 The interface, editor and terminal are each colored by a **theme**. A theme has a light and dark variant. A missing
-variant defaults to Elsewise's theme. A theme states the terminal's ANSI-16, a missing color defaulting to Elsewise's;
-the terminal's background, foreground, cursor and selection default to the editor's.
+variant defaults to Elsewise's theme. A missing color defaults to Elsewise's own for the same part, e.g. a missing
+terminal background to Elsewise's terminal background.
 
 ## Default Elsewise Theme
 
@@ -232,6 +232,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
   readability above all, which is an important quality since most developers spend a lot of time reading through code.
     * Typically ~12px
 * Family, size (12–24px) and ligatures are settings, held separately for the interface, the editor and the terminal.
+  The editor and the terminal also set their line height.
   The system font and any installed family can be chosen. [**Atkinson Hyperlegible
   Next**](https://www.brailleinstitute.org/freefont/) is the interface's one bundled alternative, for low vision.
 
@@ -243,7 +244,8 @@ brights lift lightness only (+0.08 L / +0.07 L).
       uniformly; platform text scaling is mobile's.
 - **Fraunces floor: 20px.** Below that, headings are Work Sans 500.
 - **Below 13px, compensate:** letter-spacing `+0.01–0.02em`, consider weight 450–500 — Work Sans is designed for 14px+.
-- **Code sits on a fixed line grid:** ×1.54 of the size, rounded (18px at 12). Font swaps never reflow gutters or diffs.
+- **Code sits on a fixed line grid:** the line height setting × the size, rounded; ×1.54 by default (18px at 12). Font
+  swaps never reflow gutters, diffs or the code popups, whose rows are the grid + 6px.
 - **No off-scale sizes.** If a component needs a size not listed, the scale changes or the component does.
 
 ### Desktop scale
@@ -278,10 +280,10 @@ brights lift lightness only (+0.08 L / +0.07 L).
 
 | Token         | Size / line      | Weight | Usage                                                             |
 |---------------|------------------|--------|-------------------------------------------------------------------|
-| `code`        | 12 / 18          | 400    | Editor. Size is the monospace setting; the grid is ×1.54, rounded |
+| `code`        | 12 / 18          | 400    | Editor. Size and grid (×1.54 by default) are settings             |
 | `code-gutter` | 10 / 18          | 400    | Line numbers — editor −2, on the editor's grid                    |
 | `code-inline` | 0.85em / inherit | 400    | Inline code in prose — intent, not a token yet                    |
-| terminal      | 12 / ×1.38       | 400    | Not a token: xterm takes the terminal font setting as options     |
+| terminal      | 12 / 17          | 400    | Not a token: xterm options; line height ×1.0625 the font height   |
 
 ## Mobile remap
 

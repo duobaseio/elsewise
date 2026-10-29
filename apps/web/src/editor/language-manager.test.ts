@@ -2,7 +2,7 @@ import { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
 import type { LanguageServer } from '@elsewise/plugin';
 import { describe, expect, test } from 'vitest';
-import { LanguageManager } from './language-manager';
+import { LanguageManager } from '@/editor/language-manager';
 
 // Returns a language named `name` whose grammar never loads.
 function language(name: string): LanguageDescription {

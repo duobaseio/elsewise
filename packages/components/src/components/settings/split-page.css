@@ -1,0 +1,16 @@
+.settings-split-page {
+  --dv-sash-color: transparent;
+  --dv-active-sash-color: var(--border);
+}
+
+/*
+ * The default resize cursor is semantically wrong, as are dockview's one-way cursors for a sash at a panel's limit. A
+ * drag past the limit leaves the sash behind, so the page keeps the cursor while the sash is held.
+ */
+.settings-split-page
+  .dv-split-view-container.dv-horizontal
+  > .dv-sash-container
+  > .dv-sash:is(.dv-enabled, .dv-minimum, .dv-maximum),
+.settings-split-page:has(.dv-sash:active) {
+  cursor: col-resize;
+}

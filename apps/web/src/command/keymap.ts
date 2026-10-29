@@ -3,6 +3,7 @@ import { keymap } from '@codemirror/view';
 import { BundledKeymap, type KeymapId } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { Keymap } from '@elsewise/plugin';
+import type { ITerminalAddon } from '@xterm/xterm';
 import { useMemo } from 'react';
 import type { CommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keys';
@@ -82,4 +83,31 @@ export function editorKeymap(commands: CommandManager, keys: ReadonlyMap<string,
       })),
     ),
   );
+}
+
+/**
+ * Returns an add-on that runs the terminal commands bound to a key pressed in a terminal.
+ *
+ * A key that does not run a command is handled by the shell.
+ */
+export function terminalKeymap(commands: CommandManager): ITerminalAddon {
+  return {
+    activate(terminal) {
+      terminal.attachCustomKeyEventHandler((event) => {
+        if (event.type !== 'keydown' || event.isComposing) {
+          return true;
+        }
+
+        for (const key of eventKeys(event, PLATFORM)) {
+          if (commands.keymap.keys.terminal.get(key)?.some((id) => commands.run(id, terminal))) {
+            // Chromium would also paste on its own paste event, which xterm listens for, so the text would land twice.
+            event.preventDefault();
+            return false;
+          }
+        }
+        return true;
+      });
+    },
+    dispose() {},
+  };
 }

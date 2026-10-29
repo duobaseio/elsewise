@@ -1,4 +1,3 @@
-import { forEachDiagnostic } from '@codemirror/lint';
 import { type Extension, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
@@ -10,6 +9,7 @@ import {
   type EditorCommand,
   type EditorDiagnostic,
 } from '@elsewise/plugin';
+import { diagnostics } from '@/editor/diagnostics';
 import { appendCode, hint } from '@/editor/tooltip';
 
 // A bulb, and the exclamation mark cut out of it for a fix.
@@ -83,7 +83,7 @@ const message = StateField.define<Tooltip | null>({
 
 const showMessage = StateEffect.define<number | null>();
 
-export const APPLY_TOP_FIX: EditorCommand = {
+export const EDITOR_APPLY_TOP_FIX: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.actions.applyTopFix,
   label: 'Apply top fix',
@@ -102,7 +102,7 @@ export const APPLY_TOP_FIX: EditorCommand = {
   },
 };
 
-export const SHOW_ACTIONS: EditorCommand = {
+export const EDITOR_SHOW_ACTIONS: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.actions.show,
   label: 'Show context actions',
@@ -128,8 +128,8 @@ export const SHOW_ACTIONS: EditorCommand = {
 };
 
 /**
- * Returns the extension that shows the `actions` language data's actions on {@link SHOW_ACTIONS}, and applies the top
- * fix on {@link APPLY_TOP_FIX}.
+ * Returns the extension that shows the `actions` language data's actions on {@link EDITOR_SHOW_ACTIONS}, and applies the top
+ * fix on {@link EDITOR_APPLY_TOP_FIX}.
  */
 export function actions(): Extension {
   return [
@@ -216,10 +216,7 @@ function diagnosticsAt(view: EditorView): [from: number, to: number, diagnostics
   const { state } = view;
   const { from, to } = state.selection.main;
   const line = state.doc.lineAt(state.selection.main.head);
-  const found: EditorDiagnostic[] = [];
-  forEachDiagnostic(state, (diagnostic, from, to) => {
-    found.push({ ...diagnostic, from, to });
-  });
+  const found = state.field(diagnostics);
   const overlapping = found.filter((diagnostic) => diagnostic.from <= to && diagnostic.to >= from);
   const near = found.filter((diagnostic) => diagnostic.from <= line.to && diagnostic.to >= line.from);
 

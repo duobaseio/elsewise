@@ -9,6 +9,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { type CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { diagnostics } from '@/editor/diagnostics';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { METRICS } from '@/editor/theme';
 import { useToolbarExtension } from '@/editor/toolbar';
@@ -47,6 +48,7 @@ function mount(
           doc: DOC,
           extensions: [
             toolbar,
+            diagnostics,
             METRICS,
             commandsExtension(commands),
             EditorView.theme({ '&': { height: '200px' } }),
@@ -95,7 +97,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('useToolbar', () => {
+describe('useToolbarExtension', () => {
   test('orders items from right edge, unordered left', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);
@@ -153,7 +155,7 @@ describe('useToolbar', () => {
     await expect.element(page.getByRole('button', { name: 'a' })).toBeDisabled();
   });
 
-  test('presses command that is active', async () => {
+  test('presses active command', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);
     command(commands, 'a', { active: () => true });
@@ -178,7 +180,7 @@ describe('useToolbar', () => {
 
     await userEvent.click(page.getByRole('button', { name: 'a' }));
 
-    expect(run).toHaveBeenCalledWith(commands.application, view, null);
+    expect(run).toHaveBeenCalledWith(commands.application, view);
     expect(view.hasFocus).toBe(true);
   });
 
@@ -193,7 +195,7 @@ describe('useToolbar', () => {
 
     await userEvent.click(page.getByRole('button', { name: 'a' }));
 
-    expect(run).toHaveBeenCalledWith(commands.application, view, null);
+    expect(run).toHaveBeenCalledWith(commands.application, view);
     expect(view.hasFocus).toBe(true);
   });
 
@@ -231,7 +233,7 @@ describe('useToolbar', () => {
     await expect.element(page.getByText('Wave', { exact: true })).toHaveAttribute('data-instant');
   });
 
-  test('removes items when disposed', async () => {
+  test('removes items once disposed', async () => {
     const editor = new EditorManager();
     const commands = builtInCommands(editor);
     command(commands, 'a');

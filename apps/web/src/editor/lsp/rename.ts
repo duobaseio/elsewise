@@ -39,7 +39,7 @@ interface Renaming {
   hint: Tooltip;
 }
 
-const renaming = StateField.define<Renaming | null>({
+const renaming = StateField.define<'preparing' | Renaming | null>({
   create: () => null,
   update(value, tr) {
     for (const effect of tr.effects) {
@@ -47,9 +47,9 @@ const renaming = StateField.define<Renaming | null>({
         value = effect.value;
       } else if (effect.is(stopRenaming)) {
         return null;
-      } else if (value && effect.is(typeName)) {
+      } else if (value && value !== 'preparing' && effect.is(typeName)) {
         value = { ...value, typed: effect.value };
-      } else if (value && effect.is(commitRenaming)) {
+      } else if (value && value !== 'preparing' && effect.is(commitRenaming)) {
         value = { ...value, pending: true };
       }
     }
@@ -57,7 +57,8 @@ const renaming = StateField.define<Renaming | null>({
     if (!value || !tr.docChanged) {
       return value;
     }
-    if (tr.changes.touchesRange(value.from, value.to)) {
+
+    if (value === 'preparing' || tr.changes.touchesRange(value.from, value.to)) {
       return null;
     }
 
@@ -74,7 +75,7 @@ const renaming = StateField.define<Renaming | null>({
   },
   provide: (field) => [
     EditorView.decorations.from(field, (value) =>
-      value === null
+      value === null || value === 'preparing'
         ? Decoration.none
         : Decoration.set(
             [
@@ -86,11 +87,11 @@ const renaming = StateField.define<Renaming | null>({
             true,
           ),
     ),
-    showTooltip.from(field, (value) => value?.hint ?? null),
+    showTooltip.from(field, (value) => (value === null || value === 'preparing' ? null : value.hint)),
   ],
 });
 
-const startRenaming = StateEffect.define<Renaming>();
+const startRenaming = StateEffect.define<'preparing' | Renaming>();
 const typeName = StateEffect.define<string>();
 const commitRenaming = StateEffect.define<null>();
 const stopRenaming = StateEffect.define<null>();
@@ -124,18 +125,18 @@ const message = StateField.define<Tooltip | null>({
 
 const showMessage = StateEffect.define<{ pos: number; text: string } | null>();
 
-export const RENAME: EditorCommand = {
+export const EDITOR_RENAME: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.rename,
   label: 'Rename…',
   defaultKeys: DEFAULT_KEYS.editor.lsp.rename,
-  enabled: (_, view, lsp) => !view.state.readOnly && Boolean(lsp?.client.serverCapabilities?.renameProvider),
-  shown(_, view, lsp) {
+  enabled: (_, view) => !view.state.readOnly && Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.renameProvider),
+  shown(_, view) {
     const { state } = view;
     const { from, to } = state.selection.main;
     const word = symbol(state);
     return (
-      Boolean(lsp?.client.serverCapabilities?.renameProvider) &&
+      Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.renameProvider) &&
       state.selection.ranges.length === 1 &&
       word !== null &&
       from >= word.from &&
@@ -146,16 +147,22 @@ export const RENAME: EditorCommand = {
     );
   },
   // Based on `@codemirror/lsp-client`'s `renameSymbol`.
-  run(_, view, lsp) {
+  run(_, view) {
+    const lsp = LSPPlugin.get(view);
     const provider = lsp?.client.serverCapabilities?.renameProvider;
     if (lsp === null || !provider) {
       return false;
+    }
+
+    if (view.state.field(renaming, false)) {
+      return true;
     }
 
     const { doc } = view.state;
     const pos = view.state.selection.main.head;
     const params = { position: lsp.toPosition(pos), textDocument: { uri: lsp.uri } };
     const word = view.state.wordAt(pos);
+    view.dispatch({ effects: startRenaming.of('preparing') });
     lsp.client.sync();
     void (async () => {
       try {
@@ -186,12 +193,15 @@ export const RENAME: EditorCommand = {
         }
         const highlights = await highlighting;
 
-        // Gives up when the document changed while the lsp was asked, since the ranges no longer fit it.
+        // Gives up when the document changed while the lsp was asked, since the ranges no longer fit it. The change
+        // stopped preparing already.
         if (view.state.doc !== doc) {
           return;
         }
         if (range === null) {
-          view.dispatch({ effects: showMessage.of({ pos, text: "This can't be renamed" }) });
+          view.dispatch({
+            effects: [stopRenaming.of(null), showMessage.of({ pos, text: "This can't be renamed" })],
+          });
           return;
         }
 
@@ -244,7 +254,10 @@ export const RENAME: EditorCommand = {
       } catch (error) {
         if (view.state.doc === doc) {
           view.dispatch({
-            effects: showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
+            effects: [
+              stopRenaming.of(null),
+              showMessage.of({ pos, text: (error as { message?: string }).message ?? String(error) }),
+            ],
           });
         }
       }
@@ -289,7 +302,7 @@ export function serverRename(): LSPClientExtension {
 function commit(view: EditorView, refocus: boolean): void {
   const value = view.state.field(renaming, false);
   const plugin = LSPPlugin.get(view);
-  if (!value || value.pending) {
+  if (!value || value === 'preparing' || value.pending) {
     return;
   }
   if (!plugin || value.typed === '' || value.typed === value.name) {
@@ -377,9 +390,6 @@ class Field extends WidgetType {
     input.ariaLabel = 'New name';
 
     input.addEventListener('input', () => {
-      if (view.state.field(renaming, false)?.pending) {
-        return;
-      }
       view.dispatch({ effects: typeName.of(input.value) });
       view.requestMeasure();
     });
@@ -397,7 +407,8 @@ class Field extends WidgetType {
       }
     });
     input.addEventListener('blur', () => {
-      if (view.state.field(renaming, false)?.field === this) {
+      const value = view.state.field(renaming, false);
+      if (value !== 'preparing' && value?.field === this) {
         input.readOnly = true;
         commit(view, false);
       }

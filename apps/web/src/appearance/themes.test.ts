@@ -1,8 +1,8 @@
 import { BundledTheme } from '@elsewise/bridge';
 import { Theme, type ThemeVariant } from '@elsewise/plugin';
 import { describe, expect, test } from 'vitest';
-import elsewise from './bundled/elsewise.json';
-import { type LoadedTheme, resolveActiveTheme, THEMES } from './themes';
+import elsewise from '@/appearance/bundled/elsewise.json';
+import { type LoadedTheme, resolveActiveTheme, THEMES } from '@/appearance/themes';
 
 const NIGHT: LoadedTheme = {
   id: { source: 'plugin', plugin: 'com.acme.themes', name: 'night' },
@@ -18,14 +18,14 @@ const NIGHT: LoadedTheme = {
 
 const ELSEWISE = Theme.parse(elsewise);
 
-// Returns `variant` with the stripe's and diff's colors it resolves to, which it leaves to the interface's.
+// Returns `variant` with the scrollbar markers' and diff's colors it resolves to, which it leaves to the interface's.
 function resolved(variant: ThemeVariant | undefined) {
   const colors = variant?.interface ?? {};
   return {
     ...variant,
     editor: {
       ...variant?.editor,
-      stripe: {
+      scrollbarMarkers: {
         error: colors.error,
         warning: colors['warning-fill'],
         info: colors.info,
@@ -53,23 +53,23 @@ describe('THEMES', () => {
 });
 
 describe('resolveActiveTheme', () => {
-  test("returns Elsewise's colors for unknown theme", () => {
+  test('falls back to Elsewise for unknown theme', () => {
     expect(resolveActiveTheme([NIGHT], { source: 'elsewise', name: 'dracula' }, 'dark')).toEqual(
       resolved(ELSEWISE.dark),
     );
   });
 
-  test("returns Elsewise's colors for same-named theme from another plugin", () => {
+  test('falls back to Elsewise for same-named theme from other plugin', () => {
     const id = { source: 'plugin', plugin: 'com.other.themes', name: 'night' } as const;
 
     expect(resolveActiveTheme([NIGHT], id, 'dark')).toEqual(resolved(ELSEWISE.dark));
   });
 
-  test("returns Elsewise's variant for theme without one for brightness", () => {
+  test('falls back to Elsewise variant for missing brightness', () => {
     expect(resolveActiveTheme([NIGHT], NIGHT.id, 'light')).toEqual(resolved(ELSEWISE.light));
   });
 
-  test("fills unspecified colors with Elsewise's", () => {
+  test('fills unspecified colors from Elsewise', () => {
     expect(resolveActiveTheme([NIGHT], NIGHT.id, 'dark')).toEqual({
       interface: { ...ELSEWISE.dark?.interface, background: '#000000', foreground: '#eeeeee' },
       editor: {
@@ -90,20 +90,20 @@ describe('resolveActiveTheme', () => {
     });
   });
 
-  test('fills unspecified stripe marks from interface colors', () => {
+  test('fills unspecified scrollbar markers from interface colors', () => {
     const theme: LoadedTheme = {
       ...NIGHT,
       theme: {
         name: 'Night',
         dark: {
           interface: { error: '#ff0000', 'warning-fill': '#ffff00' },
-          editor: { stripe: { error: '#880000' } },
+          editor: { scrollbarMarkers: { error: '#880000' } },
           terminal: {},
         },
       },
     };
 
-    expect(resolveActiveTheme([theme], theme.id, 'dark').editor.stripe).toMatchObject({
+    expect(resolveActiveTheme([theme], theme.id, 'dark').editor.scrollbarMarkers).toMatchObject({
       error: '#880000',
       warning: '#ffff00',
       info: ELSEWISE.dark?.interface.info,

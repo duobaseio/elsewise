@@ -11,7 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShellRouteRouteImport } from './routes/_shell/route'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ShellProjectWorktreeRouteImport } from './routes/_shell/$project/$worktree'
+import { Route as SettingsLocalIdRouteImport } from './routes/settings/local/$id'
+import { Route as SettingsLocalAppearanceGeneralRouteImport } from './routes/settings/local/appearance/general'
+import { Route as SettingsLocalAppearanceTerminalRouteImport } from './routes/settings/local/appearance/terminal'
+import { Route as SettingsRemoteRemoteIdRouteImport } from './routes/settings/remote/$remote/$id'
+import { Route as SettingsLocalAppearanceEditorIndexRouteImport } from './routes/settings/local/appearance/editor/index'
+import { Route as SettingsLocalAppearanceEditorLanguageRouteImport } from './routes/settings/local/appearance/editor/$language'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,37 +30,136 @@ const ShellRouteRoute = ShellRouteRouteImport.update({
   id: '/_shell',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRouteRoute = SettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
 const ShellProjectWorktreeRoute = ShellProjectWorktreeRouteImport.update({
   id: '/$project/$worktree',
   path: '/$project/$worktree',
   getParentRoute: () => ShellRouteRoute,
 } as any)
+const SettingsLocalIdRoute = SettingsLocalIdRouteImport.update({
+  id: '/local/$id',
+  path: '/local/$id',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsLocalAppearanceGeneralRoute =
+  SettingsLocalAppearanceGeneralRouteImport.update({
+    id: '/local/appearance/general',
+    path: '/local/appearance/general',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
+const SettingsLocalAppearanceTerminalRoute =
+  SettingsLocalAppearanceTerminalRouteImport.update({
+    id: '/local/appearance/terminal',
+    path: '/local/appearance/terminal',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
+const SettingsRemoteRemoteIdRoute = SettingsRemoteRemoteIdRouteImport.update({
+  id: '/remote/$remote/$id',
+  path: '/remote/$remote/$id',
+  getParentRoute: () => SettingsRouteRoute,
+} as any)
+const SettingsLocalAppearanceEditorIndexRoute =
+  SettingsLocalAppearanceEditorIndexRouteImport.update({
+    id: '/local/appearance/editor/',
+    path: '/local/appearance/editor/',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
+const SettingsLocalAppearanceEditorLanguageRoute =
+  SettingsLocalAppearanceEditorLanguageRouteImport.update({
+    id: '/local/appearance/editor/$language',
+    path: '/local/appearance/editor/$language',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRouteRouteWithChildren
+  '/settings/': typeof SettingsIndexRoute
   '/$project/$worktree': typeof ShellProjectWorktreeRoute
+  '/settings/local/$id': typeof SettingsLocalIdRoute
+  '/settings/local/appearance/general': typeof SettingsLocalAppearanceGeneralRoute
+  '/settings/local/appearance/terminal': typeof SettingsLocalAppearanceTerminalRoute
+  '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
+  '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
+  '/settings/local/appearance/editor/': typeof SettingsLocalAppearanceEditorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsIndexRoute
   '/$project/$worktree': typeof ShellProjectWorktreeRoute
+  '/settings/local/$id': typeof SettingsLocalIdRoute
+  '/settings/local/appearance/general': typeof SettingsLocalAppearanceGeneralRoute
+  '/settings/local/appearance/terminal': typeof SettingsLocalAppearanceTerminalRoute
+  '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
+  '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
+  '/settings/local/appearance/editor': typeof SettingsLocalAppearanceEditorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_shell': typeof ShellRouteRouteWithChildren
+  '/settings': typeof SettingsRouteRouteWithChildren
+  '/settings/': typeof SettingsIndexRoute
   '/_shell/$project/$worktree': typeof ShellProjectWorktreeRoute
+  '/settings/local/$id': typeof SettingsLocalIdRoute
+  '/settings/local/appearance/general': typeof SettingsLocalAppearanceGeneralRoute
+  '/settings/local/appearance/terminal': typeof SettingsLocalAppearanceTerminalRoute
+  '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
+  '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
+  '/settings/local/appearance/editor/': typeof SettingsLocalAppearanceEditorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$project/$worktree'
+  fullPaths:
+    | '/'
+    | '/settings'
+    | '/settings/'
+    | '/$project/$worktree'
+    | '/settings/local/$id'
+    | '/settings/local/appearance/general'
+    | '/settings/local/appearance/terminal'
+    | '/settings/remote/$remote/$id'
+    | '/settings/local/appearance/editor/$language'
+    | '/settings/local/appearance/editor/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$project/$worktree'
-  id: '__root__' | '/' | '/_shell' | '/_shell/$project/$worktree'
+  to:
+    | '/'
+    | '/settings'
+    | '/$project/$worktree'
+    | '/settings/local/$id'
+    | '/settings/local/appearance/general'
+    | '/settings/local/appearance/terminal'
+    | '/settings/remote/$remote/$id'
+    | '/settings/local/appearance/editor/$language'
+    | '/settings/local/appearance/editor'
+  id:
+    | '__root__'
+    | '/'
+    | '/_shell'
+    | '/settings'
+    | '/settings/'
+    | '/_shell/$project/$worktree'
+    | '/settings/local/$id'
+    | '/settings/local/appearance/general'
+    | '/settings/local/appearance/terminal'
+    | '/settings/remote/$remote/$id'
+    | '/settings/local/appearance/editor/$language'
+    | '/settings/local/appearance/editor/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ShellRouteRoute: typeof ShellRouteRouteWithChildren
+  SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -71,12 +178,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShellRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/_shell/$project/$worktree': {
       id: '/_shell/$project/$worktree'
       path: '/$project/$worktree'
       fullPath: '/$project/$worktree'
       preLoaderRoute: typeof ShellProjectWorktreeRouteImport
       parentRoute: typeof ShellRouteRoute
+    }
+    '/settings/local/$id': {
+      id: '/settings/local/$id'
+      path: '/local/$id'
+      fullPath: '/settings/local/$id'
+      preLoaderRoute: typeof SettingsLocalIdRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/local/appearance/general': {
+      id: '/settings/local/appearance/general'
+      path: '/local/appearance/general'
+      fullPath: '/settings/local/appearance/general'
+      preLoaderRoute: typeof SettingsLocalAppearanceGeneralRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/local/appearance/terminal': {
+      id: '/settings/local/appearance/terminal'
+      path: '/local/appearance/terminal'
+      fullPath: '/settings/local/appearance/terminal'
+      preLoaderRoute: typeof SettingsLocalAppearanceTerminalRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/remote/$remote/$id': {
+      id: '/settings/remote/$remote/$id'
+      path: '/remote/$remote/$id'
+      fullPath: '/settings/remote/$remote/$id'
+      preLoaderRoute: typeof SettingsRemoteRemoteIdRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/local/appearance/editor/': {
+      id: '/settings/local/appearance/editor/'
+      path: '/local/appearance/editor'
+      fullPath: '/settings/local/appearance/editor/'
+      preLoaderRoute: typeof SettingsLocalAppearanceEditorIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
+    '/settings/local/appearance/editor/$language': {
+      id: '/settings/local/appearance/editor/$language'
+      path: '/local/appearance/editor/$language'
+      fullPath: '/settings/local/appearance/editor/$language'
+      preLoaderRoute: typeof SettingsLocalAppearanceEditorLanguageRouteImport
+      parentRoute: typeof SettingsRouteRoute
     }
   }
 }
@@ -93,9 +256,36 @@ const ShellRouteRouteWithChildren = ShellRouteRoute._addFileChildren(
   ShellRouteRouteChildren,
 )
 
+interface SettingsRouteRouteChildren {
+  SettingsIndexRoute: typeof SettingsIndexRoute
+  SettingsLocalIdRoute: typeof SettingsLocalIdRoute
+  SettingsLocalAppearanceGeneralRoute: typeof SettingsLocalAppearanceGeneralRoute
+  SettingsLocalAppearanceTerminalRoute: typeof SettingsLocalAppearanceTerminalRoute
+  SettingsRemoteRemoteIdRoute: typeof SettingsRemoteRemoteIdRoute
+  SettingsLocalAppearanceEditorLanguageRoute: typeof SettingsLocalAppearanceEditorLanguageRoute
+  SettingsLocalAppearanceEditorIndexRoute: typeof SettingsLocalAppearanceEditorIndexRoute
+}
+
+const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
+  SettingsIndexRoute: SettingsIndexRoute,
+  SettingsLocalIdRoute: SettingsLocalIdRoute,
+  SettingsLocalAppearanceGeneralRoute: SettingsLocalAppearanceGeneralRoute,
+  SettingsLocalAppearanceTerminalRoute: SettingsLocalAppearanceTerminalRoute,
+  SettingsRemoteRemoteIdRoute: SettingsRemoteRemoteIdRoute,
+  SettingsLocalAppearanceEditorLanguageRoute:
+    SettingsLocalAppearanceEditorLanguageRoute,
+  SettingsLocalAppearanceEditorIndexRoute:
+    SettingsLocalAppearanceEditorIndexRoute,
+}
+
+const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
+  SettingsRouteRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ShellRouteRoute: ShellRouteRouteWithChildren,
+  SettingsRouteRoute: SettingsRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

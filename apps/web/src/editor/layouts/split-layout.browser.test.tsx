@@ -13,16 +13,13 @@ import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { SplitLayout, type SplitLayoutProps } from '@/editor/layouts/split-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { memoryRouter } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
 const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
-
-// Puts the document's layout into the content's `data-layout`, or `loading` while it is null.
-const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
-  const layout = state.facet(EDITOR_DOCUMENT)?.layout;
-  return { 'data-layout': layout === undefined ? 'loading' : layout.type === 'split' ? layout.side : layout.type };
-});
 
 // Renders a `SplitLayout` with `props` in the app's contexts, and returns its sides' views and a way to render it
 // again.
@@ -35,6 +32,9 @@ async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManage
       resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
     ),
     editor,
+    router: memoryRouter(),
+    settings: new SettingsPanelManager(),
+    terminal: new TerminalManager(),
   });
   const servers = new LanguageServers(editor);
   const session = { current: null };
@@ -105,7 +105,7 @@ describe('SplitLayout', () => {
     expect(base().dom.getBoundingClientRect().right).toBeLessThanOrEqual(target().dom.getBoundingClientRect().left);
   });
 
-  test('marks changes on both sides', async () => {
+  test('marks changed lines on both sides', async () => {
     const { base, target } = await mount({});
 
     await expect.poll(() => changedLines(target())).toBe(1);
@@ -114,7 +114,15 @@ describe('SplitLayout', () => {
 
   test('describes sides to plugins', async () => {
     const editor = new EditorManager();
-    editor.addExtensions([LAYOUT_ATTRIBUTE]);
+    // Puts the document's layout into the content's `data-layout`, or `loading` while it is null.
+    editor.addExtensions([
+      EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
+        const layout = state.facet(EDITOR_DOCUMENT)?.layout;
+        return {
+          'data-layout': layout === undefined ? 'loading' : layout.type === 'split' ? layout.side : layout.type,
+        };
+      }),
+    ]);
     const { base, target } = await mount({}, editor);
 
     await expect.poll(() => base().contentDOM.dataset.layout).toBe('base');
@@ -378,12 +386,12 @@ describe('SplitLayout', () => {
     await expect.poll(() => top(base())).toBe(top(target()));
   });
 
-  test('hides stripe of base', async () => {
+  test('hides scrollbar markers of base', async () => {
     const { base, target } = await mount({});
 
     const display = (view: EditorView) => {
-      const stripe = view.dom.querySelector('.cm-stripe');
-      return stripe === null ? null : getComputedStyle(stripe).display;
+      const markers = view.dom.querySelector('.cm-scrollbar-markers');
+      return markers === null ? null : getComputedStyle(markers).display;
     };
     expect(display(base())).toBe('none');
     expect(display(target())).not.toBe('none');
