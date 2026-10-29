@@ -474,6 +474,8 @@ message GetMergeBaseRequest {
   string revision = 2;
 
   // The revision to find the common ancestor with.
+  //
+  // Empty uses HEAD.
   string other_revision = 3;
 }
 

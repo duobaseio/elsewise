@@ -425,6 +425,9 @@ describe('commits', () => {
     await expect(
       harness.client.getMergeBase({ absolutePath: root, revision: 'main', otherRevision: feature }),
     ).resolves.toMatchObject({ hash: base });
+    await expect(harness.client.getMergeBase({ absolutePath: root, revision: feature })).resolves.toMatchObject({
+      hash: base,
+    });
 
     await repo.run('switch', '--quiet', '--orphan', 'unrelated');
     const unrelated = await repo.commit('other.txt', 'other\n');

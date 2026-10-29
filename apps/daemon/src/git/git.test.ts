@@ -1,15 +1,15 @@
 import { Code } from '@elsewise/transport';
-import { afterAll, beforeAll, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 import { TestRepo } from '../../test/git/repo';
 import { Git } from './git';
 
 let repo: TestRepo;
 
-beforeAll(async () => {
+beforeEach(async () => {
   repo = await TestRepo.create();
 });
 
-afterAll(() => repo.remove());
+afterEach(() => repo.remove());
 
 test('returns stdout and keeps the final newline', async () => {
   await expect(repo.git.run(['rev-parse', '--git-dir'])).resolves.toEqual(Buffer.from('.git\n'));

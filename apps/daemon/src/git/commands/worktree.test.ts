@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { TestRepo } from '../../../test/git/repo';
 import { toProtocolPath } from '../../fs/path';
 import { parseWorktrees, readWorktree, readWorktrees } from './worktree';
@@ -10,7 +10,7 @@ let hash: string;
 let linked: string;
 let link: string;
 
-beforeAll(async () => {
+beforeEach(async () => {
   repo = await TestRepo.create();
   hash = await repo.commit('a.txt', 'A');
   linked = path.join(path.dirname(repo.nativeRoot), 'linked');
@@ -19,7 +19,7 @@ beforeAll(async () => {
   await fs.symlink(linked, link);
 });
 
-afterAll(() => repo.remove());
+afterEach(() => repo.remove());
 
 describe('readWorktrees', () => {
   test('returns the worktrees', async () => {

@@ -1,5 +1,5 @@
 import { timestampFromMs } from '@bufbuild/protobuf/wkt';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { TestRepo } from '../../../test/git/repo';
 import { parseStashes, readStashes } from './stash';
 
@@ -7,11 +7,11 @@ const US = '\x1f';
 
 let repo: TestRepo;
 
-beforeAll(async () => {
+beforeEach(async () => {
   repo = await TestRepo.create();
 });
 
-afterAll(() => repo.remove());
+afterEach(() => repo.remove());
 
 describe('readStashes', () => {
   test('returns the stashes sorted by newest to oldest', async () => {

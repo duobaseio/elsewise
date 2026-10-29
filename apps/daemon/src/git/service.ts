@@ -294,7 +294,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       const revision = guardOperand(request.revision, 'revision');
-      const otherRevision = guardOperand(request.otherRevision, 'revision');
+      const otherRevision = revisionOrHead(request.otherRevision);
       return { hash: await readMergeBase(git, revision, otherRevision) };
     });
   }

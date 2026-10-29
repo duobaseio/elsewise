@@ -1,5 +1,5 @@
 import { timestampFromMs } from '@bufbuild/protobuf/wkt';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { TestRepo } from '../../../test/git/repo';
 import { Change } from '../../gen/elsewise/daemon/git/v1/git_pb';
 import { parseCommits, parseNameStatus, readChangedEntries, readCommit, readLog, readMergeBase } from './commit';
@@ -10,13 +10,13 @@ let repo: TestRepo;
 let first: string;
 let second: string;
 
-beforeAll(async () => {
+beforeEach(async () => {
   repo = await TestRepo.create();
   first = await repo.commit('a.txt', 'A', 'first');
   second = await repo.commit('b.txt', 'B', 'second\n\nbody');
 });
 
-afterAll(() => repo.remove());
+afterEach(() => repo.remove());
 
 describe('readCommit', () => {
   test('returns a commit, and refuses a revision that is not one', async () => {
