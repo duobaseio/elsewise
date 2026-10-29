@@ -20,11 +20,7 @@ import { useSettingsPanels } from '@/settings/settings-panel-manager';
 export function Search() {
   const navigate = useNavigate();
   const { remote } = useParams({ strict: false });
-  const all = useSettingsPanels((settings) => settings.panels);
-  const panels = useMemo(
-    () => all.filter((panel) => panel.scope === (remote === undefined ? 'local' : 'remote')),
-    [all, remote],
-  );
+  const panels = useSettingsPanels((settings) => (remote === undefined ? settings.localPanels : settings.remotePanels));
   const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
