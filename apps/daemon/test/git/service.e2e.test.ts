@@ -92,6 +92,10 @@ describe('common fields', () => {
       'getLog.revisions': () => client.getLog({ absolutePath: root, revisions: [option] }),
       'getLog.relativePaths': () => client.getLog({ absolutePath: root, relativePaths: [outside] }),
       'getCommit.revision': () => client.getCommit({ absolutePath: root, revision: option }),
+      'getMergeBase.revision': () =>
+        client.getMergeBase({ absolutePath: root, revision: option, otherRevision: 'HEAD' }),
+      'getMergeBase.otherRevision': () =>
+        client.getMergeBase({ absolutePath: root, revision: 'HEAD', otherRevision: option }),
       'reset.revision': () => client.reset({ absolutePath: root, mode: ResetRequest_Mode.MIXED, revision: option }),
       'createBranch.name': () => client.createBranch({ absolutePath: root, name: option }),
       'createBranch.revision': () => client.createBranch({ absolutePath: root, name: 'x', revision: option }),
@@ -414,6 +418,22 @@ describe('commits', () => {
     ]);
     const root_ = await harness.client.getCommit({ absolutePath: root, revision: first });
     expect(root_.entries).toMatchObject([{ relativePath: 'a.txt', originalRelativePath: '', change: Change.ADDED }]);
+  });
+
+  test('returns the merge base of two revisions', async () => {
+    const { base, feature } = await diverge();
+    await expect(
+      harness.client.getMergeBase({ absolutePath: root, revision: 'main', otherRevision: feature }),
+    ).resolves.toMatchObject({ hash: base });
+
+    await repo.run('switch', '--quiet', '--orphan', 'unrelated');
+    const unrelated = await repo.commit('other.txt', 'other\n');
+    await expect(
+      harness.client.getMergeBase({ absolutePath: root, revision: 'main', otherRevision: unrelated }),
+    ).resolves.toMatchObject({ hash: '' });
+    await expect(
+      harness.client.getMergeBase({ absolutePath: root, revision: 'main', otherRevision: 'nope' }),
+    ).rejects.toMatchObject({ code: Code.FAILED_PRECONDITION });
   });
 
   test('resets the branch in each mode', async () => {

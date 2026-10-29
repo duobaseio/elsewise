@@ -62,6 +62,9 @@ service GitService {
   // Returns a commit and what it changed.
   rpc GetCommit(GetCommitRequest) returns (GetCommitResponse);
 
+  // Returns the best common ancestor of two revisions.
+  rpc GetMergeBase(GetMergeBaseRequest) returns (GetMergeBaseResponse);
+
   // Resets the current branch to a revision.
   rpc Reset(ResetRequest) returns (ResetResponse);
 
@@ -461,6 +464,24 @@ message GetCommitResponse {
     // The change.
     Change change = 3;
   }
+}
+
+message GetMergeBaseRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The revision.
+  string revision = 2;
+
+  // The revision to find the common ancestor with.
+  string other_revision = 3;
+}
+
+message GetMergeBaseResponse {
+  // The hash of the common ancestor.
+  //
+  // Empty when the revisions share no history.
+  string hash = 1;
 }
 
 message ResetRequest {

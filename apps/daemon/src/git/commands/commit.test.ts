@@ -2,7 +2,7 @@ import { timestampFromMs } from '@bufbuild/protobuf/wkt';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { TestRepo } from '../../../test/git/repo';
 import { Change } from '../../gen/elsewise/daemon/git/v1/git_pb';
-import { parseCommits, parseNameStatus, readChangedEntries, readCommit, readLog } from './commit';
+import { parseCommits, parseNameStatus, readChangedEntries, readCommit, readLog, readMergeBase } from './commit';
 
 const US = '\x1f';
 
@@ -44,6 +44,22 @@ describe('readLog', () => {
     await expect(hashes([], [], 0, 1)).resolves.toEqual([second]);
     await expect(hashes(['HEAD~'], [], 0, 10)).resolves.toEqual([first]);
     await expect(hashes([], [':(literal)b.txt'], 0, 10)).resolves.toEqual([second]);
+  });
+});
+
+describe('readMergeBase', () => {
+  test('returns the common ancestor and nothing for unrelated histories', async () => {
+    await repo.run('switch', '--quiet', '--create', 'feature', first);
+    const feature = await repo.commit('c.txt', 'C', 'feature');
+    await repo.run('switch', '--quiet', '--orphan', 'unrelated');
+    const unrelated = await repo.commit('d.txt', 'D', 'unrelated');
+    await repo.run('switch', '--quiet', 'main');
+
+    await expect(readMergeBase(repo.git, 'main', 'feature')).resolves.toBe(first);
+    await expect(readMergeBase(repo.git, feature, second)).resolves.toBe(first);
+    await expect(readMergeBase(repo.git, 'HEAD', 'HEAD~')).resolves.toBe(first);
+    await expect(readMergeBase(repo.git, 'main', unrelated)).resolves.toBe('');
+    await expect(readMergeBase(repo.git, 'main', 'nope')).rejects.toThrow();
   });
 });
 
