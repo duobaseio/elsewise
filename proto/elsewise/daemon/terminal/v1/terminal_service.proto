@@ -1,0 +1,187 @@
+edition = "2024";
+
+package elsewise.daemon.terminal.v1;
+
+// Runs a terminal or executes a command on the daemon's machine.
+service TerminalService {
+  // Runs a program to completion.
+  //
+  // Outputs are streamed with the last response stating exit code. Cancelling the stream kills the program.
+  rpc Exec(ExecRequest) returns (stream ExecResponse);
+
+  // Creates a terminal in a workspace.
+  rpc CreateTerminal(CreateTerminalRequest) returns (CreateTerminalResponse);
+
+  // Returns every terminal of a workspace.
+  rpc GetTerminals(GetTerminalsRequest) returns (GetTerminalsResponse);
+
+  // Updates a terminal.
+  rpc UpdateTerminal(UpdateTerminalRequest) returns (UpdateTerminalResponse);
+
+  // Deletes a terminal.
+  //
+  // A shell still running is killed.
+  rpc DeleteTerminal(DeleteTerminalRequest) returns (DeleteTerminalResponse);
+
+  // Attaches to a shell and starts a shell if its not running.
+  //
+  // The first response sends the buffer and followed by any new stdout. A terminal may stream inputs and outputs to
+  // multiple clients concurrently. However, only the latest set size will be respected.
+  rpc AttachTerminal(stream AttachTerminalRequest) returns (stream AttachTerminalResponse);
+}
+
+message ExecRequest {
+  // The program to run.
+  //
+  // A program the daemon cannot find fails with NOT_FOUND.
+  string program = 1;
+
+  // The arguments.
+  repeated string args = 2;
+
+  // The absolute path the program starts in.
+  string absolute_path = 3;
+
+  // Environment variables.
+  map<string, string> env = 4;
+
+  // What is passed to the program's stdin.
+  bytes stdin = 5;
+}
+
+message ExecResponse {
+  oneof event {
+    bytes stdout = 1;
+    bytes stderr = 2;
+    Exit exit = 3;
+  }
+}
+
+message CreateTerminalRequest {
+  // The workspace.
+  string workspace_id = 1;
+
+  // The display name.
+  //
+  // Empty uses the project and workspace name with a suffixed number (e.g. project-workspace-1).
+  string name = 2;
+
+  // The size the shell.
+  //
+  // Unset defaults to 80 columns by 24 rows.
+  Size size = 3;
+}
+
+message CreateTerminalResponse {
+  // The created terminal.
+  Terminal terminal = 1;
+}
+
+message GetTerminalsRequest {
+  // The workspace whose terminals to return.
+  //
+  // Empty returns the terminal for all workspaces.
+  string workspace_id = 1;
+}
+
+message GetTerminalsResponse {
+  // Terminals sorted by oldest first.
+  repeated Terminal terminals = 1;
+}
+
+message UpdateTerminalRequest {
+  // The terminal.
+  string terminal_id = 1;
+
+  // The new display name.
+  string name = 2;
+}
+
+message UpdateTerminalResponse {
+  // The terminal after the update.
+  Terminal terminal = 1;
+}
+
+message DeleteTerminalRequest {
+  // The terminal.
+  string terminal_id = 1;
+}
+
+message DeleteTerminalResponse {}
+
+message AttachTerminalRequest {
+  oneof event {
+    Open open = 1;
+    bytes input = 2;
+    Size resize = 3;
+  }
+
+  // Opens the stream.
+  //
+  // Sent by the first request only. A later request that sends it fails with INVALID_ARGUMENT.
+  message Open {
+    // The terminal to attach to.
+    string terminal_id = 1;
+
+    // The size of the client.
+    Size size = 2;
+  }
+}
+
+message AttachTerminalResponse {
+  oneof event {
+    // The escape sequences that reproduce the buffer,
+    //
+    // Sent by the first response only.
+    bytes buffer = 1;
+    bytes output = 2;
+    Exit exit = 3;
+  }
+}
+
+message Terminal {
+  // The workspace's id.
+  string workspace_id = 1;
+
+  // The id.
+  string id = 2;
+
+  // The display name.
+  string name = 3;
+
+  // What state of the shell.
+  oneof state {
+    Running running = 4;
+    Exited exited = 5;
+    Stopped stopped = 6;
+  }
+
+  // The shell is running.
+  message Running {}
+
+  // The shell has exited.
+  message Exited {
+    // How the shell ended.
+    Exit exit = 1;
+  }
+
+  // No shell is running.
+  message Stopped {}
+}
+
+// How a process exit.
+message Exit {
+  oneof cause {
+    // The exit code.
+    int32 code = 1;
+
+    // The signal (e.g. SIGKILL).
+    string signal = 2;
+  }
+}
+
+// The size of a terminal.
+message Size {
+  uint32 columns = 1;
+  uint32 rows = 2;
+}

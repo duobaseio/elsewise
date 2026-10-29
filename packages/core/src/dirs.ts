@@ -34,7 +34,7 @@ export function daemonDataDir(): string {
 }
 
 /** Returns the directory where the projects and workspaces are saved. */
-export function codeDir(): string {
+export function projectDir(): string {
   return path.join(os.homedir(), APPLICATION);
 }
 
