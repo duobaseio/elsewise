@@ -38,6 +38,11 @@ export async function readLog(
   return readCommits(git, [`--skip=${skip}`, `--max-count=${limit}`, ...revisions, '--', ...pathspecs]);
 }
 
+/** Returns the hash of the best common ancestor of two revisions or an empty string when they share no history. */
+export async function readMergeBase(git: Git, revision: string, otherRevision: string): Promise<string> {
+  return (await git.text(['merge-base', revision, otherRevision], { exitCodes: [0, 1] })).trim();
+}
+
 /** Parses `git log -z` output in `COMMIT_FORMAT`. */
 export function parseCommits(text: string): CommitInit[] {
   return text

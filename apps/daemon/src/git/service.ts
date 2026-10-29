@@ -29,6 +29,7 @@ import {
   type GetDiffRequest,
   type GetIdentityRequest,
   type GetLogRequest,
+  type GetMergeBaseRequest,
   type GetRemotesRequest,
   type GetStashesRequest,
   type GetStatusRequest,
@@ -79,7 +80,7 @@ import {
   withPathspecs,
 } from './args';
 import { readBlame } from './commands/blame';
-import { readChangedEntries, readCommit, readLog } from './commands/commit';
+import { readChangedEntries, readCommit, readLog, readMergeBase } from './commands/commit';
 import type { ProgressInit } from './commands/progress';
 import {
   hasBranch,
@@ -286,6 +287,15 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
       const git = await this.#open(request.absolutePath);
       const commit = await readCommit(git, guardOperand(request.revision, 'revision'));
       return { commit, entries: await readChangedEntries(git, commit) };
+    });
+  }
+
+  getMergeBase(request: GetMergeBaseRequest) {
+    return attempt(async () => {
+      const git = await this.#open(request.absolutePath);
+      const revision = guardOperand(request.revision, 'revision');
+      const otherRevision = revisionOrHead(request.otherRevision);
+      return { hash: await readMergeBase(git, revision, otherRevision) };
     });
   }
 

@@ -71,7 +71,7 @@ export class Git {
       throw new TransportError(Code.RESOURCE_EXHAUSTED, 'the output is over the read limit');
     }
     const accepted = result.exitCode !== undefined && (options.exitCodes ?? [0]).includes(result.exitCode);
-    if (result.code === 'ENOENT' || (!accepted && (await missingOnWindows(env)))) {
+    if (result.code === 'ENOENT' || ((!accepted || result.exitCode === 1) && (await missingOnWindows(env)))) {
       throw new TransportError(Code.FAILED_PRECONDITION, 'git is not installed on the daemon machine');
     }
     const stdout = view(result.stdout);

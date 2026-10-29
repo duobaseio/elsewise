@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { TestRepo } from '../../../test/git/repo';
 import { toProtocolPath } from '../../fs/path';
 import {
@@ -22,7 +22,7 @@ const US = '\x1f';
 let repo: TestRepo;
 let first: string;
 
-beforeAll(async () => {
+beforeEach(async () => {
   repo = await TestRepo.create();
   first = await repo.commit('a.txt', 'A', 'first');
   await repo.run('tag', 'light');
@@ -32,7 +32,7 @@ beforeAll(async () => {
   await repo.run('branch', '--set-upstream-to=origin/main');
 });
 
-afterAll(() => repo.remove());
+afterEach(() => repo.remove());
 
 function branch(fields: string[]): string {
   return `${fields.join(US)}\0`;
