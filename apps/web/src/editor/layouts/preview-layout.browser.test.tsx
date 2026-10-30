@@ -8,6 +8,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { EditorManager } from '@/editor/editor-manager';
 import { PreviewLayout } from '@/editor/layouts/preview-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../test/commands';
 
@@ -20,13 +21,15 @@ async function mount(editor = new EditorManager()) {
   const application = builtInApplication({ editor });
   const screen = await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <LanguageServersContext value={new LanguageServers(editor)}>
-          <div style={{ height: 300 }}>
-            <PreviewLayout code={CODE} relativePath="main.txt" />
-          </div>
-        </LanguageServersContext>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <div style={{ height: 300 }}>
+              <PreviewLayout code={CODE} relativePath="main.txt" />
+            </div>
+          </LanguageServersContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => screen.container.querySelector('.cm-editor')).not.toBeNull();

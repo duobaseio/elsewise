@@ -57,6 +57,7 @@ function bridge(): string[] {
       paste: () => called.push('paste'),
       setBrightness: () => {},
       setBackground: () => {},
+      onClose: () => {},
     },
   };
   return called;

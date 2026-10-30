@@ -14,6 +14,7 @@ function desktop() {
       paste() {},
       setBrightness() {},
       setBackground() {},
+      onClose() {},
     },
   };
 }

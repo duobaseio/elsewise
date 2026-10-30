@@ -9,7 +9,7 @@ import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keym
 import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
-import { PluginLoader, usePlugins } from '@/plugins/loader';
+import { usePluginStore } from '@/plugins/plugin-store';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
@@ -38,13 +38,13 @@ const GENERIC_FAMILIES = new Set([
 ]);
 
 function RootComponent() {
-  const installed = usePlugins();
+  const plugins = usePluginStore();
   const brightness = useBrightness();
   const theme = useActiveTheme();
   const keymap = useSelectedKeymap();
   const router = useRouter();
 
-  const [{ application, languageServers, loader }] = useState(() => {
+  const [{ application, languageServers }] = useState(() => {
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
       new EditorManager(),
@@ -60,7 +60,6 @@ function RootComponent() {
     return {
       application,
       languageServers: new LanguageServers(application.editor),
-      loader: new PluginLoader(application),
     };
   });
   const { appearance, commands } = application;
@@ -75,20 +74,11 @@ function RootComponent() {
   useEffect(() => installApplicationKeys(window, commands), [commands]);
 
   useEffect(() => {
-    void (async () => {
-      const id = (plugin: (typeof installed)[number]) => ('error' in plugin ? plugin.id : plugin.manifest.id);
-      for (const plugin of installed
-        .filter((plugin) => plugin.enabled)
-        .toSorted((a, b) => id(a).localeCompare(id(b)))) {
-        if ('error' in plugin) {
-          console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
-        } else {
-          // TODO: Skip a plugin without a main module, once plugins without code are decided.
-          await loader.enable(plugin.manifest.id, plugin.url);
-        }
-      }
-    })();
-  }, [loader, installed]);
+    void plugins.enableAll(application);
+    return () => {
+      void plugins.disableAll();
+    };
+  }, [plugins, application]);
 
   return (
     <ApplicationManagerContext value={application}>

@@ -30,6 +30,7 @@ import {
   usePlugins,
 } from '@/editor/layouts/layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -110,22 +111,24 @@ async function mount(
   let setCode: (code: string) => void = () => {};
   const screen = await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <LanguageServersContext value={new LanguageServers(editor)}>
-          <Layout
-            initialSource={type === 'workingTree' ? { type, root } : { type }}
-            relativePath={relativePath}
-            layout={layout}
-            initialCode={code}
-            onSource={(set) => {
-              setSource = set;
-            }}
-            onCode={(set) => {
-              setCode = set;
-            }}
-          />
-        </LanguageServersContext>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <Layout
+              initialSource={type === 'workingTree' ? { type, root } : { type }}
+              relativePath={relativePath}
+              layout={layout}
+              initialCode={code}
+              onSource={(set) => {
+                setSource = set;
+              }}
+              onCode={(set) => {
+                setCode = set;
+              }}
+            />
+          </LanguageServersContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   const view = () => {
@@ -211,7 +214,7 @@ afterEach(() => {
 
 // Returns the CSS color of Elsewise's `role` token at `brightness`.
 function tokenColor(role: 'keyword' | 'comment', brightness: 'light' | 'dark'): string {
-  const { tokens } = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, brightness).editor;
+  const { tokens } = resolveActiveTheme(undefined, brightness).editor;
   const hex = tokens[role]?.color;
   if (hex === undefined) {
     throw new Error(`missing ${role} color`);

@@ -7,6 +7,7 @@ import { describe, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { terminalKeymap } from '@/command/keymap/keymap';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { TerminalSearch } from '@/terminal/search/search-bar';
 
@@ -56,9 +57,11 @@ async function mount() {
   }
   await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <Probe />
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <Probe />
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   return { client, xterm: await ready };

@@ -2,7 +2,7 @@ import { BundledTheme, type ThemeId } from '@elsewise/bridge';
 import { type ActiveTheme, Theme } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { usePlugins } from '@/plugins/loader';
+import { usePluginStore } from '@/plugins/plugin-store';
 import { useBrightness, useSettings } from '@/settings/settings';
 
 export interface LoadedTheme {
@@ -39,7 +39,7 @@ export const userThemesQuery = queryOptions({
  * Returns Elsewise's themes, then the user's and the enabled plugins', leaving out the ones that could not be read.
  */
 export function useLoadedThemes(): readonly LoadedTheme[] {
-  const plugins = usePlugins();
+  const plugins = usePluginStore((store) => store.plugins);
   const user = useSuspenseQuery(userThemesQuery).data;
 
   return useMemo(
@@ -49,13 +49,11 @@ export function useLoadedThemes(): readonly LoadedTheme[] {
         'error' in entry ? [] : [{ id: { source: 'user', id: entry.id }, theme: entry.theme }],
       ),
       ...plugins.flatMap((plugin) =>
-        'error' in plugin || !plugin.enabled
-          ? []
-          : plugin.themes.flatMap((entry): LoadedTheme[] =>
-              'error' in entry
-                ? []
-                : [{ id: { source: 'plugin', plugin: plugin.manifest.id, id: entry.id }, theme: entry.theme }],
-            ),
+        plugin.status === 'enabled'
+          ? plugin.themes.map(
+              ({ id, theme }): LoadedTheme => ({ id: { source: 'plugin', plugin: plugin.id, id }, theme }),
+            )
+          : [],
       ),
     ],
     [plugins, user],
@@ -74,30 +72,33 @@ export function useActiveTheme(): ActiveTheme {
   const brightness = useBrightness();
   const themes = useLoadedThemes();
 
+  // Fuck JS/TS's lack of list structural equality
+  const find = (id: ThemeId) => themes.find((other) => sameTheme(other.id, id))?.theme;
+  const generalTheme = find(general);
+  const editorTheme = find(editor ?? general);
+  const terminalTheme = find(terminal ?? general);
+
   return useMemo(
     () => ({
-      interface: resolveActiveTheme(themes, general, brightness).interface,
-      editor: resolveActiveTheme(themes, editor ?? general, brightness).editor,
-      terminal: resolveActiveTheme(themes, terminal ?? general, brightness).terminal,
+      interface: resolveActiveTheme(generalTheme, brightness).interface,
+      editor: resolveActiveTheme(editorTheme, brightness).editor,
+      terminal: resolveActiveTheme(terminalTheme, brightness).terminal,
     }),
-    [themes, general, editor, terminal, brightness],
+    [generalTheme, editorTheme, terminalTheme, brightness],
   );
 }
 
 /**
- * Resolves the `id`'s theme for the given `brightness` with unspecified colors defaulting to Elsewise's.
+ * Resolves `theme` for the given `brightness` with unspecified colors defaulting to Elsewise's, or Elsewise's theme
+ * without one.
  */
-export function resolveActiveTheme(
-  themes: readonly LoadedTheme[],
-  id: ThemeId,
-  brightness: 'light' | 'dark',
-): ActiveTheme {
+export function resolveActiveTheme(theme: Theme | undefined, brightness: 'light' | 'dark'): ActiveTheme {
   const elsewise = BUNDLED_THEMES.find((loaded) => loaded.id.id === 'elsewise')?.theme[brightness];
-  const variant = themes.find((other) => sameTheme(other.id, id))?.theme[brightness];
+  const variant = theme?.[brightness];
 
   const colors = { ...elsewise?.interface, ...variant?.interface };
   const editor = { ...elsewise?.editor, ...variant?.editor };
-  // Elsewise's own diff colors apply only when its variant is the one in use, e.g. for an unknown theme.
+  // Elsewise's own diff colors apply only when its variant is the one in use, e.g. without a theme.
   const diff = (variant ?? elsewise)?.editor.diff;
   return {
     interface: colors,

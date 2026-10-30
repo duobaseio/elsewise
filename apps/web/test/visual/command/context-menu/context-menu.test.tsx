@@ -65,7 +65,7 @@ test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
     delete document.documentElement.dataset.brightness;
   });
   const application = builtInApplication({
-    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+    appearance: new AppearanceManager(theme, resolveActiveTheme(undefined, theme)),
   });
   const commands = application.commands;
   commands.add(COMMANDS);

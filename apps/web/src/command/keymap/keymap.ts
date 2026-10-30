@@ -9,7 +9,7 @@ import { useMemo } from 'react';
 import type { CommandManager } from '@/command/command-manager';
 import elsewise from '@/command/keymap/bundled/elsewise.json';
 import { eventKeys } from '@/command/keymap/keys';
-import { usePlugins } from '@/plugins/loader';
+import { usePluginStore } from '@/plugins/plugin-store';
 import { useSettings } from '@/settings/settings';
 
 export interface LoadedKeymap {
@@ -48,7 +48,7 @@ export const userKeymapsQuery = queryOptions({
  * Returns Elsewise's keymaps, then the user's and the enabled plugins', leaving out the ones that could not be read.
  */
 export function useLoadedKeymaps(): readonly LoadedKeymap[] {
-  const plugins = usePlugins();
+  const plugins = usePluginStore((store) => store.plugins);
   const user = useSuspenseQuery(userKeymapsQuery).data;
 
   return useMemo(
@@ -58,13 +58,11 @@ export function useLoadedKeymaps(): readonly LoadedKeymap[] {
         'error' in entry ? [] : [{ id: { source: 'user', id: entry.id }, keymap: entry.keymap }],
       ),
       ...plugins.flatMap((plugin) =>
-        'error' in plugin || !plugin.enabled
-          ? []
-          : plugin.keymaps.flatMap((entry): LoadedKeymap[] =>
-              'error' in entry
-                ? []
-                : [{ id: { source: 'plugin', plugin: plugin.manifest.id, id: entry.id }, keymap: entry.keymap }],
-            ),
+        plugin.status === 'enabled'
+          ? plugin.keymaps.map(
+              ({ id, keymap }): LoadedKeymap => ({ id: { source: 'plugin', plugin: plugin.id, id }, keymap }),
+            )
+          : [],
       ),
     ],
     [plugins, user],

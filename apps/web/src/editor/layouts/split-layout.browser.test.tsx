@@ -10,6 +10,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { EditorManager } from '@/editor/editor-manager';
 import { SplitLayout, type SplitLayoutProps } from '@/editor/layouts/split-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../test/commands';
 
@@ -29,21 +30,23 @@ async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManage
   const ratio = { current: 0.5 };
   const tree = (next: Partial<SplitLayoutProps>) => (
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <LanguageServersContext value={servers}>
-          <div style={{ height: 200 }}>
-            <SplitLayout
-              relativePath="main.txt"
-              base={{ source: { type: 'blob' }, code: BASE }}
-              target={{ source: { type: 'workingTree' }, code: CODE }}
-              extensions={[]}
-              session={session}
-              ratio={ratio}
-              {...next}
-            />
-          </div>
-        </LanguageServersContext>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <LanguageServersContext value={servers}>
+            <div style={{ height: 200 }}>
+              <SplitLayout
+                relativePath="main.txt"
+                base={{ source: { type: 'blob' }, code: BASE }}
+                target={{ source: { type: 'workingTree' }, code: CODE }}
+                extensions={[]}
+                session={session}
+                ratio={ratio}
+                {...next}
+              />
+            </div>
+          </LanguageServersContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>
   );
   const screen = await render(tree(props));

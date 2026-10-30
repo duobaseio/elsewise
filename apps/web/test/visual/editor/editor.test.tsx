@@ -21,7 +21,6 @@ import type {
   ReferenceParams,
   SignatureHelpParams,
 } from 'vscode-languageserver-protocol';
-
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
@@ -30,6 +29,7 @@ import { Editor } from '@/editor/editor';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { toggleReplaceRow } from '@/editor/search/search-bar-query';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../commands';
 
@@ -325,36 +325,38 @@ async function mount(
     { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
   ]);
   const application = builtInApplication({
-    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+    appearance: new AppearanceManager(theme, resolveActiveTheme(undefined, theme)),
     editor,
   });
   render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <LanguageServersContext value={new LanguageServers(editor)}>
-          <div
-            className="bg-background font-sans text-foreground"
-            data-brightness={theme}
-            data-testid="sheet"
-            style={{ width: 1040, height: hovered ? 420 : 300 }}
-          >
-            {hovered ? (
-              <Editor
-                content={{ label: 'Current', code: HOVERED }}
-                relativePath="src/main.rs"
-                root={new URL('file:///worktree/')}
-                diff={new DiffState(null, 'unified')}
-              />
-            ) : (
-              <Editor
-                content={{ label: 'Current', code }}
-                relativePath="transport.rs"
-                diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
-              />
-            )}
-          </div>
-        </LanguageServersContext>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <div
+              className="bg-background font-sans text-foreground"
+              data-brightness={theme}
+              data-testid="sheet"
+              style={{ width: 1040, height: hovered ? 420 : 300 }}
+            >
+              {hovered ? (
+                <Editor
+                  content={{ label: 'Current', code: HOVERED }}
+                  relativePath="src/main.rs"
+                  root={new URL('file:///worktree/')}
+                  diff={new DiffState(null, 'unified')}
+                />
+              ) : (
+                <Editor
+                  content={{ label: 'Current', code }}
+                  relativePath="transport.rs"
+                  diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
+                />
+              )}
+            </div>
+          </LanguageServersContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
 

@@ -2,9 +2,9 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import type { BrowserWindow, Rectangle } from 'electron';
+import { app, type BrowserWindow, type Rectangle } from 'electron';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { loadWindow, saveWindow } from './window';
+import { closeAfterRenderer, loadWindow, saveWindow } from './window';
 
 interface Display {
   bounds: Rectangle;
@@ -19,30 +19,34 @@ const state = vi.hoisted(() => ({
   cursor: { x: 0, y: 0 },
 }));
 
-vi.mock('electron', () => ({
-  screen: {
-    getAllDisplays: () => state.displays,
-    getCursorScreenPoint: () => state.cursor,
-    getDisplayNearestPoint: ({ x, y }: { x: number; y: number }) =>
-      state.displays.find(
-        ({ bounds }) => x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height,
-      ) ?? state.displays[0],
-    // The display that most of the rectangle is on, or the first if it's on none.
-    getDisplayMatching: (rectangle: Rectangle) => {
-      const overlap = ({ bounds }: Display) =>
-        Math.max(
-          0,
-          Math.min(rectangle.x + rectangle.width, bounds.x + bounds.width) - Math.max(rectangle.x, bounds.x),
-        ) *
-        Math.max(
-          0,
-          Math.min(rectangle.y + rectangle.height, bounds.y + bounds.height) - Math.max(rectangle.y, bounds.y),
-        );
-      const best = state.displays.toSorted((a, b) => overlap(b) - overlap(a))[0];
-      return best && overlap(best) > 0 ? best : state.displays[0];
+vi.mock('electron', async () => {
+  const { EventEmitter } = await import('node:events');
+  return {
+    app: Object.assign(new EventEmitter(), { quit: vi.fn() }),
+    screen: {
+      getAllDisplays: () => state.displays,
+      getCursorScreenPoint: () => state.cursor,
+      getDisplayNearestPoint: ({ x, y }: { x: number; y: number }) =>
+        state.displays.find(
+          ({ bounds }) => x >= bounds.x && x < bounds.x + bounds.width && y >= bounds.y && y < bounds.y + bounds.height,
+        ) ?? state.displays[0],
+      // The display that most of the rectangle is on, or the first if it's on none.
+      getDisplayMatching: (rectangle: Rectangle) => {
+        const overlap = ({ bounds }: Display) =>
+          Math.max(
+            0,
+            Math.min(rectangle.x + rectangle.width, bounds.x + bounds.width) - Math.max(rectangle.x, bounds.x),
+          ) *
+          Math.max(
+            0,
+            Math.min(rectangle.y + rectangle.height, bounds.y + bounds.height) - Math.max(rectangle.y, bounds.y),
+          );
+        const best = state.displays.toSorted((a, b) => overlap(b) - overlap(a))[0];
+        return best && overlap(best) > 0 ? best : state.displays[0];
+      },
     },
-  },
-}));
+  };
+});
 vi.mock('@elsewise/core', async (original) => ({
   ...(await original<typeof import('@elsewise/core')>()),
   dataLocalDir: () => state.dir,
@@ -244,5 +248,78 @@ describe('saveWindow', () => {
     emitter.emit('close');
 
     expect(read()).toEqual({ [BOTH_KEY]: other, [MAIN_KEY]: { ...BOUNDS, maximized: false } });
+  });
+});
+
+describe('closeAfterRenderer', () => {
+  // A window whose closes, and its renderer's replies, the test emits.
+  function window() {
+    const fake = Object.assign(new EventEmitter(), {
+      close: vi.fn(),
+      webContents: { ipc: new EventEmitter(), send: vi.fn() },
+    });
+    closeAfterRenderer(fake as unknown as BrowserWindow);
+    return fake;
+  }
+
+  // Emits a close on `window`, and returns whether it went ahead.
+  function close(window: EventEmitter): boolean {
+    let held = false;
+    window.emit('close', { preventDefault: () => (held = true) });
+    return !held;
+  }
+
+  afterEach(() => {
+    app.removeAllListeners();
+  });
+
+  test('holds the first close until the renderer replies', () => {
+    const fake = window();
+
+    expect(close(fake)).toBe(false);
+    expect(fake.webContents.send).toHaveBeenCalledWith('window:close');
+    expect(fake.close).not.toHaveBeenCalled();
+
+    fake.webContents.ipc.emit('window:closed');
+
+    expect(fake.close).toHaveBeenCalledOnce();
+    expect(close(fake)).toBe(true);
+  });
+
+  test('asks the renderer once while the close is held', () => {
+    const fake = window();
+
+    close(fake);
+    close(fake);
+
+    expect(fake.webContents.send).toHaveBeenCalledOnce();
+  });
+
+  test('closes after three seconds without a reply, and warns', () => {
+    vi.useFakeTimers();
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fake = window();
+
+    close(fake);
+    vi.advanceTimersByTime(2999);
+
+    expect(fake.close).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1);
+    fake.webContents.ipc.emit('window:closed');
+
+    expect(fake.close).toHaveBeenCalledOnce();
+    expect(warn).toHaveBeenCalledOnce();
+  });
+
+  test('resumes a quit that the held close cancelled', () => {
+    const fake = window();
+
+    app.emit('before-quit');
+    close(fake);
+    fake.webContents.ipc.emit('window:closed');
+
+    expect(app.quit).toHaveBeenCalledOnce();
+    expect(fake.close).not.toHaveBeenCalled();
   });
 });

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { dataLocalDir, writeJsonSync } from '@elsewise/core';
-import { type BrowserWindow, type Rectangle, screen } from 'electron';
+import { app, type BrowserWindow, type Rectangle, screen } from 'electron';
 
 interface Window extends Rectangle {
   maximized: boolean;
@@ -9,6 +9,7 @@ interface Window extends Rectangle {
 
 const DEFAULT_SIZE = { width: 1024, height: 768 };
 const SAVE_DELAY_MS = 250;
+const CLOSE_TIMEOUT_MS = 5000;
 
 export function saveWindow(window: BrowserWindow): void {
   let timer: NodeJS.Timeout | undefined;
@@ -130,4 +131,54 @@ function loadLayouts(): Record<string, Window> {
   }
 
   return layouts;
+}
+
+/**
+ * Holds `window`'s first close until its renderer replies to `window:close`, or for three seconds, so the renderer can
+ * finish first, e.g. disabling its plugins.
+ *
+ * Holding a close cancels a quit, so a quit that started it is resumed afterwards.
+ */
+export function closeAfterRenderer(window: BrowserWindow): void {
+  let quitting = false;
+  let held = false;
+  let done = false;
+
+  const quit = () => {
+    quitting = true;
+  };
+  app.on('before-quit', quit);
+  window.on('closed', () => app.off('before-quit', quit));
+
+  window.on('close', (event) => {
+    if (done) {
+      return;
+    }
+
+    event.preventDefault();
+    if (held) {
+      return;
+    }
+
+    held = true;
+    const finish = () => {
+      if (done) {
+        return;
+      }
+
+      done = true;
+      clearTimeout(timer);
+      if (quitting) {
+        app.quit();
+      } else {
+        window.close();
+      }
+    };
+    const timer = setTimeout(() => {
+      console.warn(`window: renderer did not finish within ${CLOSE_TIMEOUT_MS}ms, closing anyway`);
+      finish();
+    }, CLOSE_TIMEOUT_MS);
+    window.webContents.ipc.once('window:closed', finish);
+    window.webContents.send('window:close');
+  });
 }

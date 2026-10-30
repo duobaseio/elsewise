@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
@@ -46,14 +46,15 @@ async function mount(settings = SETTINGS) {
   };
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  client.setQueryData(pluginsQuery.queryKey, []);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/settings/local/appearance/editor'] }),
   });
   await render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <PluginStoreContext value={new PluginStore()}>
+        <RouterProvider router={router} />
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.element(page.getByRole('heading', { name: 'Editor' })).toBeVisible();

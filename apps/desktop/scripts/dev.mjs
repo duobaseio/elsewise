@@ -33,12 +33,21 @@ async function waitForUrl(url, timeoutMs = 30000) {
   throw new Error(`Renderer dev server not reachable at ${url} (is apps/web running?)`);
 }
 
+// How long Electron may take to quit, disabling its plugins, before it is killed. Above the main process's 3 s close
+// timeout, so Electron always gets to quit on its own.
+const STOP_TIMEOUT_MS = 5000;
+
+// Electron's starts and stops, one at a time, so a restart never overlaps another restart or the shutdown and leaves
+// an Electron behind.
+let queue = Promise.resolve();
+function enqueue(step) {
+  queue = queue.then(step);
+  return queue;
+}
+
 let electron;
-function startElectron() {
-  if (electron) {
-    electron.removeAllListeners('exit');
-    electron.kill();
-  }
+async function startElectron() {
+  await stopElectron();
   electron = spawn(electronPath, ['.'], {
     stdio: 'inherit',
     env: { ...process.env, ELECTRON_RENDERER_URL: RENDERER_URL },
@@ -47,14 +56,36 @@ function startElectron() {
   electron.on('exit', () => process.exit(0));
 }
 
+// Asks Electron to quit, which lets the renderer disable its plugins, and resolves once it has exited.
+function stopElectron() {
+  const stopping = electron;
+  electron = undefined;
+  if (!stopping || stopping.exitCode !== null || stopping.signalCode !== null) {
+    return Promise.resolve();
+  }
+
+  stopping.removeAllListeners('exit');
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => stopping.kill('SIGKILL'), STOP_TIMEOUT_MS);
+    stopping.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    stopping.kill('SIGTERM');
+  });
+}
+
 // Electron is a child, not a member of a shared process group: pnpm --parallel puts each script in its own group, so
 // an IDE stopping the root `dev` kills pnpm alone and leaves this runner and its Electron behind. Kill Electron when
 // a signal does arrive, and when it does not — the parent is gone, so we have been reparented to launchd (ppid 1).
-function shutdown() {
-  if (electron) {
-    electron.removeAllListeners('exit');
-    electron.kill();
+let stopping = false;
+async function shutdown() {
+  if (stopping) {
+    return;
   }
+
+  stopping = true;
+  await enqueue(stopElectron);
   process.exit(0);
 }
 for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP']) {
@@ -70,7 +101,7 @@ setInterval(() => {
 await bundle();
 console.log(`[dev] waiting for renderer at ${RENDERER_URL} ...`);
 await waitForUrl(RENDERER_URL);
-startElectron();
+await enqueue(startElectron);
 
 // Rebuild + restart Electron on main/preload changes, and on changes to the bridge and core bundled into them
 // (debounced).
@@ -78,13 +109,15 @@ let timer;
 for (const folder of ['src', '../../packages/bridge/src', '../../packages/core/src']) {
   watch(folder, { recursive: true }, () => {
     clearTimeout(timer);
-    timer = setTimeout(async () => {
-      try {
-        await bundle();
-        startElectron();
-      } catch (err) {
-        console.error('[dev]', err.message);
-      }
+    timer = setTimeout(() => {
+      void enqueue(async () => {
+        try {
+          await bundle();
+          await startElectron();
+        } catch (err) {
+          console.error('[dev]', err.message);
+        }
+      });
     }, 150);
   });
 }

@@ -4,8 +4,9 @@ import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { userThemesQuery } from '@/appearance/themes';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { ThemeSelect } from '@/routes/settings/local/appearance/-theme';
+import { pluginStore } from '../../../../../test/plugins';
 
 const DRACULA: ThemeId = { source: 'elsewise', id: 'dracula' };
 
@@ -24,11 +25,13 @@ const PLUGIN: InstalledPlugin = {
 async function mount(theme: ThemeId | null, others = false) {
   const onChange = vi.fn();
   const client = new QueryClient();
-  client.setQueryData(pluginsQuery.queryKey, others ? [PLUGIN] : []);
   client.setQueryData(userThemesQuery.queryKey, others ? [{ id: 'night', theme: NIGHT }] : []);
+  const store = await pluginStore(others ? [PLUGIN] : []);
   await render(
     <QueryClientProvider client={client}>
-      <ThemeSelect inheritable label="Theme" theme={theme} onChange={onChange} />
+      <PluginStoreContext value={store}>
+        <ThemeSelect inheritable label="Theme" theme={theme} onChange={onChange} />
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   return onChange;
@@ -95,11 +98,12 @@ describe('ThemeSelect', () => {
 
   test('omits interface theme unless inheritable', async () => {
     const client = new QueryClient();
-    client.setQueryData(pluginsQuery.queryKey, []);
     client.setQueryData(userThemesQuery.queryKey, []);
     await render(
       <QueryClientProvider client={client}>
-        <ThemeSelect label="Theme" theme={DRACULA} onChange={() => {}} />
+        <PluginStoreContext value={new PluginStore()}>
+          <ThemeSelect label="Theme" theme={DRACULA} onChange={() => {}} />
+        </PluginStoreContext>
       </QueryClientProvider>,
     );
 

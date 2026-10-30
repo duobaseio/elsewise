@@ -41,7 +41,7 @@ const { EDITOR } = vi.hoisted(() => ({
 // Replaces the editor's colors with test colors, since a test cannot add a theme to the bundled ones.
 vi.mock('@/appearance/themes', async (original) => {
   const actual = await original<typeof import('@/appearance/themes')>();
-  const elsewise = actual.resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light');
+  const elsewise = actual.resolveActiveTheme(undefined, 'light');
   // The same object on every call, as the real hook returns while the theme stays the same.
   const theme = { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
   return { ...actual, useActiveTheme: () => theme };

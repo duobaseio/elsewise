@@ -5,9 +5,10 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStoreContext } from '@/plugins/plugin-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
+import { pluginStore } from '../../../test/plugins';
 
 // A plugin that adds local panels, one of them throwing, and a remote panel.
 const PANELS: InstalledPlugin = {
@@ -78,11 +79,13 @@ function sidebar() {
 async function mount(entries: string[], plugins: InstalledPlugin[] = [], settings = DEFAULT_SETTINGS) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  client.setQueryData(pluginsQuery.queryKey, plugins);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: entries }) });
+  const store = await pluginStore(plugins);
   await render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <PluginStoreContext value={store}>
+        <RouterProvider router={router} />
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   return router;

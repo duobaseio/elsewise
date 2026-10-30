@@ -1,4 +1,4 @@
-import type { InstalledPlugin, ThemeId } from '@elsewise/bridge';
+import type { ThemeId } from '@elsewise/bridge';
 import {
   Combobox,
   ComboboxCollection,
@@ -15,7 +15,7 @@ import {
 } from '@elsewise/components/components/combobox';
 import { Fragment, useMemo } from 'react';
 import { sameTheme, useLoadedThemes } from '@/appearance/themes';
-import { usePlugins } from '@/plugins/loader';
+import { usePluginStore } from '@/plugins/plugin-store';
 
 type ThemeGroup = { label: string | null; value: string; items: readonly ThemeItem[] };
 
@@ -96,7 +96,7 @@ export function ThemeSelect(
 
 function useThemeGroups(): readonly ThemeGroup[] {
   const themes = useLoadedThemes();
-  const plugins = usePlugins();
+  const plugins = usePluginStore((store) => store.plugins);
 
   return useMemo(() => {
     const groups = new Map<string, { label: string | null; value: string; items: ThemeItem[] }>();
@@ -104,12 +104,11 @@ function useThemeGroups(): readonly ThemeGroup[] {
       const key = id.source === 'plugin' ? `plugin/${id.plugin}` : id.source;
       let group = groups.get(key);
       if (group === undefined) {
-        const label =
-          id.source === 'plugin'
-            ? (plugins.find(
-                (plugin): plugin is InstalledPlugin => !('error' in plugin) && plugin.manifest.id === id.plugin,
-              )?.manifest.name ?? id.plugin)
-            : null;
+        let label: string | null = null;
+        if (id.source === 'plugin') {
+          const plugin = plugins.find((other) => other.id === id.plugin);
+          label = plugin !== undefined && plugin.status !== 'invalid' ? plugin.manifest.name : id.plugin;
+        }
         group = { label, value: key, items: [] };
         groups.set(key, group);
       }

@@ -51,7 +51,7 @@ function handler(channel: string) {
 
   return vi.mocked(ipcMain.handle).mock.calls.find(([name]) => name === channel)?.[1] as unknown as (
     event?: unknown,
-    plugins?: unknown,
+    argument?: unknown,
   ) => unknown;
 }
 
@@ -247,6 +247,31 @@ describe('plugins:load', () => {
 
     expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
     expect(error).toHaveBeenCalledWith(expect.stringMatching(/themes: unreadable, skipping it/), expect.anything());
+  });
+
+  test('returns plugin with id only', () => {
+    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
+    install('hello', MANIFEST);
+    install('goodbye', { ...MANIFEST, id: 'goodbye' });
+
+    expect(handler('plugins:load')(undefined, 'hello')).toEqual({
+      manifest: MANIFEST,
+      ...NOTHING,
+      url: URL,
+      enabled: true,
+    });
+  });
+
+  test('returns undefined for id without folder', () => {
+    install('hello', MANIFEST);
+
+    expect(handler('plugins:load')(undefined, 'goodbye')).toBeUndefined();
+  });
+
+  test('throws for id that is not a path segment', () => {
+    install('hello', MANIFEST);
+
+    expect(() => handler('plugins:load')(undefined, '../hello')).toThrow(/not a plugin id/);
   });
 
   test('throws when the file cannot be read', () => {

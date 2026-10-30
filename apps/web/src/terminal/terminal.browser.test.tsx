@@ -257,7 +257,7 @@ describe('Terminal', () => {
   test('follows settings', async () => {
     const fake = session();
     const { client, xterm } = await mount(fake);
-    const elsewise = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light').terminal;
+    const elsewise = resolveActiveTheme(undefined, 'light').terminal;
     await expect.poll(() => xterm.options.fontSize).toBe(12);
     expect(xterm.options.lineHeight).toBe(1.0625);
     expect(xterm.options.cursorStyle).toBe('block');
@@ -282,10 +282,8 @@ describe('Terminal', () => {
       },
     } satisfies Settings);
 
-    const id = { source: 'elsewise', id: 'dracula' } as const;
     const { selection, searchMatch, searchMatchSelected, searchMatchSelectedBorder, ...colors } = resolveActiveTheme(
-      [{ id, theme: Theme.parse(dracula) }],
-      id,
+      Theme.parse(dracula),
       'light',
     ).terminal;
     await expect.poll(() => xterm.options.fontSize).toBe(16);

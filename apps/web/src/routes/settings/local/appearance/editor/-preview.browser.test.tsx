@@ -4,7 +4,7 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { afterEach, describe, expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
@@ -23,7 +23,6 @@ async function mount({ lineWrapping = false, guides = [] as number[], viewport =
   };
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  client.setQueryData(pluginsQuery.queryKey, []);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/settings/local/appearance/editor/Rust'] }),
@@ -31,7 +30,9 @@ async function mount({ lineWrapping = false, guides = [] as number[], viewport =
   await render(
     <div className="h-dvh" style={{ width: viewport }}>
       <QueryClientProvider client={client}>
-        <RouterProvider router={router} />
+        <PluginStoreContext value={new PluginStore()}>
+          <RouterProvider router={router} />
+        </PluginStoreContext>
       </QueryClientProvider>
     </div>,
   );

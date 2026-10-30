@@ -29,4 +29,10 @@ export interface WindowBridge {
    * `color` is a CSS color, e.g. `#1e1e1e`.
    */
   setBackground(color: string): void;
+
+  /**
+   * Sets what runs before the window closes, e.g. disabling the plugins, replacing what was set before. The window
+   * closes once it settles, or after a few seconds if it does not.
+   */
+  onClose(handler: () => Promise<void>): void;
 }

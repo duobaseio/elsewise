@@ -5,6 +5,7 @@ import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } fr
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { General } from '@/routes/settings/local/appearance/general';
 import { settingsQuery } from '@/settings/settings';
 
@@ -44,7 +45,9 @@ async function mount(settings: Settings = DEFAULT_SETTINGS, highlight?: string) 
   });
   await render(
     <QueryClientProvider client={client}>
-      <RouterProvider router={router} />
+      <PluginStoreContext value={new PluginStore()}>
+        <RouterProvider router={router} />
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();

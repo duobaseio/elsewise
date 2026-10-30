@@ -4,10 +4,10 @@ import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/rea
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStoreContext } from '@/plugins/plugin-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
-
+import { pluginStore } from '../../../plugins';
 import { THEMES } from '../../../sheet';
 
 // A plugin with a panel inside another, for a result's path. The tests open the outer one, which is blank, so that only
@@ -57,12 +57,14 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appea
       editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
     },
   });
-  client.setQueryData(pluginsQuery.queryKey, [WORDS]);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ['/settings'] }) });
+  const store = await pluginStore([WORDS]);
   await render(
     <div className="font-sans" data-brightness={theme} data-testid="sheet" style={{ width: 900, height: 480 }}>
       <QueryClientProvider client={client}>
-        <RouterProvider router={router} />
+        <PluginStoreContext value={store}>
+          <RouterProvider router={router} />
+        </PluginStoreContext>
       </QueryClientProvider>
     </div>,
   );

@@ -12,8 +12,9 @@ import {
   useLoadedKeymaps,
   userKeymapsQuery,
 } from '@/command/keymap/keymap';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStoreContext } from '@/plugins/plugin-store';
 import { builtInCommands } from '../../../test/commands';
+import { pluginStore } from '../../../test/plugins';
 
 const ELSEWISE: LoadedKeymap = { id: { source: 'elsewise', id: 'elsewise' }, keymap: Keymap.parse(elsewise) };
 
@@ -39,19 +40,27 @@ function plugin(id: string, keymaps: InstalledPlugin['keymaps'], enabled = true)
 }
 
 // Returns what `useLoadedKeymaps` returns with `plugins` installed and the user's `keymaps`, leaving out Elsewise's.
-function keymaps(
+async function keymaps(
   plugins: readonly (InstalledPlugin | InvalidPlugin)[],
   user: InstalledPlugin['keymaps'] = [],
-): readonly LoadedKeymap[] {
+): Promise<readonly LoadedKeymap[]> {
+  // The store reads the plugins through the bridge, which Node lacks.
+  vi.stubGlobal('window', {});
+  const store = await pluginStore(plugins);
   const client = new QueryClient();
-  client.setQueryData(pluginsQuery.queryKey, plugins);
   client.setQueryData(userKeymapsQuery.queryKey, user);
   let result: readonly LoadedKeymap[] = [];
   function Probe() {
     result = useLoadedKeymaps();
     return null;
   }
-  renderToString(createElement(QueryClientProvider, { client }, createElement(Probe)));
+  renderToString(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+    ),
+  );
   return result.filter(({ id }) => id.source !== 'elsewise');
 }
 
@@ -192,26 +201,26 @@ describe('userKeymapsQuery', () => {
 });
 
 describe('useLoadedKeymaps', () => {
-  test('appends user and plugin keymaps', () => {
+  test('appends user and plugin keymaps', async () => {
     expect(
-      keymaps(
+      await keymaps(
         [plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }])],
         [{ id: 'mine', keymap: ECLIPSE.keymap }],
       ),
     ).toEqual([{ id: { source: 'user', id: 'mine' }, keymap: ECLIPSE.keymap }, ECLIPSE]);
   });
 
-  test('skips disabled plugin', () => {
-    expect(keymaps([plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }], false)])).toEqual([]);
+  test('skips disabled plugin', async () => {
+    expect(await keymaps([plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }], false)])).toEqual([]);
   });
 
-  test('skips invalid plugin', () => {
-    expect(keymaps([{ id: 'io.example', enabled: true, error: 'manifest.json does not exist' }])).toEqual([]);
+  test('skips invalid plugin', async () => {
+    expect(await keymaps([{ id: 'io.example', enabled: true, error: 'manifest.json does not exist' }])).toEqual([]);
   });
 
-  test('skips unreadable keymaps', () => {
+  test('skips unreadable keymaps', async () => {
     expect(
-      keymaps(
+      await keymaps(
         [plugin('io.example', [{ id: 'Eclipse', error: 'Eclipse.json is not JSON' }])],
         [{ id: 'mine', error: 'mine.json is not JSON' }],
       ),

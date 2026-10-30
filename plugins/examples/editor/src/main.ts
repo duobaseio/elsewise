@@ -93,6 +93,10 @@ export default function ({ id }: PluginInfo): Plugin {
         ]),
       ];
     },
+    // Runs before the disposables above are disposed, e.g. as Elsewise closes or quits.
+    onDisable() {
+      console.log(`${id} disabled`);
+    },
   };
 }
 

@@ -5,8 +5,9 @@ import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import elsewise from '@/appearance/bundled/elsewise.json';
-import { type LoadedTheme, resolveActiveTheme, useLoadedThemes, userThemesQuery } from '@/appearance/themes';
-import { pluginsQuery } from '@/plugins/loader';
+import { type LoadedTheme, resolveActiveTheme, sameTheme, useLoadedThemes, userThemesQuery } from '@/appearance/themes';
+import { PluginStoreContext } from '@/plugins/plugin-store';
+import { pluginStore } from '../../test/plugins';
 
 const NIGHT: LoadedTheme = {
   id: { source: 'plugin', plugin: 'com.acme.themes', id: 'night' },
@@ -32,19 +33,27 @@ function plugin(id: string, themes: InstalledPlugin['themes'], enabled = true): 
 }
 
 // Returns what `useLoadedThemes` returns with `plugins` installed and the user's `themes`.
-function themes(
+async function themes(
   plugins: readonly (InstalledPlugin | InvalidPlugin)[],
   user: InstalledPlugin['themes'] = [],
-): readonly LoadedTheme[] {
+): Promise<readonly LoadedTheme[]> {
+  // The store reads the plugins through the bridge, which Node lacks.
+  vi.stubGlobal('window', {});
+  const store = await pluginStore(plugins);
   const client = new QueryClient();
-  client.setQueryData(pluginsQuery.queryKey, plugins);
   client.setQueryData(userThemesQuery.queryKey, user);
   let result: readonly LoadedTheme[] = [];
   function Probe() {
     result = useLoadedThemes();
     return null;
   }
-  renderToString(createElement(QueryClientProvider, { client }, createElement(Probe)));
+  renderToString(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+    ),
+  );
   return result;
 }
 
@@ -77,22 +86,16 @@ function resolved(variant: ThemeVariant | undefined) {
 }
 
 describe('resolveActiveTheme', () => {
-  test('falls back to Elsewise for unknown theme', () => {
-    expect(resolveActiveTheme([NIGHT], { source: 'elsewise', id: 'dracula' }, 'dark')).toEqual(resolved(ELSEWISE.dark));
-  });
-
-  test('falls back to Elsewise for same-named theme from other plugin', () => {
-    const id = { source: 'plugin', plugin: 'com.other.themes', id: 'night' } as const;
-
-    expect(resolveActiveTheme([NIGHT], id, 'dark')).toEqual(resolved(ELSEWISE.dark));
+  test('falls back to Elsewise without theme', () => {
+    expect(resolveActiveTheme(undefined, 'dark')).toEqual(resolved(ELSEWISE.dark));
   });
 
   test('falls back to Elsewise variant for missing brightness', () => {
-    expect(resolveActiveTheme([NIGHT], NIGHT.id, 'light')).toEqual(resolved(ELSEWISE.light));
+    expect(resolveActiveTheme(NIGHT.theme, 'light')).toEqual(resolved(ELSEWISE.light));
   });
 
   test('fills unspecified colors from Elsewise', () => {
-    expect(resolveActiveTheme([NIGHT], NIGHT.id, 'dark')).toEqual({
+    expect(resolveActiveTheme(NIGHT.theme, 'dark')).toEqual({
       interface: { ...ELSEWISE.dark?.interface, background: '#000000', foreground: '#eeeeee' },
       editor: {
         ...resolved(ELSEWISE.dark).editor,
@@ -125,7 +128,7 @@ describe('resolveActiveTheme', () => {
       },
     };
 
-    expect(resolveActiveTheme([theme], theme.id, 'dark').editor.scrollbarMarkers).toMatchObject({
+    expect(resolveActiveTheme(theme.theme, 'dark').editor.scrollbarMarkers).toMatchObject({
       error: '#880000',
       warning: '#ffff00',
       info: ELSEWISE.dark?.interface.info,
@@ -145,12 +148,18 @@ describe('resolveActiveTheme', () => {
       },
     };
 
-    expect(resolveActiveTheme([theme], theme.id, 'dark').editor.diff).toMatchObject({
+    expect(resolveActiveTheme(theme.theme, 'dark').editor.diff).toMatchObject({
       addedLine: '#002200',
       addedText: ELSEWISE.dark?.interface['success-line'],
       deletedLine: '#220000',
       deletedGutter: '#ff0000',
     });
+  });
+});
+
+describe('sameTheme', () => {
+  test('distinguishes plugins with same theme id', () => {
+    expect(sameTheme(NIGHT.id, { source: 'plugin', plugin: 'com.other.themes', id: 'night' })).toBe(false);
   });
 });
 
@@ -175,32 +184,37 @@ describe('userThemesQuery', () => {
 });
 
 describe('useLoadedThemes', () => {
-  test('starts with bundled themes', () => {
-    expect(themes([]).map(({ id }) => id.id)).toEqual(BundledTheme.options);
+  test('starts with bundled themes', async () => {
+    expect((await themes([])).map(({ id }) => id.id)).toEqual(BundledTheme.options);
   });
 
-  test('appends user and plugin themes', () => {
+  test('appends user and plugin themes', async () => {
     expect(
-      themes([plugin('com.acme.themes', [{ id: 'night', theme: NIGHT.theme }])], [{ id: 'dusk', theme: NIGHT.theme }]),
-    ).toEqual([...themes([]), { id: { source: 'user', id: 'dusk' }, theme: NIGHT.theme }, NIGHT]);
+      await themes(
+        [plugin('com.acme.themes', [{ id: 'night', theme: NIGHT.theme }])],
+        [{ id: 'dusk', theme: NIGHT.theme }],
+      ),
+    ).toEqual([...(await themes([])), { id: { source: 'user', id: 'dusk' }, theme: NIGHT.theme }, NIGHT]);
   });
 
-  test('skips disabled plugin', () => {
-    expect(themes([plugin('com.acme.themes', [{ id: 'night', theme: NIGHT.theme }], false)])).toEqual(themes([]));
-  });
-
-  test('skips invalid plugin', () => {
-    expect(themes([{ id: 'com.acme.themes', enabled: true, error: 'manifest.json does not exist' }])).toEqual(
-      themes([]),
+  test('skips disabled plugin', async () => {
+    expect(await themes([plugin('com.acme.themes', [{ id: 'night', theme: NIGHT.theme }], false)])).toEqual(
+      await themes([]),
     );
   });
 
-  test('skips unreadable themes', () => {
+  test('skips invalid plugin', async () => {
+    expect(await themes([{ id: 'com.acme.themes', enabled: true, error: 'manifest.json does not exist' }])).toEqual(
+      await themes([]),
+    );
+  });
+
+  test('skips unreadable themes', async () => {
     expect(
-      themes(
+      await themes(
         [plugin('com.acme.themes', [{ id: 'night', error: 'night.json is not JSON' }])],
         [{ id: 'dusk', error: 'dusk.json is not JSON' }],
       ),
-    ).toEqual(themes([]));
+    ).toEqual(await themes([]));
   });
 });

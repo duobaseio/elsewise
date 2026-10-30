@@ -5,9 +5,9 @@ import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { userThemesQuery } from '@/appearance/themes';
-import { pluginsQuery } from '@/plugins/loader';
+import { PluginStoreContext } from '@/plugins/plugin-store';
 import { ThemeSelect } from '@/routes/settings/local/appearance/-theme';
-
+import { pluginStore } from '../../../../../plugins';
 import { THEMES } from '../../../../../sheet';
 
 const NIGHT = { name: 'Night', dark: { interface: { background: '#000000' }, editor: {}, terminal: {} } };
@@ -30,18 +30,20 @@ async function open(theme: (typeof THEMES)[number], select: ReactNode) {
     delete document.documentElement.dataset.brightness;
   });
   const client = new QueryClient();
-  client.setQueryData(pluginsQuery.queryKey, [PLUGIN]);
   client.setQueryData(userThemesQuery.queryKey, [{ id: 'midnight', theme: { ...NIGHT, name: 'Midnight' } }]);
+  const store = await pluginStore([PLUGIN]);
   await render(
     <QueryClientProvider client={client}>
-      <div
-        className="bg-background p-2 font-sans text-foreground"
-        data-brightness={theme}
-        data-testid="sheet"
-        style={{ width: 320, height: 560 }}
-      >
-        {select}
-      </div>
+      <PluginStoreContext value={store}>
+        <div
+          className="bg-background p-2 font-sans text-foreground"
+          data-brightness={theme}
+          data-testid="sheet"
+          style={{ width: 320, height: 560 }}
+        >
+          {select}
+        </div>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
 

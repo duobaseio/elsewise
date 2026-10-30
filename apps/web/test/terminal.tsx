@@ -6,6 +6,7 @@ import { expect, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
 import { TerminalManager } from '@/terminal/terminal-manager';
@@ -43,11 +44,13 @@ export async function mount(fake: ITerminalAddon, settings = SETTINGS, preview =
   const ref = createRef<XTerm | null>();
   const screen = await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <div data-testid="frame" style={{ height: 300, width: 600 }}>
-          <Terminal ref={ref} session={fake} preview={preview} />
-        </div>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <div data-testid="frame" style={{ height: 300, width: 600 }}>
+            <Terminal ref={ref} session={fake} preview={preview} />
+          </div>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => ref.current).not.toBeNull();

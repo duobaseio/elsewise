@@ -11,6 +11,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { EditorManager } from '@/editor/editor-manager';
 import { UnifiedLayout, type UnifiedLayoutProps } from '@/editor/layouts/unified-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../test/commands';
 
@@ -33,21 +34,23 @@ async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorMana
   const session = { current: null };
   const tree = (next: Partial<UnifiedLayoutProps>) => (
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <LanguageServersContext value={servers}>
-          <div style={{ height: 300 }}>
-            <UnifiedLayout
-              source={{ type: 'workingTree' }}
-              relativePath="main.txt"
-              code={CODE}
-              base={null}
-              extensions={[]}
-              session={session}
-              {...next}
-            />
-          </div>
-        </LanguageServersContext>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <LanguageServersContext value={servers}>
+            <div style={{ height: 300 }}>
+              <UnifiedLayout
+                source={{ type: 'workingTree' }}
+                relativePath="main.txt"
+                code={CODE}
+                base={null}
+                extensions={[]}
+                session={session}
+                {...next}
+              />
+            </div>
+          </LanguageServersContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>
   );
   const screen = await render(tree(props));

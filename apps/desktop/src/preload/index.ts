@@ -2,7 +2,7 @@ import type { PluginsBridge, SettingsBridge, WindowBridge } from '@elsewise/brid
 import { contextBridge, ipcRenderer } from 'electron';
 
 const plugins: PluginsBridge = {
-  load: () => ipcRenderer.invoke('plugins:load'),
+  load: (id?: string) => ipcRenderer.invoke('plugins:load', id),
   save: (installed) => ipcRenderer.invoke('plugins:save', installed),
 };
 
@@ -19,12 +19,26 @@ const settings: SettingsBridge = {
   deleteUserKeymap: (id) => ipcRenderer.invoke('settings:delete-user-keymap', id),
 };
 
+let close: (() => Promise<void>) | undefined;
+ipcRenderer.on('window:close', async () => {
+  try {
+    if (close !== undefined) {
+      await close();
+    }
+  } finally {
+    ipcRenderer.send('window:closed');
+  }
+});
+
 const window: WindowBridge = {
   cut: () => ipcRenderer.send('window:cut'),
   copy: () => ipcRenderer.send('window:copy'),
   paste: () => ipcRenderer.send('window:paste'),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
+  onClose: (handler) => {
+    close = handler;
+  },
 };
 
 contextBridge.exposeInMainWorld('bridge', {

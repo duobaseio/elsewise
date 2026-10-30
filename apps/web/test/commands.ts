@@ -21,8 +21,7 @@ export function builtInApplication(
   platform?: Platform,
 ): ApplicationManager {
   return new ApplicationManager(
-    parts.appearance ??
-      new AppearanceManager('light', resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light')),
+    parts.appearance ?? new AppearanceManager('light', resolveActiveTheme(undefined, 'light')),
     parts.editor ?? new EditorManager(),
     memoryRouter(),
     parts.settings ?? new SettingsPanelManager(),

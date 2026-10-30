@@ -10,6 +10,7 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { Editor } from '@/routes/settings/local/appearance/editor';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
@@ -32,7 +33,7 @@ test.each(THEMES)('editor (%s)', async (theme) => {
   const editor = new EditorManager();
   const settings = new SettingsPanelManager();
   const application = builtInApplication({
-    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+    appearance: new AppearanceManager(theme, resolveActiveTheme(undefined, theme)),
     editor,
     settings,
   });
@@ -55,11 +56,13 @@ test.each(THEMES)('editor (%s)', async (theme) => {
   });
   await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <LanguageServersContext value={new LanguageServers(editor)}>
-          <RouterProvider router={router} />
-        </LanguageServersContext>
-      </ApplicationManagerContext>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
+          <LanguageServersContext value={new LanguageServers(editor)}>
+            <RouterProvider router={router} />
+          </LanguageServersContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.element(page.getByRole('heading', { name: 'Editor' })).toBeVisible();

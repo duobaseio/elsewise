@@ -17,6 +17,13 @@ export interface PluginsBridge {
   load(): Promise<(InstalledPlugin | InvalidPlugin)[]>;
 
   /**
+   * Returns the installed plugin with `id`, or `undefined` if none is installed.
+   *
+   * Throws an error if `id` is not a plugin id.
+   */
+  load(id: string): Promise<InstalledPlugin | InvalidPlugin | undefined>;
+
+  /**
    * Replaces whether each plugin is enabled with `entries`.
    *
    * Throws an error if two of `entries` share an id.

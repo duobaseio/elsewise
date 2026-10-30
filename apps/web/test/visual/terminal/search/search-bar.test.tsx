@@ -23,7 +23,7 @@ test.each(THEMES)('terminal search bar (%s)', async (theme) => {
     host.remove();
   });
   await new Promise<void>((resolve) => terminal.write('session one\r\nsession two\r\nsession three', resolve));
-  const { background, foreground } = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme).terminal;
+  const { background, foreground } = resolveActiveTheme(undefined, theme).terminal;
 
   render(
     <div
