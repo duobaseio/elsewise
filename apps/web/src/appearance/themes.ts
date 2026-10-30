@@ -1,6 +1,8 @@
 import { BundledTheme, type ThemeId } from '@elsewise/bridge';
 import { type ActiveTheme, Theme } from '@elsewise/plugin';
+import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
+import { usePlugins } from '@/plugins/loader';
 import { useBrightness, useSettings } from '@/settings/settings';
 
 export interface LoadedTheme {
@@ -8,18 +10,56 @@ export interface LoadedTheme {
   readonly theme: Theme;
 }
 
-// TODO: add support for plugin themes.
-export const THEMES: readonly LoadedTheme[] = Object.entries(
+const BUNDLED_THEMES: readonly LoadedTheme[] = Object.entries(
   import.meta.glob<unknown>('./bundled/*.json', { eager: true, import: 'default' }),
 ).map(([path, content]) => ({
-  id: { source: 'elsewise', name: BundledTheme.parse(path.slice('./bundled/'.length, -'.json'.length)) },
+  id: { source: 'elsewise', id: BundledTheme.parse(path.slice('./bundled/'.length, -'.json'.length)) },
   theme: Theme.parse(content),
 }));
 
-export function sameTheme(a: ThemeId, b: ThemeId): boolean {
-  return a.source === 'elsewise'
-    ? b.source === 'elsewise' && a.name === b.name
-    : b.source === 'plugin' && a.plugin === b.plugin && a.name === b.name;
+/**
+ * The user's themes, and the ones that could not be read, which it logs.
+ */
+export const userThemesQuery = queryOptions({
+  queryKey: ['user-themes'],
+  queryFn: async () => {
+    const themes = (await window.bridge?.settings?.loadUserThemes()) ?? [];
+    for (const theme of themes) {
+      if ('error' in theme) {
+        console.error(`Theme ${theme.id} failed to load: ${theme.error}`);
+      }
+    }
+    return themes;
+  },
+  staleTime: 'static',
+  gcTime: Number.POSITIVE_INFINITY,
+});
+
+/**
+ * Returns Elsewise's themes, then the user's and the enabled plugins', leaving out the ones that could not be read.
+ */
+export function useLoadedThemes(): readonly LoadedTheme[] {
+  const plugins = usePlugins();
+  const user = useSuspenseQuery(userThemesQuery).data;
+
+  return useMemo(
+    () => [
+      ...BUNDLED_THEMES,
+      ...user.flatMap((entry): LoadedTheme[] =>
+        'error' in entry ? [] : [{ id: { source: 'user', id: entry.id }, theme: entry.theme }],
+      ),
+      ...plugins.flatMap((plugin) =>
+        'error' in plugin || !plugin.enabled
+          ? []
+          : plugin.themes.flatMap((entry): LoadedTheme[] =>
+              'error' in entry
+                ? []
+                : [{ id: { source: 'plugin', plugin: plugin.manifest.id, id: entry.id }, theme: entry.theme }],
+            ),
+      ),
+    ],
+    [plugins, user],
+  );
 }
 
 /**
@@ -32,14 +72,15 @@ export function useActiveTheme(): ActiveTheme {
   const editor = useSettings((settings) => settings.appearance.editor.theme);
   const terminal = useSettings((settings) => settings.appearance.terminal.theme);
   const brightness = useBrightness();
+  const themes = useLoadedThemes();
 
   return useMemo(
     () => ({
-      interface: resolveActiveTheme(THEMES, general, brightness).interface,
-      editor: resolveActiveTheme(THEMES, editor ?? general, brightness).editor,
-      terminal: resolveActiveTheme(THEMES, terminal ?? general, brightness).terminal,
+      interface: resolveActiveTheme(themes, general, brightness).interface,
+      editor: resolveActiveTheme(themes, editor ?? general, brightness).editor,
+      terminal: resolveActiveTheme(themes, terminal ?? general, brightness).terminal,
     }),
-    [general, editor, terminal, brightness],
+    [themes, general, editor, terminal, brightness],
   );
 }
 
@@ -51,13 +92,8 @@ export function resolveActiveTheme(
   id: ThemeId,
   brightness: 'light' | 'dark',
 ): ActiveTheme {
-  const elsewise = THEMES.find((loaded) => loaded.id.name === 'elsewise')?.theme[brightness];
-  const variant = themes.find(
-    ({ id: other }) =>
-      other.source === id.source &&
-      other.name === id.name &&
-      (other.source !== 'plugin' || (id.source === 'plugin' && other.plugin === id.plugin)),
-  )?.theme[brightness];
+  const elsewise = BUNDLED_THEMES.find((loaded) => loaded.id.id === 'elsewise')?.theme[brightness];
+  const variant = themes.find((other) => sameTheme(other.id, id))?.theme[brightness];
 
   const colors = { ...elsewise?.interface, ...variant?.interface };
   const editor = { ...elsewise?.editor, ...variant?.editor };
@@ -89,4 +125,10 @@ export function resolveActiveTheme(
     },
     terminal: { ...elsewise?.terminal, ...variant?.terminal },
   } as ActiveTheme;
+}
+
+export function sameTheme(a: ThemeId, b: ThemeId): boolean {
+  return a.source === 'plugin'
+    ? b.source === 'plugin' && a.plugin === b.plugin && a.id === b.id
+    : b.source === a.source && a.id === b.id;
 }

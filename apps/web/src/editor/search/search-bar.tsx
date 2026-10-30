@@ -19,7 +19,7 @@ import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCommandManager } from '@/command/command-manager';
-import { eventKeys } from '@/command/keys';
+import { eventKeys } from '@/command/keymap/keys';
 import { SearchAction, SearchOption } from '@/components/search-controls';
 import { scroll } from '@/editor/scroll';
 import { scrollbarMarkerSources } from '@/editor/scrollbar-markers/scrollbar-markers';

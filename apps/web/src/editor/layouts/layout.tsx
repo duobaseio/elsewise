@@ -23,7 +23,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import { EDITOR_DOCUMENT, type EditorDocument, type EditorDocumentLayout } from '@elsewise/plugin';
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
-import { editorKeymap } from '@/command/keymap';
+import { editorKeymap } from '@/command/keymap/keymap';
 import { actions } from '@/editor/actions';
 import { drawActiveLine } from '@/editor/active-line';
 import { completion } from '@/editor/completion';

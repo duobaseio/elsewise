@@ -5,13 +5,13 @@ import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { CommandContextMenu } from '@/command/context-menu';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../../commands';
 
-import { THEMES } from '../../sheet';
+import { THEMES } from '../../../sheet';
 
 const COMMANDS: ApplicationCommand[] = [
   { scope: 'application', id: 'actions', label: 'Show context actions', defaultKeys: ['Alt-Enter'], run: () => true },
@@ -67,13 +67,16 @@ test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
   onTestFinished(() => {
     delete document.documentElement.dataset.brightness;
   });
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
-    editor: new EditorManager(),
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+      editor: new EditorManager(),
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   commands.add(COMMANDS);
   render(
     <CommandManagerContext value={commands}>

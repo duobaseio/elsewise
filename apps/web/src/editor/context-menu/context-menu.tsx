@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view';
 import type { ReactNode, RefObject } from 'react';
-import { CommandContextMenu } from '@/command/context-menu';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { useEditorManager } from '@/editor/editor-manager';
 
 /**

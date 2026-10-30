@@ -9,11 +9,11 @@ import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
-  resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+  resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
 );
 
 // Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
@@ -30,6 +30,7 @@ function commands(
       settings: new SettingsPanelManager(),
       terminal: terminals,
     },
+    EMPTY_KEYMAP,
     platform,
   );
 }
@@ -302,7 +303,7 @@ describe('onKeymapChange', () => {
     const manager = bound({ format: ['Shift-F6'] });
     const listener = vi.fn();
     manager.onKeymapChange(listener);
-    manager.selected = { name: 'Elsewise', keys: { format: ['Shift-F6'] } };
+    manager.selected = { ...EMPTY_KEYMAP, keys: { format: ['Shift-F6'] } };
     manager.add([{ id: 'format', label: 'Format', scope: 'application', defaultKeys: ['Shift-F6'], run: () => true }]);
 
     expect(listener).not.toHaveBeenCalled();

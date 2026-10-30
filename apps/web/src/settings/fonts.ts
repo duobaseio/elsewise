@@ -1,17 +1,17 @@
 export const DEFAULT_FONTS: readonly FontChoice[] = [
-  { value: null, label: 'Work Sans' },
-  { value: 'Atkinson Hyperlegible Next Variable', label: 'Atkinson Hyperlegible Next' },
-  { value: 'system-ui', label: 'System' },
+  { label: 'Work Sans', value: null },
+  { label: 'Atkinson Hyperlegible Next', value: 'Atkinson Hyperlegible Next Variable' },
+  { label: 'System', value: 'system-ui' },
 ];
 
 export const DEFAULT_MONO_FONTS: readonly FontChoice[] = [
-  { value: null, label: 'JetBrains Mono' },
-  { value: 'ui-monospace', label: 'System' },
+  { label: 'JetBrains Mono', value: null },
+  { label: 'System', value: 'ui-monospace' },
 ];
 
 export interface FontChoice {
-  readonly value: string | null;
   readonly label: string;
+  readonly value: string | null;
 }
 
 export function fontStack(family: string | null): string {

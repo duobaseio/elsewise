@@ -8,6 +8,7 @@ export type TextStyle = z.infer<typeof TextStyle>;
 /**
  * A theme for the interface, editor and terminal.
  */
+// TODO: Link the docs on bundling a theme with a plugin, once they exist.
 export const Theme = z.lazy(() =>
   z
     .object({

@@ -9,8 +9,25 @@ import type { CommandManager } from '@/command/command-manager';
  */
 export const pluginsQuery = queryOptions({
   queryKey: ['plugins'],
-  queryFn: async (): Promise<readonly (InstalledPlugin | InvalidPlugin)[]> =>
-    (await window.bridge?.plugins?.load()) ?? [],
+  queryFn: async (): Promise<readonly (InstalledPlugin | InvalidPlugin)[]> => {
+    const plugins = (await window.bridge?.plugins?.load()) ?? [];
+    for (const plugin of plugins) {
+      if ('error' in plugin || !plugin.enabled) {
+        continue;
+      }
+      for (const theme of plugin.themes) {
+        if ('error' in theme) {
+          console.error(`Plugin ${plugin.manifest.id}'s theme ${theme.id} failed to load: ${theme.error}`);
+        }
+      }
+      for (const keymap of plugin.keymaps) {
+        if ('error' in keymap) {
+          console.error(`Plugin ${plugin.manifest.id}'s keymap ${keymap.id} failed to load: ${keymap.error}`);
+        }
+      }
+    }
+    return plugins;
+  },
   staleTime: 'static',
   gcTime: Number.POSITIVE_INFINITY,
 });

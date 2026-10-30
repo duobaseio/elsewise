@@ -8,7 +8,7 @@ import type { Terminal } from '@xterm/xterm';
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
-import { eventKeys } from '@/command/keys';
+import { eventKeys } from '@/command/keymap/keys';
 import { SearchAction, SearchOption } from '@/components/search-controls';
 
 const NEXT = 'Enter';

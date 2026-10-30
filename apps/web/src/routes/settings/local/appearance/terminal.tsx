@@ -12,8 +12,8 @@ import { useState } from 'react';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { Terminal as TerminalView } from '@/terminal/terminal';
-import { FontRows } from '../-font-rows';
-import { LineHeightInput } from '../-line-height-input';
+import { FontRows } from './-font-rows';
+import { LineHeightInput } from './-line-height-input';
 import { ThemeSelect } from './-theme';
 
 export const Route = createFileRoute('/settings/local/appearance/terminal')({ component: Terminal });
@@ -86,7 +86,12 @@ export function Terminal() {
         description="The terminal's colors."
         help="A theme without a light or dark variant uses the default theme's variant."
       >
-        <ThemeSelect label={TERMINAL_TERMS.theme.label} onChange={(theme) => set({ theme })} theme={terminal.theme} />
+        <ThemeSelect
+          inheritable
+          label={TERMINAL_TERMS.theme.label}
+          theme={terminal.theme}
+          onChange={(theme) => set({ theme })}
+        />
       </Row>
 
       <Separator />

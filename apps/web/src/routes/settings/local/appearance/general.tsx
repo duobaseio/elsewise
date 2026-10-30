@@ -5,11 +5,10 @@ import { Page, Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import { DEFAULT_ROUTES, type SettingsSearchTerm } from '@elsewise/plugin';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { sameTheme } from '@/appearance/themes';
 import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
-import { FontRows } from '../-font-rows';
-import { THEME_ITEMS } from './-theme';
+import { FontRows } from './-font-rows';
+import { ThemeSelect } from './-theme';
 
 export const Route = createFileRoute('/settings/local/appearance/general')({ component: General });
 
@@ -65,28 +64,7 @@ export function General() {
       </Row>
 
       <Row id="theme" label={GENERAL_TERMS.theme.label} description="The interface's colors.">
-        <Select
-          isItemEqualToValue={sameTheme}
-          items={THEME_ITEMS}
-          itemToStringLabel={(theme) => THEME_ITEMS.find((item) => sameTheme(item.value, theme))?.label ?? ''}
-          onValueChange={(theme) => {
-            if (theme) {
-              set({ theme });
-            }
-          }}
-          value={general.theme}
-        >
-          <SelectTrigger aria-label={GENERAL_TERMS.theme.label} autoWidth size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {THEME_ITEMS.map((item) => (
-              <SelectItem key={item.label} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ThemeSelect label={GENERAL_TERMS.theme.label} theme={general.theme} onChange={(theme) => set({ theme })} />
       </Row>
 
       <Separator />

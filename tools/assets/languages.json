@@ -2357,28 +2357,28 @@
       }
     },
     "xml": {
-      "slug": "xml",
+      "letterform": "XML",
       "color": {
         "light": "#005FAD",
         "dark": "#2374c3"
       }
     },
     "xsd": {
-      "slug": "xml",
+      "letterform": "XML",
       "color": {
         "light": "#005FAD",
         "dark": "#2374c3"
       }
     },
     "xsl": {
-      "slug": "xml",
+      "letterform": "XML",
       "color": {
         "light": "#005FAD",
         "dark": "#2374c3"
       }
     },
     "xslt": {
-      "slug": "xml",
+      "letterform": "XML",
       "color": {
         "light": "#005FAD",
         "dark": "#2374c3"

@@ -1,7 +1,7 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import type { ReactNode } from 'react';
-import { CommandContextMenu } from '@/command/context-menu';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { useTerminalManager } from '@/terminal/terminal-manager';
 
 /**

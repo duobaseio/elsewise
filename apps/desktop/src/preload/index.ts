@@ -11,6 +11,12 @@ const settings: SettingsBridge = {
   save: (value) => ipcRenderer.invoke('settings:save', value),
   loadPlugin: (plugin) => ipcRenderer.invoke('settings:load-plugin', plugin),
   savePlugin: (plugin, value) => ipcRenderer.invoke('settings:save-plugin', plugin, value),
+  loadUserThemes: () => ipcRenderer.invoke('settings:load-user-themes'),
+  saveUserTheme: (id, theme) => ipcRenderer.invoke('settings:save-user-theme', id, theme),
+  deleteUserTheme: (id) => ipcRenderer.invoke('settings:delete-user-theme', id),
+  loadUserKeymaps: () => ipcRenderer.invoke('settings:load-user-keymaps'),
+  saveUserKeymap: (id, keymap) => ipcRenderer.invoke('settings:save-user-keymap', id, keymap),
+  deleteUserKeymap: (id) => ipcRenderer.invoke('settings:delete-user-keymap', id),
 };
 
 const window: WindowBridge = {

@@ -2,12 +2,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, PluginId, Settings } from '@elsewise/bridge';
 import { configLocalDir, dataLocalDir, writeJsonSync } from '@elsewise/core';
+import { Keymap, Theme } from '@elsewise/plugin';
 import { ipcMain } from 'electron';
+import { readJsonFolder } from '../fs/json-folder';
 
 /**
  * Handles the renderer's settings channels:
  * - `settings:load` and `settings:save` read and replace `<config folder>/settings.json`.
  * - `settings:load-plugin` and `settings:save-plugin` read and replace `<data folder>/plugins/<id>/settings.json`.
+ * - `settings:load-user-themes`, `settings:save-user-theme` and `settings:delete-user-theme` read, replace and delete
+ *   the user's themes in `<config folder>/themes`.
+ * - `settings:load-user-keymaps`, `settings:save-user-keymap` and `settings:delete-user-keymap` do the same for the
+ *   user's keymaps in `<config folder>/keymaps`.
  */
 export function handleSettings(): void {
   ipcMain.handle('settings:load', () => {
@@ -44,6 +50,28 @@ export function handleSettings(): void {
 
     writeJsonSync(file, value);
   });
+  ipcMain.handle('settings:load-user-themes', () =>
+    readJsonFolder(path.join(configLocalDir(), 'themes'), Theme).map((entry) =>
+      'error' in entry ? entry : { id: entry.id, theme: entry.content },
+    ),
+  );
+  ipcMain.handle('settings:save-user-theme', (_event, id: unknown, theme: unknown) => {
+    writeJsonSync(userFile('themes', id), Theme.parse(theme));
+  });
+  ipcMain.handle('settings:delete-user-theme', (_event, id: unknown) => {
+    fs.rmSync(userFile('themes', id), { force: true });
+  });
+  ipcMain.handle('settings:load-user-keymaps', () =>
+    readJsonFolder(path.join(configLocalDir(), 'keymaps'), Keymap).map((entry) =>
+      'error' in entry ? entry : { id: entry.id, keymap: entry.content },
+    ),
+  );
+  ipcMain.handle('settings:save-user-keymap', (_event, id: unknown, keymap: unknown) => {
+    writeJsonSync(userFile('keymaps', id), Keymap.parse(keymap));
+  });
+  ipcMain.handle('settings:delete-user-keymap', (_event, id: unknown) => {
+    fs.rmSync(userFile('keymaps', id), { force: true });
+  });
 }
 
 function pluginFile(plugin: unknown): string {
@@ -53,4 +81,13 @@ function pluginFile(plugin: unknown): string {
   }
 
   return path.join(dataLocalDir(), 'plugins', id.data, 'settings.json');
+}
+
+function userFile(folder: 'themes' | 'keymaps', id: unknown): string {
+  const parsed = PluginId.safeParse(id);
+  if (!parsed.success) {
+    throw new Error(`settings: invalid ${folder === 'themes' ? 'theme' : 'keymap'} id ${JSON.stringify(id)}`);
+  }
+
+  return path.join(configLocalDir(), folder, `${parsed.data}.json`);
 }

@@ -12,8 +12,7 @@ import type {
 } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { ApplicationKeymap } from '@/command/application-keymap';
-import { ELSEWISE } from '@/command/keymap';
+import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import {
   EDITOR_ADD_CARET_ABOVE,
@@ -155,11 +154,12 @@ export class CommandManager implements Commands {
   private readonly listeners = new Set<() => void>();
   private addedCommands: ReadonlyArray<ReadonlyArray<ApplicationCommand | EditorCommand | TerminalCommand>> = [];
   private currentCommands: ReadonlyMap<string, ApplicationCommand | EditorCommand | TerminalCommand> = new Map();
-  private currentSelected: Keymap = ELSEWISE.keymap;
+  private currentSelected: Keymap;
 
-  constructor(parts: Omit<Application, 'commands'>, platform?: Platform) {
+  constructor(parts: Omit<Application, 'commands'>, selected: Keymap, platform?: Platform) {
     this.application = { ...parts, commands: this };
     this.keymap = new ApplicationKeymap(platform);
+    this.currentSelected = selected;
     this.add(DEFAULT_COMMANDS);
   }
 

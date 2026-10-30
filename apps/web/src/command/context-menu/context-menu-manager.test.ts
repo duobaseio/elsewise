@@ -1,6 +1,6 @@
 import type { ContextMenuGroup, ContextMenuItem } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { ContextMenuManager } from '@/command/context-menu-manager';
+import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 
 // Returns an item that runs the command with `id`.
 function item(id: string): ContextMenuItem {

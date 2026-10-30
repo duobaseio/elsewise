@@ -1,3 +1,4 @@
+import type { Keymap, Theme } from '@elsewise/plugin';
 import * as z from 'zod';
 import { PluginId } from './plugins.js';
 
@@ -80,6 +81,46 @@ export interface SettingsBridge {
    * Throws an error if `value` is not JSON-serializable.
    */
   savePlugin<T>(plugin: string, value: T & Json<T>): Promise<void>;
+
+  /**
+   * Returns the user's themes in `<config folder>/themes`, each identified by its file name without `.json`, or with why
+   * it could not be read.
+   */
+  loadUserThemes(): Promise<({ id: string; theme: Theme } | { id: string; error: string })[]>;
+
+  /**
+   * Saves the user's theme with `id`, replacing any existing one.
+   *
+   * Throws an error if `id` is invalid or `theme` is malformed.
+   */
+  saveUserTheme(id: string, theme: Theme): Promise<void>;
+
+  /**
+   * Deletes the user's theme with `id`, if any.
+   *
+   * Throws an error if `id` is invalid.
+   */
+  deleteUserTheme(id: string): Promise<void>;
+
+  /**
+   * Returns the user's keymaps in `<config folder>/keymaps`, each identified by its file name without `.json`, or with
+   * why it could not be read.
+   */
+  loadUserKeymaps(): Promise<({ id: string; keymap: Keymap } | { id: string; error: string })[]>;
+
+  /**
+   * Saves the user's keymap with `id`, replacing any existing one.
+   *
+   * Throws an error if `id` is invalid or `keymap` is malformed.
+   */
+  saveUserKeymap(id: string, keymap: Keymap): Promise<void>;
+
+  /**
+   * Deletes the user's keymap with `id`, if any.
+   *
+   * Throws an error if `id` is invalid.
+   */
+  deleteUserKeymap(id: string): Promise<void>;
 }
 
 /**
@@ -99,7 +140,7 @@ export const Settings = z.lazy(() =>
             /**
              * The interface's theme.
              */
-            theme: ThemeId.catch({ source: 'elsewise', name: 'elsewise' }),
+            theme: ThemeId.catch({ source: 'elsewise', id: 'elsewise' }),
             font: font(13),
             /**
              * Whether the file tree shows a git status's letter, e.g. `M`.
@@ -195,7 +236,7 @@ export const Settings = z.lazy(() =>
     /**
      * The current keymap.
      */
-    keymap: KeymapId.catch({ source: 'elsewise', name: 'elsewise' }),
+    keymap: KeymapId.catch({ source: 'elsewise', id: 'elsewise' }),
   }),
 );
 
@@ -203,11 +244,13 @@ export const Settings = z.lazy(() =>
  * A theme and where it comes from:
  *
  * - `elsewise`: bundled with Elsewise.
+ * - `user`: created by the user, e.g. by changing a bundled or plugin theme.
  * - `plugin`: provided by the plugin whose id is `plugin`.
  */
 export const ThemeId = z.discriminatedUnion('source', [
-  z.strictObject({ source: z.literal('elsewise'), name: z.lazy(() => BundledTheme) }),
-  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
+  z.strictObject({ source: z.literal('elsewise'), id: z.lazy(() => BundledTheme) }),
+  z.strictObject({ source: z.literal('user'), id: z.string().min(1) }),
+  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, id: z.string().min(1) }),
 ]);
 
 /**
@@ -281,11 +324,13 @@ export const CursorStyle = z.enum(['block', 'underline', 'bar']);
  * A keymap and where it comes from:
  *
  * - `elsewise`: bundled with Elsewise.
+ * - `user`: created by the user, e.g. by changing a bundled or plugin keymap.
  * - `plugin`: provided by the plugin whose id is `plugin`.
  */
 export const KeymapId = z.discriminatedUnion('source', [
-  z.strictObject({ source: z.literal('elsewise'), name: z.lazy(() => BundledKeymap) }),
-  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
+  z.strictObject({ source: z.literal('elsewise'), id: z.lazy(() => BundledKeymap) }),
+  z.strictObject({ source: z.literal('user'), id: z.string().min(1) }),
+  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, id: z.string().min(1) }),
 ]);
 
 /**

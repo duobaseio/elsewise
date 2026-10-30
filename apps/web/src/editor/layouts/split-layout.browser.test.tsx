@@ -15,7 +15,7 @@ import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-s
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -26,16 +26,19 @@ const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
 async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(
+        'light',
+        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
+      ),
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   const servers = new LanguageServers(editor);
   const session = { current: null };
   const ratio = { current: 0.5 };

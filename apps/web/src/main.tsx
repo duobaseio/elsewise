@@ -2,6 +2,8 @@ import { DEFAULT_ROUTES } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { createRoot } from 'react-dom/client';
+import { userThemesQuery } from '@/appearance/themes';
+import { userKeymapsQuery } from '@/command/keymap/keymap';
 import { pluginsQuery } from '@/plugins/loader';
 import { type FileRouteTypes, routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
@@ -19,8 +21,14 @@ void (DEFAULT_ROUTES satisfies Routes);
 
 const queryClient = new QueryClient();
 
-// Plugins and settings are awaited here so the first render has them and never shows a fallback.
-await Promise.all([queryClient.query(pluginsQuery), queryClient.query(settingsQuery)]);
+// Plugins, settings and the user's themes and keymaps are awaited here so the first render has them and never shows a
+// fallback.
+await Promise.all([
+  queryClient.query(pluginsQuery),
+  queryClient.query(settingsQuery),
+  queryClient.query(userThemesQuery),
+  queryClient.query(userKeymapsQuery),
+]);
 
 const router = createRouter({ routeTree });
 

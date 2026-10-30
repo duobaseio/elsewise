@@ -13,7 +13,7 @@ import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-s
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
 
 const CODE = ['alpha', 'beta', 'gamma'].join('\n');
 
@@ -21,16 +21,19 @@ const CODE = ['alpha', 'beta', 'gamma'].join('\n');
 async function mount(editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(
+        'light',
+        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
+      ),
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   const screen = await render(
     <QueryClientProvider client={client}>
       <EditorManagerContext value={editor}>

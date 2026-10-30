@@ -3,7 +3,7 @@ import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
-import { CommandContextMenu } from '@/command/context-menu';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
 import { builtInCommands } from '../../../commands';
 

@@ -15,6 +15,8 @@ import { THEMES } from '../../../sheet';
 const WORDS: InstalledPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
   enabled: true,
+  themes: [],
+  keymaps: [],
   url: `data:text/javascript,${encodeURIComponent(`
     export default function () {
       return {

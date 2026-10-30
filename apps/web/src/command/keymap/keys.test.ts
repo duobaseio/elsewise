@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { eventKeys, normalizeKey } from '@/command/keys';
+import { eventKeys, normalizeKey } from '@/command/keymap/keys';
 
 // Returns a keydown that presses `key`, whose key code is `keyCode`, with `modifiers` held.
 function press(key: string, keyCode: number, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {

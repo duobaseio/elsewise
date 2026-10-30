@@ -2,15 +2,16 @@ import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { HighlightProvider } from '@elsewise/components/components/settings';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
-import { expect, test } from 'vitest';
-import { page } from 'vitest/browser';
+import { expect, onTestFinished, test } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { General } from '@/routes/settings/local/appearance/general';
 import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../../../../sheet';
 
-test.each(THEMES)('general (%s)', async (theme) => {
+// Renders the general page on a sheet in `theme`.
+async function mount(theme: (typeof THEMES)[number]) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
   const router = createRouter({
@@ -36,6 +37,26 @@ test.each(THEMES)('general (%s)', async (theme) => {
     </QueryClientProvider>,
   );
   await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+}
+
+test.each(THEMES)('general (%s)', async (theme) => {
+  await mount(theme);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`general-${theme}`);
+});
+
+test.each(THEMES)('general font groups (%s)', async (theme) => {
+  // The popup is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  window.queryLocalFonts = async () => [{ family: 'Helvetica' }, { family: 'Menlo' }];
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+    delete window.queryLocalFonts;
+  });
+  await mount(theme);
+
+  await userEvent.click(page.getByRole('combobox', { name: 'Font' }));
+  await expect.element(page.getByRole('option', { name: 'Menlo' })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`general-font-groups-${theme}`);
 });

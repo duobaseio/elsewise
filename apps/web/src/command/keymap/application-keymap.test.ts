@@ -1,9 +1,8 @@
 import type { Platform } from '@elsewise/components/lib/platform';
 import { type ApplicationCommand, type EditorCommand, Keymap, type Keys } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ApplicationKeymap } from '@/command/application-keymap';
-
-const ELSEWISE: Keymap = { name: 'Elsewise', keys: {} };
+import { ApplicationKeymap } from '@/command/keymap/application-keymap';
+import { EMPTY_KEYMAP } from '../../../test/commands';
 
 // Returns an editor command for each id in `keys`, with those default keys.
 function editor(keys: Record<string, Keys>): EditorCommand[] {
@@ -19,7 +18,7 @@ function editor(keys: Record<string, Keys>): EditorCommand[] {
 // Returns a keymap on `platform` updated with `commands` under `keymap`.
 function updated(
   commands: readonly (ApplicationCommand | EditorCommand)[],
-  keymap: Keymap = ELSEWISE,
+  keymap: Keymap = EMPTY_KEYMAP,
   platform: Platform = 'linux',
 ): ApplicationKeymap {
   const active = new ApplicationKeymap(platform);
@@ -51,7 +50,7 @@ describe('commands', () => {
   test('lists keys of every command', () => {
     const keymap = updated(editor({ rename: ['Mod-r', 'Cmd-L'], save: [] }));
 
-    expect(keymap.name).toBe('Elsewise');
+    expect(keymap.name).toBe(EMPTY_KEYMAP.name);
     expect(keymap.commands).toEqual(
       new Map([
         ['rename', ['Mod-r', 'Cmd-L']],
@@ -65,7 +64,9 @@ describe('commands', () => {
     const expected = { mac: ['Cmd-Alt-r', 'F2'], windows: ['Ctrl-Alt-r', 'F2'], linux: ['Mod-r', 'F2'] } as const;
 
     for (const platform of ['mac', 'windows', 'linux'] as const) {
-      expect(updated(editor({ rename: keys }), ELSEWISE, platform).commands.get('rename')).toEqual(expected[platform]);
+      expect(updated(editor({ rename: keys }), EMPTY_KEYMAP, platform).commands.get('rename')).toEqual(
+        expected[platform],
+      );
       expect(
         updated(editor({ rename: [] }), { name: 'Eclipse', keys: { rename: keys } }, platform).commands.get('rename'),
       ).toEqual(expected[platform]);
@@ -75,8 +76,11 @@ describe('commands', () => {
   test('skips platform key without slot for platform', () => {
     const keys: Keys = ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }];
 
-    expect(updated(editor({ cut: keys }), ELSEWISE, 'mac').commands.get('cut')).toEqual(['Mod-x']);
-    expect(updated(editor({ cut: keys }), ELSEWISE, 'linux').commands.get('cut')).toEqual(['Mod-x', 'Shift-Delete']);
+    expect(updated(editor({ cut: keys }), EMPTY_KEYMAP, 'mac').commands.get('cut')).toEqual(['Mod-x']);
+    expect(updated(editor({ cut: keys }), EMPTY_KEYMAP, 'linux').commands.get('cut')).toEqual([
+      'Mod-x',
+      'Shift-Delete',
+    ]);
   });
 
   test('uses default keys for invalid entry', () => {
@@ -113,7 +117,7 @@ describe('commands', () => {
   test('keeps unchanged commands', () => {
     const keymap = updated(editor({ rename: ['Mod-r'] }));
     const commands = keymap.commands;
-    keymap.update({ name: 'Elsewise', keys: { rename: ['Mod-r'] } }, [
+    keymap.update({ ...EMPTY_KEYMAP, keys: { rename: ['Mod-r'] } }, [
       { id: 'rename', label: 'Rename', scope: 'application', defaultKeys: ['Mod-r'], run: () => true },
     ]);
 
@@ -124,7 +128,7 @@ describe('commands', () => {
   test('replaces changed commands', () => {
     const keymap = updated(editor({ rename: ['Mod-r'] }));
     const initial = keymap.commands;
-    keymap.update(ELSEWISE, editor({ rename: ['Mod-r'], format: ['Shift-F6'] }));
+    keymap.update(EMPTY_KEYMAP, editor({ rename: ['Mod-r'], format: ['Shift-F6'] }));
     const added = keymap.commands;
     keymap.update({ name: 'Eclipse', keys: {} }, editor({ rename: ['Mod-r'], format: ['Shift-F6'] }));
 
@@ -136,7 +140,9 @@ describe('commands', () => {
 
 describe('keys', () => {
   test('resolves Mod per platform', () => {
-    expect([...updated(editor({ rename: ['Mod-r'] }), ELSEWISE, 'mac').keys.editor]).toEqual([['Meta-r', ['rename']]]);
+    expect([...updated(editor({ rename: ['Mod-r'] }), EMPTY_KEYMAP, 'mac').keys.editor]).toEqual([
+      ['Meta-r', ['rename']],
+    ]);
     expect([...updated(editor({ rename: ['Mod-r'] })).keys.editor]).toEqual([['Ctrl-r', ['rename']]]);
   });
 

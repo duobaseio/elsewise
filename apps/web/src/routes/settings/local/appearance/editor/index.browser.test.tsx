@@ -31,7 +31,18 @@ afterEach(() => {
 async function mount(settings = SETTINGS) {
   const save = vi.fn(async () => {});
   window.bridge = {
-    settings: { load: async () => settings, save, loadPlugin: async () => ({}), savePlugin: async () => {} },
+    settings: {
+      load: async () => settings,
+      save,
+      loadPlugin: async () => ({}),
+      savePlugin: async () => {},
+      loadUserThemes: async () => [],
+      saveUserTheme: async () => {},
+      deleteUserTheme: async () => {},
+      loadUserKeymaps: async () => [],
+      saveUserKeymap: async () => {},
+      deleteUserKeymap: async () => {},
+    },
   };
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
@@ -61,7 +72,7 @@ describe('Editor', () => {
     await userEvent.click(page.getByRole('option', { name: 'Dracula' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withEditor({ theme: { source: 'elsewise', name: 'dracula' } }));
+    expect(save).toHaveBeenCalledWith(withEditor({ theme: { source: 'elsewise', id: 'dracula' } }));
   });
 
   test.each([

@@ -53,7 +53,7 @@ vi.mock('@/appearance/themes', async (original) => {
   return {
     ...actual,
     useActiveTheme: () => {
-      const elsewise = actual.resolveActiveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
+      const elsewise = actual.resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light');
       return { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
     },
   };

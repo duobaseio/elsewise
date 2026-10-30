@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useState } from 'react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { useActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { installApplicationKeys, useKeymap } from '@/command/keymap';
+import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
 import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -40,7 +40,7 @@ function RootComponent() {
   const installed = usePlugins();
   const brightness = useBrightness();
   const theme = useActiveTheme();
-  const keymap = useKeymap();
+  const keymap = useSelectedKeymap();
   const router = useRouter();
 
   const [{ appearance, commands, editor, settings, terminal, languageServers, loader }] = useState(() => {
@@ -48,7 +48,7 @@ function RootComponent() {
     const editor = new EditorManager();
     const settings = new SettingsPanelManager(Object.values(DEFAULT_PANELS));
     const terminal = new TerminalManager();
-    const commands = new CommandManager({ appearance, editor, router, settings, terminal });
+    const commands = new CommandManager({ appearance, editor, router, settings, terminal }, keymap);
 
     // TODO: Replace with actual diffs once git daemon is ready
     editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
@@ -82,6 +82,7 @@ function RootComponent() {
         if ('error' in plugin) {
           console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
         } else {
+          // TODO: Skip a plugin without a main module, once plugins without code are decided.
           await loader.load(plugin.manifest.id, plugin.url);
         }
       }

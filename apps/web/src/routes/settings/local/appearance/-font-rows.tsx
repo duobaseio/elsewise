@@ -9,6 +9,7 @@ import {
   ComboboxItem,
   ComboboxLabel,
   ComboboxList,
+  ComboboxSeparator,
   ComboboxTrigger,
   ComboboxValue,
 } from '@elsewise/components/components/combobox';
@@ -16,12 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import type { SettingsSearchTerm } from '@elsewise/plugin';
-import { type ReactNode, useEffect, useState } from 'react';
+import { Fragment, type ReactNode, useEffect, useState } from 'react';
 import { type FontChoice, installedFonts } from '@/settings/fonts';
 
 const SIZES: Record<string, string> = Object.fromEntries(FONT_SIZES.map((size) => [String(size), String(size)]));
 
-type FontGroup = { value: string; items: readonly FontChoice[] };
+type FontGroup = { label: string | null; value: string; items: readonly FontChoice[] };
 
 /**
  * The rows of a font: its family and size, then `children`, then its ligatures.
@@ -48,16 +49,20 @@ export function FontRows<F extends Font>({
     installedFonts().then(setInstalled);
   }, []);
 
-  const groups: FontGroup[] = [{ value: 'Bundled', items: defaults }];
+  const groups: FontGroup[] = [{ label: null, value: 'bundled', items: defaults }];
   if (installed.length > 0) {
-    groups.push({ value: 'Installed', items: installed.map((family) => ({ value: family, label: family })) });
+    groups.push({
+      label: 'Installed',
+      value: 'installed',
+      items: installed.map((family) => ({ label: family, value: family })),
+    });
   }
   const known = groups.flatMap((group) => group.items).find((item) => item.value === font.family);
   // A family that is neither bundled nor installed is still listed, so the user sees what is set.
   const missing = !known && installed.length > 0;
-  const selected = known ?? { value: font.family, label: font.family ?? '' };
+  const selected = known ?? { label: font.family ?? '', value: font.family };
   if (missing) {
-    groups.unshift({ value: 'Not installed', items: [selected] });
+    groups.unshift({ label: 'Not installed', value: 'missing', items: [selected] });
   }
 
   return (
@@ -88,17 +93,20 @@ export function FontRows<F extends Font>({
             <ComboboxInput placeholder="Search fonts" />
             <ComboboxEmpty>No fonts found</ComboboxEmpty>
             <ComboboxList>
-              {(group: FontGroup) => (
-                <ComboboxGroup items={group.items} key={group.value}>
-                  <ComboboxLabel>{group.value}</ComboboxLabel>
-                  <ComboboxCollection>
-                    {(item: FontChoice) => (
-                      <ComboboxItem key={item.value ?? ''} style={{ fontFamily: stack(item.value) }} value={item}>
-                        {item.label}
-                      </ComboboxItem>
-                    )}
-                  </ComboboxCollection>
-                </ComboboxGroup>
+              {(group: FontGroup, index: number) => (
+                <Fragment key={group.value}>
+                  {index > 0 && <ComboboxSeparator />}
+                  <ComboboxGroup items={group.items}>
+                    {group.label !== null && <ComboboxLabel>{group.label}</ComboboxLabel>}
+                    <ComboboxCollection>
+                      {(item: FontChoice) => (
+                        <ComboboxItem key={item.value ?? ''} style={{ fontFamily: stack(item.value) }} value={item}>
+                          {item.label}
+                        </ComboboxItem>
+                      )}
+                    </ComboboxCollection>
+                  </ComboboxGroup>
+                </Fragment>
               )}
             </ComboboxList>
           </ComboboxContent>

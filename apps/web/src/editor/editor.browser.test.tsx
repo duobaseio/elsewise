@@ -27,7 +27,7 @@ import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-s
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../test/commands';
 import { StubTransport } from '../../test/stub-transport';
 
 const { EDITOR } = vi.hoisted(() => ({
@@ -45,7 +45,7 @@ const { EDITOR } = vi.hoisted(() => ({
 // Replaces the editor's colors with test colors, since a test cannot add a theme to the bundled ones.
 vi.mock('@/appearance/themes', async (original) => {
   const actual = await original<typeof import('@/appearance/themes')>();
-  const elsewise = actual.resolveActiveTheme(actual.THEMES, { source: 'elsewise', name: 'elsewise' }, 'light');
+  const elsewise = actual.resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light');
   // The same object on every call, as the real hook returns while the theme stays the same.
   const theme = { ...elsewise, editor: { ...elsewise.editor, ...EDITOR } };
   return { ...actual, useActiveTheme: () => theme };
@@ -72,16 +72,19 @@ async function mountEditor(
   editor = new EditorManager(),
   root?: URL,
 ): Promise<EditorView> {
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(
+        'light',
+        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
+      ),
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   const screen = await render(
     shell(
       <EditorManagerContext value={editor}>
@@ -181,16 +184,19 @@ function diffSourceOf(id: string, base: string | Promise<string>): EditorDiffSou
 // and the base side's editor.
 async function mountDiff(source: string | null, layout: DiffLayout, editor = new EditorManager()) {
   const diff = new DiffState(source, layout);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(
+        'light',
+        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
+      ),
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   const screen = await render(
     shell(
       <EditorManagerContext value={editor}>

@@ -35,6 +35,7 @@ export const Manifest = z.lazy(() =>
     /**
      * The path of the plugin's main module in its `bundle` folder. Cannot be blank. Defaults to `main.js`.
      */
+    // TODO: Make optional, so a plugin can ship only themes and keymaps, once plugins without code are decided.
     main: z.string().regex(/\S/).default('main.js'),
   }),
 );

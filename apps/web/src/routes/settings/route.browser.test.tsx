@@ -13,6 +13,8 @@ import { settingsQuery } from '@/settings/settings';
 const PANELS: InstalledPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
   enabled: true,
+  themes: [],
+  keymaps: [],
   url: `data:text/javascript,${encodeURIComponent(`
     export default function () {
       return {
@@ -239,7 +241,18 @@ describe('AddLanguage', () => {
   test('saves language without override, excluding listed and those listed under another, and opens it', async () => {
     const save = vi.fn(async () => {});
     window.bridge = {
-      settings: { load: async () => LANGUAGES, save, loadPlugin: async () => ({}), savePlugin: async () => {} },
+      settings: {
+        load: async () => LANGUAGES,
+        save,
+        loadPlugin: async () => ({}),
+        savePlugin: async () => {},
+        loadUserThemes: async () => [],
+        saveUserTheme: async () => {},
+        deleteUserTheme: async () => {},
+        loadUserKeymaps: async () => [],
+        saveUserKeymap: async () => {},
+        deleteUserKeymap: async () => {},
+      },
     };
     const router = await mount(['/settings/local/appearance/editor'], [], LANGUAGES);
     await userEvent.click(sidebar().getByRole('combobox', { name: 'Add language' }));

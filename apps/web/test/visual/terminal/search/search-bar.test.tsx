@@ -4,7 +4,7 @@ import { createRef } from 'react';
 import { expect, onTestFinished, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { THEMES as LOADED, resolveActiveTheme } from '@/appearance/themes';
+import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManagerContext } from '@/command/command-manager';
 import { SearchBar } from '@/terminal/search/search-bar';
 import { builtInCommands } from '../../../commands';
@@ -24,11 +24,7 @@ test.each(THEMES)('terminal search bar (%s)', async (theme) => {
     host.remove();
   });
   await new Promise<void>((resolve) => terminal.write('session one\r\nsession two\r\nsession three', resolve));
-  const { background, foreground } = resolveActiveTheme(
-    LOADED,
-    { source: 'elsewise', name: 'elsewise' },
-    theme,
-  ).terminal;
+  const { background, foreground } = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme).terminal;
 
   render(
     <div

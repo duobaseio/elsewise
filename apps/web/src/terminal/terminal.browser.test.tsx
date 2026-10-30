@@ -1,10 +1,11 @@
 import type { Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMANDS } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, Theme } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
-import { resolveActiveTheme, THEMES } from '@/appearance/themes';
+import dracula from '@/appearance/bundled/dracula.json';
+import { resolveActiveTheme } from '@/appearance/themes';
 import { settingsQuery } from '@/settings/settings';
 import { mount, rightClick, SETTINGS, session } from '../../test/terminal';
 
@@ -256,7 +257,7 @@ describe('Terminal', () => {
   test('follows settings', async () => {
     const fake = session();
     const { client, xterm } = await mount(fake);
-    const elsewise = resolveActiveTheme(THEMES, { source: 'elsewise', name: 'elsewise' }, 'light').terminal;
+    const elsewise = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light').terminal;
     await expect.poll(() => xterm.options.fontSize).toBe(12);
     expect(xterm.options.lineHeight).toBe(1.0625);
     expect(xterm.options.cursorStyle).toBe('block');
@@ -269,7 +270,7 @@ describe('Terminal', () => {
       appearance: {
         ...SETTINGS.appearance,
         terminal: {
-          theme: { source: 'elsewise', name: 'dracula' },
+          theme: { source: 'elsewise', id: 'dracula' },
           font: { family: null, size: 16, lineHeight: 1.2, ligatures: false },
           cursorStyle: 'bar',
           cursorBlink: false,
@@ -281,9 +282,10 @@ describe('Terminal', () => {
       },
     } satisfies Settings);
 
-    const { selection, searchMatch, searchMatchSelected, searchMatchSelectedBorder, ...dracula } = resolveActiveTheme(
-      THEMES,
-      { source: 'elsewise', name: 'dracula' },
+    const id = { source: 'elsewise', id: 'dracula' } as const;
+    const { selection, searchMatch, searchMatchSelected, searchMatchSelectedBorder, ...colors } = resolveActiveTheme(
+      [{ id, theme: Theme.parse(dracula) }],
+      id,
       'light',
     ).terminal;
     await expect.poll(() => xterm.options.fontSize).toBe(16);
@@ -293,7 +295,7 @@ describe('Terminal', () => {
     expect(xterm.options.macOptionClickForcesSelection).toBe(true);
     expect(xterm.options.macOptionIsMeta).toBe(true);
     expect(xterm.options.scrollback).toBe(2000);
-    expect(xterm.options.theme).toEqual({ ...dracula, selectionBackground: selection });
+    expect(xterm.options.theme).toEqual({ ...colors, selectionBackground: selection });
   });
 
   describe('preview', () => {

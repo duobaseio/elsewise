@@ -8,8 +8,8 @@ import { createFileRoute } from '@tanstack/react-router';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
-import { FontRows } from '../../-font-rows';
-import { LineHeightInput } from '../../-line-height-input';
+import { FontRows } from '../-font-rows';
+import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from '../-theme';
 import { CompletionDocumentationHelp, HighlightUsagesHelp, ScrollbarMarkersHelp } from './-help';
 import { LanguageRows } from './-language-rows';
@@ -54,7 +54,12 @@ export function Editor() {
         description="The editor's colors."
         help="A theme without a light or dark variant uses the default theme's variant."
       >
-        <ThemeSelect label={EDITOR_TERMS.theme.label} onChange={(theme) => set({ theme })} theme={editor.theme} />
+        <ThemeSelect
+          inheritable
+          label={EDITOR_TERMS.theme.label}
+          theme={editor.theme}
+          onChange={(theme) => set({ theme })}
+        />
       </Row>
 
       <Separator />

@@ -1,7 +1,7 @@
 import type { ContextMenuGroup, Disposable, Terminal } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { ContextMenuManager } from '@/command/context-menu-manager';
+import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
 
 /**

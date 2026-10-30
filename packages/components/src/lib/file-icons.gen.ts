@@ -124,7 +124,6 @@ import vimGlyph from '../assets/file-icons/vim.svg?no-inline';
 import webassemblyGlyph from '../assets/file-icons/webassembly.svg?no-inline';
 import webgpuGlyph from '../assets/file-icons/webgpu.svg?no-inline';
 import xcodeGlyph from '../assets/file-icons/xcode.svg?no-inline';
-import xmlGlyph from '../assets/file-icons/xml.svg?no-inline';
 import yamlGlyph from '../assets/file-icons/yaml.svg?no-inline';
 import yarnGlyph from '../assets/file-icons/yarn.svg?no-inline';
 import zigGlyph from '../assets/file-icons/zig.svg?no-inline';
@@ -554,10 +553,10 @@ export const EXTENSION_ICONS: Record<string, FileIconData> = {
   'xaml': { kind: 'glyph', src: dotnetGlyph, tint: { light: '#512BD4', dark: '#6d56fc' } },
   'xhtml': { kind: 'glyph', src: html5Glyph, tint: { light: '#E34F26', dark: '#E34F26' } },
   'xib': { kind: 'glyph', src: xcodeGlyph, tint: { light: '#147EFB', dark: '#147EFB' } },
-  'xml': { kind: 'glyph', src: xmlGlyph, tint: { light: '#005FAD', dark: '#2374c3' } },
-  'xsd': { kind: 'glyph', src: xmlGlyph, tint: { light: '#005FAD', dark: '#2374c3' } },
-  'xsl': { kind: 'glyph', src: xmlGlyph, tint: { light: '#005FAD', dark: '#2374c3' } },
-  'xslt': { kind: 'glyph', src: xmlGlyph, tint: { light: '#005FAD', dark: '#2374c3' } },
+  'xml': { kind: 'letters', letters: 'XML', tint: { light: '#005FAD', dark: '#2374c3' } },
+  'xsd': { kind: 'letters', letters: 'XML', tint: { light: '#005FAD', dark: '#2374c3' } },
+  'xsl': { kind: 'letters', letters: 'XML', tint: { light: '#005FAD', dark: '#2374c3' } },
+  'xslt': { kind: 'letters', letters: 'XML', tint: { light: '#005FAD', dark: '#2374c3' } },
   'y': { kind: 'letters', letters: 'Y', tint: { light: '#4B6C4B', dark: '#597b59' } },
   'yaml': { kind: 'glyph', src: yamlGlyph, tint: { light: '#CB171E', dark: '#da2c2c' } },
   'yml': { kind: 'glyph', src: yamlGlyph, tint: { light: '#CB171E', dark: '#da2c2c' } },

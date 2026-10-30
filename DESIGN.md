@@ -255,7 +255,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
 | Token        | Size / line | Weight             | Usage                                                         |
 |--------------|-------------|--------------------|---------------------------------------------------------------|
 | `text-2xs`   | 10 / 14     | 500, +0.02em       | Overlines, badge counts — sparingly                           |
-| `text-xs`    | 11 / 16     | 400                | Status bar, timestamps, tree metadata                         |
+| `text-xs`    | 11 / 16     | 400                | Status bar, timestamps, tree metadata; popup group labels at 500 in `text-2` |
 | `text-sm`    | 12 / 16     | 400                | Menus, help text, tooltips, dense tables, secondary controls  |
 | `text-base`  | **13 / 20** | 400                | **Default chrome:** buttons, inputs, tabs, tree items, labels, dialog body |
 | `text-prose` | 15 / 24     | 400                | Agent conversation, settings descriptions, docs               |
@@ -264,7 +264,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
 
 | Token        | Size / line | Weight       | Usage                                       |
 |--------------|-------------|--------------|---------------------------------------------|
-| `heading-sm` | 13 / 20     | 500, +0.01em | Group headers, section labels within panels |
+| `heading-sm` | 13 / 20     | 500, +0.01em | Group headers, section labels within panels, not in popups |
 | `heading`    | 15 / 20     | 500          | Panel titles, dialog titles                 |
 | `heading-lg` | 17 / 24     | 500          | View titles, settings page headers          |
 

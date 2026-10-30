@@ -33,7 +33,7 @@ import { toggleReplaceRow } from '@/editor/search/search-bar-query';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../commands';
 
 import { THEMES } from '../../sheet';
 import { StubTransport } from '../../stub-transport';
@@ -326,13 +326,16 @@ async function mount(
     { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
     { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
   ]);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, theme)),
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   render(
     <QueryClientProvider client={client}>
       <EditorManagerContext value={editor}>

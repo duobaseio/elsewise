@@ -7,7 +7,7 @@ import { describe, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { CommandManagerContext } from '@/command/command-manager';
-import { terminalKeymap } from '@/command/keymap';
+import { terminalKeymap } from '@/command/keymap/keymap';
 import { settingsQuery } from '@/settings/settings';
 import { TerminalSearch } from '@/terminal/search/search-bar';
 import { builtInCommands } from '../../../test/commands';

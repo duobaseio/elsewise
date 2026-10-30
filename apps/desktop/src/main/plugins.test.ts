@@ -21,6 +21,10 @@ const ENTRY = { id: 'hello', enabled: true };
 const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', main: 'main.js' };
 const URL = 'app://elsewise/plugins/hello/bundle/main.js';
 
+const NOTHING = { themes: [], keymaps: [] };
+const DUSK = { name: 'Dusk', dark: { interface: { background: '#1c2430' }, editor: {}, terminal: {} } };
+const EMACS = { name: 'Emacs', keys: { 'io.example.rename': ['Ctrl-r'] } };
+
 // Each list `validate` rejects, with the error it rejects it with.
 const MALFORMED: [string, unknown, RegExp][] = [
   ['is not an array', { plugins: [ENTRY] }, /not an array/],
@@ -60,6 +64,15 @@ function install(folder: string, manifest: unknown) {
   );
 }
 
+// Writes `content` to `file` in the bundle of the plugin in `folder`, as is when a string and as JSON otherwise.
+function bundle(folder: string, file: string, content: unknown) {
+  fs.mkdirSync(path.dirname(path.join(PLUGINS_FOLDER, folder, 'bundle', file)), { recursive: true });
+  fs.writeFileSync(
+    path.join(PLUGINS_FOLDER, folder, 'bundle', file),
+    typeof content === 'string' ? content : JSON.stringify(content),
+  );
+}
+
 describe('plugins:load', () => {
   test('returns no plugins when the plugins folder does not exist', () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
@@ -75,10 +88,11 @@ describe('plugins:load', () => {
     expect(handler('plugins:load')()).toEqual([
       {
         manifest: { ...MANIFEST, id: 'goodbye' },
+        ...NOTHING,
         url: 'app://elsewise/plugins/goodbye/bundle/main.js',
         enabled: false,
       },
-      { manifest: MANIFEST, url: URL, enabled: true },
+      { manifest: MANIFEST, ...NOTHING, url: URL, enabled: true },
     ]);
   });
 
@@ -86,7 +100,7 @@ describe('plugins:load', () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
     install('hello', { id: 'hello', name: 'Hello', version: '1.0.0', extra: 'ignored' });
 
-    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, url: URL, enabled: true }]);
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: true }]);
   });
 
   test("resolves url from manifest's main", () => {
@@ -96,6 +110,7 @@ describe('plugins:load', () => {
     expect(handler('plugins:load')()).toEqual([
       {
         manifest: { ...MANIFEST, main: 'dist/index.js' },
+        ...NOTHING,
         url: 'app://elsewise/plugins/hello/bundle/dist/index.js',
         enabled: true,
       },
@@ -105,21 +120,21 @@ describe('plugins:load', () => {
   test('disables plugin without entry', () => {
     install('hello', MANIFEST);
 
-    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, url: URL, enabled: false }]);
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
   });
 
   test('ignores entry without folder', () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY, { id: 'goodbye', enabled: true }]));
     install('hello', MANIFEST);
 
-    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, url: URL, enabled: true }]);
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: true }]);
   });
 
   test('ignores files in plugins folder', () => {
     install('hello', MANIFEST);
     fs.writeFileSync(path.join(PLUGINS_FOLDER, '.DS_Store'), '');
 
-    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, url: URL, enabled: false }]);
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
   });
 
   test('fails plugin without manifest', () => {
@@ -151,10 +166,87 @@ describe('plugins:load', () => {
       { ...ENTRY, error: expect.stringMatching(error) },
       {
         manifest: { ...MANIFEST, id: 'other' },
+        ...NOTHING,
         url: 'app://elsewise/plugins/other/bundle/main.js',
         enabled: false,
       },
     ]);
+  });
+
+  test('reads themes and keymaps in bundle, sorted by id', () => {
+    install('hello', MANIFEST);
+    bundle('hello', 'themes/dusk.json', DUSK);
+    bundle('hello', 'themes/dawn.json', { ...DUSK, name: 'Dawn' });
+    bundle('hello', 'keymaps/emacs.json', EMACS);
+
+    expect(handler('plugins:load')()).toEqual([
+      {
+        manifest: MANIFEST,
+        themes: [
+          { id: 'dawn', theme: { ...DUSK, name: 'Dawn' } },
+          { id: 'dusk', theme: DUSK },
+        ],
+        keymaps: [{ id: 'emacs', keymap: EMACS }],
+        url: URL,
+        enabled: false,
+      },
+    ]);
+  });
+
+  test('ignores anything but JSON files in bundle', () => {
+    install('hello', MANIFEST);
+    bundle('hello', 'themes/README.md', '# Dusk');
+    bundle('hello', 'themes/old.json/dusk.json', DUSK);
+    bundle('hello', 'keymaps/.DS_Store', '');
+
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
+  });
+
+  test.each([
+    ['is not JSON', 'dusk', '{', /dusk\.json is not JSON/],
+    ['is malformed', 'dusk', { name: 'Dusk' }, /dusk\.json is malformed/],
+    ['has an invalid id', '-dusk', DUSK, /-dusk\.json has an invalid id/],
+  ])('fails theme that %s', (_, id, content, error) => {
+    install('hello', MANIFEST);
+    bundle('hello', `themes/${id}.json`, content);
+    bundle('hello', 'themes/other.json', DUSK);
+
+    expect(handler('plugins:load')()).toEqual([
+      {
+        manifest: MANIFEST,
+        themes: [
+          { id, error: expect.stringMatching(error) },
+          { id: 'other', theme: DUSK },
+        ],
+        keymaps: [],
+        url: URL,
+        enabled: false,
+      },
+    ]);
+  });
+
+  test('fails malformed keymap', () => {
+    install('hello', MANIFEST);
+    bundle('hello', 'keymaps/emacs.json', { keys: {} });
+
+    expect(handler('plugins:load')()).toEqual([
+      {
+        manifest: MANIFEST,
+        themes: [],
+        keymaps: [{ id: 'emacs', error: expect.stringMatching(/emacs\.json is malformed/) }],
+        url: URL,
+        enabled: false,
+      },
+    ]);
+  });
+
+  test('skips themes when folder cannot be read', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    install('hello', MANIFEST);
+    bundle('hello', 'themes', '');
+
+    expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
+    expect(error).toHaveBeenCalledWith(expect.stringMatching(/themes: unreadable, skipping it/), expect.anything());
   });
 
   test('throws when the file cannot be read', () => {

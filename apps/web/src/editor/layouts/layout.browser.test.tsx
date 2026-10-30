@@ -18,7 +18,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme, THEMES } from '@/appearance/themes';
+import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager, CommandManagerContext } from '@/command/command-manager';
 import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
 import {
@@ -34,7 +34,7 @@ import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-s
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const BASE: EditorDocumentLayout = { type: 'split', side: 'base' };
@@ -107,16 +107,19 @@ async function mount(
 ) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: new AppearanceManager(
+        'light',
+        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
+      ),
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   let setSource: (source: EditorSource) => void = () => {};
   let setCode: (code: string) => void = () => {};
   const screen = await render(
@@ -224,7 +227,7 @@ afterEach(() => {
 
 // Returns the CSS color of Elsewise's `role` token at `brightness`.
 function tokenColor(role: 'keyword' | 'comment', brightness: 'light' | 'dark'): string {
-  const { tokens } = resolveActiveTheme(THEMES, { source: 'elsewise', name: 'elsewise' }, brightness).editor;
+  const { tokens } = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, brightness).editor;
   const hex = tokens[role]?.color;
   if (hex === undefined) {
     throw new Error(`missing ${role} color`);

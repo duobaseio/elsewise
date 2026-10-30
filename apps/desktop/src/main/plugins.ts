@@ -2,9 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { type InstalledPlugin, type InvalidPlugin, PluginEntry } from '@elsewise/bridge';
 import { dataLocalDir, writeJsonSync } from '@elsewise/core';
-import { Manifest } from '@elsewise/plugin';
+import { Keymap, Manifest, Theme } from '@elsewise/plugin';
 import { ipcMain } from 'electron';
 import * as z from 'zod';
+import { readJsonFolder } from '../fs/json-folder';
 
 const PLUGINS = path.join(dataLocalDir(), 'plugins.json');
 const ROOT = path.join(dataLocalDir(), 'plugins');
@@ -12,8 +13,8 @@ const ROOT = path.join(dataLocalDir(), 'plugins');
 /**
  * Handles the renderer's `plugins:load` and `plugins:save`.
  *
- * A load returns each folder in `<data folder>/plugins` with its `manifest.json`, and whether `<data folder>/plugins.json`
- * enables it.
+ * A load returns each folder in `<data folder>/plugins` with its `manifest.json`, the themes and keymaps in its bundle,
+ * and whether `<data folder>/plugins.json` enables it.
  *
  * A save replaces `plugins.json`.
  *
@@ -103,5 +104,16 @@ function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin
     return { id: folder, enabled, error: `${file} declares the id ${manifest.data.id}, not its folder's name` };
   }
 
-  return { manifest: manifest.data, enabled, url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.main}` };
+  return {
+    manifest: manifest.data,
+    enabled,
+    themes: readJsonFolder(path.join(ROOT, folder, 'bundle', 'themes'), Theme).map((entry) =>
+      'error' in entry ? entry : { id: entry.id, theme: entry.content },
+    ),
+    keymaps: readJsonFolder(path.join(ROOT, folder, 'bundle', 'keymaps'), Keymap).map((entry) =>
+      'error' in entry ? entry : { id: entry.id, keymap: entry.content },
+    ),
+    // TODO: Leave out for a manifest without `main`, once plugins without code are decided.
+    url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.main}`,
+  };
 }

@@ -6,9 +6,9 @@ import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { type CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu';
-import { builtInCommands } from '../../test/commands';
-import { group, item, labels, menuitem, submenu } from '../../test/context-menu';
+import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu/context-menu';
+import { builtInCommands } from '../../../test/commands';
+import { group, item, labels, menuitem, submenu } from '../../../test/context-menu';
 
 // Shows `menu` with `commands` and the `rest` of the props, over a target that `open` right-clicks.
 async function mount(

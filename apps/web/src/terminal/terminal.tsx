@@ -8,7 +8,7 @@ import { type ITerminalAddon, type ITheme, Terminal as XTerm } from '@xterm/xter
 import { type RefObject, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
-import { terminalKeymap } from '@/command/keymap';
+import { terminalKeymap } from '@/command/keymap/keymap';
 import { monoFontStack } from '@/settings/fonts';
 import { useSettings } from '@/settings/settings';
 import { TerminalContextMenu } from '@/terminal/context-menu/context-menu';

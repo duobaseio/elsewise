@@ -101,7 +101,7 @@ function Settings() {
       <Sidebar className="shrink-0 border-border border-r" collapsible="none">
         <Header className="px-2" trafficLights>
           <Button
-            className="ml-1 cursor-default text-text-3 [-webkit-app-region:no-drag]"
+            className="ml-auto cursor-default text-text-3 [-webkit-app-region:no-drag]"
             onClick={() => (router.history.canGoBack() ? router.history.back() : router.navigate({ to: '/' }))}
             size="sm"
             variant="ghost"

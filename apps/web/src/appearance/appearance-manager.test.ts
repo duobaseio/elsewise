@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 
-const LIGHT = resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light');
-const DARK = resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark');
+const LIGHT = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light');
+const DARK = resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark');
 
 afterEach(() => {
   vi.restoreAllMocks();

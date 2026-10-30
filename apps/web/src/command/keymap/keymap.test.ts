@@ -1,21 +1,35 @@
-import type { ApplicationCommand } from '@elsewise/plugin';
+import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
+import { type ApplicationCommand, Keymap } from '@elsewise/plugin';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createElement } from 'react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
-import { ELSEWISE, installApplicationKeys, type LoadedKeymap, resolveKeymap } from '@/command/keymap';
+import elsewise from '@/command/keymap/bundled/elsewise.json';
+import {
+  installApplicationKeys,
+  type LoadedKeymap,
+  resolveKeymap,
+  useLoadedKeymaps,
+  userKeymapsQuery,
+} from '@/command/keymap/keymap';
 import { EditorManager } from '@/editor/editor-manager';
+import { pluginsQuery } from '@/plugins/loader';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
 
 const APPEARANCE = new AppearanceManager(
   'dark',
-  resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+  resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
 );
 
+const ELSEWISE: LoadedKeymap = { id: { source: 'elsewise', id: 'elsewise' }, keymap: Keymap.parse(elsewise) };
+
 const ECLIPSE: LoadedKeymap = {
-  id: { source: 'plugin', plugin: 'io.example', name: 'Eclipse' },
+  id: { source: 'plugin', plugin: 'io.example', id: 'Eclipse' },
   keymap: { name: 'Eclipse', keys: {} },
 };
 
@@ -27,18 +41,44 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
+
+// Returns the plugin `id` with `keymaps`.
+function plugin(id: string, keymaps: InstalledPlugin['keymaps'], enabled = true): InstalledPlugin {
+  return { manifest: { id, name: id, version: '1.0.0', main: 'main.js' }, enabled, themes: [], keymaps, url: '' };
+}
+
+// Returns what `useLoadedKeymaps` returns with `plugins` installed and the user's `keymaps`, leaving out Elsewise's.
+function keymaps(
+  plugins: readonly (InstalledPlugin | InvalidPlugin)[],
+  user: InstalledPlugin['keymaps'] = [],
+): readonly LoadedKeymap[] {
+  const client = new QueryClient();
+  client.setQueryData(pluginsQuery.queryKey, plugins);
+  client.setQueryData(userKeymapsQuery.queryKey, user);
+  let result: readonly LoadedKeymap[] = [];
+  function Probe() {
+    result = useLoadedKeymaps();
+    return null;
+  }
+  renderToString(createElement(QueryClientProvider, { client }, createElement(Probe)));
+  return result.filter(({ id }) => id.source !== 'elsewise');
+}
 
 // Returns a window with application keys installed for `added`, which are added in order.
 function install(...added: ApplicationCommand[]) {
   const window = new EventTarget() as Window;
-  const commands = new CommandManager({
-    appearance: APPEARANCE,
-    editor: new EditorManager(),
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance: APPEARANCE,
+      editor: new EditorManager(),
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   for (const command of added) {
     commands.add([command]);
   }
@@ -74,7 +114,7 @@ describe('resolveKeymap', () => {
 
   test('distinguishes plugins with same keymap name', () => {
     const other: LoadedKeymap = {
-      id: { source: 'plugin', plugin: 'io.other', name: 'Eclipse' },
+      id: { source: 'plugin', plugin: 'io.other', id: 'Eclipse' },
       keymap: { name: 'Eclipse', keys: {} },
     };
 
@@ -82,7 +122,7 @@ describe('resolveKeymap', () => {
   });
 
   test('falls back to Elsewise and warns', () => {
-    expect(resolveKeymap([ELSEWISE], ECLIPSE.id)).toBe(ELSEWISE.keymap);
+    expect(resolveKeymap([ELSEWISE], ECLIPSE.id)).toEqual(ELSEWISE.keymap);
     expect(warn).toHaveBeenCalledOnce();
     expect(warn.mock.calls[0]?.[0]).toContain('io.example/Eclipse');
   });
@@ -113,13 +153,16 @@ describe('installApplicationKeys', () => {
     const run = vi.fn(() => true);
     const window = new EventTarget() as Window;
     window.addEventListener('keydown', (event) => event.preventDefault());
-    const commands = new CommandManager({
-      appearance: APPEARANCE,
-      editor: new EditorManager(),
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    });
+    const commands = new CommandManager(
+      {
+        appearance: APPEARANCE,
+        editor: new EditorManager(),
+        router: memoryRouter(),
+        settings: new SettingsPanelManager(),
+        terminal: new TerminalManager(),
+      },
+      EMPTY_KEYMAP,
+    );
     commands.add([command('a', run)]);
     installApplicationKeys(window, commands);
     window.dispatchEvent(press());
@@ -154,5 +197,53 @@ describe('installApplicationKeys', () => {
     window.dispatchEvent(press());
 
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('userKeymapsQuery', () => {
+  test('returns none without bridge', async () => {
+    vi.stubGlobal('window', {});
+
+    await expect(new QueryClient().fetchQuery(userKeymapsQuery)).resolves.toEqual([]);
+  });
+
+  test('logs unreadable keymap', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const keymaps = [
+      { id: 'mine', keymap: ECLIPSE.keymap },
+      { id: 'theirs', error: 'theirs.json is not JSON' },
+    ];
+    vi.stubGlobal('window', { bridge: { settings: { loadUserKeymaps: async () => keymaps } } });
+
+    await expect(new QueryClient().fetchQuery(userKeymapsQuery)).resolves.toEqual(keymaps);
+    expect(error).toHaveBeenCalledExactlyOnceWith('Keymap theirs failed to load: theirs.json is not JSON');
+  });
+});
+
+describe('useLoadedKeymaps', () => {
+  test('appends user and plugin keymaps', () => {
+    expect(
+      keymaps(
+        [plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }])],
+        [{ id: 'mine', keymap: ECLIPSE.keymap }],
+      ),
+    ).toEqual([{ id: { source: 'user', id: 'mine' }, keymap: ECLIPSE.keymap }, ECLIPSE]);
+  });
+
+  test('skips disabled plugin', () => {
+    expect(keymaps([plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }], false)])).toEqual([]);
+  });
+
+  test('skips invalid plugin', () => {
+    expect(keymaps([{ id: 'io.example', enabled: true, error: 'manifest.json does not exist' }])).toEqual([]);
+  });
+
+  test('skips unreadable keymaps', () => {
+    expect(
+      keymaps(
+        [plugin('io.example', [{ id: 'Eclipse', error: 'Eclipse.json is not JSON' }])],
+        [{ id: 'mine', error: 'mine.json is not JSON' }],
+      ),
+    ).toEqual([]);
   });
 });

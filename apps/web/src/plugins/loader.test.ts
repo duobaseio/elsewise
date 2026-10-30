@@ -1,27 +1,31 @@
+import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
-import { PluginLoader } from '@/plugins/loader';
+import { PluginLoader, pluginsQuery } from '@/plugins/loader';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { memoryRouter } from '../../test/commands';
+import { EMPTY_KEYMAP, memoryRouter } from '../../test/commands';
 
 // Returns a loader over its own managers.
 function setUp() {
   const appearance = new AppearanceManager(
     'dark',
-    resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'dark'),
+    resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
   );
   const editor = new EditorManager();
-  const commands = new CommandManager({
-    appearance,
-    editor,
-    router: memoryRouter(),
-    settings: new SettingsPanelManager(),
-    terminal: new TerminalManager(),
-  });
+  const commands = new CommandManager(
+    {
+      appearance,
+      editor,
+      router: memoryRouter(),
+      settings: new SettingsPanelManager(),
+      terminal: new TerminalManager(),
+    },
+    EMPTY_KEYMAP,
+  );
   return { appearance, editor, commands, loader: new PluginLoader(appearance, commands) };
 }
 
@@ -472,5 +476,41 @@ describe('unload', () => {
     await unloaded;
 
     expect(events).toEqual(['enable started', 'enable finished', 'dispose']);
+  });
+});
+
+describe('pluginsQuery', () => {
+  test('returns none without bridge', async () => {
+    vi.stubGlobal('window', {});
+
+    await expect(new QueryClient().fetchQuery(pluginsQuery)).resolves.toEqual([]);
+  });
+
+  test("logs enabled plugin's unreadable themes and keymaps", async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const manifest = { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' };
+    const plugins = [
+      {
+        manifest,
+        enabled: true,
+        themes: [{ id: 'dusk', error: 'dusk.json is not JSON' }],
+        keymaps: [{ id: 'emacs', error: 'emacs.json is malformed' }],
+        url: '',
+      },
+      {
+        manifest: { ...manifest, id: 'io.other' },
+        enabled: false,
+        themes: [{ id: 'dawn', error: 'dawn.json is not JSON' }],
+        keymaps: [],
+        url: '',
+      },
+    ];
+    vi.stubGlobal('window', { bridge: { plugins: { load: async () => plugins } } });
+
+    await expect(new QueryClient().fetchQuery(pluginsQuery)).resolves.toEqual(plugins);
+    expect(error.mock.calls).toEqual([
+      ["Plugin io.example's theme dusk failed to load: dusk.json is not JSON"],
+      ["Plugin io.example's keymap emacs failed to load: emacs.json is malformed"],
+    ]);
   });
 });

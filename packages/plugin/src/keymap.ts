@@ -12,6 +12,7 @@ export type Key = z.infer<typeof Key>;
  *
  * See {@link DEFAULT_COMMANDS} for the built-in commands.
  */
+// TODO: Link the docs on bundling a keymap with a plugin, once they exist.
 export const Keymap = z.lazy(() =>
   z.object({
     /**

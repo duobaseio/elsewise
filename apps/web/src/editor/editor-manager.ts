@@ -9,7 +9,7 @@ import type {
   EditorToolbarItem,
 } from '@elsewise/plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { ContextMenuManager } from '@/command/context-menu-manager';
+import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { DiffManager } from '@/editor/diff/diff-manager';
 import { LanguageManager } from '@/editor/language-manager';

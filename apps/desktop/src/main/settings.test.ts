@@ -69,7 +69,7 @@ describe('settings:load', () => {
   });
 
   test('keeps valid leaves and fills the missing ones', () => {
-    write({ appearance: { general: { brightness: 'dark', theme: { source: 'elsewise', name: 'dracula' } } } });
+    write({ appearance: { general: { brightness: 'dark', theme: { source: 'elsewise', id: 'dracula' } } } });
 
     expect(load()).toEqual({
       ...DEFAULT_SETTINGS,
@@ -78,7 +78,7 @@ describe('settings:load', () => {
         general: {
           ...DEFAULT_SETTINGS.appearance.general,
           brightness: 'dark',
-          theme: { source: 'elsewise', name: 'dracula' },
+          theme: { source: 'elsewise', id: 'dracula' },
         },
       },
     });
@@ -138,13 +138,13 @@ describe('settings:load', () => {
   });
 
   test('lets the editor and terminal follow the interface theme or name their own', () => {
-    write({ appearance: { editor: { theme: { source: 'elsewise', name: 'dracula' } }, terminal: { theme: null } } });
+    write({ appearance: { editor: { theme: { source: 'elsewise', id: 'dracula' } }, terminal: { theme: null } } });
 
     expect(load()).toEqual({
       ...DEFAULT_SETTINGS,
       appearance: {
         ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, theme: { source: 'elsewise', name: 'dracula' } },
+        editor: { ...DEFAULT_SETTINGS.appearance.editor, theme: { source: 'elsewise', id: 'dracula' } },
       },
     });
 
@@ -154,23 +154,29 @@ describe('settings:load', () => {
     }
   });
 
-  test('keeps a theme a plugin provides and replaces a malformed theme', () => {
-    const theme = { source: 'plugin', plugin: 'com.acme.themes', name: 'nord' };
-    write({ appearance: { general: { theme } } });
-    expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
-      appearance: { ...DEFAULT_SETTINGS.appearance, general: { ...DEFAULT_SETTINGS.appearance.general, theme } },
-    });
+  test('keeps a theme the user or a plugin provides and replaces a malformed theme', () => {
+    for (const theme of [
+      { source: 'user', id: 'nord' },
+      { source: 'plugin', plugin: 'com.acme.themes', id: 'nord' },
+    ]) {
+      write({ appearance: { general: { theme } } });
+      expect(load()).toEqual({
+        ...DEFAULT_SETTINGS,
+        appearance: { ...DEFAULT_SETTINGS.appearance, general: { ...DEFAULT_SETTINGS.appearance.general, theme } },
+      });
+    }
 
     for (const bad of [
       'elsewise/elsewise',
-      { source: 'elsewise', name: '' },
-      { source: 'elsewise', name: 'nord' },
-      { source: 'acme', name: 'nord' },
-      { source: 'plugin', name: 'nord' },
-      { source: 'plugin', plugin: '../acme', name: 'nord' },
-      { source: 'elsewise', plugin: 'com.acme.themes', name: 'dracula' },
-      { source: 'elsewise', name: 'dracula', extra: 1 },
+      { source: 'elsewise', id: '' },
+      { source: 'elsewise', id: 'nord' },
+      { source: 'acme', id: 'nord' },
+      { source: 'plugin', id: 'nord' },
+      { source: 'plugin', plugin: '../acme', id: 'nord' },
+      { source: 'elsewise', plugin: 'com.acme.themes', id: 'dracula' },
+      { source: 'elsewise', id: 'dracula', extra: 1 },
+      { source: 'user', id: '' },
+      { source: 'user', plugin: 'com.acme.themes', id: 'nord' },
     ]) {
       write({ appearance: { general: { theme: bad } } });
       expect(load()).toEqual(DEFAULT_SETTINGS);
@@ -178,19 +184,23 @@ describe('settings:load', () => {
   });
 
   test('keeps valid keymap and replaces malformed one', () => {
-    expect(DEFAULT_SETTINGS.keymap).toEqual({ source: 'elsewise', name: 'elsewise' });
+    expect(DEFAULT_SETTINGS.keymap).toEqual({ source: 'elsewise', id: 'elsewise' });
 
-    const keymap = { source: 'plugin', plugin: 'io.example', name: 'Eclipse' };
-    write({ keymap });
-    expect(load()).toEqual({ ...DEFAULT_SETTINGS, keymap });
+    for (const keymap of [
+      { source: 'user', id: 'Eclipse' },
+      { source: 'plugin', plugin: 'io.example', id: 'Eclipse' },
+    ]) {
+      write({ keymap });
+      expect(load()).toEqual({ ...DEFAULT_SETTINGS, keymap });
+    }
 
     for (const bad of [
       'elsewise',
-      { source: 'elsewise', name: 'Eclipse' },
-      { source: 'user', name: 'Eclipse' },
-      { source: 'plugin', name: 'Eclipse' },
-      { source: 'plugin', plugin: 'io.example', name: '' },
-      { source: 'plugin', plugin: 'io.example', name: 'Eclipse', extra: 1 },
+      { source: 'elsewise', id: 'Eclipse' },
+      { source: 'user', id: '' },
+      { source: 'plugin', id: 'Eclipse' },
+      { source: 'plugin', plugin: 'io.example', id: '' },
+      { source: 'plugin', plugin: 'io.example', id: 'Eclipse', extra: 1 },
     ]) {
       write({ keymap: bad });
       expect(load()).toEqual(DEFAULT_SETTINGS);
@@ -280,7 +290,7 @@ describe('settings:load', () => {
 
   test('keeps valid terminal leaves and replaces bad ones', () => {
     const terminal = {
-      theme: { source: 'elsewise', name: 'dracula' },
+      theme: { source: 'elsewise', id: 'dracula' },
       font: { family: 'Iosevka', size: 16, lineHeight: 1.2, ligatures: false },
       cursorStyle: 'bar',
       cursorBlink: false,
@@ -437,6 +447,53 @@ describe('settings:save-plugin', () => {
 
   test.each(['', '..', '../other', 'a/b'])('throws for the id %j', (id) => {
     expect(() => handler('settings:save-plugin')({}, id, {})).toThrow(/invalid plugin id/);
+  });
+});
+
+describe.each([
+  {
+    kind: 'theme',
+    folder: 'themes',
+    content: { name: 'Dusk', dark: { interface: { background: '#1c2430' }, editor: {}, terminal: {} } },
+  },
+  { kind: 'keymap', folder: 'keymaps', content: { name: 'Emacs', keys: { 'io.example.rename': ['Ctrl-r'] } } },
+])('user $folder', ({ kind, folder, content }) => {
+  const load = () => handler(`settings:load-user-${folder}`)();
+  const save = (id: unknown, value: unknown) => handler(`settings:save-user-${kind}`)({}, id, value);
+  const del = (id: unknown) => handler(`settings:delete-user-${kind}`)({}, id);
+
+  test('returns none when the folder does not exist', () => {
+    expect(load()).toEqual([]);
+  });
+
+  test('saves, loads and deletes', () => {
+    save('dusk', content);
+    expect(JSON.parse(fs.readFileSync(path.join(configLocalDir(), folder, 'dusk.json'), 'utf8'))).toEqual(content);
+    expect(load()).toEqual([{ id: 'dusk', [kind]: content }]);
+
+    del('dusk');
+    expect(load()).toEqual([]);
+  });
+
+  test('ignores deleting a missing one', () => {
+    expect(() => del('dusk')).not.toThrow();
+  });
+
+  test('returns a file that is not JSON with why', () => {
+    fs.mkdirSync(path.join(configLocalDir(), folder), { recursive: true });
+    fs.writeFileSync(path.join(configLocalDir(), folder, 'dusk.json'), '{');
+
+    expect(load()).toEqual([{ id: 'dusk', error: expect.stringMatching(/dusk\.json is not JSON/) }]);
+  });
+
+  test('throws and writes nothing for a malformed value', () => {
+    expect(() => save('dusk', { name: '' })).toThrow();
+    expect(fs.existsSync(path.join(configLocalDir(), folder))).toBe(false);
+  });
+
+  test.each(['', '..', '../other', 'a/b', 'a\\b', '.hidden', 7, undefined])('throws for the id %j', (id) => {
+    expect(() => save(id, content)).toThrow(new RegExp(`invalid ${kind} id`));
+    expect(() => del(id)).toThrow(new RegExp(`invalid ${kind} id`));
   });
 });
 

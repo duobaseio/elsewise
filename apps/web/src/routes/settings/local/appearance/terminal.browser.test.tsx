@@ -17,7 +17,18 @@ afterEach(() => {
 async function mount() {
   const save = vi.fn(async () => {});
   window.bridge = {
-    settings: { load: async () => DEFAULT_SETTINGS, save, loadPlugin: async () => ({}), savePlugin: async () => {} },
+    settings: {
+      load: async () => DEFAULT_SETTINGS,
+      save,
+      loadPlugin: async () => ({}),
+      savePlugin: async () => {},
+      loadUserThemes: async () => [],
+      saveUserTheme: async () => {},
+      deleteUserTheme: async () => {},
+      loadUserKeymaps: async () => [],
+      saveUserKeymap: async () => {},
+      deleteUserKeymap: async () => {},
+    },
   };
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
@@ -59,7 +70,7 @@ describe('Terminal', () => {
     await userEvent.click(page.getByRole('option', { name: 'Dracula' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withTerminal({ theme: { source: 'elsewise', name: 'dracula' } }));
+    expect(save).toHaveBeenCalledWith(withTerminal({ theme: { source: 'elsewise', id: 'dracula' } }));
   });
 
   test('saves cursor style', async () => {
