@@ -5,7 +5,7 @@ import { describe, expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { OPEN_SETTINGS, settingsQuery, useEditorSettings } from '@/settings/settings';
-import { builtInCommands } from '../../test/commands';
+import { builtInApplication } from '../../test/commands';
 
 describe('useEditorSettings', () => {
   // Renders the setting `key` of `language` into the page.
@@ -44,7 +44,7 @@ describe('OPEN_SETTINGS', () => {
       routeTree: createRootRoute(),
       history: createMemoryHistory({ initialEntries: [pathname] }),
     });
-    const { application } = builtInCommands();
+    const application = builtInApplication();
 
     OPEN_SETTINGS.run({ ...application, router });
 

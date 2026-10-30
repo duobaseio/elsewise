@@ -1,6 +1,7 @@
 import type { ContextMenuGroup, Disposable, Terminal } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
 
@@ -65,16 +66,10 @@ export class TerminalManager implements Terminal {
   }
 }
 
-export const TerminalManagerContext = createContext<TerminalManager | null>(null);
-
 export function useTerminalManager(): TerminalManager;
 export function useTerminalManager<T>(select: (terminal: TerminalManager) => T): T;
 export function useTerminalManager<T>(select?: (terminal: TerminalManager) => T): TerminalManager | T {
-  const terminal = useContext(TerminalManagerContext);
-  if (terminal === null) {
-    throw new Error('Missing TerminalManagerContext');
-  }
-
+  const terminal = useApplicationManager().terminal;
   const subscribe = useCallback((listener: () => void) => terminal.subscribe(listener), [terminal]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? terminal : select(terminal)));
 }

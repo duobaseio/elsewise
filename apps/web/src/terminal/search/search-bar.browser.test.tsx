@@ -6,13 +6,13 @@ import { useEffect, useRef, useState } from 'react';
 import { describe, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
 import { settingsQuery } from '@/settings/settings';
 import { TerminalSearch } from '@/terminal/search/search-bar';
-import { builtInCommands } from '../../../test/commands';
 
 import '@xterm/xterm/css/xterm.css';
+import { ApplicationManagerContext } from '@/application-context';
+import { builtInApplication } from '../../../test/commands';
 
 const SETTINGS: Settings = {
   ...DEFAULT_SETTINGS,
@@ -24,7 +24,7 @@ const SETTINGS: Settings = {
 
 // Renders a bare terminal with the commands' keymap and its search. Returns the settings' client and the terminal.
 async function mount() {
-  const commands = builtInCommands();
+  const application = builtInApplication();
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
   let resolve!: (xterm: XTerm) => void;
@@ -32,7 +32,7 @@ async function mount() {
     resolve = r;
   });
   function Probe() {
-    const [keymap] = useState(() => terminalKeymap(commands));
+    const [keymap] = useState(() => terminalKeymap(application.commands));
     const [terminal, setTerminal] = useState<XTerm | null>(null);
     const host = useRef<HTMLDivElement>(null);
     useEffect(() => {
@@ -56,9 +56,9 @@ async function mount() {
   }
   await render(
     <QueryClientProvider client={client}>
-      <CommandManagerContext value={commands}>
+      <ApplicationManagerContext value={application}>
         <Probe />
-      </CommandManagerContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   return { client, xterm: await ready };

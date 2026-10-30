@@ -3,19 +3,8 @@ import { EditorView, keymap } from '@codemirror/view';
 import type { EditorCommand, TerminalCommand } from '@elsewise/plugin';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager } from '@/command/command-manager';
 import { editorKeymap, terminalKeymap } from '@/command/keymap/keymap';
-import { EditorManager } from '@/editor/editor-manager';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
-
-const APPEARANCE = new AppearanceManager(
-  'dark',
-  resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
-);
+import { builtInCommands } from '../../../test/commands';
 
 const views: EditorView[] = [];
 const terminals: XTerm[] = [];
@@ -31,16 +20,7 @@ afterEach(() => {
 
 // Opens an editor with the keys of `added`, which are added in order, above a keymap that binds Ctrl-k to `fallback`.
 function open(fallback: () => boolean, ...added: EditorCommand[]): EditorView {
-  const commands = new CommandManager(
-    {
-      appearance: APPEARANCE,
-      editor: new EditorManager(),
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const commands = builtInCommands();
   for (const command of added) {
     commands.add([command]);
   }
@@ -130,16 +110,7 @@ describe('editorKeymap', () => {
 
 // Opens a terminal with the keys of `added`, which are added in order. Returns it and what it sends to the shell.
 function openTerminal(...added: TerminalCommand[]) {
-  const commands = new CommandManager(
-    {
-      appearance: APPEARANCE,
-      editor: new EditorManager(),
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const commands = builtInCommands();
   for (const command of added) {
     commands.add([command]);
   }

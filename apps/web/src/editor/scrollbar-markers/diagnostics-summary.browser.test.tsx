@@ -8,14 +8,14 @@ import { useEffect, useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { diagnostics } from '@/editor/diagnostics';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { hover } from '@/editor/hover';
 import { METRICS } from '@/editor/theme';
 import { useToolbarExtension } from '@/editor/toolbar';
 import { settingsQuery } from '@/settings/settings';
-import { builtInCommands, commandsExtension } from '../../../test/commands';
+import { builtInApplication, commandsExtension } from '../../../test/commands';
 
 const DOC = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
 
@@ -30,7 +30,7 @@ function mount(
     resolve = r;
   });
   const editor = new EditorManager();
-  const commands = builtInCommands(editor);
+  const application = builtInApplication({ editor });
   client.setQueryData(settingsQuery.queryKey, settings);
   function Probe() {
     const { toolbar, portal } = useToolbarExtension();
@@ -44,7 +44,7 @@ function mount(
             METRICS,
             diagnostics,
             hover(),
-            commandsExtension(commands),
+            commandsExtension(application.commands),
             EditorView.theme({ '&': { height: '200px' } }),
             extensions,
           ],
@@ -63,11 +63,9 @@ function mount(
   }
   render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <Probe />
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <Probe />
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   return ready;

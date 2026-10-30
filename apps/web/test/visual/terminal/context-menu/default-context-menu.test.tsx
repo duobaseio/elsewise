@@ -2,10 +2,10 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
-import { builtInCommands } from '../../../commands';
+import { builtInApplication } from '../../../commands';
 
 import { THEMES } from '../../../sheet';
 
@@ -18,8 +18,9 @@ test.each(THEMES)('terminal context menu (%s)', async (theme) => {
   onTestFinished(() => {
     delete document.documentElement.dataset.brightness;
   });
+  const application = builtInApplication();
   render(
-    <CommandManagerContext value={builtInCommands()}>
+    <ApplicationManagerContext value={application}>
       <div
         className="bg-background font-sans text-foreground"
         data-brightness={theme}
@@ -30,7 +31,7 @@ test.each(THEMES)('terminal context menu (%s)', async (theme) => {
           <div className="size-full" data-testid="target" />
         </CommandContextMenu>
       </div>
-    </CommandManagerContext>,
+    </ApplicationManagerContext>,
   );
 
   await userEvent.click(page.getByTestId('target'), { button: 'right', position: { x: 8, y: 8 } });

@@ -17,17 +17,13 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
-import { COMMANDS, EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../test/commands';
+import { builtInApplication } from '../../test/commands';
 import { StubTransport } from '../../test/stub-transport';
 
 const { EDITOR } = vi.hoisted(() => ({
@@ -72,35 +68,21 @@ async function mountEditor(
   editor = new EditorManager(),
   root?: URL,
 ): Promise<EditorView> {
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(
-        'light',
-        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
-      ),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({ editor });
   const screen = await render(
     shell(
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={new LanguageServers(editor)}>
-            <div style={{ height: 300 }}>
-              <Editor
-                content={{ label: 'Current', code }}
-                relativePath={path}
-                root={root}
-                diff={new DiffState(null, 'unified')}
-              />
-            </div>
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>,
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
+          <div style={{ height: 300 }}>
+            <Editor
+              content={{ label: 'Current', code }}
+              relativePath={path}
+              root={root}
+              diff={new DiffState(null, 'unified')}
+            />
+          </div>
+        </LanguageServersContext>
+      </ApplicationManagerContext>,
     ),
   );
   await expect.element(screen.getByText(code.split('\n')[0])).toBeVisible();
@@ -184,30 +166,17 @@ function diffSourceOf(id: string, base: string | Promise<string>): EditorDiffSou
 // and the base side's editor.
 async function mountDiff(source: string | null, layout: DiffLayout, editor = new EditorManager()) {
   const diff = new DiffState(source, layout);
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(
-        'light',
-        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
-      ),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   const screen = await render(
     shell(
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={new LanguageServers(editor)}>
-            <div style={{ height: 300 }}>
-              <Editor content={{ label: 'Current', code: CODE }} relativePath="main.txt" diff={diff} />
-            </div>
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>,
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
+          <div style={{ height: 300 }}>
+            <Editor content={{ label: 'Current', code: CODE }} relativePath="main.txt" diff={diff} />
+          </div>
+        </LanguageServersContext>
+      </ApplicationManagerContext>,
     ),
   );
   await expect.element(screen.getByText('alpha').first()).toBeVisible();

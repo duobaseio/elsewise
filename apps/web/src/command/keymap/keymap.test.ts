@@ -4,9 +4,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager } from '@/command/command-manager';
 import elsewise from '@/command/keymap/bundled/elsewise.json';
 import {
   installApplicationKeys,
@@ -15,16 +12,8 @@ import {
   useLoadedKeymaps,
   userKeymapsQuery,
 } from '@/command/keymap/keymap';
-import { EditorManager } from '@/editor/editor-manager';
 import { pluginsQuery } from '@/plugins/loader';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
-
-const APPEARANCE = new AppearanceManager(
-  'dark',
-  resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
-);
+import { builtInCommands } from '../../../test/commands';
 
 const ELSEWISE: LoadedKeymap = { id: { source: 'elsewise', id: 'elsewise' }, keymap: Keymap.parse(elsewise) };
 
@@ -69,16 +58,7 @@ function keymaps(
 // Returns a window with application keys installed for `added`, which are added in order.
 function install(...added: ApplicationCommand[]) {
   const window = new EventTarget() as Window;
-  const commands = new CommandManager(
-    {
-      appearance: APPEARANCE,
-      editor: new EditorManager(),
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const commands = builtInCommands();
   for (const command of added) {
     commands.add([command]);
   }
@@ -153,16 +133,7 @@ describe('installApplicationKeys', () => {
     const run = vi.fn(() => true);
     const window = new EventTarget() as Window;
     window.addEventListener('keydown', (event) => event.preventDefault());
-    const commands = new CommandManager(
-      {
-        appearance: APPEARANCE,
-        editor: new EditorManager(),
-        router: memoryRouter(),
-        settings: new SettingsPanelManager(),
-        terminal: new TerminalManager(),
-      },
-      EMPTY_KEYMAP,
-    );
+    const commands = builtInCommands();
     commands.add([command('a', run)]);
     installApplicationKeys(window, commands);
     window.dispatchEvent(press());

@@ -3,18 +3,10 @@ import type { Platform } from '@elsewise/components/lib/platform';
 import type { EditorCommand, Keys, TerminalCommand } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager } from '@/command/command-manager';
+import type { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../test/commands';
-
-const APPEARANCE = new AppearanceManager(
-  'dark',
-  resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
-);
+import { builtInApplication, EMPTY_KEYMAP } from '../../test/commands';
 
 // Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
 function commands(
@@ -22,17 +14,7 @@ function commands(
   platform: Platform = 'linux',
   terminals = new TerminalManager(),
 ): CommandManager {
-  return new CommandManager(
-    {
-      appearance: APPEARANCE,
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: terminals,
-    },
-    EMPTY_KEYMAP,
-    platform,
-  );
+  return builtInApplication({ editor, terminal: terminals }, platform).commands;
 }
 
 // Returns commands on `platform` with an editor command for each id in `keys`, with those default keys, added in order.

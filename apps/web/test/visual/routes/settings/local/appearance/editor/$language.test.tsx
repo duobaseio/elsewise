@@ -6,14 +6,13 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { Language } from '@/routes/settings/local/appearance/editor/$language';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager, SettingsPanelManagerContext } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../../../../commands';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { builtInApplication } from '../../../../../../commands';
 
 import { THEMES } from '../../../../../../sheet';
 
@@ -38,16 +37,11 @@ async function mount(
   });
   const editor = new EditorManager();
   const settings = new SettingsPanelManager();
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
-      editor,
-      router: memoryRouter(),
-      settings,
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({
+    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+    editor,
+    settings,
+  });
   const router = createRouter({
     routeTree: createRootRoute({
       component: () => (
@@ -65,15 +59,11 @@ async function mount(
   });
   await render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <SettingsPanelManagerContext value={settings}>
-            <LanguageServersContext value={new LanguageServers(editor)}>
-              <RouterProvider router={router} />
-            </LanguageServersContext>
-          </SettingsPanelManagerContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
+          <RouterProvider router={router} />
+        </LanguageServersContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   await expect.element(page.getByRole('heading', { name: label })).toBeVisible();

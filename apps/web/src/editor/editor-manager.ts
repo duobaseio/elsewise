@@ -8,7 +8,8 @@ import type {
   EditorDocument,
   EditorToolbarItem,
 } from '@elsewise/plugin';
-import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { DiffManager } from '@/editor/diff/diff-manager';
@@ -126,19 +127,13 @@ export class EditorManager implements Editor {
   }
 }
 
-export const EditorManagerContext = createContext<EditorManager | null>(null);
-
 /**
  * Returns the code editor as plugins see it.
  */
 export function useEditorManager(): EditorManager;
 export function useEditorManager<T>(select: (editor: EditorManager) => T): T;
 export function useEditorManager<T>(select?: (editor: EditorManager) => T): EditorManager | T {
-  const editor = useContext(EditorManagerContext);
-  if (editor === null) {
-    throw new Error('Missing EditorManagerContext');
-  }
-
+  const editor = useApplicationManager().editor;
   const subscribe = useCallback((listener: () => void) => editor.subscribe(listener), [editor]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? editor : select(editor)));
 }

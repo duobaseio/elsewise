@@ -8,18 +8,18 @@ import { useEffect, useRef } from 'react';
 import { expect } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu/context-menu';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
-import { builtInCommands } from './commands';
+import { EditorManager } from '@/editor/editor-manager';
+import { builtInApplication } from './commands';
 
 /** The Rust document that `mount` opens. */
 export const DOC = 'fn main() {\n    let a = 1;\n}\n';
 
-/** Returns a view of `DOC` in Rust with the context menu of `editor` and `commands`, and `extensions`. */
+/** Returns a view of `DOC` in Rust with the context menu of `editor` and `application`, and `extensions`. */
 export async function mount(
   editor = new EditorManager(),
-  commands = builtInCommands(editor),
+  application = builtInApplication({ editor }),
   extensions: Extension = [],
 ): Promise<EditorView> {
   const rust = await (LanguageDescription.matchFilename(languages, 'main.rs') as LanguageDescription).load();
@@ -42,13 +42,11 @@ export async function mount(
       return () => view.current?.destroy();
     }, []);
     return (
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <EditorContextMenu view={view}>
-            <div ref={host} />
-          </EditorContextMenu>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <EditorContextMenu view={view}>
+          <div ref={host} />
+        </EditorContextMenu>
+      </ApplicationManagerContext>
     );
   }
   render(<Probe />);

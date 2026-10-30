@@ -7,16 +7,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import { UnifiedLayout, type UnifiedLayoutProps } from '@/editor/layouts/unified-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
+import { builtInApplication } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -31,40 +27,27 @@ const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT],
 async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(
-        'light',
-        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
-      ),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   const servers = new LanguageServers(editor);
   const session = { current: null };
   const tree = (next: Partial<UnifiedLayoutProps>) => (
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={servers}>
-            <div style={{ height: 300 }}>
-              <UnifiedLayout
-                source={{ type: 'workingTree' }}
-                relativePath="main.txt"
-                code={CODE}
-                base={null}
-                extensions={[]}
-                session={session}
-                {...next}
-              />
-            </div>
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={servers}>
+          <div style={{ height: 300 }}>
+            <UnifiedLayout
+              source={{ type: 'workingTree' }}
+              relativePath="main.txt"
+              code={CODE}
+              base={null}
+              extensions={[]}
+              session={session}
+              {...next}
+            />
+          </div>
+        </LanguageServersContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>
   );
   const screen = await render(tree(props));

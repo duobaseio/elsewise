@@ -6,7 +6,8 @@ import {
   type Settings,
   type SettingsLanguagePreview,
 } from '@elsewise/plugin';
-import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { LANGUAGES } from '@/settings/languages';
 
 const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
@@ -143,19 +144,13 @@ export class SettingsPanelManager implements Settings {
   }
 }
 
-export const SettingsPanelManagerContext = createContext<SettingsPanelManager | null>(null);
-
 /**
  * Returns the settings as plugins see them.
  */
 export function useSettingsPanels(): SettingsPanelManager;
 export function useSettingsPanels<T>(select: (settings: SettingsPanelManager) => T): T;
 export function useSettingsPanels<T>(select?: (settings: SettingsPanelManager) => T): SettingsPanelManager | T {
-  const settings = useContext(SettingsPanelManagerContext);
-  if (settings === null) {
-    throw new Error('Missing SettingsPanelManagerContext');
-  }
-
+  const settings = useApplicationManager().settings;
   const subscribe = useCallback((listener: () => void) => settings.subscribe(listener), [settings]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? settings : select(settings)));
 }

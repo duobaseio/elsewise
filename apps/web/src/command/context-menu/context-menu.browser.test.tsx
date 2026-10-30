@@ -5,23 +5,24 @@ import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { type CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu/context-menu';
-import { builtInCommands } from '../../../test/commands';
+import { builtInApplication } from '../../../test/commands';
 import { group, item, labels, menuitem, submenu } from '../../../test/context-menu';
 
-// Shows `menu` with `commands` and the `rest` of the props, over a target that `open` right-clicks.
+// Shows `menu` with `application` and the `rest` of the props, over a target that `open` right-clicks.
 async function mount(
   menu: readonly ContextMenuGroup[],
-  commands: CommandManager,
+  application: ApplicationManager,
   rest: Partial<CommandContextMenuProps> = {},
 ): Promise<void> {
   await render(
-    <CommandManagerContext value={commands}>
+    <ApplicationManagerContext value={application}>
       <CommandContextMenu menu={menu} {...rest}>
         <div data-testid="target" style={{ width: 200, height: 100 }} />
       </CommandContextMenu>
-    </CommandManagerContext>,
+    </ApplicationManagerContext>,
   );
 }
 
@@ -34,11 +35,11 @@ function command(
   return { scope: 'application', id, label: id, run, ...rest };
 }
 
-// Returns commands that include `added`.
-function setUp(added: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): CommandManager {
-  const commands = builtInCommands();
-  commands.add(added);
-  return commands;
+// Returns an application whose commands include `added`.
+function setUp(added: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): ApplicationManager {
+  const application = builtInApplication();
+  application.commands.add(added);
+  return application;
 }
 
 async function open(): Promise<void> {
@@ -48,14 +49,14 @@ async function open(): Promise<void> {
 
 describe('CommandContextMenu', () => {
   test('sorts groups by order then id, and items by order then label', async () => {
-    const commands = setUp(['Top', 'First', 'Second', 'Apple', 'Zebra', 'Last'].map((id) => command(id)));
+    const application = setUp(['Top', 'First', 'Second', 'Apple', 'Zebra', 'Last'].map((id) => command(id)));
     await mount(
       [
         group('c', [item('Last')], 30),
         group('b', [item('Second', 20), item('First', 10), item('Zebra', 30), item('Apple', 30)], 30),
         group('top', [item('Top')], 0),
       ],
-      commands,
+      application,
     );
 
     await open();
@@ -63,10 +64,10 @@ describe('CommandContextMenu', () => {
   });
 
   test('shows groups and items without order last', async () => {
-    const commands = setUp(['First', 'Apple', 'Zebra', 'Last'].map((id) => command(id)));
+    const application = setUp(['First', 'Apple', 'Zebra', 'Last'].map((id) => command(id)));
     await mount(
       [group('a', [item('Last')]), group('b', [item('Zebra'), item('Apple'), item('First', 10)], 30)],
-      commands,
+      application,
     );
 
     await open();
@@ -74,8 +75,8 @@ describe('CommandContextMenu', () => {
   });
 
   test('shows command label and first key', async () => {
-    const commands = setUp([command('a.rename', () => true, { label: 'Rename…', defaultKeys: ['Shift-F6', 'F2'] })]);
-    await mount([group('a', [item('a.rename')])], commands);
+    const application = setUp([command('a.rename', () => true, { label: 'Rename…', defaultKeys: ['Shift-F6', 'F2'] })]);
+    await mount([group('a', [item('a.rename')])], application);
 
     await open();
     await expect.element(menuitem('Rename…')).toHaveTextContent(`Rename…${formatKey('Shift-F6')}`);
@@ -83,13 +84,13 @@ describe('CommandContextMenu', () => {
 
   test('calls onClosed before running item', async () => {
     const events: string[] = [];
-    const commands = setUp([
+    const application = setUp([
       command('Item', () => {
         events.push('run');
         return true;
       }),
     ]);
-    await mount([group('a', [item('Item')])], commands, { onClosed: () => events.push('closed') });
+    await mount([group('a', [item('Item')])], application, { onClosed: () => events.push('closed') });
 
     await open();
     await userEvent.click(menuitem('Item'));
@@ -97,8 +98,8 @@ describe('CommandContextMenu', () => {
   });
 
   test('hides editor command without view', async () => {
-    const commands = setUp([{ scope: 'editor', id: 'Editor', label: 'Editor', run: () => true }, command('Other')]);
-    await mount([group('a', [item('Editor'), item('Other')])], commands);
+    const application = setUp([{ scope: 'editor', id: 'Editor', label: 'Editor', run: () => true }, command('Other')]);
+    await mount([group('a', [item('Editor'), item('Other')])], application);
 
     await open();
     expect(labels()).toEqual(['Other']);
@@ -108,11 +109,11 @@ describe('CommandContextMenu', () => {
     ['editor', { state: {} } as unknown as EditorView, 'Editor'],
     ['terminal', { buffer: {} } as unknown as XTerm, 'Terminal'],
   ])('shows commands of %s target only', async (_, target, shown) => {
-    const commands = setUp([
+    const application = setUp([
       { scope: 'editor', id: 'Editor', label: 'Editor', run: () => true },
       { scope: 'terminal', id: 'Terminal', label: 'Terminal', run: () => true },
     ]);
-    await mount([group('a', [item('Editor'), item('Terminal')])], commands, { target: { current: target } });
+    await mount([group('a', [item('Editor'), item('Terminal')])], application, { target: { current: target } });
 
     await open();
     expect(labels()).toEqual([shown]);
@@ -121,8 +122,8 @@ describe('CommandContextMenu', () => {
   test('hides item of hidden or unknown command', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     let shown = true;
-    const commands = setUp([command('Item', () => true, { shown: () => shown }), command('Other')]);
-    await mount([group('a', [item('Item'), item('Unknown'), item('Other')])], commands);
+    const application = setUp([command('Item', () => true, { shown: () => shown }), command('Other')]);
+    await mount([group('a', [item('Item'), item('Unknown'), item('Other')])], application);
 
     await open();
     expect(labels()).toEqual(['Item', 'Other']);
@@ -135,8 +136,8 @@ describe('CommandContextMenu', () => {
   });
 
   test('disables item of disabled command', async () => {
-    const commands = setUp([command('Item', () => true, { enabled: () => false })]);
-    await mount([group('a', [item('Item')])], commands);
+    const application = setUp([command('Item', () => true, { enabled: () => false })]);
+    await mount([group('a', [item('Item')])], application);
 
     await open();
     await expect.element(menuitem('Item')).toHaveAttribute('aria-disabled', 'true');
@@ -144,7 +145,7 @@ describe('CommandContextMenu', () => {
 
   test('hides item of command throwing in shown', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const commands = setUp([
+    const application = setUp([
       command('Broken', () => true, {
         shown: () => {
           throw new Error('nope');
@@ -152,7 +153,7 @@ describe('CommandContextMenu', () => {
       }),
       command('Other'),
     ]);
-    await mount([group('a', [item('Broken'), item('Other')])], commands);
+    await mount([group('a', [item('Broken'), item('Other')])], application);
 
     await open();
     expect(labels()).toEqual(['Other']);
@@ -160,7 +161,7 @@ describe('CommandContextMenu', () => {
   });
 
   test('places command and submenu once per group', async () => {
-    const commands = setUp([command('Item'), command('Other')]);
+    const application = setUp([command('Item'), command('Other')]);
     await mount(
       [
         group(
@@ -171,7 +172,7 @@ describe('CommandContextMenu', () => {
         group('b', [item('Item')], 10),
         group('inner', [item('Other')], 0, 'more'),
       ],
-      commands,
+      application,
     );
 
     await open();
@@ -180,8 +181,8 @@ describe('CommandContextMenu', () => {
   });
 
   test('stays closed with nothing to show', async () => {
-    const commands = setUp([command('Item', () => true, { shown: () => false })]);
-    await mount([group('a', [item('Item')])], commands);
+    const application = setUp([command('Item', () => true, { shown: () => false })]);
+    await mount([group('a', [item('Item')])], application);
 
     await userEvent.click(page.getByTestId('target'), { button: 'right' });
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -189,14 +190,14 @@ describe('CommandContextMenu', () => {
   });
 
   test('returns focus to trigger without onClosed', async () => {
-    const commands = setUp([command('Item')]);
+    const application = setUp([command('Item')]);
     await render(
-      <CommandManagerContext value={commands}>
+      <ApplicationManagerContext value={application}>
         <CommandContextMenu menu={[group('a', [item('Item')])]}>
           {/* biome-ignore lint/a11y/noNoninteractiveTabindex: a target that can take the focus back. */}
           <div data-testid="target" style={{ width: 200, height: 100 }} tabIndex={0} />
         </CommandContextMenu>
-      </CommandManagerContext>,
+      </ApplicationManagerContext>,
     );
     await userEvent.click(page.getByTestId('target'));
     await open();
@@ -208,32 +209,32 @@ describe('CommandContextMenu', () => {
 
   test('runs item in nested submenu', async () => {
     const run = vi.fn();
-    const commands = setUp([command('Nested item', run)]);
+    const application = setUp([command('Nested item', run)]);
     await mount(
       [
         group('plugin', [submenu('more', 'More')]),
         group('inner', [submenu('deeper', 'Deeper')], 0, 'more'),
         group('innermost', [item('Nested item')], 0, 'deeper'),
       ],
-      commands,
+      application,
     );
 
     await open();
     await userEvent.click(menuitem('More'));
     await userEvent.click(menuitem('Deeper'));
     await userEvent.click(menuitem('Nested item'));
-    await vi.waitFor(() => expect(run).toHaveBeenCalledWith(commands.application));
+    await vi.waitFor(() => expect(run).toHaveBeenCalledWith(application));
   });
 
   test('shows submenu in several groups, with own labels', async () => {
-    const commands = setUp([command('Item')]);
+    const application = setUp([command('Item')]);
     await mount(
       [
         group('a', [submenu('more', 'More')], 0),
         group('b', [submenu('more', 'Other')], 10),
         group('inner', [item('Item')], 0, 'more'),
       ],
-      commands,
+      application,
     );
 
     await open();
@@ -243,14 +244,14 @@ describe('CommandContextMenu', () => {
   });
 
   test('hides submenu with nothing shown, without groups or inside itself', async () => {
-    const commands = setUp([command('Hidden item', () => true, { shown: () => false }), command('Item')]);
+    const application = setUp([command('Hidden item', () => true, { shown: () => false }), command('Item')]);
     await mount(
       [
         group('plugin', [submenu('empty', 'Empty'), submenu('none', 'None'), submenu('loop', 'Loop'), item('Item')]),
         group('inner', [item('Hidden item')], 0, 'empty'),
         group('x', [item('Item'), submenu('loop', 'Loop')], 0, 'loop'),
       ],
-      commands,
+      application,
     );
 
     await open();
@@ -263,12 +264,12 @@ describe('CommandContextMenu', () => {
   });
 
   test('ticks active command', async () => {
-    const commands = setUp([
+    const application = setUp([
       command('On', () => true, { active: () => true }),
       command('Off', () => true, { active: () => false }),
       command('Plain'),
     ]);
-    await mount([group('a', [item('On'), item('Off'), item('Plain')])], commands);
+    await mount([group('a', [item('On'), item('Off'), item('Plain')])], application);
 
     await open();
     await expect.element(menuitem('On')).toHaveAttribute('aria-checked', 'true');
@@ -280,8 +281,8 @@ describe('CommandContextMenu', () => {
   test('runs active item and closes', async () => {
     const run = vi.fn(() => true);
     const onClosed = vi.fn();
-    const commands = setUp([command('Item', run, { active: () => true })]);
-    await mount([group('a', [item('Item')])], commands, { onClosed });
+    const application = setUp([command('Item', run, { active: () => true })]);
+    await mount([group('a', [item('Item')])], application, { onClosed });
 
     await open();
     await userEvent.click(menuitem('Item'));

@@ -5,12 +5,11 @@ import { createRef } from 'react';
 import { expect, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
-import { EditorManager } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { settingsQuery } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
-import { TerminalManager, TerminalManagerContext } from '@/terminal/terminal-manager';
-import { builtInCommands } from './commands';
+import { TerminalManager } from '@/terminal/terminal-manager';
+import { builtInApplication } from './commands';
 
 export const SETTINGS: Settings = {
   ...DEFAULT_SETTINGS,
@@ -39,17 +38,16 @@ export async function mount(fake: ITerminalAddon, settings = SETTINGS, preview =
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
   const terminals = new TerminalManager();
-  const commands = builtInCommands(new EditorManager(), terminals);
+  const application = builtInApplication({ terminal: terminals });
+  const commands = application.commands;
   const ref = createRef<XTerm | null>();
   const screen = await render(
     <QueryClientProvider client={client}>
-      <TerminalManagerContext value={terminals}>
-        <CommandManagerContext value={commands}>
-          <div data-testid="frame" style={{ height: 300, width: 600 }}>
-            <Terminal ref={ref} session={fake} preview={preview} />
-          </div>
-        </CommandManagerContext>
-      </TerminalManagerContext>
+      <ApplicationManagerContext value={application}>
+        <div data-testid="frame" style={{ height: 300, width: 600 }}>
+          <Terminal ref={ref} session={fake} preview={preview} />
+        </div>
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => ref.current).not.toBeNull();

@@ -5,10 +5,9 @@ import { expect, onTestFinished, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { SearchBar } from '@/terminal/search/search-bar';
-import { builtInCommands } from '../../../commands';
-
+import { builtInApplication } from '../../../commands';
 import { THEMES } from '../../../sheet';
 
 test.each(THEMES)('terminal search bar (%s)', async (theme) => {
@@ -33,7 +32,7 @@ test.each(THEMES)('terminal search bar (%s)', async (theme) => {
       data-testid="sheet"
       style={{ width: 560, height: 96, background, color: foreground }}
     >
-      <CommandManagerContext value={builtInCommands()}>
+      <ApplicationManagerContext value={builtInApplication()}>
         <SearchBar
           decorations={{ matchOverviewRuler: '#000000', activeMatchColorOverviewRuler: '#000000' }}
           field={createRef()}
@@ -42,7 +41,7 @@ test.each(THEMES)('terminal search bar (%s)', async (theme) => {
           onClose={() => {}}
           search={search}
         />
-      </CommandManagerContext>
+      </ApplicationManagerContext>
     </div>,
   );
   await expect.element(page.getByRole('status')).toHaveTextContent('1/3');

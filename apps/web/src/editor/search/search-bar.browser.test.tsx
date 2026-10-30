@@ -7,15 +7,15 @@ import { useEffect, useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { diagnostics } from '@/editor/diagnostics';
 import { scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
 import { useSearchExtension } from '@/editor/search/search-bar';
-import { builtInCommands, commandsExtension } from '../../../test/commands';
+import { builtInApplication, commandsExtension } from '../../../test/commands';
 
 const DOC = 'let a = 1;\nlet b = 2;\nLet c = 3;\nletter\n';
 
-function mount(extensions: Extension[] = [], commands = builtInCommands()): Promise<EditorView> {
+function mount(extensions: Extension[] = [], application = builtInApplication()): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
@@ -27,7 +27,7 @@ function mount(extensions: Extension[] = [], commands = builtInCommands()): Prom
       const created = new EditorView({
         state: EditorState.create({
           doc: DOC,
-          extensions: [search, commandsExtension(commands), keymap.of(standardKeymap), ...extensions],
+          extensions: [search, commandsExtension(application.commands), keymap.of(standardKeymap), ...extensions],
         }),
         parent: host.current as HTMLDivElement,
       });
@@ -35,10 +35,10 @@ function mount(extensions: Extension[] = [], commands = builtInCommands()): Prom
       return () => created.destroy();
     }, [search]);
     return (
-      <CommandManagerContext value={commands}>
+      <ApplicationManagerContext value={application}>
         <div ref={host} />
         {portal}
-      </CommandManagerContext>
+      </ApplicationManagerContext>
     );
   }
   render(<Probe />);
@@ -283,10 +283,10 @@ describe('SearchBar', () => {
   });
 
   test('shows selected keymap key on toggle replace', async () => {
-    const commands = builtInCommands();
-    const view = await mount([], commands);
+    const application = builtInApplication();
+    const view = await mount([], application);
     openSearchPanel(view);
-    commands.selected = { name: 'Test', keys: { [DEFAULT_COMMANDS.editor.search.replace]: ['Mod-e'] } };
+    application.commands.selected = { name: 'Test', keys: { [DEFAULT_COMMANDS.editor.search.replace]: ['Mod-e'] } };
 
     await userEvent.hover(page.getByRole('button', { name: 'Toggle replace' }));
     await expect.element(page.getByText('⌘E'), { timeout: 2000 }).toBeVisible();

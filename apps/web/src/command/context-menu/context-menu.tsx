@@ -12,9 +12,10 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { ContextMenuGroup } from '@elsewise/plugin';
+import type { Application, ContextMenuGroup } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { type CommandManager, isTerminal, useCommandManager } from '@/command/command-manager';
 
 export interface CommandContextMenuProps {
@@ -64,6 +65,7 @@ type Entry =
 
 export function CommandContextMenu({ menu, target, opens, onClosed, className, children }: CommandContextMenuProps) {
   const [groups, setGroups] = useState<readonly Group[]>([]);
+  const application = useApplicationManager();
   const commands = useCommandManager();
   const clicked = useRef<(() => void) | null>(null);
   const refocused = useRef(false);
@@ -80,7 +82,7 @@ export function CommandContextMenu({ menu, target, opens, onClosed, className, c
     }
 
     refocused.current = false;
-    const resolved = resolve(menu, commands, target?.current ?? null, []);
+    const resolved = resolve(menu, application, commands, target?.current ?? null, []);
     if (resolved.length === 0) {
       details.cancel();
       return;
@@ -121,6 +123,7 @@ export function CommandContextMenu({ menu, target, opens, onClosed, className, c
 // submenu ids from the menu down, so a submenu inside itself is skipped. A command or submenu is placed once per group.
 function resolve(
   menu: readonly ContextMenuGroup[],
+  application: Application,
   commands: CommandManager,
   target: EditorView | XTerm | null,
   path: readonly string[],
@@ -148,7 +151,7 @@ function resolve(
           continue;
         }
 
-        const inner = resolve(menu, commands, target, [...path, item.submenu]);
+        const inner = resolve(menu, application, commands, target, [...path, item.submenu]);
         if (inner.length > 0) {
           entries.push({
             type: 'submenu',
@@ -171,17 +174,17 @@ function resolve(
         let enabled: boolean | undefined;
         let active: boolean | undefined;
         if (command.scope === 'application') {
-          shown = command.shown?.(commands.application);
-          enabled = command.enabled?.(commands.application);
-          active = command.active?.(commands.application);
+          shown = command.shown?.(application);
+          enabled = command.enabled?.(application);
+          active = command.active?.(application);
         } else if (command.scope === 'editor' && target !== null && !isTerminal(target)) {
-          shown = command.shown?.(commands.application, target);
-          enabled = command.enabled?.(commands.application, target);
-          active = command.active?.(commands.application, target);
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
         } else if (command.scope === 'terminal' && target !== null && isTerminal(target)) {
-          shown = command.shown?.(commands.application, target);
-          enabled = command.enabled?.(commands.application, target);
-          active = command.active?.(commands.application, target);
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
         } else {
           continue;
         }

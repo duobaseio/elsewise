@@ -5,6 +5,7 @@ import { Toggle } from '@elsewise/components/components/toggle';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { type RefObject, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import type { DiffState } from '@/editor/diff/diff';
 import { DiffSourceMenu } from '@/editor/diff/diff-source-menu';
@@ -42,6 +43,7 @@ export interface DiffHeaderProps {
 }
 
 export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
+  const application = useApplicationManager();
   const commands = useCommandManager();
   const subscribe = useCallback((listener: () => void) => diff.subscribe(listener), [diff]);
   const layout = useSyncExternalStore(subscribe, () => diff.layout);
@@ -59,11 +61,11 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
           }
 
           try {
-            if (command.shown?.(commands.application, editor) !== false) {
+            if (command.shown?.(application, editor) !== false) {
               next.set(id, {
                 label: command.label,
-                enabled: command.enabled?.(commands.application, editor) !== false,
-                active: command.active?.(commands.application, editor),
+                enabled: command.enabled?.(application, editor) !== false,
+                active: command.active?.(application, editor),
               });
             }
           } catch (error) {
@@ -88,7 +90,7 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
     return () => {
       unsubscribe();
     };
-  }, [commands, view, diff]);
+  }, [application, commands, view, diff]);
 
   // Runs the command with `id` in the target, which keeps the focus.
   const run = (id: string) => {

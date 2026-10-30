@@ -17,10 +17,9 @@ import { type RefObject, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import {
   applyPlugins,
   type EditorSource,
@@ -32,9 +31,7 @@ import {
 } from '@/editor/layouts/layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
+import { builtInApplication } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const BASE: EditorDocumentLayout = { type: 'split', side: 'base' };
@@ -107,41 +104,28 @@ async function mount(
 ) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(
-        'light',
-        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
-      ),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   let setSource: (source: EditorSource) => void = () => {};
   let setCode: (code: string) => void = () => {};
   const screen = await render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={new LanguageServers(editor)}>
-            <Layout
-              initialSource={type === 'workingTree' ? { type, root } : { type }}
-              relativePath={relativePath}
-              layout={layout}
-              initialCode={code}
-              onSource={(set) => {
-                setSource = set;
-              }}
-              onCode={(set) => {
-                setCode = set;
-              }}
-            />
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
+          <Layout
+            initialSource={type === 'workingTree' ? { type, root } : { type }}
+            relativePath={relativePath}
+            layout={layout}
+            initialCode={code}
+            onSource={(set) => {
+              setSource = set;
+            }}
+            onCode={(set) => {
+              setCode = set;
+            }}
+          />
+        </LanguageServersContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   const view = () => {
@@ -755,15 +739,16 @@ function Language({
 // Renders `useLanguage` for `path`, and returns its latest result and a way to change the path.
 async function mountLanguage(editor: EditorManager, path: string) {
   let latest: ReturnType<typeof useLanguage> | undefined;
+  const application = builtInApplication({ editor });
   const ui = (path: string) => (
-    <EditorManagerContext value={editor}>
+    <ApplicationManagerContext value={application}>
       <Language
         path={path}
         onLanguage={(language) => {
           latest = language;
         }}
       />
-    </EditorManagerContext>
+    </ApplicationManagerContext>
   );
   const screen = await render(ui(path));
   return { latest: () => latest, path: (path: string) => screen.rerender(ui(path)) };
@@ -870,7 +855,7 @@ function Plugins({
 async function pluginValues(editor: EditorManager, document: EditorDocument | null): Promise<readonly string[]> {
   let latest: Extension = [];
   await render(
-    <EditorManagerContext value={editor}>
+    <ApplicationManagerContext value={builtInApplication({ editor })}>
       <Plugins
         view={{ current: null }}
         document={document}
@@ -878,7 +863,7 @@ async function pluginValues(editor: EditorManager, document: EditorDocument | nu
           latest = plugins;
         }}
       />
-    </EditorManagerContext>,
+    </ApplicationManagerContext>,
   );
   return EditorState.create({ extensions: latest }).facet(VALUES);
 }
@@ -924,9 +909,9 @@ describe('usePlugins', () => {
     const editor = new EditorManager();
     const view = new EditorView({ state: EditorState.create({ extensions: PLUGINS.of([]) }) });
     await render(
-      <EditorManagerContext value={editor}>
+      <ApplicationManagerContext value={builtInApplication({ editor })}>
         <Plugins view={{ current: view }} document={null} onPlugins={() => {}} />
-      </EditorManagerContext>,
+      </ApplicationManagerContext>,
     );
 
     editor.addExtensions([attribute('plugin')]);

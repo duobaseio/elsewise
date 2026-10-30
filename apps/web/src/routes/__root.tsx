@@ -3,16 +3,17 @@ import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { useActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { ApplicationManager } from '@/application-manager';
 import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
 import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { PluginLoader, usePlugins } from '@/plugins/loader';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
-import { SettingsPanelManager, SettingsPanelManagerContext } from '@/settings/settings-panel-manager';
-import { TerminalManager, TerminalManagerContext } from '@/terminal/terminal-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 
 import '../styles.css';
 
@@ -43,26 +44,26 @@ function RootComponent() {
   const keymap = useSelectedKeymap();
   const router = useRouter();
 
-  const [{ appearance, commands, editor, settings, terminal, languageServers, loader }] = useState(() => {
-    const appearance = new AppearanceManager(brightness, theme);
-    const editor = new EditorManager();
-    const settings = new SettingsPanelManager(Object.values(DEFAULT_PANELS));
-    const terminal = new TerminalManager();
-    const commands = new CommandManager({ appearance, editor, router, settings, terminal }, keymap);
+  const [{ application, languageServers, loader }] = useState(() => {
+    const application = new ApplicationManager(
+      new AppearanceManager(brightness, theme),
+      new EditorManager(),
+      router,
+      new SettingsPanelManager(Object.values(DEFAULT_PANELS)),
+      new TerminalManager(),
+      keymap,
+    );
 
     // TODO: Replace with actual diffs once git daemon is ready
-    editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
+    application.editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
 
     return {
-      appearance,
-      commands,
-      editor,
-      settings,
-      terminal,
-      languageServers: new LanguageServers(editor),
-      loader: new PluginLoader(appearance, commands),
+      application,
+      languageServers: new LanguageServers(application.editor),
+      loader: new PluginLoader(application),
     };
   });
+  const { appearance, commands } = application;
 
   useCurrentTheme(appearance);
   useCurrentFonts();
@@ -83,26 +84,20 @@ function RootComponent() {
           console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
         } else {
           // TODO: Skip a plugin without a main module, once plugins without code are decided.
-          await loader.load(plugin.manifest.id, plugin.url);
+          await loader.enable(plugin.manifest.id, plugin.url);
         }
       }
     })();
   }, [loader, installed]);
 
   return (
-    <EditorManagerContext value={editor}>
-      <TerminalManagerContext value={terminal}>
-        <CommandManagerContext value={commands}>
-          <SettingsPanelManagerContext value={settings}>
-            <LanguageServersContext value={languageServers}>
-              <Toaster>
-                <Outlet />
-              </Toaster>
-            </LanguageServersContext>
-          </SettingsPanelManagerContext>
-        </CommandManagerContext>
-      </TerminalManagerContext>
-    </EditorManagerContext>
+    <ApplicationManagerContext value={application}>
+      <LanguageServersContext value={languageServers}>
+        <Toaster>
+          <Outlet />
+        </Toaster>
+      </LanguageServersContext>
+    </ApplicationManagerContext>
   );
 }
 

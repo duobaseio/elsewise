@@ -11,7 +11,8 @@ import type {
   TerminalCommand,
 } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import {
@@ -72,7 +73,7 @@ import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
 import { OPEN_SETTINGS } from '@/settings/settings';
 import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
-import { TERMINAL_FIND } from '@/terminal/search/search-bar';
+import { TERMINAL_FIND } from '@/terminal/search/commands';
 
 export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[] = [
   // Application
@@ -149,15 +150,17 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | Te
  * The commands and their keys.
  */
 export class CommandManager implements Commands {
-  readonly application: Application;
   readonly keymap: ApplicationKeymap;
   private readonly listeners = new Set<() => void>();
   private addedCommands: ReadonlyArray<ReadonlyArray<ApplicationCommand | EditorCommand | TerminalCommand>> = [];
   private currentCommands: ReadonlyMap<string, ApplicationCommand | EditorCommand | TerminalCommand> = new Map();
   private currentSelected: Keymap;
 
-  constructor(parts: Omit<Application, 'commands'>, selected: Keymap, platform?: Platform) {
-    this.application = { ...parts, commands: this };
+  constructor(
+    private readonly application: Application,
+    selected: Keymap,
+    platform?: Platform,
+  ) {
     this.keymap = new ApplicationKeymap(platform);
     this.currentSelected = selected;
     this.add(DEFAULT_COMMANDS);
@@ -308,16 +311,10 @@ export function isTerminal(target: EditorView | XTerm): target is XTerm {
   return 'buffer' in target;
 }
 
-export const CommandManagerContext = createContext<CommandManager | null>(null);
-
 export function useCommandManager(): CommandManager;
 export function useCommandManager<T>(select: (commands: CommandManager) => T): T;
 export function useCommandManager<T>(select?: (commands: CommandManager) => T): CommandManager | T {
-  const commands = useContext(CommandManagerContext);
-  if (commands === null) {
-    throw new Error('Missing CommandManagerContext');
-  }
-
+  const commands = useApplicationManager().commands;
   const subscribe = useCallback((listener: () => void) => commands.subscribe(listener), [commands]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? commands : select(commands)));
 }

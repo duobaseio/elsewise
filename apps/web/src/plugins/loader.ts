@@ -1,8 +1,7 @@
 import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
 import type { Disposable, Plugin, PluginInfo } from '@elsewise/plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
-import type { AppearanceManager } from '@/appearance/appearance-manager';
-import type { CommandManager } from '@/command/command-manager';
+import type { ApplicationManager } from '@/application-manager';
 
 /**
  * Every installed plugin, and every invalid one.
@@ -60,16 +59,15 @@ export class PluginLoader {
 
   private readonly plugins = new Map<string, Promise<LoadedPlugin | undefined>>();
 
-  constructor(
-    private readonly appearance: AppearanceManager,
-    private readonly commands: CommandManager,
-  ) {}
+  constructor(private readonly application: ApplicationManager) {}
 
   /**
-   * Loads and enables the plugin with `id`.
+   * Enables the plugin with `id`, importing its code first.
+   *
+   * Returns whether the plugin is enabled, false if its code failed to load or enable.
    */
-  load(id: string, url: string): Promise<void> {
-    return this.enqueue(id, async (loaded) => {
+  async enable(id: string, url: string): Promise<boolean> {
+    const enabled = await this.enqueue(id, async (loaded) => {
       if (loaded) {
         return loaded;
       }
@@ -89,26 +87,26 @@ export class PluginLoader {
         }
 
         const plugin = module.default({ id });
-        const disposables = (await plugin.onEnable?.(this.commands.application)) ?? [];
+        const disposables = (await plugin.onEnable?.(this.application)) ?? [];
 
         const listeners: Disposable[] = [];
         if (plugin.onBrightnessChange) {
           listeners.push(
-            this.appearance.onBrightnessChange((brightness) =>
+            this.application.appearance.onBrightnessChange((brightness) =>
               this.call(id, 'onBrightnessChange', () => plugin.onBrightnessChange?.(brightness)),
             ),
           );
         }
         if (plugin.onThemeChange) {
           listeners.push(
-            this.appearance.onThemeChange((theme) =>
+            this.application.appearance.onThemeChange((theme) =>
               this.call(id, 'onThemeChange', () => plugin.onThemeChange?.(theme)),
             ),
           );
         }
         if (plugin.onKeymapChange) {
           listeners.push(
-            this.commands.onKeymapChange((keymap) =>
+            this.application.commands.onKeymapChange((keymap) =>
               this.call(id, 'onKeymapChange', () => plugin.onKeymapChange?.(keymap)),
             ),
           );
@@ -116,19 +114,20 @@ export class PluginLoader {
 
         return { plugin, onEnableDisposables: disposables, listeners };
       } catch (error) {
-        console.error(`Plugin ${id} failed to load`, error);
+        console.error(`Plugin ${id} failed to enable`, error);
         return;
       }
     });
+    return enabled !== undefined;
   }
 
   /**
-   * Disables and unloads the plugin with `id`.
+   * Disables the plugin with `id`.
    *
-   * Waits for the plugin's pending load or unload first, and does nothing if it is then unloaded.
+   * Waits for the plugin's pending enable or disable first, and does nothing if it is then disabled.
    */
-  unload(id: string): Promise<void> {
-    return this.enqueue(id, async (loaded) => {
+  async disable(id: string): Promise<void> {
+    await this.enqueue(id, async (loaded) => {
       if (!loaded) {
         return;
       }
@@ -137,7 +136,7 @@ export class PluginLoader {
         listener();
       }
       if (loaded.plugin.onDisable) {
-        await this.guard(id, 'disable', () => loaded.plugin.onDisable?.(this.commands.application));
+        await this.guard(id, 'disable', () => loaded.plugin.onDisable?.(this.application));
       }
       await this.dispose(id, loaded.onEnableDisposables);
     });
@@ -152,7 +151,7 @@ export class PluginLoader {
       return undefined;
     });
     this.plugins.set(id, next);
-    await next;
+    return next;
   }
 
   private call(id: string, what: string, handler: () => unknown) {

@@ -7,15 +7,15 @@ import { EDITOR_COPY, EDITOR_CUT, EDITOR_PASTE } from '@/editor/context-menu/def
 import { diagnostics } from '@/editor/diagnostics';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
-import { builtInCommands, commandsExtension } from '../../../test/commands';
+import { builtInApplication, builtInCommands, commandsExtension } from '../../../test/commands';
 import { DOC, labels, menuitem, mount, open } from '../../../test/context-menu';
 import { StubTransport } from '../../../test/stub-transport';
 
 // Returns a view with the built-in menu and commands, and `extensions`, e.g. a language server's.
 function mountBuiltIn(extensions: Extension = []): Promise<EditorView> {
   const editor = new EditorManager();
-  const commands = builtInCommands(editor);
-  return mount(editor, commands, [commandsExtension(commands), diagnostics, actions(), extensions]);
+  const application = builtInApplication({ editor });
+  return mount(editor, application, [commandsExtension(application.commands), diagnostics, actions(), extensions]);
 }
 
 // Returns the extension that connects the editor to a server with `capabilities` that responds with `handlers`.

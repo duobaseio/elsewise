@@ -4,16 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import { PreviewLayout } from '@/editor/layouts/preview-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
+import { builtInApplication } from '../../../test/commands';
 
 const CODE = ['alpha', 'beta', 'gamma'].join('\n');
 
@@ -21,30 +17,16 @@ const CODE = ['alpha', 'beta', 'gamma'].join('\n');
 async function mount(editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(
-        'light',
-        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
-      ),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({ editor });
   const screen = await render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={new LanguageServers(editor)}>
-            <div style={{ height: 300 }}>
-              <PreviewLayout code={CODE} relativePath="main.txt" />
-            </div>
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
+          <div style={{ height: 300 }}>
+            <PreviewLayout code={CODE} relativePath="main.txt" />
+          </div>
+        </LanguageServersContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => screen.container.querySelector('.cm-editor')).not.toBeNull();

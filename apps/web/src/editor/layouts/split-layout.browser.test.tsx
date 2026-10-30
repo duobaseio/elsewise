@@ -6,16 +6,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import { SplitLayout, type SplitLayoutProps } from '@/editor/layouts/split-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../test/commands';
+import { builtInApplication } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -26,41 +22,28 @@ const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
 async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(
-        'light',
-        resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'light'),
-      ),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   const servers = new LanguageServers(editor);
   const session = { current: null };
   const ratio = { current: 0.5 };
   const tree = (next: Partial<SplitLayoutProps>) => (
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={servers}>
-            <div style={{ height: 200 }}>
-              <SplitLayout
-                relativePath="main.txt"
-                base={{ source: { type: 'blob' }, code: BASE }}
-                target={{ source: { type: 'workingTree' }, code: CODE }}
-                extensions={[]}
-                session={session}
-                ratio={ratio}
-                {...next}
-              />
-            </div>
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={servers}>
+          <div style={{ height: 200 }}>
+            <SplitLayout
+              relativePath="main.txt"
+              base={{ source: { type: 'blob' }, code: BASE }}
+              target={{ source: { type: 'workingTree' }, code: CODE }}
+              extensions={[]}
+              session={session}
+              ratio={ratio}
+              {...next}
+            />
+          </div>
+        </LanguageServersContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>
   );
   const screen = await render(tree(props));

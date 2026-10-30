@@ -2,7 +2,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { type ISearchOptions, type ISearchResultChangeEvent, SearchAddon } from '@xterm/addon-search';
 import type { Terminal } from '@xterm/xterm';
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
@@ -10,24 +10,13 @@ import { useActiveTheme } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keymap/keys';
 import { SearchAction, SearchOption } from '@/components/search-controls';
+import { FIND } from '@/terminal/search/commands';
 
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';
 const CLOSE = 'Escape';
 
 export const LIMIT = 1000;
-
-// TODO: Open the search directly once terminals have state that commands can reach.
-const FIND = 'elsewise-terminal-find';
-
-export const TERMINAL_FIND: TerminalCommand = {
-  scope: 'terminal',
-  id: DEFAULT_COMMANDS.terminal.search.find,
-  label: 'Find…',
-  defaultKeys: DEFAULT_KEYS.terminal.search.find,
-  run: (_, terminal) =>
-    terminal.element !== undefined && !terminal.element.dispatchEvent(new Event(FIND, { cancelable: true })),
-};
 
 interface Query {
   query: string;

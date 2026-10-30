@@ -4,12 +4,9 @@ import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
-import { EditorManager } from '@/editor/editor-manager';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../../commands';
+import { builtInApplication } from '../../../commands';
 
 import { THEMES } from '../../../sheet';
 
@@ -67,19 +64,13 @@ test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
   onTestFinished(() => {
     delete document.documentElement.dataset.brightness;
   });
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
-      editor: new EditorManager(),
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({
+    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+  });
+  const commands = application.commands;
   commands.add(COMMANDS);
   render(
-    <CommandManagerContext value={commands}>
+    <ApplicationManagerContext value={application}>
       <div
         className="bg-background font-sans text-foreground"
         data-brightness={theme}
@@ -90,7 +81,7 @@ test.each(THEMES)('context menu open submenu (%s)', async (theme) => {
           <div className="size-full" data-testid="target" />
         </CommandContextMenu>
       </div>
-    </CommandManagerContext>,
+    </ApplicationManagerContext>,
   );
 
   await userEvent.click(page.getByTestId('target'), { button: 'right', position: { x: 8, y: 8 } });

@@ -21,6 +21,7 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import { CompareToolbarItem } from '@/editor/diff/compare';
 import { useEditorManager } from '@/editor/editor-manager';
@@ -123,6 +124,7 @@ export function useToolbarExtension(): { toolbar: Extension; portal: ReactNode }
  */
 function Toolbar({ view, subscribe }: EditorToolbarProps) {
   const added = useEditorManager((editor) => editor.toolbarItems);
+  const application = useApplicationManager();
   const commands = useCommandManager();
   const registered = useCommandManager((commands) => commands.commands);
   const keys = useCommandManager((commands) => commands.keymap.commands);
@@ -169,17 +171,11 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
         const { command } = entry;
         try {
           const shown =
-            command.scope === 'application'
-              ? command.shown?.(commands.application)
-              : command.shown?.(commands.application, view);
+            command.scope === 'application' ? command.shown?.(application) : command.shown?.(application, view);
           const enabled =
-            command.scope === 'application'
-              ? command.enabled?.(commands.application)
-              : command.enabled?.(commands.application, view);
+            command.scope === 'application' ? command.enabled?.(application) : command.enabled?.(application, view);
           const active =
-            command.scope === 'application'
-              ? command.active?.(commands.application)
-              : command.active?.(commands.application, view);
+            command.scope === 'application' ? command.active?.(application) : command.active?.(application, view);
           if (shown !== false) {
             next.set(command.id, { enabled: enabled !== false, active });
           }
@@ -199,7 +195,7 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
 
     evaluate();
     return subscribe(evaluate);
-  }, [entries, commands, view, subscribe]);
+  }, [entries, application, view, subscribe]);
 
   return (
     <TooltipProvider>

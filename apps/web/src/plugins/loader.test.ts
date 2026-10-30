@@ -2,12 +2,9 @@ import { QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager } from '@/command/command-manager';
 import { EditorManager } from '@/editor/editor-manager';
 import { PluginLoader, pluginsQuery } from '@/plugins/loader';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../test/commands';
+import { builtInApplication } from '../../test/commands';
 
 // Returns a loader over its own managers.
 function setUp() {
@@ -16,17 +13,8 @@ function setUp() {
     resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, 'dark'),
   );
   const editor = new EditorManager();
-  const commands = new CommandManager(
-    {
-      appearance,
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
-  return { appearance, editor, commands, loader: new PluginLoader(appearance, commands) };
+  const application = builtInApplication({ appearance, editor });
+  return { appearance, editor, commands: application.commands, loader: new PluginLoader(application) };
 }
 
 // What the plugins below did, in order. They reach it as the global `events`.
@@ -75,16 +63,16 @@ const SLOW = plugin(`
   }
 `);
 
-describe('load', () => {
+describe('enable', () => {
   test('enables plugin with id', async () => {
-    await setUp().loader.load('a', RECORDING);
+    await expect(setUp().loader.enable('a', RECORDING)).resolves.toBe(true);
 
     expect(events).toEqual(['enable a']);
   });
 
-  test('adds context menu until unloaded', async () => {
+  test('adds context menu until disabled', async () => {
     const { editor, loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -99,14 +87,14 @@ describe('load', () => {
 
     expect(editor.contextMenu).toContainEqual({ id: 'a.group', order: 0, items: [] });
 
-    await loader.unload('a');
+    await loader.disable('a');
 
     expect(editor.contextMenu).not.toContainEqual({ id: 'a.group', order: 0, items: [] });
   });
 
   test('adds commands', async () => {
     const { commands, loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -123,7 +111,7 @@ describe('load', () => {
   });
 
   test('runs commands with application', async () => {
-    await setUp().loader.load(
+    await setUp().loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -149,7 +137,7 @@ describe('load', () => {
 
   test('calls hooks while enabled', async () => {
     const { appearance, loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -162,7 +150,7 @@ describe('load', () => {
     );
     appearance.brightness = 'light';
     appearance.theme = { ...appearance.theme };
-    await loader.unload('a');
+    await loader.disable('a');
     appearance.brightness = 'dark';
 
     expect(events).toEqual(['brightness light', 'theme']);
@@ -170,7 +158,7 @@ describe('load', () => {
 
   test('calls keymap hook while enabled', async () => {
     const { commands, loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -179,7 +167,7 @@ describe('load', () => {
       `),
     );
     commands.add([{ id: 'a.run', label: 'Run', scope: 'application', run: () => true }]);
-    await loader.unload('a');
+    await loader.disable('a');
     commands.add([{ id: 'a.other', label: 'Other', scope: 'application', run: () => true }]);
 
     expect(events).toEqual([`keymap ${commands.keymap.commands.size - 1}`]);
@@ -187,7 +175,7 @@ describe('load', () => {
 
   test('logs throwing hook', async () => {
     const { appearance, loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -203,7 +191,7 @@ describe('load', () => {
 
   test('logs rejecting hook', async () => {
     const { appearance, loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -222,16 +210,16 @@ describe('load', () => {
     expect(error.mock.calls[0]?.[0]).toContain('Plugin a');
   });
 
-  test('ignores loaded plugin', async () => {
+  test('ignores enabled plugin', async () => {
     const { loader } = setUp();
-    await loader.load('a', RECORDING);
-    await loader.load('a', RECORDING);
+    await loader.enable('a', RECORDING);
+    await expect(loader.enable('a', RECORDING)).resolves.toBe(true);
 
     expect(events).toEqual(['enable a']);
   });
 
   test('logs failed import', async () => {
-    await setUp().loader.load('a', plugin('this is not javascript'));
+    await expect(setUp().loader.enable('a', plugin('this is not javascript'))).resolves.toBe(false);
 
     expect(events).toEqual([]);
     expect(error).toHaveBeenCalledOnce();
@@ -250,86 +238,90 @@ describe('load', () => {
     `);
     const { loader } = setUp();
     vi.stubGlobal('broken', true);
-    await loader.load('a', url);
+    await loader.enable('a', url);
     vi.stubGlobal('broken', false);
-    await loader.load('a', url);
+    await loader.enable('a', url);
 
     expect(events).toEqual(['enable a']);
     expect(error).toHaveBeenCalledOnce();
   });
 
   test('logs module without default function', async () => {
-    await setUp().loader.load('a', plugin('export default 1;'));
+    await expect(setUp().loader.enable('a', plugin('export default 1;'))).resolves.toBe(false);
 
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0]?.[0]).toContain('has no default function');
   });
 
   test('logs throwing default function', async () => {
-    await setUp().loader.load('a', plugin("export default function () { throw new Error('failed'); }"));
+    await expect(
+      setUp().loader.enable('a', plugin("export default function () { throw new Error('failed'); }")),
+    ).resolves.toBe(false);
 
     expect(error).toHaveBeenCalledOnce();
   });
 
   test('logs throwing onEnable', async () => {
-    await setUp().loader.load(
-      'a',
-      plugin(`
-        export default function () {
-          return { onEnable() { throw new Error('failed'); } };
-        }
-      `),
-    );
+    await expect(
+      setUp().loader.enable(
+        'a',
+        plugin(`
+          export default function () {
+            return { onEnable() { throw new Error('failed'); } };
+          }
+        `),
+      ),
+    ).resolves.toBe(false);
 
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('re-enables unloaded plugin', async () => {
+  test('re-enables disabled plugin', async () => {
     const { loader } = setUp();
-    await loader.load('a', RECORDING);
-    await loader.unload('a');
-    await loader.load('a', RECORDING);
+    await loader.enable('a', RECORDING);
+    await loader.disable('a');
+    await loader.enable('a', RECORDING);
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first', 'enable a']);
   });
 
-  test('re-evaluates module of unloaded plugin', async () => {
+  test('re-evaluates module of disabled plugin', async () => {
     const url = plugin(`
       events.push('evaluate');
       export default function () { return {}; }
     `);
     const { loader } = setUp();
-    await loader.load('a', url);
-    await loader.unload('a');
-    await loader.load('a', url);
+    await loader.enable('a', url);
+    await loader.disable('a');
+    await loader.enable('a', url);
 
     expect(events).toEqual(['evaluate', 'evaluate']);
   });
 
-  test('loads alongside pending plugin', async () => {
+  test('enables alongside pending plugin', async () => {
     vi.stubGlobal('gate', Promise.withResolvers<void>().promise);
     const { loader } = setUp();
 
-    void loader.load('a', SLOW);
+    void loader.enable('a', SLOW);
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
-    await loader.load('b', RECORDING);
+    await loader.enable('b', RECORDING);
 
     expect(events).toEqual(['enable started', 'enable b']);
   });
 });
 
-describe('unload', () => {
+describe('disable', () => {
   test('disposes in reverse order', async () => {
     const { loader } = setUp();
-    await loader.load('a', RECORDING);
-    await loader.unload('a');
+    await loader.enable('a', RECORDING);
+    await loader.disable('a');
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 
   test('calls onDisable before disposing', async () => {
     const { loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -343,14 +335,14 @@ describe('unload', () => {
         }
       `),
     );
-    await loader.unload('a');
+    await loader.disable('a');
 
     expect(events).toEqual(['disable', 'dispose']);
   });
 
   test('disposes past throwing onDisable', async () => {
     const { loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -361,25 +353,25 @@ describe('unload', () => {
         }
       `),
     );
-    await loader.unload('a');
+    await loader.disable('a');
 
     expect(events).toEqual(['dispose']);
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('ignores unloaded plugin', async () => {
+  test('ignores disabled plugin', async () => {
     const { loader } = setUp();
-    await loader.unload('a');
-    await loader.load('a', RECORDING);
-    await loader.unload('a');
-    await loader.unload('a');
+    await loader.disable('a');
+    await loader.enable('a', RECORDING);
+    await loader.disable('a');
+    await loader.disable('a');
 
     expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 
   test('awaits async disposable', async () => {
     const { loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -395,14 +387,14 @@ describe('unload', () => {
         }
       `),
     );
-    await loader.unload('a');
+    await loader.disable('a');
 
     expect(events).toEqual(['dispose second', 'dispose first']);
   });
 
   test('continues past throwing disposable', async () => {
     const { loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -416,7 +408,7 @@ describe('unload', () => {
         }
       `),
     );
-    await loader.unload('a');
+    await loader.disable('a');
 
     expect(events).toEqual(['dispose third', 'dispose first']);
     expect(error).toHaveBeenCalledOnce();
@@ -424,7 +416,7 @@ describe('unload', () => {
 
   test('skips timed-out disposable', async () => {
     const { loader } = setUp();
-    await loader.load(
+    await loader.enable(
       'a',
       plugin(`
         export default function () {
@@ -433,16 +425,16 @@ describe('unload', () => {
       `),
     );
     vi.useFakeTimers();
-    const unloaded = loader.unload('a');
+    const disabled = loader.disable('a');
     await vi.advanceTimersByTimeAsync(15_000);
-    await unloaded;
+    await disabled;
 
     expect(events).toEqual(['dispose first']);
     expect(error).toHaveBeenCalledOnce();
     expect(error.mock.calls[0]?.[0]).toContain('Plugin a failed to dispose');
   });
 
-  test('reloads after failed unload', async () => {
+  test('re-enables after failed disable', async () => {
     const url = plugin(`
       export default function ({ id }) {
         return {
@@ -456,24 +448,24 @@ describe('unload', () => {
       }
     `);
     const { loader } = setUp();
-    await loader.load('a', url);
-    await loader.unload('a');
-    await loader.load('a', url);
+    await loader.enable('a', url);
+    await loader.disable('a');
+    await loader.enable('a', url);
 
     expect(events).toEqual(['enable a', 'enable a']);
     expect(error).toHaveBeenCalledOnce();
   });
 
-  test('waits for pending load', async () => {
+  test('waits for pending enable', async () => {
     const gate = Promise.withResolvers<void>();
     vi.stubGlobal('gate', gate.promise);
     const { loader } = setUp();
 
-    void loader.load('a', SLOW);
-    const unloaded = loader.unload('a');
+    void loader.enable('a', SLOW);
+    const disabled = loader.disable('a');
     await vi.waitFor(() => expect(events).toEqual(['enable started']));
     gate.resolve();
-    await unloaded;
+    await disabled;
 
     expect(events).toEqual(['enable started', 'enable finished', 'dispose']);
   });

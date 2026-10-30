@@ -24,16 +24,14 @@ import type {
 
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { toggleReplaceRow } from '@/editor/search/search-bar-query';
 import { settingsQuery } from '@/settings/settings';
-import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
-import { EMPTY_KEYMAP, memoryRouter } from '../../commands';
+import { builtInApplication } from '../../commands';
 
 import { THEMES } from '../../sheet';
 import { StubTransport } from '../../stub-transport';
@@ -326,45 +324,37 @@ async function mount(
     { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
     { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
   ]);
-  const commands = new CommandManager(
-    {
-      appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
-      editor,
-      router: memoryRouter(),
-      settings: new SettingsPanelManager(),
-      terminal: new TerminalManager(),
-    },
-    EMPTY_KEYMAP,
-  );
+  const application = builtInApplication({
+    appearance: new AppearanceManager(theme, resolveActiveTheme([], { source: 'elsewise', id: 'elsewise' }, theme)),
+    editor,
+  });
   render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <LanguageServersContext value={new LanguageServers(editor)}>
-            <div
-              className="bg-background font-sans text-foreground"
-              data-brightness={theme}
-              data-testid="sheet"
-              style={{ width: 1040, height: hovered ? 420 : 300 }}
-            >
-              {hovered ? (
-                <Editor
-                  content={{ label: 'Current', code: HOVERED }}
-                  relativePath="src/main.rs"
-                  root={new URL('file:///worktree/')}
-                  diff={new DiffState(null, 'unified')}
-                />
-              ) : (
-                <Editor
-                  content={{ label: 'Current', code }}
-                  relativePath="transport.rs"
-                  diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
-                />
-              )}
-            </div>
-          </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <LanguageServersContext value={new LanguageServers(editor)}>
+          <div
+            className="bg-background font-sans text-foreground"
+            data-brightness={theme}
+            data-testid="sheet"
+            style={{ width: 1040, height: hovered ? 420 : 300 }}
+          >
+            {hovered ? (
+              <Editor
+                content={{ label: 'Current', code: HOVERED }}
+                relativePath="src/main.rs"
+                root={new URL('file:///worktree/')}
+                diff={new DiffState(null, 'unified')}
+              />
+            ) : (
+              <Editor
+                content={{ label: 'Current', code }}
+                relativePath="transport.rs"
+                diff={new DiffState(diff === undefined ? null : 'test.base', diff ?? 'unified')}
+              />
+            )}
+          </div>
+        </LanguageServersContext>
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
 

@@ -8,13 +8,14 @@ import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { type CommandManager, CommandManagerContext } from '@/command/command-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import type { CommandManager } from '@/command/command-manager';
 import { diagnostics } from '@/editor/diagnostics';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { METRICS } from '@/editor/theme';
 import { useToolbarExtension } from '@/editor/toolbar';
 import { settingsQuery } from '@/settings/settings';
-import { builtInCommands, commandsExtension } from '../../test/commands';
+import { builtInApplication, commandsExtension } from '../../test/commands';
 
 // An icon.
 function Dot(props: ComponentProps<'svg'>) {
@@ -27,10 +28,10 @@ function Dot(props: ComponentProps<'svg'>) {
 
 const DOC = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
 
-// Mounts `DOC` in an editor 200px high with the toolbar of `editor` and `commands`, and `extensions`.
+// Mounts `DOC` in an editor 200px high with the toolbar of `editor` and `application`, and `extensions`.
 function mount(
   editor = new EditorManager(),
-  commands = builtInCommands(editor),
+  application = builtInApplication({ editor }),
   extensions: Extension = [],
 ): Promise<EditorView> {
   let resolve!: (view: EditorView) => void;
@@ -50,7 +51,7 @@ function mount(
             toolbar,
             diagnostics,
             METRICS,
-            commandsExtension(commands),
+            commandsExtension(application.commands),
             EditorView.theme({ '&': { height: '200px' } }),
             extensions,
           ],
@@ -69,11 +70,9 @@ function mount(
   }
   render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
-          <Probe />
-        </CommandManagerContext>
-      </EditorManagerContext>
+      <ApplicationManagerContext value={application}>
+        <Probe />
+      </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   return ready;
@@ -100,30 +99,30 @@ afterEach(() => {
 describe('useToolbarExtension', () => {
   test('orders items from right edge, unordered left', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a');
-    command(commands, 'b');
-    command(commands, 'c');
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a');
+    command(application.commands, 'b');
+    command(application.commands, 'c');
     editor.addToolbarItems([
       { type: 'command', command: 'c', icon: Dot },
       { type: 'command', order: 20, command: 'a', icon: Dot },
       { type: 'command', order: 5, command: 'b', icon: Dot },
     ]);
-    await mount(editor, commands);
+    await mount(editor, application);
 
     await vi.waitFor(() => expect(items()).toEqual(['c', 'a', 'diagnostics-summary', 'b']));
   });
 
   test('tabs from left to right', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a');
-    command(commands, 'b');
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a');
+    command(application.commands, 'b');
     editor.addToolbarItems([
       { type: 'command', order: 20, command: 'a', icon: Dot },
       { type: 'command', order: 30, command: 'b', icon: Dot },
     ]);
-    await mount(editor, commands);
+    await mount(editor, application);
     (await page.getByRole('button', { name: 'b' }).element()).focus();
 
     await userEvent.keyboard('{Tab}');
@@ -133,10 +132,10 @@ describe('useToolbarExtension', () => {
 
   test('hides command not shown, following edits', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a', { shown: (_, view) => view.state.doc.length === 0 });
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a', { shown: (_, view) => view.state.doc.length === 0 });
     editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
-    const view = await mount(editor, commands);
+    const view = await mount(editor, application);
     await expect.element(page.getByRole('status')).toBeInTheDocument();
     expect(items()).toEqual(['diagnostics-summary']);
 
@@ -147,22 +146,22 @@ describe('useToolbarExtension', () => {
 
   test('disables command not enabled', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a', { enabled: () => false });
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a', { enabled: () => false });
     editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
-    await mount(editor, commands);
+    await mount(editor, application);
 
     await expect.element(page.getByRole('button', { name: 'a' })).toBeDisabled();
   });
 
   test('presses active command', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a', { active: () => true });
-    command(commands, 'b', { active: () => false });
-    command(commands, 'c');
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a', { active: () => true });
+    command(application.commands, 'b', { active: () => false });
+    command(application.commands, 'c');
     editor.addToolbarItems(['a', 'b', 'c'].map((id) => ({ type: 'command' as const, command: id, icon: Dot })));
-    await mount(editor, commands);
+    await mount(editor, application);
 
     await expect.element(page.getByRole('button', { name: 'a' })).toHaveAttribute('aria-pressed', 'true');
     await expect.element(page.getByRole('button', { name: 'b' })).toHaveAttribute('aria-pressed', 'false');
@@ -171,40 +170,40 @@ describe('useToolbarExtension', () => {
 
   test('runs active command, keeping editor focused', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
+    const application = builtInApplication({ editor });
     const run = vi.fn(() => true);
-    command(commands, 'a', { run, active: () => false });
+    command(application.commands, 'a', { run, active: () => false });
     editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
-    const view = await mount(editor, commands);
+    const view = await mount(editor, application);
     view.focus();
 
     await userEvent.click(page.getByRole('button', { name: 'a' }));
 
-    expect(run).toHaveBeenCalledWith(commands.application, view);
+    expect(run).toHaveBeenCalledWith(application, view);
     expect(view.hasFocus).toBe(true);
   });
 
   test('runs command, keeping editor focused', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
+    const application = builtInApplication({ editor });
     const run = vi.fn(() => true);
-    command(commands, 'a', { run });
+    command(application.commands, 'a', { run });
     editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
-    const view = await mount(editor, commands);
+    const view = await mount(editor, application);
     view.focus();
 
     await userEvent.click(page.getByRole('button', { name: 'a' }));
 
-    expect(run).toHaveBeenCalledWith(commands.application, view);
+    expect(run).toHaveBeenCalledWith(application, view);
     expect(view.hasFocus).toBe(true);
   });
 
   test('shows label and key in tooltip', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a', { label: 'Shrug', defaultKeys: ['Shift-F9'] });
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a', { label: 'Shrug', defaultKeys: ['Shift-F9'] });
     editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
-    await mount(editor, commands);
+    await mount(editor, application);
 
     await userEvent.hover(page.getByRole('button', { name: 'Shrug' }));
 
@@ -217,14 +216,14 @@ describe('useToolbarExtension', () => {
 
   test('shows neighbouring tooltip instantly', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a', { label: 'Shrug' });
-    command(commands, 'b', { label: 'Wave' });
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a', { label: 'Shrug' });
+    command(application.commands, 'b', { label: 'Wave' });
     editor.addToolbarItems([
       { type: 'command', command: 'a', icon: Dot },
       { type: 'command', command: 'b', icon: Dot },
     ]);
-    await mount(editor, commands);
+    await mount(editor, application);
     await userEvent.hover(page.getByRole('button', { name: 'Shrug' }));
     await expect.element(page.getByText('Shrug', { exact: true })).toBeVisible();
 
@@ -235,10 +234,10 @@ describe('useToolbarExtension', () => {
 
   test('removes items once disposed', async () => {
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a');
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a');
     const dispose = editor.addToolbarItems([{ type: 'command', command: 'a', icon: Dot }]);
-    await mount(editor, commands);
+    await mount(editor, application);
     await expect.element(page.getByRole('button', { name: 'a' })).toBeInTheDocument();
 
     dispose();
@@ -260,14 +259,14 @@ describe('useToolbarExtension', () => {
   test('skips duplicate id, first wins', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const editor = new EditorManager();
-    const commands = builtInCommands(editor);
-    command(commands, 'a');
+    const application = builtInApplication({ editor });
+    command(application.commands, 'a');
     editor.addToolbarItems([
       { type: 'command', command: 'a', icon: Dot },
       { type: 'component', id: 'a', component: () => <span data-slot="duplicate" /> },
       { type: 'command', command: 'a', icon: Dot },
     ]);
-    await mount(editor, commands);
+    await mount(editor, application);
 
     await expect.element(page.getByRole('button', { name: 'a' })).toBeInTheDocument();
     expect(items()).toEqual(['a', 'diagnostics-summary']);
