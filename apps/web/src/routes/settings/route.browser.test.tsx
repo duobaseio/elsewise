@@ -255,6 +255,7 @@ describe('AddLanguage', () => {
         loadUserKeymaps: async () => [],
         saveUserKeymap: async () => {},
         deleteUserKeymap: async () => {},
+        onChange: () => {},
       },
     };
     const router = await mount(['/settings/local/appearance/editor'], [], LANGUAGES);

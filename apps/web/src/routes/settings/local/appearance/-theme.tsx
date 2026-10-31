@@ -1,4 +1,4 @@
-import type { ThemeId } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type ThemeId } from '@elsewise/bridge';
 import {
   Combobox,
   ComboboxCollection,
@@ -43,10 +43,15 @@ export function ThemeSelect(
     () => (props.inheritable ? [INHERITED, ...themes] : themes),
     [props.inheritable, themes],
   );
-  const selected = useMemo(
-    () => groups.flatMap((group) => group.items).find((item) => sameThemeOrNone(item.value, props.theme)) ?? null,
-    [groups, props.theme],
-  );
+  const selected = useMemo(() => {
+    const items = groups.flatMap((group) => group.items);
+    const fallback = props.inheritable ? null : DEFAULT_SETTINGS.appearance.general.theme;
+    return (
+      items.find((item) => sameThemeOrNone(item.value, props.theme)) ??
+      items.find((item) => sameThemeOrNone(item.value, fallback)) ??
+      null
+    );
+  }, [groups, props.theme, props.inheritable]);
 
   return (
     <Combobox

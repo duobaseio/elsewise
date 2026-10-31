@@ -2,11 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { configLocalDir, dataLocalDir } from '@elsewise/core';
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
-import { handleSettings } from './settings';
+import { handleSettings, watchUserThemesAndKeymaps } from './settings';
 
-vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
+vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: vi.fn() }, ipcMain: { handle: vi.fn() } }));
 // The real `writeJsonSync`, but in a temporary folder rather than the user's config and data folders.
 vi.mock('@elsewise/core', async (importOriginal) => {
   const { mkdtempSync } = await import('node:fs');
@@ -494,6 +494,74 @@ describe.each([
   test.each(['', '..', '../other', 'a/b', 'a\\b', '.hidden', 7, undefined])('throws for the id %j', (id) => {
     expect(() => save(id, content)).toThrow(new RegExp(`invalid ${kind} id`));
     expect(() => del(id)).toThrow(new RegExp(`invalid ${kind} id`));
+  });
+});
+
+describe('watchUserThemesAndKeymaps', () => {
+  const send = vi.fn();
+  let stop: (() => void) | undefined;
+
+  // Watches, then waits out the events FSEvents still reports from just before, e.g. the previous test's.
+  async function watch() {
+    vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([{ webContents: { send } } as unknown as BrowserWindow]);
+    stop = watchUserThemesAndKeymaps();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    send.mockClear();
+  }
+
+  function put(file: string, content = '{}') {
+    fs.mkdirSync(path.dirname(path.join(configLocalDir(), file)), { recursive: true });
+    fs.writeFileSync(path.join(configLocalDir(), file), content);
+  }
+
+  afterEach(() => {
+    stop?.();
+    send.mockReset();
+  });
+
+  test('creates themes and keymaps folders', async () => {
+    await watch();
+
+    expect(fs.existsSync(path.join(configLocalDir(), 'themes'))).toBe(true);
+    expect(fs.existsSync(path.join(configLocalDir(), 'keymaps'))).toBe(true);
+  });
+
+  test('sends themes for written theme', async () => {
+    put('themes/dusk.json');
+    await watch();
+
+    put('themes/dusk.json', '{ "name": "Dusk" }');
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith('settings:changed', 'themes'));
+  });
+
+  test('sends keymaps for deleted keymap', async () => {
+    put('keymaps/emacs.json');
+    await watch();
+
+    fs.rmSync(path.join(configLocalDir(), 'keymaps', 'emacs.json'));
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith('settings:changed', 'keymaps'));
+  });
+
+  test('sends themes for recreated themes folder', async () => {
+    await watch();
+    fs.rmSync(path.join(configLocalDir(), 'themes'), { recursive: true });
+
+    put('themes/dusk.json');
+
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith('settings:changed', 'themes'));
+  });
+
+  test('skips settings and temporary files', async () => {
+    await watch();
+
+    put('settings.json');
+    put('themes/dusk.json.tmp');
+    put('keymaps/notes.txt');
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(send).not.toHaveBeenCalled();
   });
 });
 

@@ -40,7 +40,7 @@ export const userKeymapsQuery = queryOptions({
     }
     return keymaps;
   },
-  staleTime: 'static',
+  staleTime: Number.POSITIVE_INFINITY,
   gcTime: Number.POSITIVE_INFINITY,
 });
 
@@ -82,12 +82,7 @@ export function useSelectedKeymap(): Keymap {
  * Resolves the `id`'s keymap, falling back to Elsewise's if it is not among `keymaps`.
  */
 export function resolveKeymap(keymaps: readonly LoadedKeymap[], id: KeymapId): Keymap {
-  const loaded = keymaps.find((other) => sameKeymap(other.id, id));
-  if (loaded === undefined) {
-    console.warn(`Keymap ${id.source === 'plugin' ? `${id.plugin}/${id.id}` : id.id} not found, using Elsewise's`);
-  }
-
-  return loaded?.keymap ?? ELSEWISE;
+  return keymaps.find((other) => sameKeymap(other.id, id))?.keymap ?? ELSEWISE;
 }
 
 export function sameKeymap(a: KeymapId, b: KeymapId): boolean {

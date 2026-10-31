@@ -10,6 +10,8 @@ import { pluginStore } from '../../../../../test/plugins';
 
 const DRACULA: ThemeId = { source: 'elsewise', id: 'dracula' };
 
+const MISSING: ThemeId = { source: 'plugin', plugin: 'io.missing', id: 'dusk' };
+
 const NIGHT = { name: 'Night', dark: { interface: { background: '#000000' }, editor: {}, terminal: {} } };
 
 // A plugin with a theme named like the user's.
@@ -94,6 +96,36 @@ describe('ThemeSelect', () => {
 
     await expect.poll(() => onChange.mock.calls.length).toBe(1);
     expect(onChange).toHaveBeenCalledWith({ source: 'user', id: 'night' });
+  });
+
+  test('shows default for missing theme', async () => {
+    await mount(MISSING);
+
+    await expect.poll(shown).toBe('Same as interface');
+  });
+
+  test('returns shown default for missing theme', async () => {
+    const onChange = await mount(MISSING);
+
+    await userEvent.click(page.getByRole('combobox', { name: 'Theme' }));
+    await userEvent.click(page.getByRole('option', { name: 'Same as interface' }));
+
+    await expect.poll(() => onChange.mock.calls.length).toBe(1);
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  test('shows Elsewise for missing theme unless inheritable', async () => {
+    const client = new QueryClient();
+    client.setQueryData(userThemesQuery.queryKey, []);
+    await render(
+      <QueryClientProvider client={client}>
+        <PluginStoreContext value={new PluginStore()}>
+          <ThemeSelect label="Theme" theme={MISSING} onChange={() => {}} />
+        </PluginStoreContext>
+      </QueryClientProvider>,
+    );
+
+    await expect.poll(shown).toBe('Elsewise');
   });
 
   test('omits interface theme unless inheritable', async () => {

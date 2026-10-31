@@ -121,6 +121,11 @@ export interface SettingsBridge {
    * Throws an error if `id` is invalid.
    */
   deleteUserKeymap(id: string): Promise<void>;
+
+  /**
+   * Calls `handler` when the user's themes or keymaps change on disk.
+   */
+  onChange(handler: (changed: 'themes' | 'keymaps') => void): void;
 }
 
 /**

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { DEFAULT_SETTINGS, PluginId, Settings } from '@elsewise/bridge';
 import { configLocalDir, dataLocalDir, writeJsonSync } from '@elsewise/core';
 import { Keymap, Theme } from '@elsewise/plugin';
-import { ipcMain } from 'electron';
+import { BrowserWindow, ipcMain } from 'electron';
 import { readJsonFolder } from '../fs/json-folder';
 
 /**
@@ -90,4 +90,35 @@ function userFile(folder: 'themes' | 'keymaps', id: unknown): string {
   }
 
   return path.join(configLocalDir(), folder, `${parsed.data}.json`);
+}
+
+export function watchUserThemesAndKeymaps(): () => void {
+  fs.mkdirSync(path.join(configLocalDir(), 'themes'), { recursive: true });
+  fs.mkdirSync(path.join(configLocalDir(), 'keymaps'), { recursive: true });
+
+  const timers = new Map<'themes' | 'keymaps', ReturnType<typeof setTimeout>>();
+  const watcher = fs.watch(configLocalDir(), { recursive: true }, (_, file) => {
+    const folder = file === null ? undefined : path.dirname(file);
+    if ((folder !== 'themes' && folder !== 'keymaps') || path.extname(file ?? '') !== '.json') {
+      return;
+    }
+
+    clearTimeout(timers.get(folder));
+    timers.set(
+      folder,
+      setTimeout(() => {
+        timers.delete(folder);
+        for (const window of BrowserWindow.getAllWindows()) {
+          window.webContents.send('settings:changed', folder);
+        }
+      }, 100),
+    );
+  });
+
+  return () => {
+    watcher.close();
+    for (const timer of timers.values()) {
+      clearTimeout(timer);
+    }
+  };
 }

@@ -5,7 +5,7 @@ import { app, BrowserWindow, nativeTheme, protocol, shell } from 'electron';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
-import { handleSettings } from './settings';
+import { handleSettings, watchUserThemesAndKeymaps } from './settings';
 import { closeAfterRenderer, loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
@@ -28,7 +28,10 @@ app.whenReady().then(() => {
   handleAppScheme();
   handlePlugins();
   handleSettings();
+
   installMenu();
+  watchUserThemesAndKeymaps();
+
   createWindow();
 
   app.on('activate', () => {

@@ -17,6 +17,9 @@ const settings: SettingsBridge = {
   loadUserKeymaps: () => ipcRenderer.invoke('settings:load-user-keymaps'),
   saveUserKeymap: (id, keymap) => ipcRenderer.invoke('settings:save-user-keymap', id, keymap),
   deleteUserKeymap: (id) => ipcRenderer.invoke('settings:delete-user-keymap', id),
+  onChange: (handler) => {
+    ipcRenderer.on('settings:changed', (_event, changed) => handler(changed));
+  },
 };
 
 let close: (() => Promise<void>) | undefined;

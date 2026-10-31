@@ -3,7 +3,7 @@ import { type ApplicationCommand, Keymap } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import elsewise from '@/command/keymap/bundled/elsewise.json';
 import {
   installApplicationKeys,
@@ -22,12 +22,6 @@ const ECLIPSE: LoadedKeymap = {
   id: { source: 'plugin', plugin: 'io.example', id: 'Eclipse' },
   keymap: { name: 'Eclipse', keys: {} },
 };
-
-let warn: ReturnType<typeof vi.spyOn>;
-
-beforeEach(() => {
-  warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -98,7 +92,6 @@ describe('resolveKeymap', () => {
   test('finds keymap by id', () => {
     expect(resolveKeymap([ELSEWISE, ECLIPSE], ECLIPSE.id)).toBe(ECLIPSE.keymap);
     expect(resolveKeymap([ELSEWISE, ECLIPSE], ELSEWISE.id)).toBe(ELSEWISE.keymap);
-    expect(warn).not.toHaveBeenCalled();
   });
 
   test('distinguishes plugins with same keymap name', () => {
@@ -110,10 +103,8 @@ describe('resolveKeymap', () => {
     expect(resolveKeymap([ECLIPSE, other], other.id)).toBe(other.keymap);
   });
 
-  test('falls back to Elsewise and warns', () => {
+  test('falls back to Elsewise', () => {
     expect(resolveKeymap([ELSEWISE], ECLIPSE.id)).toEqual(ELSEWISE.keymap);
-    expect(warn).toHaveBeenCalledOnce();
-    expect(warn.mock.calls[0]?.[0]).toContain('io.example/Eclipse');
   });
 });
 

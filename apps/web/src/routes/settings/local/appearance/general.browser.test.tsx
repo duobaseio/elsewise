@@ -28,6 +28,7 @@ async function mount(settings: Settings = DEFAULT_SETTINGS, highlight?: string) 
       loadUserKeymaps: async () => [],
       saveUserKeymap: async () => {},
       deleteUserKeymap: async () => {},
+      onChange: () => {},
     },
   };
   const client = new QueryClient();

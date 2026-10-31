@@ -31,7 +31,7 @@ export const userThemesQuery = queryOptions({
     }
     return themes;
   },
-  staleTime: 'static',
+  staleTime: Number.POSITIVE_INFINITY,
   gcTime: Number.POSITIVE_INFINITY,
 });
 
@@ -75,8 +75,8 @@ export function useActiveTheme(): ActiveTheme {
   // Fuck JS/TS's lack of list structural equality
   const find = (id: ThemeId) => themes.find((other) => sameTheme(other.id, id))?.theme;
   const generalTheme = find(general);
-  const editorTheme = find(editor ?? general);
-  const terminalTheme = find(terminal ?? general);
+  const editorTheme = (editor === null ? undefined : find(editor)) ?? generalTheme;
+  const terminalTheme = (terminal === null ? undefined : find(terminal)) ?? generalTheme;
 
   return useMemo(
     () => ({
