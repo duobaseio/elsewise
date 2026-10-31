@@ -4,7 +4,7 @@ import type {
   ActiveKeymap,
   Application,
   ApplicationCommand,
-  CommandCategory,
+  CommandGroup,
   Commands,
   Disposable,
   EditorCommand,
@@ -22,7 +22,7 @@ import {
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
   TERMINAL,
-} from '@/command/categories';
+} from '@/command/groups';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import {
@@ -85,7 +85,7 @@ import { OPEN_SETTINGS } from '@/settings/settings';
 import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
 import { TERMINAL_FIND } from '@/terminal/search/commands';
 
-export const DEFAULT_CATEGORIES: readonly CommandCategory[] = [
+export const DEFAULT_GROUPS: readonly CommandGroup[] = [
   APPLICATION,
   EDITOR,
   EDITOR_CODE,
@@ -172,8 +172,8 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | Te
 export class CommandManager implements Commands {
   readonly keymap: ApplicationKeymap;
   private readonly listeners = new Set<() => void>();
-  private addedCategories: ReadonlyArray<ReadonlyArray<CommandCategory>> = [];
-  private currentCategories: ReadonlyMap<string, CommandCategory> = new Map();
+  private addedGroups: ReadonlyArray<ReadonlyArray<CommandGroup>> = [];
+  private currentGroups: ReadonlyMap<string, CommandGroup> = new Map();
   private addedCommands: ReadonlyArray<ReadonlyArray<ApplicationCommand | EditorCommand | TerminalCommand>> = [];
   private currentCommands: ReadonlyMap<string, ApplicationCommand | EditorCommand | TerminalCommand> = new Map();
   private currentSelected: Keymap;
@@ -185,15 +185,15 @@ export class CommandManager implements Commands {
   ) {
     this.keymap = new ApplicationKeymap(platform);
     this.currentSelected = selected;
-    this.addCategories(DEFAULT_CATEGORIES);
+    this.addGroups(DEFAULT_GROUPS);
     this.add(DEFAULT_COMMANDS);
   }
 
   /**
-   * The categories by id, in order of addition.
+   * The groups by id, in order of addition.
    */
-  get categories(): ReadonlyMap<string, CommandCategory> {
-    return this.currentCategories;
+  get groups(): ReadonlyMap<string, CommandGroup> {
+    return this.currentGroups;
   }
 
   /**
@@ -234,36 +234,36 @@ export class CommandManager implements Commands {
   /**
    * {@inheritDoc}
    */
-  addCategories(categories: readonly CommandCategory[]): Disposable {
-    const ids = new Set(this.currentCategories.keys());
-    const added = categories.filter((category) => {
-      if (ids.has(category.id)) {
-        console.warn(`Command category ${category.id} already exists`);
+  addGroups(groups: readonly CommandGroup[]): Disposable {
+    const ids = new Set(this.currentGroups.keys());
+    const added = groups.filter((group) => {
+      if (ids.has(group.id)) {
+        console.warn(`Command group ${group.id} already exists`);
         return false;
       }
 
-      if (category.in !== undefined && !ids.has(category.in)) {
-        console.warn(`Command category ${category.id} is in unknown category ${category.in}`);
+      if (group.in !== undefined && !ids.has(group.in)) {
+        console.warn(`Command group ${group.id} is in unknown group ${group.in}`);
         return false;
       }
 
-      ids.add(category.id);
+      ids.add(group.id);
       return true;
     });
-    this.addedCategories = [...this.addedCategories, added];
+    this.addedGroups = [...this.addedGroups, added];
     this.update();
     return () => {
-      // A category is added after the one it is in, so one pass in that order reaches every nested category.
-      const removed = new Set(added.map((category) => category.id));
-      this.addedCategories = this.addedCategories.map((other) =>
-        other.filter((category) => {
-          if (category.in !== undefined && removed.has(category.in)) {
-            removed.add(category.id);
+      // A group is added after the one it is in, so one pass in that order reaches every nested group.
+      const removed = new Set(added.map((group) => group.id));
+      this.addedGroups = this.addedGroups.map((other) =>
+        other.filter((group) => {
+          if (group.in !== undefined && removed.has(group.in)) {
+            removed.add(group.id);
           }
-          return !removed.has(category.id);
+          return !removed.has(group.id);
         }),
       );
-      this.addedCommands = this.addedCommands.map((other) => other.filter((command) => !removed.has(command.category)));
+      this.addedCommands = this.addedCommands.map((other) => other.filter((command) => !removed.has(command.group)));
       this.update();
     };
   }
@@ -279,8 +279,8 @@ export class CommandManager implements Commands {
         return false;
       }
 
-      if (!this.currentCategories.has(command.category)) {
-        console.warn(`Command ${command.id} is in unknown category ${command.category}`);
+      if (!this.currentGroups.has(command.group)) {
+        console.warn(`Command ${command.id} is in unknown group ${command.group}`);
         return false;
       }
 
@@ -290,18 +290,18 @@ export class CommandManager implements Commands {
     this.addedCommands = [...this.addedCommands, added];
     this.update();
     return () => {
-      // By command rather than addition, since removing a category may have thinned the addition already.
+      // By command rather than addition, since removing a group may have thinned the addition already.
       this.addedCommands = this.addedCommands.map((other) => other.filter((command) => !added.includes(command)));
       this.update();
     };
   }
 
   private update() {
-    const categories = new Map<string, CommandCategory>();
-    for (const category of this.addedCategories.flat()) {
-      categories.set(category.id, category);
+    const groups = new Map<string, CommandGroup>();
+    for (const group of this.addedGroups.flat()) {
+      groups.set(group.id, group);
     }
-    this.currentCategories = categories;
+    this.currentGroups = groups;
 
     const commands = new Map<string, ApplicationCommand | EditorCommand | TerminalCommand>();
     for (const command of this.addedCommands.flat()) {

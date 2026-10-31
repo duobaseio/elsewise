@@ -5,7 +5,7 @@ import { Compartment, EditorState, type Extension, Facet, Prec, StateField } fro
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import {
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   EDITOR_DOCUMENT,
   type EditorCommand,
@@ -357,7 +357,7 @@ describe('useEditorExtensions', () => {
           id: 'test.command',
           label: 'Test',
           scope: 'editor',
-          category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+          group: DEFAULT_COMMAND_GROUPS.editor.id,
           defaultKeys: ['F20'],
           run,
         },
@@ -602,7 +602,7 @@ describe('useEditorExtensions', () => {
           id: 'test.command',
           label: 'Test',
           scope: 'editor',
-          category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+          group: DEFAULT_COMMAND_GROUPS.editor.id,
           defaultKeys: ['Ctrl-k'],
           run,
         },

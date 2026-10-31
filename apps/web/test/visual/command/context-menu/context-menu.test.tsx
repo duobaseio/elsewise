@@ -1,4 +1,4 @@
-import { type ApplicationCommand, type ContextMenuGroup, DEFAULT_COMMAND_CATEGORIES } from '@elsewise/plugin';
+import { type ApplicationCommand, type ContextMenuGroup, DEFAULT_COMMAND_GROUPS } from '@elsewise/plugin';
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -13,7 +13,7 @@ import { THEMES } from '../../../sheet';
 const COMMANDS: ApplicationCommand[] = [
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'actions',
     label: 'Show context actions',
     defaultKeys: ['Alt-Enter'],
@@ -21,7 +21,7 @@ const COMMANDS: ApplicationCommand[] = [
   },
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'usages',
     label: 'Find usages',
     defaultKeys: ['Mod-Alt-F7'],
@@ -29,7 +29,7 @@ const COMMANDS: ApplicationCommand[] = [
   },
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'definition',
     label: 'Go to definition',
     defaultKeys: ['Mod-b'],
@@ -38,7 +38,7 @@ const COMMANDS: ApplicationCommand[] = [
   },
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'rename',
     label: 'Rename…',
     defaultKeys: ['Shift-F6'],
@@ -46,14 +46,14 @@ const COMMANDS: ApplicationCommand[] = [
   },
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'extract',
     label: 'Extract function',
     run: () => true,
   },
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'wrap',
     label: 'Soft wrap',
     active: () => true,
@@ -61,7 +61,7 @@ const COMMANDS: ApplicationCommand[] = [
   },
   {
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     id: 'whitespace',
     label: 'Show whitespace',
     active: () => false,

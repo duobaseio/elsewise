@@ -1,6 +1,35 @@
 import { type Platform, parseKey } from '@elsewise/components/lib/platform';
 import { base, keyName, shift } from 'w3c-keyname';
 
+const MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'Meta']);
+
+/**
+ * Returns the key that `event` presses as a keymap writes it, or null for a modifier alone.
+ *
+ * For example, Cmd-Shift-K on a Mac is `Mod-Shift-k`.
+ */
+export function recordKey(event: KeyboardEvent, platform: Platform): string | null {
+  if (MODIFIERS.has(keyName(event))) {
+    return null;
+  }
+
+  const keys = eventKeys(event, platform);
+  const parsed = parseKey(keys[keys.length - 1] ?? '');
+  if (parsed === null) {
+    return null;
+  }
+
+  const primary = platform === 'mac' ? 'meta' : 'ctrl';
+  return [
+    ...(parsed.modifiers.has(primary) ? ['Mod'] : []),
+    ...(parsed.modifiers.has('ctrl') && primary !== 'ctrl' ? ['Ctrl'] : []),
+    ...(parsed.modifiers.has('meta') && primary !== 'meta' ? ['Meta'] : []),
+    ...(parsed.modifiers.has('alt') ? ['Alt'] : []),
+    ...(parsed.modifiers.has('shift') ? ['Shift'] : []),
+    parsed.name === ' ' ? 'Space' : parsed.name,
+  ].join('-');
+}
+
 /**
  * Returns the keys that `event` presses, in the order CodeMirror looks them up.
  *

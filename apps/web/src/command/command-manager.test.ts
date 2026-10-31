@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMAND_CATEGORIES, type EditorCommand, type Keys, type TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type Keys, type TerminalCommand } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { CommandManager } from '@/command/command-manager';
@@ -8,9 +8,9 @@ import { EditorManager } from '@/editor/editor-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
 import { builtInApplication, EMPTY_KEYMAP } from '../../test/commands';
 
-const APPLICATION = DEFAULT_COMMAND_CATEGORIES.application.id;
-const EDITOR = DEFAULT_COMMAND_CATEGORIES.editor.id;
-const TERMINAL = DEFAULT_COMMAND_CATEGORIES.terminal.id;
+const APPLICATION = DEFAULT_COMMAND_GROUPS.application.id;
+const EDITOR = DEFAULT_COMMAND_GROUPS.editor.id;
+const TERMINAL = DEFAULT_COMMAND_GROUPS.terminal.id;
 
 // Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
 function commands(
@@ -25,7 +25,7 @@ function commands(
 function bound(keys: Record<string, Keys>, platform: Platform = 'linux'): CommandManager {
   const manager = commands(new EditorManager(), platform);
   for (const [id, defaultKeys] of Object.entries(keys)) {
-    manager.add([{ id, label: id, scope: 'editor', category: EDITOR, defaultKeys, run: () => true }]);
+    manager.add([{ id, label: id, scope: 'editor', group: EDITOR, defaultKeys, run: () => true }]);
   }
 
   return manager;
@@ -59,7 +59,7 @@ describe('add', () => {
       id: 'io.example.rename',
       label: 'Rename',
       scope: 'editor',
-      category: EDITOR,
+      group: EDITOR,
       run: () => true,
     } as const;
     manager.add([rename]);
@@ -70,8 +70,8 @@ describe('add', () => {
 
   test('rejects existing id', () => {
     const manager = commands();
-    manager.add([{ id: 'rename', label: 'First', scope: 'editor', category: EDITOR, run: () => true }]);
-    manager.add([{ id: 'rename', label: 'Second', scope: 'editor', category: EDITOR, run: () => true }]);
+    manager.add([{ id: 'rename', label: 'First', scope: 'editor', group: EDITOR, run: () => true }]);
+    manager.add([{ id: 'rename', label: 'Second', scope: 'editor', group: EDITOR, run: () => true }]);
 
     expect(manager.commands.get('rename')?.label).toBe('First');
     expect(warn).toHaveBeenCalledWith('Command rename already exists');
@@ -80,16 +80,16 @@ describe('add', () => {
   test('rejects existing id in same addition', () => {
     const manager = commands();
     manager.add([
-      { id: 'rename', label: 'First', scope: 'editor', category: EDITOR, run: () => true },
-      { id: 'rename', label: 'Second', scope: 'editor', category: EDITOR, run: () => true },
+      { id: 'rename', label: 'First', scope: 'editor', group: EDITOR, run: () => true },
+      { id: 'rename', label: 'Second', scope: 'editor', group: EDITOR, run: () => true },
     ]);
 
     expect(manager.commands.get('rename')?.label).toBe('First');
   });
 
-  test('rejects unknown category', () => {
+  test('rejects unknown group', () => {
     const manager = commands();
-    manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', category: 'io.example', run: () => true }]);
+    manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', group: 'io.example', run: () => true }]);
 
     expect(manager.commands.has('rename')).toBe(false);
     expect(warn).toHaveBeenCalledOnce();
@@ -103,7 +103,7 @@ describe('add', () => {
         id: 'elsewise.application.settings.open',
         label: 'Mine',
         scope: 'application',
-        category: APPLICATION,
+        group: APPLICATION,
         run: () => true,
       },
     ]);
@@ -113,10 +113,10 @@ describe('add', () => {
 
   test('removes only disposed commands', () => {
     const manager = commands();
-    manager.add([{ id: 'rename', label: 'First', scope: 'editor', category: EDITOR, run: () => true }]);
+    manager.add([{ id: 'rename', label: 'First', scope: 'editor', group: EDITOR, run: () => true }]);
     const dispose = manager.add([
-      { id: 'rename', label: 'Second', scope: 'editor', category: EDITOR, run: () => true },
-      { id: 'format', label: 'Format', scope: 'editor', category: EDITOR, run: () => true },
+      { id: 'rename', label: 'Second', scope: 'editor', group: EDITOR, run: () => true },
+      { id: 'format', label: 'Format', scope: 'editor', group: EDITOR, run: () => true },
     ]);
     dispose();
 
@@ -126,8 +126,8 @@ describe('add', () => {
 
   test('forgets rejected command', () => {
     const manager = commands();
-    const dispose = manager.add([{ id: 'rename', label: 'First', scope: 'editor', category: EDITOR, run: () => true }]);
-    manager.add([{ id: 'rename', label: 'Second', scope: 'editor', category: EDITOR, run: () => true }]);
+    const dispose = manager.add([{ id: 'rename', label: 'First', scope: 'editor', group: EDITOR, run: () => true }]);
+    manager.add([{ id: 'rename', label: 'Second', scope: 'editor', group: EDITOR, run: () => true }]);
     dispose();
 
     expect(manager.commands.get('rename')).toBeUndefined();
@@ -137,9 +137,7 @@ describe('add', () => {
     const manager = commands();
     const listener = vi.fn();
     manager.subscribe(listener);
-    const dispose = manager.add([
-      { id: 'rename', label: 'Rename', scope: 'editor', category: EDITOR, run: () => true },
-    ]);
+    const dispose = manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, run: () => true }]);
     dispose();
 
     expect(listener).toHaveBeenCalledTimes(2);
@@ -147,7 +145,7 @@ describe('add', () => {
 
   test('removes only disposed addition when added twice', () => {
     const manager = commands();
-    const added = [{ id: 'rename', label: 'Rename', scope: 'editor', category: EDITOR, run: () => true }] as const;
+    const added = [{ id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, run: () => true }] as const;
     manager.add(added);
     const dispose = manager.add(added);
     dispose();
@@ -156,73 +154,73 @@ describe('add', () => {
   });
 });
 
-describe('addCategories', () => {
+describe('addGroups', () => {
   test('appends after defaults', () => {
     const manager = commands();
-    manager.addCategories([{ id: 'io.example', label: 'Example' }]);
+    manager.addGroups([{ id: 'io.example', label: 'Example' }]);
 
-    expect([...manager.categories.keys()].slice(-2)).toEqual([TERMINAL, 'io.example']);
-    expect(manager.categories.get('io.example')?.label).toBe('Example');
+    expect([...manager.groups.keys()].slice(-2)).toEqual([TERMINAL, 'io.example']);
+    expect(manager.groups.get('io.example')?.label).toBe('Example');
   });
 
   test('rejects existing id', () => {
     const manager = commands();
-    manager.addCategories([{ id: 'io.example', label: 'First' }]);
-    manager.addCategories([{ id: 'io.example', label: 'Second' }]);
+    manager.addGroups([{ id: 'io.example', label: 'First' }]);
+    manager.addGroups([{ id: 'io.example', label: 'Second' }]);
 
-    expect(manager.categories.get('io.example')?.label).toBe('First');
+    expect(manager.groups.get('io.example')?.label).toBe('First');
     expect(warn).toHaveBeenCalledOnce();
   });
 
-  test('accepts category in built-in or earlier category', () => {
+  test('accepts group in built-in or earlier group', () => {
     const manager = commands();
-    manager.addCategories([
+    manager.addGroups([
       { id: 'io.example', in: EDITOR, label: 'Example' },
       { id: 'io.example.tone', in: 'io.example', label: 'Tone' },
     ]);
 
-    expect(manager.categories.get('io.example.tone')?.in).toBe('io.example');
+    expect(manager.groups.get('io.example.tone')?.in).toBe('io.example');
   });
 
-  test('rejects category in unknown category', () => {
+  test('rejects group in unknown group', () => {
     const manager = commands();
-    manager.addCategories([
+    manager.addGroups([
       { id: 'io.example.tone', in: 'io.example', label: 'Tone' },
       { id: 'io.example', label: 'Example' },
     ]);
 
-    expect(manager.categories.has('io.example.tone')).toBe(false);
-    expect(manager.categories.has('io.example')).toBe(true);
+    expect(manager.groups.has('io.example.tone')).toBe(false);
+    expect(manager.groups.has('io.example')).toBe(true);
     expect(warn).toHaveBeenCalledOnce();
   });
 
-  test('removes nested categories and their commands on dispose', () => {
+  test('removes nested groups and their commands on dispose', () => {
     const manager = commands();
-    const dispose = manager.addCategories([{ id: 'a', label: 'A' }]);
-    manager.addCategories([
+    const dispose = manager.addGroups([{ id: 'a', label: 'A' }]);
+    manager.addGroups([
       { id: 'b', in: 'a', label: 'B' },
       { id: 'c', in: 'b', label: 'C' },
       { id: 'd', label: 'D' },
     ]);
     manager.add([
-      { id: 'inC', label: 'In C', scope: 'editor', category: 'c', run: () => true },
-      { id: 'inD', label: 'In D', scope: 'editor', category: 'd', run: () => true },
+      { id: 'inC', label: 'In C', scope: 'editor', group: 'c', run: () => true },
+      { id: 'inD', label: 'In D', scope: 'editor', group: 'd', run: () => true },
     ]);
     dispose();
 
-    expect([...manager.categories.keys()].filter((id) => id.length === 1)).toEqual(['d']);
+    expect([...manager.groups.keys()].filter((id) => id.length === 1)).toEqual(['d']);
     expect(manager.commands.has('inC')).toBe(false);
     expect(manager.commands.has('inD')).toBe(true);
   });
 
-  test('keeps disposing commands after category removed some', () => {
+  test('keeps disposing commands after group removed some', () => {
     const manager = commands();
-    const disposeCategory = manager.addCategories([{ id: 'a', label: 'A' }]);
+    const disposeGroup = manager.addGroups([{ id: 'a', label: 'A' }]);
     const disposeCommands = manager.add([
-      { id: 'inA', label: 'In A', scope: 'editor', category: 'a', run: () => true },
-      { id: 'inEditor', label: 'In editor', scope: 'editor', category: EDITOR, run: () => true },
+      { id: 'inA', label: 'In A', scope: 'editor', group: 'a', run: () => true },
+      { id: 'inEditor', label: 'In editor', scope: 'editor', group: EDITOR, run: () => true },
     ]);
-    disposeCategory();
+    disposeGroup();
     disposeCommands();
 
     expect(manager.commands.has('inEditor')).toBe(false);
@@ -232,7 +230,7 @@ describe('addCategories', () => {
     const manager = commands();
     const listener = vi.fn();
     manager.subscribe(listener);
-    const dispose = manager.addCategories([{ id: 'a', label: 'A' }]);
+    const dispose = manager.addGroups([{ id: 'a', label: 'A' }]);
     dispose();
 
     expect(listener).toHaveBeenCalledTimes(2);
@@ -255,11 +253,11 @@ describe('run', () => {
         id: 'application',
         label: 'Application',
         scope: 'application',
-        category: APPLICATION,
+        group: APPLICATION,
         enabled: () => false,
         run,
       },
-      { id: 'editor', label: 'Editor', scope: 'editor', category: EDITOR, enabled: () => false, run },
+      { id: 'editor', label: 'Editor', scope: 'editor', group: EDITOR, enabled: () => false, run },
     ]);
 
     expect(manager.run('application')).toBe(false);
@@ -270,8 +268,8 @@ describe('run', () => {
   test('returns false for unapplied command', () => {
     const manager = commands();
     manager.add([
-      { id: 'application', label: 'Application', scope: 'application', category: APPLICATION, run: () => false },
-      { id: 'editor', label: 'Editor', scope: 'editor', category: EDITOR, run: () => false },
+      { id: 'application', label: 'Application', scope: 'application', group: APPLICATION, run: () => false },
+      { id: 'editor', label: 'Editor', scope: 'editor', group: EDITOR, run: () => false },
     ]);
 
     expect(manager.run('application')).toBe(false);
@@ -282,7 +280,7 @@ describe('run', () => {
     const editor = new EditorManager();
     const manager = commands(editor);
     const run = vi.fn<EditorCommand['run']>(() => true);
-    manager.add([{ id: 'c', label: 'C', scope: 'editor', category: EDITOR, run }]);
+    manager.add([{ id: 'c', label: 'C', scope: 'editor', group: EDITOR, run }]);
     const active = view('active');
     const target = view('target');
 
@@ -301,7 +299,7 @@ describe('run', () => {
     const terminals = new TerminalManager();
     const manager = commands(new EditorManager(), 'linux', terminals);
     const run = vi.fn<TerminalCommand['run']>(() => true);
-    manager.add([{ id: 'c', label: 'C', scope: 'terminal', category: TERMINAL, run }]);
+    manager.add([{ id: 'c', label: 'C', scope: 'terminal', group: TERMINAL, run }]);
     const active = terminal('active');
     const target = terminal('target');
 
@@ -320,8 +318,8 @@ describe('run', () => {
     const manager = commands();
     const run = vi.fn(() => true);
     manager.add([
-      { id: 'editor', label: 'Editor', scope: 'editor', category: EDITOR, run },
-      { id: 'terminal', label: 'Terminal', scope: 'terminal', category: TERMINAL, run },
+      { id: 'editor', label: 'Editor', scope: 'editor', group: EDITOR, run },
+      { id: 'terminal', label: 'Terminal', scope: 'terminal', group: TERMINAL, run },
     ]);
 
     expect(manager.run('editor', terminal('a'))).toBe(false);
@@ -333,7 +331,7 @@ describe('run', () => {
   test('runs application command regardless of view', () => {
     const manager = commands();
     const run = vi.fn(() => true);
-    manager.add([{ id: 'c', label: 'C', scope: 'application', category: APPLICATION, run }]);
+    manager.add([{ id: 'c', label: 'C', scope: 'application', group: APPLICATION, run }]);
 
     expect(manager.run('c', view('a'))).toBe(true);
     expect(run).toHaveBeenCalledOnce();
@@ -346,7 +344,7 @@ describe('run', () => {
         id: 'throws',
         label: 'Throws',
         scope: 'application',
-        category: APPLICATION,
+        group: APPLICATION,
         run: () => {
           throw new Error('failed');
         },
@@ -379,7 +377,7 @@ describe('keymap', () => {
   test('follows added commands', () => {
     const manager = commands();
     const dispose = manager.add([
-      { id: 'rename', label: 'Rename', scope: 'editor', category: EDITOR, defaultKeys: ['Mod-k'], run: () => true },
+      { id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, defaultKeys: ['Mod-k'], run: () => true },
     ]);
 
     expect(manager.keymap.keys.editor.get('Ctrl-k')).toEqual(['rename']);
@@ -395,7 +393,7 @@ describe('onKeymapChange', () => {
     const listener = vi.fn();
     manager.onKeymapChange(listener);
     manager.add([
-      { id: 'rename', label: 'Rename', scope: 'editor', category: EDITOR, defaultKeys: ['Mod-r'], run: () => true },
+      { id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, defaultKeys: ['Mod-r'], run: () => true },
     ]);
 
     expect(listener).toHaveBeenCalledExactlyOnceWith(manager.keymap);
@@ -412,7 +410,7 @@ describe('onKeymapChange', () => {
         id: 'format',
         label: 'Format',
         scope: 'application',
-        category: APPLICATION,
+        group: APPLICATION,
         defaultKeys: ['Shift-F6'],
         run: () => true,
       },
@@ -429,7 +427,7 @@ describe('onKeymapChange', () => {
     });
     manager.onKeymapChange(listener);
     manager.add([
-      { id: 'rename', label: 'Rename', scope: 'editor', category: EDITOR, defaultKeys: ['Mod-r'], run: () => true },
+      { id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, defaultKeys: ['Mod-r'], run: () => true },
     ]);
 
     expect(error).toHaveBeenCalledOnce();

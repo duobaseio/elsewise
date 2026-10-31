@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { eventKeys, normalizeKey } from '@/command/keymap/keys';
+import { eventKeys, normalizeKey, recordKey } from '@/command/keymap/keys';
 
 // Returns a keydown that presses `key`, whose key code is `keyCode`, with `modifiers` held.
 function press(key: string, keyCode: number, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
@@ -14,6 +14,52 @@ function press(key: string, keyCode: number, modifiers: Partial<KeyboardEvent> =
     ...modifiers,
   } as KeyboardEvent;
 }
+
+describe('recordKey', () => {
+  test('writes primary modifier as Mod', () => {
+    expect(recordKey(press('k', 75, { metaKey: true }), 'mac')).toBe('Mod-k');
+    expect(recordKey(press('k', 75, { ctrlKey: true }), 'windows')).toBe('Mod-k');
+    expect(recordKey(press('k', 75, { ctrlKey: true }), 'linux')).toBe('Mod-k');
+  });
+
+  test('keeps other modifier', () => {
+    expect(recordKey(press('k', 75, { ctrlKey: true }), 'mac')).toBe('Ctrl-k');
+    expect(recordKey(press('k', 75, { metaKey: true }), 'linux')).toBe('Meta-k');
+    expect(recordKey(press('k', 75, { ctrlKey: true, altKey: true }), 'linux')).toBe('Mod-Alt-k');
+  });
+
+  test('unshifts character under modifier, naming Shift', () => {
+    expect(recordKey(press('K', 75, { metaKey: true, shiftKey: true }), 'mac')).toBe('Mod-Shift-k');
+    expect(recordKey(press('?', 191, { ctrlKey: true, shiftKey: true }), 'linux')).toBe('Mod-Shift-/');
+  });
+
+  test('keeps uppercase letter held with Shift alone', () => {
+    expect(recordKey(press('K', 75, { shiftKey: true }), 'linux')).toBe('Shift-K');
+  });
+
+  test('keeps character typed with Option on mac', () => {
+    expect(recordKey(press('˚', 75, { altKey: true }), 'mac')).toBe('Alt-˚');
+  });
+
+  test('names Space and named keys', () => {
+    expect(recordKey(press(' ', 32, { ctrlKey: true }), 'linux')).toBe('Mod-Space');
+    expect(recordKey(press('Enter', 13, { shiftKey: true }), 'linux')).toBe('Shift-Enter');
+    expect(recordKey(press('F2', 113), 'linux')).toBe('F2');
+  });
+
+  test('matches normalized key', () => {
+    const event = press('K', 75, { metaKey: true, shiftKey: true });
+    const key = recordKey(event, 'mac');
+
+    expect(key).not.toBeNull();
+    expect(eventKeys(event, 'mac')).toContain(normalizeKey(key ?? '', 'mac'));
+  });
+
+  test('returns null for modifier alone', () => {
+    expect(recordKey(press('Shift', 16, { shiftKey: true }), 'linux')).toBeNull();
+    expect(recordKey(press('Meta', 91, { metaKey: true }), 'mac')).toBeNull();
+  });
+});
 
 describe('eventKeys', () => {
   test('names character with modifiers', () => {

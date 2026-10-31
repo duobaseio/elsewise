@@ -1,7 +1,7 @@
 import { DEFAULT_SETTINGS, type EditorLanguageSettings, type Settings } from '@elsewise/bridge';
 import {
   type ApplicationCommand,
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
   DEFAULT_ROUTES,
@@ -13,7 +13,7 @@ import { LANGUAGES } from '@/settings/languages';
 export const OPEN_SETTINGS: ApplicationCommand = {
   scope: 'application',
   id: DEFAULT_COMMANDS.application.settings.open,
-  category: DEFAULT_COMMAND_CATEGORIES.application.id,
+  group: DEFAULT_COMMAND_GROUPS.application.id,
   label: 'Settings',
   defaultKeys: DEFAULT_KEYS.application.settings.open,
   run: ({ router }) => {

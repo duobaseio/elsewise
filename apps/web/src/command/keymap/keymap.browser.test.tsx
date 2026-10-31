@@ -1,6 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { DEFAULT_COMMAND_CATEGORIES, type EditorCommand, type TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type TerminalCommand } from '@elsewise/plugin';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { editorKeymap, terminalKeymap } from '@/command/keymap/keymap';
@@ -49,7 +49,7 @@ describe('editorKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'editor',
-      category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+      group: DEFAULT_COMMAND_GROUPS.editor.id,
       defaultKeys: ['Ctrl-k'],
       run,
     });
@@ -69,7 +69,7 @@ describe('editorKeymap', () => {
         id: 'first',
         label: 'First',
         scope: 'editor',
-        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        group: DEFAULT_COMMAND_GROUPS.editor.id,
         defaultKeys: ['Ctrl-k'],
         run: first,
       },
@@ -77,7 +77,7 @@ describe('editorKeymap', () => {
         id: 'second',
         label: 'Second',
         scope: 'editor',
-        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        group: DEFAULT_COMMAND_GROUPS.editor.id,
         defaultKeys: ['Ctrl-k'],
         run: second,
       },
@@ -94,7 +94,7 @@ describe('editorKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'editor',
-      category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+      group: DEFAULT_COMMAND_GROUPS.editor.id,
       defaultKeys: ['Shift-K'],
       run,
     });
@@ -110,7 +110,7 @@ describe('editorKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'editor',
-      category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+      group: DEFAULT_COMMAND_GROUPS.editor.id,
       defaultKeys: ['Ctrl-k'],
       enabled: () => false,
       run,
@@ -131,7 +131,7 @@ describe('editorKeymap', () => {
         id: 'first',
         label: 'First',
         scope: 'editor',
-        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        group: DEFAULT_COMMAND_GROUPS.editor.id,
         defaultKeys: ['Ctrl-k'],
         run: first,
       },
@@ -139,7 +139,7 @@ describe('editorKeymap', () => {
         id: 'second',
         label: 'Second',
         scope: 'editor',
-        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        group: DEFAULT_COMMAND_GROUPS.editor.id,
         defaultKeys: ['Ctrl-k'],
         run: second,
       },
@@ -187,7 +187,7 @@ describe('terminalKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'terminal',
-      category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+      group: DEFAULT_COMMAND_GROUPS.terminal.id,
       defaultKeys: ['Ctrl-k'],
       run,
     });
@@ -211,7 +211,7 @@ describe('terminalKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'terminal',
-      category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+      group: DEFAULT_COMMAND_GROUPS.terminal.id,
       defaultKeys: ['Ctrl-k'],
       enabled: () => false,
       run,
@@ -230,7 +230,7 @@ describe('terminalKeymap', () => {
         id: 'first',
         label: 'First',
         scope: 'terminal',
-        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        group: DEFAULT_COMMAND_GROUPS.terminal.id,
         defaultKeys: ['Ctrl-k'],
         run: first,
       },
@@ -238,7 +238,7 @@ describe('terminalKeymap', () => {
         id: 'second',
         label: 'Second',
         scope: 'terminal',
-        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        group: DEFAULT_COMMAND_GROUPS.terminal.id,
         defaultKeys: ['Ctrl-k'],
         run: second,
       },

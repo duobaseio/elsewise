@@ -32,7 +32,7 @@ export const DEFAULT_ROUTES = {
  *     async onEnable(app) {
  *       const index = await buildIndex();
  *       return [
- *         app.commands.addCategories([...]),
+ *         app.commands.addGroups([...]),
  *         app.commands.add([...]),
  *         app.editor.addContextMenu([...]),
  *         () => index.close(),

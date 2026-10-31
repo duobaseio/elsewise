@@ -1,5 +1,5 @@
 import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
-import { type ApplicationCommand, DEFAULT_COMMAND_CATEGORIES, Keymap } from '@elsewise/plugin';
+import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -89,7 +89,7 @@ function command(id: string, run: () => boolean, enabled = true): ApplicationCom
     id,
     label: id,
     scope: 'application',
-    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    group: DEFAULT_COMMAND_GROUPS.application.id,
     defaultKeys: ['Ctrl-k'],
     enabled: () => enabled,
     run,

@@ -3,7 +3,7 @@ import { formatKey } from '@elsewise/components/lib/platform';
 import {
   type ApplicationCommand,
   type ContextMenuGroup,
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   type EditorCommand,
   type TerminalCommand,
 } from '@elsewise/plugin';
@@ -38,7 +38,7 @@ function command(
   run: ApplicationCommand['run'] = () => true,
   rest: Partial<ApplicationCommand> = {},
 ): ApplicationCommand {
-  return { scope: 'application', category: DEFAULT_COMMAND_CATEGORIES.application.id, id, label: id, run, ...rest };
+  return { scope: 'application', group: DEFAULT_COMMAND_GROUPS.application.id, id, label: id, run, ...rest };
 }
 
 // Returns an application whose commands include `added`.
@@ -107,7 +107,7 @@ describe('CommandContextMenu', () => {
     const application = setUp([
       {
         scope: 'editor',
-        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        group: DEFAULT_COMMAND_GROUPS.editor.id,
         id: 'Editor',
         label: 'Editor',
         run: () => true,
@@ -127,14 +127,14 @@ describe('CommandContextMenu', () => {
     const application = setUp([
       {
         scope: 'editor',
-        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        group: DEFAULT_COMMAND_GROUPS.editor.id,
         id: 'Editor',
         label: 'Editor',
         run: () => true,
       },
       {
         scope: 'terminal',
-        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        group: DEFAULT_COMMAND_GROUPS.terminal.id,
         id: 'Terminal',
         label: 'Terminal',
         run: () => true,

@@ -11,7 +11,7 @@ import {
 } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
 import {
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_HOVER_SECTIONS,
   DEFAULT_KEYS,
@@ -89,7 +89,7 @@ const setCursorHover = StateEffect.define<Tooltip | null>();
 export const EDITOR_SHOW_HOVER: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.hover.show,
-  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
+  group: DEFAULT_COMMAND_GROUPS.editor.code,
   label: 'Quick documentation',
   defaultKeys: DEFAULT_KEYS.editor.hover.show,
   // Shows the hover for the word the cursor is on, until the cursor moves.

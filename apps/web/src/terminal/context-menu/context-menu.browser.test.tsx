@@ -1,5 +1,5 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMAND_CATEGORIES } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { mount, rightClick, SETTINGS, session } from '../../../test/terminal';
@@ -16,7 +16,7 @@ describe('TerminalContextMenu', () => {
         id: 'shrug',
         label: 'Shrug',
         scope: 'terminal',
-        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        group: DEFAULT_COMMAND_GROUPS.terminal.id,
         run: () => true,
       },
     ]);
@@ -35,7 +35,7 @@ describe('TerminalContextMenu', () => {
         id: 'shrug',
         label: 'Shrug',
         scope: 'terminal',
-        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        group: DEFAULT_COMMAND_GROUPS.terminal.id,
         run: () => {
           focused = document.activeElement;
           return true;

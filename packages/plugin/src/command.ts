@@ -4,9 +4,9 @@ import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
 
 /**
- * The ids of the built-in categories.
+ * The ids of the built-in groups.
  */
-export const DEFAULT_COMMAND_CATEGORIES = {
+export const DEFAULT_COMMAND_GROUPS = {
   application: { id: 'elsewise.application' },
   editor: {
     id: 'elsewise.editor',
@@ -247,21 +247,20 @@ export interface Commands {
   readonly keymap: ActiveKeymap;
 
   /**
-   * Adds `categories`.
+   * Adds `groups`.
    *
-   * A category with an already existing id, or in a category that does not exist, is rejected. Categories are listed
-   * in order of addition.
+   * A group with an already existing id, or in a group that does not exist, is rejected. Groups are listed in order
+   * of addition.
    *
-   * Returns a disposable that removes the added `categories`, the categories in them, and the commands in any of
-   * those.
+   * Returns a disposable that removes the added `groups`, the groups in them, and the commands in any of those.
    */
-  addCategories(categories: readonly CommandCategory[]): Disposable;
+  addGroups(groups: readonly CommandGroup[]): Disposable;
 
   /**
    * Adds `commands`.
    *
-   * A command with an already existing id or an unknown category is rejected. Commands that share a key are tried
-   * from the last added to the first, until one applies.
+   * A command with an already existing id or an unknown group is rejected. Commands that share a key are tried from
+   * the last added to the first, until one applies.
    *
    * Returns a disposable that removes the added `commands`.
    */
@@ -299,16 +298,16 @@ export interface ActiveKeymap {
 /**
  * A group for visually organizing commands.
  */
-export interface CommandCategory {
+export interface CommandGroup {
   /**
-   * The category's id, namespaced by the plugin's, e.g. `io.example.tone`. Omitted if the id already exists.
+   * The group's id, namespaced by the plugin's, e.g. `io.example.tone`. Omitted if the id already exists.
    */
   readonly id: string;
 
   /**
-   * The id of the category it is listed in, e.g. `io.example`. Omitted if the category does not exist.
+   * The id of the group it is listed in, e.g. `io.example`. Omitted if the group does not exist.
    *
-   * See {@link DEFAULT_COMMAND_CATEGORIES} for the built-in categories.
+   * See {@link DEFAULT_COMMAND_GROUPS} for the built-in groups.
    */
   readonly in?: string;
 
@@ -333,11 +332,11 @@ export interface Command {
   readonly id: string;
 
   /**
-   * The category's id, used for visually organizing commands.
+   * The group's id, used for visually organizing commands.
    *
-   * See {@link DEFAULT_COMMAND_CATEGORIES} for the built-in categories.
+   * See {@link DEFAULT_COMMAND_GROUPS} for the built-in groups.
    */
-  readonly category: string;
+  readonly group: string;
 
   /**
    * The label shown in menus, e.g. `Rename…`.

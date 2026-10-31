@@ -2,7 +2,7 @@ import { openSearchPanel, search } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import { DEFAULT_COMMAND_CATEGORIES, type EditorCommand, type EditorToolbarProps } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type EditorToolbarProps } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -82,7 +82,7 @@ function mount(
 function command(commands: CommandManager, id: string, parts: Partial<EditorCommand> = {}): EditorCommand {
   const added: EditorCommand = {
     scope: 'editor',
-    category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+    group: DEFAULT_COMMAND_GROUPS.editor.id,
     id,
     label: id,
     run: () => true,

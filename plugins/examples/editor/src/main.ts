@@ -56,7 +56,7 @@ export default function ({ id }: PluginInfo): Plugin {
           }),
         ]),
         // The keymap settings list the commands below under these.
-        commands.addCategories([
+        commands.addGroups([
           { id, label: 'Editor example' },
           { id: `${id}.tone`, in: id, label: 'Tone of voice' },
         ]),
@@ -105,14 +105,14 @@ export default function ({ id }: PluginInfo): Plugin {
   };
 }
 
-function excuse(id: string, category: string): EditorCommand {
+function excuse(id: string, group: string): EditorCommand {
   const comment = (state: EditorState) =>
     state.languageDataAt<{ line?: string }>('commentTokens', state.selection.main.head)[0]?.line;
 
   return {
     scope: 'editor',
     id,
-    category,
+    group,
     label: 'Leave an excuse',
     shown: (_, view) => comment(view.state) !== undefined,
     run: (_, view) => {
@@ -125,11 +125,11 @@ function excuse(id: string, category: string): EditorCommand {
   };
 }
 
-function reaction(id: string, category: string, label: string, text: () => string): EditorCommand {
+function reaction(id: string, group: string, label: string, text: () => string): EditorCommand {
   return {
     scope: 'editor',
     id,
-    category,
+    group,
     label,
     run: (_, view) => {
       view.dispatch(view.state.replaceSelection(text()));
@@ -138,11 +138,11 @@ function reaction(id: string, category: string, label: string, text: () => strin
   };
 }
 
-function tone(id: string, category: string, label: string, transform: (text: string) => string): EditorCommand {
+function tone(id: string, group: string, label: string, transform: (text: string) => string): EditorCommand {
   return {
     scope: 'editor',
     id,
-    category,
+    group,
     label,
     shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
     run: (_, view) => {

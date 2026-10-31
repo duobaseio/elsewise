@@ -1,5 +1,5 @@
 import type { InstalledPlugin } from '@elsewise/bridge';
-import { DEFAULT_COMMAND_CATEGORIES } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
@@ -112,7 +112,7 @@ describe('enable', () => {
         export default function () {
           return {
             onEnable(app) {
-              return [app.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', category: 'elsewise.application', run() {} }])];
+              return [app.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', group: 'elsewise.application', run() {} }])];
             },
           };
         }
@@ -134,7 +134,7 @@ describe('enable', () => {
                   id: 'a.run',
                   label: 'Run',
                   scope: 'application',
-                  category: 'elsewise.application',
+                  group: 'elsewise.application',
                   run: (received) => events.push(received === app ? 'run with application' : 'run'),
                 },
               ]);
@@ -184,7 +184,7 @@ describe('enable', () => {
         id: 'a.run',
         label: 'Run',
         scope: 'application',
-        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        group: DEFAULT_COMMAND_GROUPS.application.id,
         run: () => true,
       },
     ]);
@@ -194,7 +194,7 @@ describe('enable', () => {
         id: 'a.other',
         label: 'Other',
         scope: 'application',
-        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        group: DEFAULT_COMMAND_GROUPS.application.id,
         run: () => true,
       },
     ]);

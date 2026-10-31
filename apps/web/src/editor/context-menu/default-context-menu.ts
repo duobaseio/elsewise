@@ -1,7 +1,7 @@
 import type { EditorView } from '@codemirror/view';
 import {
   type ContextMenuGroup,
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_EDITOR_CONTEXT_MENU,
   DEFAULT_KEYS,
@@ -58,7 +58,7 @@ export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
 export const EDITOR_CUT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.cut,
-  category: DEFAULT_COMMAND_CATEGORIES.editor.edit,
+  group: DEFAULT_COMMAND_GROUPS.editor.edit,
   label: 'Cut',
   defaultKeys: DEFAULT_KEYS.editor.clipboard.cut,
   enabled: (_, view) => !view.state.readOnly,
@@ -72,7 +72,7 @@ export const EDITOR_CUT: EditorCommand = {
 export const EDITOR_COPY: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.copy,
-  category: DEFAULT_COMMAND_CATEGORIES.editor.edit,
+  group: DEFAULT_COMMAND_GROUPS.editor.edit,
   label: 'Copy',
   defaultKeys: DEFAULT_KEYS.editor.clipboard.copy,
   shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
@@ -85,7 +85,7 @@ export const EDITOR_COPY: EditorCommand = {
 export const EDITOR_PASTE: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.clipboard.paste,
-  category: DEFAULT_COMMAND_CATEGORIES.editor.edit,
+  group: DEFAULT_COMMAND_GROUPS.editor.edit,
   label: 'Paste',
   defaultKeys: DEFAULT_KEYS.editor.clipboard.paste,
   enabled: (_, view) => !view.state.readOnly,

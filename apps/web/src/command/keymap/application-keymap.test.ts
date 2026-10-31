@@ -1,7 +1,7 @@
 import type { Platform } from '@elsewise/components/lib/platform';
 import {
   type ApplicationCommand,
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   type EditorCommand,
   Keymap,
   type Keys,
@@ -16,7 +16,7 @@ function editor(keys: Record<string, Keys>): EditorCommand[] {
     id,
     label: id,
     scope: 'editor',
-    category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+    group: DEFAULT_COMMAND_GROUPS.editor.id,
     defaultKeys,
     run: () => true,
   }));
@@ -129,7 +129,7 @@ describe('commands', () => {
         id: 'rename',
         label: 'Rename',
         scope: 'application',
-        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        group: DEFAULT_COMMAND_GROUPS.application.id,
         defaultKeys: ['Mod-r'],
         run: () => true,
       },
@@ -174,7 +174,7 @@ describe('keys', () => {
         id: 'settings',
         label: 'Settings',
         scope: 'application',
-        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        group: DEFAULT_COMMAND_GROUPS.application.id,
         defaultKeys: ['Mod-,'],
         run: () => true,
       },

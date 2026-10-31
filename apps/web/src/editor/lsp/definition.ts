@@ -3,7 +3,7 @@ import { EditorSelection, EditorState } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import {
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
   DEFAULT_NAVIGATION_SOURCES,
@@ -37,7 +37,7 @@ const SERVER: EditorNavigationSource = {
 export const EDITOR_GO_TO_DEFINITION: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.goToDefinition,
-  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
+  group: DEFAULT_COMMAND_GROUPS.editor.code,
   label: 'Go to definition',
   defaultKeys: DEFAULT_KEYS.editor.lsp.goToDefinition,
   enabled: (_, view) => Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.definitionProvider),

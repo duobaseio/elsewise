@@ -3,7 +3,7 @@ import { ChangeSet, type EditorState, StateEffect, StateField } from '@codemirro
 import type { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import {
-  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
   type EditorCommand,
@@ -41,7 +41,7 @@ const trackEdits = StateEffect.define<{ request: object; track: boolean }>();
 export const EDITOR_FORMAT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.edit.format,
-  category: DEFAULT_COMMAND_CATEGORIES.editor.edit,
+  group: DEFAULT_COMMAND_GROUPS.editor.edit,
   label: 'Format',
   defaultKeys: DEFAULT_KEYS.editor.edit.format,
   // Formats only the selection when there is one, with the first formatter that is enabled.
