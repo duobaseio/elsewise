@@ -4,6 +4,7 @@ import type {
   ActiveKeymap,
   Application,
   ApplicationCommand,
+  CommandCategory,
   Commands,
   Disposable,
   EditorCommand,
@@ -13,6 +14,15 @@ import type {
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import {
+  APPLICATION,
+  EDITOR,
+  EDITOR_CODE,
+  EDITOR_DIFF,
+  EDITOR_EDIT,
+  EDITOR_NAVIGATE,
+  TERMINAL,
+} from '@/command/categories';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import {
@@ -74,6 +84,16 @@ import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
 import { OPEN_SETTINGS } from '@/settings/settings';
 import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
 import { TERMINAL_FIND } from '@/terminal/search/commands';
+
+export const DEFAULT_CATEGORIES: readonly CommandCategory[] = [
+  APPLICATION,
+  EDITOR,
+  EDITOR_CODE,
+  EDITOR_DIFF,
+  EDITOR_EDIT,
+  EDITOR_NAVIGATE,
+  TERMINAL,
+];
 
 export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[] = [
   // Application
@@ -152,6 +172,8 @@ export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | Te
 export class CommandManager implements Commands {
   readonly keymap: ApplicationKeymap;
   private readonly listeners = new Set<() => void>();
+  private addedCategories: ReadonlyArray<ReadonlyArray<CommandCategory>> = [];
+  private currentCategories: ReadonlyMap<string, CommandCategory> = new Map();
   private addedCommands: ReadonlyArray<ReadonlyArray<ApplicationCommand | EditorCommand | TerminalCommand>> = [];
   private currentCommands: ReadonlyMap<string, ApplicationCommand | EditorCommand | TerminalCommand> = new Map();
   private currentSelected: Keymap;
@@ -163,7 +185,15 @@ export class CommandManager implements Commands {
   ) {
     this.keymap = new ApplicationKeymap(platform);
     this.currentSelected = selected;
+    this.addCategories(DEFAULT_CATEGORIES);
     this.add(DEFAULT_COMMANDS);
+  }
+
+  /**
+   * The categories by id, in order of addition.
+   */
+  get categories(): ReadonlyMap<string, CommandCategory> {
+    return this.currentCategories;
   }
 
   /**
@@ -204,11 +234,53 @@ export class CommandManager implements Commands {
   /**
    * {@inheritDoc}
    */
+  addCategories(categories: readonly CommandCategory[]): Disposable {
+    const ids = new Set(this.currentCategories.keys());
+    const added = categories.filter((category) => {
+      if (ids.has(category.id)) {
+        console.warn(`Command category ${category.id} already exists`);
+        return false;
+      }
+
+      if (category.in !== undefined && !ids.has(category.in)) {
+        console.warn(`Command category ${category.id} is in unknown category ${category.in}`);
+        return false;
+      }
+
+      ids.add(category.id);
+      return true;
+    });
+    this.addedCategories = [...this.addedCategories, added];
+    this.update();
+    return () => {
+      // A category is added after the one it is in, so one pass in that order reaches every nested category.
+      const removed = new Set(added.map((category) => category.id));
+      this.addedCategories = this.addedCategories.map((other) =>
+        other.filter((category) => {
+          if (category.in !== undefined && removed.has(category.in)) {
+            removed.add(category.id);
+          }
+          return !removed.has(category.id);
+        }),
+      );
+      this.addedCommands = this.addedCommands.map((other) => other.filter((command) => !removed.has(command.category)));
+      this.update();
+    };
+  }
+
+  /**
+   * {@inheritDoc}
+   */
   add(commands: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): Disposable {
     const ids = new Set(this.currentCommands.keys());
     const added = commands.filter((command) => {
       if (ids.has(command.id)) {
         console.warn(`Command ${command.id} already exists`);
+        return false;
+      }
+
+      if (!this.currentCategories.has(command.category)) {
+        console.warn(`Command ${command.id} is in unknown category ${command.category}`);
         return false;
       }
 
@@ -218,12 +290,19 @@ export class CommandManager implements Commands {
     this.addedCommands = [...this.addedCommands, added];
     this.update();
     return () => {
-      this.addedCommands = this.addedCommands.filter((other) => other !== added);
+      // By command rather than addition, since removing a category may have thinned the addition already.
+      this.addedCommands = this.addedCommands.map((other) => other.filter((command) => !added.includes(command)));
       this.update();
     };
   }
 
   private update() {
+    const categories = new Map<string, CommandCategory>();
+    for (const category of this.addedCategories.flat()) {
+      categories.set(category.id, category);
+    }
+    this.currentCategories = categories;
+
     const commands = new Map<string, ApplicationCommand | EditorCommand | TerminalCommand>();
     for (const command of this.addedCommands.flat()) {
       commands.set(command.id, command);

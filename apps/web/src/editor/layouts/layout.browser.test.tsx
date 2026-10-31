@@ -5,6 +5,7 @@ import { Compartment, EditorState, type Extension, Facet, Prec, StateField } fro
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import {
+  DEFAULT_COMMAND_CATEGORIES,
   DEFAULT_COMMANDS,
   EDITOR_DOCUMENT,
   type EditorCommand,
@@ -351,7 +352,16 @@ describe('useEditorExtensions', () => {
       built.dispatch({ selection: { anchor: 3 } });
       const run = vi.fn<EditorCommand['run']>(() => true);
 
-      commands.add([{ id: 'test.command', label: 'Test', scope: 'editor', defaultKeys: ['F20'], run }]);
+      commands.add([
+        {
+          id: 'test.command',
+          label: 'Test',
+          scope: 'editor',
+          category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+          defaultKeys: ['F20'],
+          run,
+        },
+      ]);
 
       await expect
         .poll(() => {
@@ -587,7 +597,16 @@ describe('useEditorExtensions', () => {
       const built = view();
       const run = vi.fn<EditorCommand['run']>(() => true);
 
-      commands.add([{ id: 'test.command', label: 'Test', scope: 'editor', defaultKeys: ['Ctrl-k'], run }]);
+      commands.add([
+        {
+          id: 'test.command',
+          label: 'Test',
+          scope: 'editor',
+          category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+          defaultKeys: ['Ctrl-k'],
+          run,
+        },
+      ]);
       await new Promise((resolve) => setTimeout(resolve));
       view().contentDOM.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'k', code: 'KeyK', keyCode: 75, ctrlKey: true, bubbles: true }),

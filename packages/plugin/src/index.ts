@@ -2,11 +2,12 @@ export type {
   ActiveKeymap,
   ApplicationCommand,
   Command,
+  CommandCategory,
   Commands,
   EditorCommand,
   TerminalCommand,
 } from './command.ts';
-export { DEFAULT_COMMANDS, DEFAULT_KEYS } from './command.ts';
+export { DEFAULT_COMMAND_CATEGORIES, DEFAULT_COMMANDS, DEFAULT_KEYS } from './command.ts';
 export {
   type ContextMenuGroup,
   type ContextMenuItem,

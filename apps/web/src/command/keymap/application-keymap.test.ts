@@ -1,5 +1,11 @@
 import type { Platform } from '@elsewise/components/lib/platform';
-import { type ApplicationCommand, type EditorCommand, Keymap, type Keys } from '@elsewise/plugin';
+import {
+  type ApplicationCommand,
+  DEFAULT_COMMAND_CATEGORIES,
+  type EditorCommand,
+  Keymap,
+  type Keys,
+} from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EMPTY_KEYMAP } from '../../../test/commands';
@@ -10,6 +16,7 @@ function editor(keys: Record<string, Keys>): EditorCommand[] {
     id,
     label: id,
     scope: 'editor',
+    category: DEFAULT_COMMAND_CATEGORIES.editor.id,
     defaultKeys,
     run: () => true,
   }));
@@ -118,7 +125,14 @@ describe('commands', () => {
     const keymap = updated(editor({ rename: ['Mod-r'] }));
     const commands = keymap.commands;
     keymap.update({ ...EMPTY_KEYMAP, keys: { rename: ['Mod-r'] } }, [
-      { id: 'rename', label: 'Rename', scope: 'application', defaultKeys: ['Mod-r'], run: () => true },
+      {
+        id: 'rename',
+        label: 'Rename',
+        scope: 'application',
+        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        defaultKeys: ['Mod-r'],
+        run: () => true,
+      },
     ]);
 
     expect(keymap.commands).toBe(commands);
@@ -156,7 +170,14 @@ describe('keys', () => {
   test('separates scopes', () => {
     const keymap = updated([
       ...editor({ rename: ['Mod-r'] }),
-      { id: 'settings', label: 'Settings', scope: 'application', defaultKeys: ['Mod-,'], run: () => true },
+      {
+        id: 'settings',
+        label: 'Settings',
+        scope: 'application',
+        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        defaultKeys: ['Mod-,'],
+        run: () => true,
+      },
     ]);
 
     expect([...keymap.keys.editor]).toEqual([['Ctrl-r', ['rename']]]);

@@ -3,7 +3,7 @@ import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showTooltip, type Tooltip, WidgetType } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_CATEGORIES, DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import { highlightTree, tags } from '@lezer/highlight';
 import type {
   DocumentHighlight,
@@ -128,6 +128,7 @@ const showMessage = StateEffect.define<{ pos: number; text: string } | null>();
 export const EDITOR_RENAME: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.rename,
+  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
   label: 'Rename…',
   defaultKeys: DEFAULT_KEYS.editor.lsp.rename,
   enabled: (_, view) => !view.state.readOnly && Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.renameProvider),

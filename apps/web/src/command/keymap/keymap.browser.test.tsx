@@ -1,6 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import type { EditorCommand, TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_CATEGORIES, type EditorCommand, type TerminalCommand } from '@elsewise/plugin';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { editorKeymap, terminalKeymap } from '@/command/keymap/keymap';
@@ -45,7 +45,14 @@ describe('editorKeymap', () => {
   test('runs command against view', () => {
     const run = vi.fn<EditorCommand['run']>(() => true);
     const fallback = vi.fn(() => true);
-    const view = open(fallback, { id: 'a', label: 'A', scope: 'editor', defaultKeys: ['Ctrl-k'], run });
+    const view = open(fallback, {
+      id: 'a',
+      label: 'A',
+      scope: 'editor',
+      category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+      defaultKeys: ['Ctrl-k'],
+      run,
+    });
     press(view);
 
     expect(run).toHaveBeenCalledOnce();
@@ -58,8 +65,22 @@ describe('editorKeymap', () => {
     const second = vi.fn(() => true);
     const view = open(
       () => true,
-      { id: 'first', label: 'First', scope: 'editor', defaultKeys: ['Ctrl-k'], run: first },
-      { id: 'second', label: 'Second', scope: 'editor', defaultKeys: ['Ctrl-k'], run: second },
+      {
+        id: 'first',
+        label: 'First',
+        scope: 'editor',
+        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        defaultKeys: ['Ctrl-k'],
+        run: first,
+      },
+      {
+        id: 'second',
+        label: 'Second',
+        scope: 'editor',
+        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        defaultKeys: ['Ctrl-k'],
+        run: second,
+      },
     );
     press(view);
 
@@ -69,7 +90,14 @@ describe('editorKeymap', () => {
 
   test('runs uppercase letter held with Shift alone', () => {
     const run = vi.fn(() => true);
-    const view = open(() => true, { id: 'a', label: 'A', scope: 'editor', defaultKeys: ['Shift-K'], run });
+    const view = open(() => true, {
+      id: 'a',
+      label: 'A',
+      scope: 'editor',
+      category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+      defaultKeys: ['Shift-K'],
+      run,
+    });
     press(view, { key: 'K', shiftKey: true });
 
     expect(run).toHaveBeenCalledOnce();
@@ -82,6 +110,7 @@ describe('editorKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'editor',
+      category: DEFAULT_COMMAND_CATEGORIES.editor.id,
       defaultKeys: ['Ctrl-k'],
       enabled: () => false,
       run,
@@ -98,8 +127,22 @@ describe('editorKeymap', () => {
     const fallback = vi.fn(() => true);
     const view = open(
       fallback,
-      { id: 'first', label: 'First', scope: 'editor', defaultKeys: ['Ctrl-k'], run: first },
-      { id: 'second', label: 'Second', scope: 'editor', defaultKeys: ['Ctrl-k'], run: second },
+      {
+        id: 'first',
+        label: 'First',
+        scope: 'editor',
+        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        defaultKeys: ['Ctrl-k'],
+        run: first,
+      },
+      {
+        id: 'second',
+        label: 'Second',
+        scope: 'editor',
+        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        defaultKeys: ['Ctrl-k'],
+        run: second,
+      },
     );
     press(view);
 
@@ -140,7 +183,14 @@ function pressTerminal(terminal: XTerm) {
 describe('terminalKeymap', () => {
   test('runs command against terminal, keeping key from shell', () => {
     const run = vi.fn<TerminalCommand['run']>(() => true);
-    const { terminal, sent } = openTerminal({ id: 'a', label: 'A', scope: 'terminal', defaultKeys: ['Ctrl-k'], run });
+    const { terminal, sent } = openTerminal({
+      id: 'a',
+      label: 'A',
+      scope: 'terminal',
+      category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+      defaultKeys: ['Ctrl-k'],
+      run,
+    });
     pressTerminal(terminal);
 
     expect(run).toHaveBeenCalledOnce();
@@ -161,6 +211,7 @@ describe('terminalKeymap', () => {
       id: 'a',
       label: 'A',
       scope: 'terminal',
+      category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
       defaultKeys: ['Ctrl-k'],
       enabled: () => false,
       run,
@@ -175,8 +226,22 @@ describe('terminalKeymap', () => {
     const first = vi.fn(() => false);
     const second = vi.fn(() => false);
     const { terminal, sent } = openTerminal(
-      { id: 'first', label: 'First', scope: 'terminal', defaultKeys: ['Ctrl-k'], run: first },
-      { id: 'second', label: 'Second', scope: 'terminal', defaultKeys: ['Ctrl-k'], run: second },
+      {
+        id: 'first',
+        label: 'First',
+        scope: 'terminal',
+        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        defaultKeys: ['Ctrl-k'],
+        run: first,
+      },
+      {
+        id: 'second',
+        label: 'Second',
+        scope: 'terminal',
+        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        defaultKeys: ['Ctrl-k'],
+        run: second,
+      },
     );
     pressTerminal(terminal);
 

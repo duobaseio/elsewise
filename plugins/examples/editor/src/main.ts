@@ -55,17 +55,22 @@ export default function ({ id }: PluginInfo): Plugin {
             support: new LanguageSupport(dotenv, dotenv.data.of({ autocomplete: keys })),
           }),
         ]),
+        // The keymap settings list the commands below under these.
+        commands.addCategories([
+          { id, label: 'Editor example' },
+          { id: `${id}.tone`, in: id, label: 'Tone of voice' },
+        ]),
         // The context menu items below run these.
         commands.add([
-          excuse(`${id}.leaveAnExcuse`),
-          reaction(`${id}.shrug`, 'Shrug', () => '¯\\_(ツ)_/¯'),
-          reaction(`${id}.flipTheTable`, 'Flip the table', () => '(╯°□°)╯︵ ┻━┻'),
-          reaction(`${id}.rollAD20`, 'Roll a d20', () => String(1 + Math.floor(Math.random() * 20))),
-          tone(`${id}.uwu`, 'uwu', (text) => text.replace(/[rl]/g, 'w').replace(/[RL]/g, 'W')),
-          tone(`${id}.vaporwave`, 'ｖａｐｏｒｗａｖｅ', (text) =>
+          excuse(`${id}.leaveAnExcuse`, id),
+          reaction(`${id}.shrug`, id, 'Shrug', () => '¯\\_(ツ)_/¯'),
+          reaction(`${id}.flipTheTable`, id, 'Flip the table', () => '(╯°□°)╯︵ ┻━┻'),
+          reaction(`${id}.rollAD20`, id, 'Roll a d20', () => String(1 + Math.floor(Math.random() * 20))),
+          tone(`${id}.uwu`, `${id}.tone`, 'uwu', (text) => text.replace(/[rl]/g, 'w').replace(/[RL]/g, 'W')),
+          tone(`${id}.vaporwave`, `${id}.tone`, 'ｖａｐｏｒｗａｖｅ', (text) =>
             text.replace(/[!-~]/g, (char) => String.fromCharCode(char.charCodeAt(0) + 0xfee0)),
           ),
-          tone(`${id}.mocking`, 'mOcKiNg', (text) =>
+          tone(`${id}.mocking`, `${id}.tone`, 'mOcKiNg', (text) =>
             [...text].map((char, index) => (index % 2 ? char.toUpperCase() : char.toLowerCase())).join(''),
           ),
         ]),
@@ -100,13 +105,14 @@ export default function ({ id }: PluginInfo): Plugin {
   };
 }
 
-function excuse(id: string): EditorCommand {
+function excuse(id: string, category: string): EditorCommand {
   const comment = (state: EditorState) =>
     state.languageDataAt<{ line?: string }>('commentTokens', state.selection.main.head)[0]?.line;
 
   return {
     scope: 'editor',
     id,
+    category,
     label: 'Leave an excuse',
     shown: (_, view) => comment(view.state) !== undefined,
     run: (_, view) => {
@@ -119,10 +125,11 @@ function excuse(id: string): EditorCommand {
   };
 }
 
-function reaction(id: string, label: string, text: () => string): EditorCommand {
+function reaction(id: string, category: string, label: string, text: () => string): EditorCommand {
   return {
     scope: 'editor',
     id,
+    category,
     label,
     run: (_, view) => {
       view.dispatch(view.state.replaceSelection(text()));
@@ -131,10 +138,11 @@ function reaction(id: string, label: string, text: () => string): EditorCommand 
   };
 }
 
-function tone(id: string, label: string, transform: (text: string) => string): EditorCommand {
+function tone(id: string, category: string, label: string, transform: (text: string) => string): EditorCommand {
   return {
     scope: 'editor',
     id,
+    category,
     label,
     shown: (_, view) => view.state.selection.ranges.some((range) => !range.empty),
     run: (_, view) => {

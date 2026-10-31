@@ -2,6 +2,7 @@ import { type Extension, Prec, StateEffect, StateField } from '@codemirror/state
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import {
+  DEFAULT_COMMAND_CATEGORIES,
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
   type EditorAction,
@@ -86,6 +87,7 @@ const showMessage = StateEffect.define<number | null>();
 export const EDITOR_APPLY_TOP_FIX: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.actions.applyTopFix,
+  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
   label: 'Apply top fix',
   defaultKeys: DEFAULT_KEYS.editor.actions.applyTopFix,
   enabled: (_, view) => !view.state.readOnly,
@@ -105,6 +107,7 @@ export const EDITOR_APPLY_TOP_FIX: EditorCommand = {
 export const EDITOR_SHOW_ACTIONS: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.actions.show,
+  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
   label: 'Show context actions',
   defaultKeys: DEFAULT_KEYS.editor.actions.show,
   enabled: (_, view) => !view.state.readOnly,

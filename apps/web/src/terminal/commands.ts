@@ -1,8 +1,9 @@
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_CATEGORIES, DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
 
 export const TERMINAL_COPY: TerminalCommand = {
   scope: 'terminal',
   id: DEFAULT_COMMANDS.terminal.clipboard.copy,
+  category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
   label: 'Copy',
   defaultKeys: DEFAULT_KEYS.terminal.clipboard.copy,
   shown: (_, terminal) => terminal.hasSelection(),
@@ -17,6 +18,7 @@ export const TERMINAL_COPY: TerminalCommand = {
 export const TERMINAL_PASTE: TerminalCommand = {
   scope: 'terminal',
   id: DEFAULT_COMMANDS.terminal.clipboard.paste,
+  category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
   label: 'Paste',
   defaultKeys: DEFAULT_KEYS.terminal.clipboard.paste,
   enabled: (_, terminal) => !terminal.options.disableStdin,
@@ -29,6 +31,7 @@ export const TERMINAL_PASTE: TerminalCommand = {
 export const TERMINAL_SELECT_ALL: TerminalCommand = {
   scope: 'terminal',
   id: DEFAULT_COMMANDS.terminal.selection.selectAll,
+  category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
   label: 'Select all',
   defaultKeys: DEFAULT_KEYS.terminal.selection.selectAll,
   run: (_, terminal) => {
@@ -40,6 +43,7 @@ export const TERMINAL_SELECT_ALL: TerminalCommand = {
 export const TERMINAL_CLEAR: TerminalCommand = {
   scope: 'terminal',
   id: DEFAULT_COMMANDS.terminal.buffer.clear,
+  category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
   label: 'Clear terminal',
   defaultKeys: DEFAULT_KEYS.terminal.buffer.clear,
   run: (_, terminal) => {

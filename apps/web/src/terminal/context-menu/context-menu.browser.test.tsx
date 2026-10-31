@@ -1,4 +1,5 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_COMMAND_CATEGORIES } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { mount, rightClick, SETTINGS, session } from '../../../test/terminal';
@@ -10,7 +11,15 @@ afterEach(() => {
 describe('TerminalContextMenu', () => {
   test('shows added group', async () => {
     const { commands, terminals, xterm } = await mount(session());
-    commands.add([{ id: 'shrug', label: 'Shrug', scope: 'terminal', run: () => true }]);
+    commands.add([
+      {
+        id: 'shrug',
+        label: 'Shrug',
+        scope: 'terminal',
+        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        run: () => true,
+      },
+    ]);
     terminals.addContextMenu([{ id: 'reactions', order: 50, items: [{ order: 10, command: 'shrug' }] }]);
 
     await rightClick(xterm);
@@ -26,6 +35,7 @@ describe('TerminalContextMenu', () => {
         id: 'shrug',
         label: 'Shrug',
         scope: 'terminal',
+        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
         run: () => {
           focused = document.activeElement;
           return true;

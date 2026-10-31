@@ -1,6 +1,12 @@
 import type { EditorView } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { ApplicationCommand, ContextMenuGroup, EditorCommand, TerminalCommand } from '@elsewise/plugin';
+import {
+  type ApplicationCommand,
+  type ContextMenuGroup,
+  DEFAULT_COMMAND_CATEGORIES,
+  type EditorCommand,
+  type TerminalCommand,
+} from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -32,7 +38,7 @@ function command(
   run: ApplicationCommand['run'] = () => true,
   rest: Partial<ApplicationCommand> = {},
 ): ApplicationCommand {
-  return { scope: 'application', id, label: id, run, ...rest };
+  return { scope: 'application', category: DEFAULT_COMMAND_CATEGORIES.application.id, id, label: id, run, ...rest };
 }
 
 // Returns an application whose commands include `added`.
@@ -98,7 +104,16 @@ describe('CommandContextMenu', () => {
   });
 
   test('hides editor command without view', async () => {
-    const application = setUp([{ scope: 'editor', id: 'Editor', label: 'Editor', run: () => true }, command('Other')]);
+    const application = setUp([
+      {
+        scope: 'editor',
+        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        id: 'Editor',
+        label: 'Editor',
+        run: () => true,
+      },
+      command('Other'),
+    ]);
     await mount([group('a', [item('Editor'), item('Other')])], application);
 
     await open();
@@ -110,8 +125,20 @@ describe('CommandContextMenu', () => {
     ['terminal', { buffer: {} } as unknown as XTerm, 'Terminal'],
   ])('shows commands of %s target only', async (_, target, shown) => {
     const application = setUp([
-      { scope: 'editor', id: 'Editor', label: 'Editor', run: () => true },
-      { scope: 'terminal', id: 'Terminal', label: 'Terminal', run: () => true },
+      {
+        scope: 'editor',
+        category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+        id: 'Editor',
+        label: 'Editor',
+        run: () => true,
+      },
+      {
+        scope: 'terminal',
+        category: DEFAULT_COMMAND_CATEGORIES.terminal.id,
+        id: 'Terminal',
+        label: 'Terminal',
+        run: () => true,
+      },
     ]);
     await mount([group('a', [item('Editor'), item('Terminal')])], application, { target: { current: target } });
 

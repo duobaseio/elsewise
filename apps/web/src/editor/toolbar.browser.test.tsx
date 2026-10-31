@@ -2,7 +2,7 @@ import { openSearchPanel, search } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import type { EditorCommand, EditorToolbarProps } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_CATEGORIES, type EditorCommand, type EditorToolbarProps } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -80,7 +80,14 @@ function mount(
 
 // Adds an editor command with `id` as its label, and `parts`, to `commands`.
 function command(commands: CommandManager, id: string, parts: Partial<EditorCommand> = {}): EditorCommand {
-  const added: EditorCommand = { scope: 'editor', id, label: id, run: () => true, ...parts };
+  const added: EditorCommand = {
+    scope: 'editor',
+    category: DEFAULT_COMMAND_CATEGORIES.editor.id,
+    id,
+    label: id,
+    run: () => true,
+    ...parts,
+  };
   commands.add([added]);
   return added;
 }

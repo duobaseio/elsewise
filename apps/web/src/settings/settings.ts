@@ -1,5 +1,11 @@
 import { DEFAULT_SETTINGS, type EditorLanguageSettings, type Settings } from '@elsewise/bridge';
-import { type ApplicationCommand, DEFAULT_COMMANDS, DEFAULT_KEYS, DEFAULT_ROUTES } from '@elsewise/plugin';
+import {
+  type ApplicationCommand,
+  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMANDS,
+  DEFAULT_KEYS,
+  DEFAULT_ROUTES,
+} from '@elsewise/plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import { LANGUAGES } from '@/settings/languages';
@@ -7,6 +13,7 @@ import { LANGUAGES } from '@/settings/languages';
 export const OPEN_SETTINGS: ApplicationCommand = {
   scope: 'application',
   id: DEFAULT_COMMANDS.application.settings.open,
+  category: DEFAULT_COMMAND_CATEGORIES.application.id,
   label: 'Settings',
   defaultKeys: DEFAULT_KEYS.application.settings.open,
   run: ({ router }) => {

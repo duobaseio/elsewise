@@ -1,5 +1,5 @@
 import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
-import { type ApplicationCommand, Keymap } from '@elsewise/plugin';
+import { type ApplicationCommand, DEFAULT_COMMAND_CATEGORIES, Keymap } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -85,7 +85,15 @@ function press(init: Partial<KeyboardEvent> = {}): KeyboardEvent {
 
 // Returns an application command `id` bound to Ctrl-k.
 function command(id: string, run: () => boolean, enabled = true): ApplicationCommand {
-  return { id, label: id, scope: 'application', defaultKeys: ['Ctrl-k'], enabled: () => enabled, run };
+  return {
+    id,
+    label: id,
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    defaultKeys: ['Ctrl-k'],
+    enabled: () => enabled,
+    run,
+  };
 }
 
 describe('resolveKeymap', () => {

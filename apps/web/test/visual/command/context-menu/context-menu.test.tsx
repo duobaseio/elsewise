@@ -1,4 +1,4 @@
-import type { ApplicationCommand, ContextMenuGroup } from '@elsewise/plugin';
+import { type ApplicationCommand, type ContextMenuGroup, DEFAULT_COMMAND_CATEGORIES } from '@elsewise/plugin';
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -11,20 +11,62 @@ import { builtInApplication } from '../../../commands';
 import { THEMES } from '../../../sheet';
 
 const COMMANDS: ApplicationCommand[] = [
-  { scope: 'application', id: 'actions', label: 'Show context actions', defaultKeys: ['Alt-Enter'], run: () => true },
-  { scope: 'application', id: 'usages', label: 'Find usages', defaultKeys: ['Mod-Alt-F7'], run: () => true },
   {
     scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    id: 'actions',
+    label: 'Show context actions',
+    defaultKeys: ['Alt-Enter'],
+    run: () => true,
+  },
+  {
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    id: 'usages',
+    label: 'Find usages',
+    defaultKeys: ['Mod-Alt-F7'],
+    run: () => true,
+  },
+  {
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
     id: 'definition',
     label: 'Go to definition',
     defaultKeys: ['Mod-b'],
     enabled: () => false,
     run: () => true,
   },
-  { scope: 'application', id: 'rename', label: 'Rename…', defaultKeys: ['Shift-F6'], run: () => true },
-  { scope: 'application', id: 'extract', label: 'Extract function', run: () => true },
-  { scope: 'application', id: 'wrap', label: 'Soft wrap', active: () => true, run: () => true },
-  { scope: 'application', id: 'whitespace', label: 'Show whitespace', active: () => false, run: () => true },
+  {
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    id: 'rename',
+    label: 'Rename…',
+    defaultKeys: ['Shift-F6'],
+    run: () => true,
+  },
+  {
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    id: 'extract',
+    label: 'Extract function',
+    run: () => true,
+  },
+  {
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    id: 'wrap',
+    label: 'Soft wrap',
+    active: () => true,
+    run: () => true,
+  },
+  {
+    scope: 'application',
+    category: DEFAULT_COMMAND_CATEGORIES.application.id,
+    id: 'whitespace',
+    label: 'Show whitespace',
+    active: () => false,
+    run: () => true,
+  },
 ];
 
 // Groups with keys, a disabled item, checked and unchecked items, and a submenu.

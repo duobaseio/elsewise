@@ -3,7 +3,7 @@ import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorSelection, type EditorState, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, showTooltip, type Tooltip } from '@codemirror/view';
 import { FileIcon } from '@elsewise/components/components/file-icon';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_CATEGORIES, DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
 import { highlightTree } from '@lezer/highlight';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -108,6 +108,7 @@ const setPending = StateEffect.define<boolean>();
 export const EDITOR_FIND_USAGES: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.lsp.findUsages,
+  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
   label: 'Find usages',
   defaultKeys: DEFAULT_KEYS.editor.lsp.findUsages,
   enabled: (_, view) => Boolean(LSPPlugin.get(view)?.client.serverCapabilities?.referencesProvider),

@@ -1,4 +1,5 @@
 import type { InstalledPlugin } from '@elsewise/bridge';
+import { DEFAULT_COMMAND_CATEGORIES } from '@elsewise/plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
@@ -111,7 +112,7 @@ describe('enable', () => {
         export default function () {
           return {
             onEnable(app) {
-              return [app.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', run() {} }])];
+              return [app.commands.add([{ id: 'a.rename', label: 'Rename', scope: 'application', category: 'elsewise.application', run() {} }])];
             },
           };
         }
@@ -133,6 +134,7 @@ describe('enable', () => {
                   id: 'a.run',
                   label: 'Run',
                   scope: 'application',
+                  category: 'elsewise.application',
                   run: (received) => events.push(received === app ? 'run with application' : 'run'),
                 },
               ]);
@@ -177,9 +179,25 @@ describe('enable', () => {
         }
       `),
     );
-    commands.add([{ id: 'a.run', label: 'Run', scope: 'application', run: () => true }]);
+    commands.add([
+      {
+        id: 'a.run',
+        label: 'Run',
+        scope: 'application',
+        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        run: () => true,
+      },
+    ]);
     await store.disable('a');
-    commands.add([{ id: 'a.other', label: 'Other', scope: 'application', run: () => true }]);
+    commands.add([
+      {
+        id: 'a.other',
+        label: 'Other',
+        scope: 'application',
+        category: DEFAULT_COMMAND_CATEGORIES.application.id,
+        run: () => true,
+      },
+    ]);
 
     expect(events).toEqual([`keymap ${commands.keymap.commands.size - 1}`]);
   });

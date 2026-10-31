@@ -4,6 +4,21 @@ import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
 
 /**
+ * The ids of the built-in categories.
+ */
+export const DEFAULT_COMMAND_CATEGORIES = {
+  application: { id: 'elsewise.application' },
+  editor: {
+    id: 'elsewise.editor',
+    edit: 'elsewise.editor.edit',
+    navigate: 'elsewise.editor.navigate',
+    code: 'elsewise.editor.code',
+    diff: 'elsewise.editor.diff',
+  },
+  terminal: { id: 'elsewise.terminal' },
+} as const;
+
+/**
  * The ids of the built-in commands.
  */
 export const DEFAULT_COMMANDS = {
@@ -232,10 +247,21 @@ export interface Commands {
   readonly keymap: ActiveKeymap;
 
   /**
+   * Adds `categories`.
+   *
+   * A category with an already existing id, or in a category that does not exist, is rejected. Categories are listed
+   * in order of addition.
+   *
+   * Returns a disposable that removes the added `categories`, the categories in them, and the commands in any of
+   * those.
+   */
+  addCategories(categories: readonly CommandCategory[]): Disposable;
+
+  /**
    * Adds `commands`.
    *
-   * A command with an already existing id is rejected. Commands that share a key are tried from the last added to the
-   * first, until one applies.
+   * A command with an already existing id or an unknown category is rejected. Commands that share a key are tried
+   * from the last added to the first, until one applies.
    *
    * Returns a disposable that removes the added `commands`.
    */
@@ -271,6 +297,28 @@ export interface ActiveKeymap {
 }
 
 /**
+ * A group for visually organizing commands.
+ */
+export interface CommandCategory {
+  /**
+   * The category's id, namespaced by the plugin's, e.g. `io.example.tone`. Omitted if the id already exists.
+   */
+  readonly id: string;
+
+  /**
+   * The id of the category it is listed in, e.g. `io.example`. Omitted if the category does not exist.
+   *
+   * See {@link DEFAULT_COMMAND_CATEGORIES} for the built-in categories.
+   */
+  readonly in?: string;
+
+  /**
+   * The user-facing label.
+   */
+  readonly label: string;
+}
+
+/**
  * An action that a user can invoke.
  */
 export interface Command {
@@ -283,6 +331,13 @@ export interface Command {
    * The command's id, namespaced by the plugin's, e.g. `io.example.rename`.
    */
   readonly id: string;
+
+  /**
+   * The category's id, used for visually organizing commands.
+   *
+   * See {@link DEFAULT_COMMAND_CATEGORIES} for the built-in categories.
+   */
+  readonly category: string;
 
   /**
    * The label shown in menus, e.g. `Rename…`.

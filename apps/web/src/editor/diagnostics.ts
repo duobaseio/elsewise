@@ -1,7 +1,13 @@
 import { forEachDiagnostic, setDiagnosticsEffect } from '@codemirror/lint';
 import { type EditorState, StateField } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand, type EditorDiagnostic } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMAND_CATEGORIES,
+  DEFAULT_COMMANDS,
+  DEFAULT_KEYS,
+  type EditorCommand,
+  type EditorDiagnostic,
+} from '@elsewise/plugin';
 import { COMMANDS } from '@/editor/editor-manager';
 import { jump } from '@/editor/scroll';
 
@@ -30,6 +36,7 @@ function collect(state: EditorState): readonly EditorDiagnostic[] {
 export const EDITOR_NEXT_DIAGNOSTIC: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diagnostics.next,
+  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
   label: 'Next diagnostic',
   defaultKeys: DEFAULT_KEYS.editor.diagnostics.next,
   run: (_, view) => step(view, true),
@@ -38,6 +45,7 @@ export const EDITOR_NEXT_DIAGNOSTIC: EditorCommand = {
 export const EDITOR_PREVIOUS_DIAGNOSTIC: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diagnostics.previous,
+  category: DEFAULT_COMMAND_CATEGORIES.editor.code,
   label: 'Previous diagnostic',
   defaultKeys: DEFAULT_KEYS.editor.diagnostics.previous,
   run: (_, view) => step(view, false),

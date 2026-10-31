@@ -295,13 +295,13 @@ describe('closeAfterRenderer', () => {
     expect(fake.webContents.send).toHaveBeenCalledOnce();
   });
 
-  test('closes after three seconds without a reply, and warns', () => {
+  test('closes after five seconds without a reply, and warns', () => {
     vi.useFakeTimers();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fake = window();
 
     close(fake);
-    vi.advanceTimersByTime(2999);
+    vi.advanceTimersByTime(4999);
 
     expect(fake.close).not.toHaveBeenCalled();
 

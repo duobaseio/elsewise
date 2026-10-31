@@ -134,7 +134,7 @@ function loadLayouts(): Record<string, Window> {
 }
 
 /**
- * Holds `window`'s first close until its renderer replies to `window:close`, or for three seconds, so the renderer can
+ * Holds `window`'s first close until its renderer replies to `window:close`, or for five seconds, so the renderer can
  * finish first, e.g. disabling its plugins.
  *
  * Holding a close cancels a quit, so a quit that started it is resumed afterwards.

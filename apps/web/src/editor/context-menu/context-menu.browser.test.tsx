@@ -1,4 +1,4 @@
-import type { EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_CATEGORIES, type EditorCommand } from '@elsewise/plugin';
 import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { ApplicationManager } from '@/application-manager';
@@ -8,7 +8,7 @@ import { group, item, labels, menuitem, mount, open, submenu } from '../../../te
 
 // Returns an editor command with `id` whose label is `id`, with `run` and the `rest` of its fields.
 function command(id: string, run: EditorCommand['run'] = () => true): EditorCommand {
-  return { scope: 'editor', id, label: id, run };
+  return { scope: 'editor', category: DEFAULT_COMMAND_CATEGORIES.editor.id, id, label: id, run };
 }
 
 // Returns an editor whose commands are `commands`, and the application.
