@@ -2,7 +2,7 @@ import type { PluginsBridge, SettingsBridge, WindowBridge } from '@elsewise/brid
 import { contextBridge, ipcRenderer } from 'electron';
 
 const plugins: PluginsBridge = {
-  load: () => ipcRenderer.invoke('plugins:load'),
+  load: (id?: string) => ipcRenderer.invoke('plugins:load', id),
   save: (installed) => ipcRenderer.invoke('plugins:save', installed),
 };
 
@@ -11,7 +11,27 @@ const settings: SettingsBridge = {
   save: (value) => ipcRenderer.invoke('settings:save', value),
   loadPlugin: (plugin) => ipcRenderer.invoke('settings:load-plugin', plugin),
   savePlugin: (plugin, value) => ipcRenderer.invoke('settings:save-plugin', plugin, value),
+  loadUserThemes: () => ipcRenderer.invoke('settings:load-user-themes'),
+  saveUserTheme: (id, theme) => ipcRenderer.invoke('settings:save-user-theme', id, theme),
+  deleteUserTheme: (id) => ipcRenderer.invoke('settings:delete-user-theme', id),
+  loadUserKeymaps: () => ipcRenderer.invoke('settings:load-user-keymaps'),
+  saveUserKeymap: (id, keymap) => ipcRenderer.invoke('settings:save-user-keymap', id, keymap),
+  deleteUserKeymap: (id) => ipcRenderer.invoke('settings:delete-user-keymap', id),
+  onChange: (handler) => {
+    ipcRenderer.on('settings:changed', (_event, changed) => handler(changed));
+  },
 };
+
+let close: (() => Promise<void>) | undefined;
+ipcRenderer.on('window:close', async () => {
+  try {
+    if (close !== undefined) {
+      await close();
+    }
+  } finally {
+    ipcRenderer.send('window:closed');
+  }
+});
 
 const window: WindowBridge = {
   cut: () => ipcRenderer.send('window:cut'),
@@ -19,6 +39,9 @@ const window: WindowBridge = {
   paste: () => ipcRenderer.send('window:paste'),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
+  onClose: (handler) => {
+    close = handler;
+  },
 };
 
 contextBridge.exposeInMainWorld('bridge', {

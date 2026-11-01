@@ -1,6 +1,7 @@
 import { getChunks, goToNextChunk, goToPreviousChunk } from '@codemirror/merge';
 import type { EditorView } from '@codemirror/view';
 import {
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_DIFF_SOURCES,
   DEFAULT_KEYS,
@@ -9,9 +10,10 @@ import {
 } from '@elsewise/plugin';
 import { EDITOR_DIFF } from '@/editor/diff/diff';
 
-export const UNSTAGED_DIFF: EditorCommand = {
+export const EDITOR_UNSTAGED_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.unstaged,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Unstaged',
   defaultKeys: DEFAULT_KEYS.editor.diff.unstaged,
   shown: (_, view) => !base(view),
@@ -23,9 +25,10 @@ export const UNSTAGED_DIFF: EditorCommand = {
   },
 };
 
-export const UNCOMMITTED_DIFF: EditorCommand = {
+export const EDITOR_UNCOMMITTED_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.uncommitted,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Uncommitted',
   defaultKeys: DEFAULT_KEYS.editor.diff.uncommitted,
   shown: (_, view) => !base(view),
@@ -37,9 +40,10 @@ export const UNCOMMITTED_DIFF: EditorCommand = {
   },
 };
 
-export const BRANCH_DIFF: EditorCommand = {
+export const EDITOR_BRANCH_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.branch,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Branch',
   defaultKeys: DEFAULT_KEYS.editor.diff.branch,
   shown: (_, view) => !base(view),
@@ -51,9 +55,10 @@ export const BRANCH_DIFF: EditorCommand = {
   },
 };
 
-export const CLOSE_DIFF: EditorCommand = {
+export const EDITOR_CLOSE_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.close,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Close comparison',
   defaultKeys: DEFAULT_KEYS.editor.diff.close,
   shown: (_, view) => !base(view) && view.state.facet(EDITOR_DIFF)?.source != null,
@@ -69,9 +74,10 @@ export const CLOSE_DIFF: EditorCommand = {
   },
 };
 
-export const NEXT_CHUNK: EditorCommand = {
+export const EDITOR_NEXT_CHUNK: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.next,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Next change',
   defaultKeys: DEFAULT_KEYS.editor.diff.next,
   shown: (_, view) => getChunks(view.state) !== null,
@@ -79,9 +85,10 @@ export const NEXT_CHUNK: EditorCommand = {
   run: (_, view) => goToNextChunk(view),
 };
 
-export const PREVIOUS_CHUNK: EditorCommand = {
+export const EDITOR_PREVIOUS_CHUNK: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.previous,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Previous change',
   defaultKeys: DEFAULT_KEYS.editor.diff.previous,
   shown: (_, view) => getChunks(view.state) !== null,
@@ -89,9 +96,10 @@ export const PREVIOUS_CHUNK: EditorCommand = {
   run: (_, view) => goToPreviousChunk(view),
 };
 
-export const UNIFIED_DIFF: EditorCommand = {
+export const EDITOR_UNIFIED_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.unified,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Unified',
   defaultKeys: DEFAULT_KEYS.editor.diff.unified,
   shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,
@@ -107,9 +115,10 @@ export const UNIFIED_DIFF: EditorCommand = {
   },
 };
 
-export const SPLIT_DIFF: EditorCommand = {
+export const EDITOR_SPLIT_DIFF: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.diff.split,
+  group: DEFAULT_COMMAND_GROUPS.editor.diff,
   label: 'Split',
   defaultKeys: DEFAULT_KEYS.editor.diff.split,
   shown: (_, view) => view.state.facet(EDITOR_DIFF)?.source != null,

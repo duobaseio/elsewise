@@ -1,14 +1,47 @@
+import { DEFAULT_ROUTES } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { createRoot } from 'react-dom/client';
-import { pluginsQuery } from '@/plugins/loader';
-import { routeTree } from '@/routeTree.gen';
+import { userThemesQuery } from '@/appearance/themes';
+import { userKeymapsQuery } from '@/command/keymap/keymap';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { type FileRouteTypes, routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
-const queryClient = new QueryClient();
+// A route's params become `${string}`, so a path function's return type matches its route.
+type Pattern<T extends string> = T extends `${infer Head}$${string}/${infer Tail}`
+  ? `${Head}${string}/${Pattern<Tail>}`
+  : T extends `${infer Head}$${string}`
+    ? `${Head}${string}`
+    : T;
+type Routes = {
+  readonly [key: string]: Routes | FileRouteTypes['to'] | ((...args: string[]) => Pattern<FileRouteTypes['to']>);
+};
+void (DEFAULT_ROUTES satisfies Routes);
 
-// Plugins and settings are awaited here so the first render has them and never shows a fallback.
-await Promise.all([queryClient.query(pluginsQuery), queryClient.query(settingsQuery)]);
+const queryClient = new QueryClient();
+const plugins = new PluginStore();
+
+// TODO: Disable the plugins on reloads from the menu or DevTools
+import.meta.hot?.on('vite:beforeFullReload', () => plugins.disableAll());
+window.bridge?.window?.onClose(() => plugins.disableAll());
+
+window.bridge?.settings?.onChange((changed) => {
+  if (changed === 'themes') {
+    void queryClient.refetchQueries(userThemesQuery);
+  } else {
+    void queryClient.refetchQueries(userKeymapsQuery);
+  }
+});
+
+// Plugins, settings and the user's themes and keymaps are awaited here so the first render has them and never shows a
+// fallback.
+await Promise.all([
+  plugins.loadAll(),
+  queryClient.query(settingsQuery),
+  queryClient.query(userThemesQuery),
+  queryClient.query(userKeymapsQuery),
+]);
 
 const router = createRouter({ routeTree });
 
@@ -22,7 +55,9 @@ const root = document.getElementById('app');
 if (root && !root.innerHTML) {
   createRoot(root).render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <PluginStoreContext value={plugins}>
+        <RouterProvider router={router} />
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
 }

@@ -4,6 +4,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_COMMANDS, type EditorDiagnostic } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { diagnostics } from '@/editor/diagnostics';
 import { hover } from '@/editor/hover';
 import { builtInCommands, commandsExtension } from '../../test/commands';
 
@@ -17,17 +18,17 @@ afterEach(() => {
   }
 });
 
-// Opens `DOC` in an editor 200px high with `diagnostics`, and returns it with the built-in commands.
-function open(diagnostics: EditorDiagnostic[]) {
+// Opens `DOC` in an editor 200px high with `initial` diagnostics, and returns it with the built-in commands.
+function open(initial: EditorDiagnostic[]) {
   const commands = builtInCommands();
   const view = new EditorView({
     state: EditorState.create({
       doc: DOC,
-      extensions: [hover(), commandsExtension(commands), EditorView.theme({ '&': { height: '200px' } })],
+      extensions: [diagnostics, hover(), commandsExtension(commands), EditorView.theme({ '&': { height: '200px' } })],
     }),
     parent: document.body,
   });
-  view.dispatch(setDiagnostics(view.state, diagnostics));
+  view.dispatch(setDiagnostics(view.state, initial));
   views.push(view);
   return { view, commands };
 }
@@ -41,7 +42,7 @@ function at(line: number, severity: EditorDiagnostic['severity'] = 'error') {
 const NEXT = DEFAULT_COMMANDS.editor.diagnostics.next;
 const PREVIOUS = DEFAULT_COMMANDS.editor.diagnostics.previous;
 
-describe('NEXT_DIAGNOSTIC', () => {
+describe('EDITOR_NEXT_DIAGNOSTIC', () => {
   test('steps through highest severity, wrapping', () => {
     const { view, commands } = open([at(5, 'warning'), at(20), at(10)]);
 
@@ -84,7 +85,7 @@ describe('NEXT_DIAGNOSTIC', () => {
   });
 });
 
-describe('PREVIOUS_DIAGNOSTIC', () => {
+describe('EDITOR_PREVIOUS_DIAGNOSTIC', () => {
   test('steps back through highest severity, wrapping', () => {
     const { view, commands } = open([at(5, 'warning'), at(20), at(10)]);
 

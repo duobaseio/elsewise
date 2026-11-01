@@ -108,7 +108,7 @@ function expectCentered(): void {
   expect(Math.abs((definition?.top ?? 0) - (bounds.top + bounds.height / 2))).toBeLessThan(20);
 }
 
-describe('GO_TO_DEFINITION', () => {
+describe('EDITOR_GO_TO_DEFINITION', () => {
   test('centers off-screen definition', async () => {
     await open(DOC);
 

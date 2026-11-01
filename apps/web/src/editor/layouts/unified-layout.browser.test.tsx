@@ -7,13 +7,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import { UnifiedLayout, type UnifiedLayoutProps } from '@/editor/layouts/unified-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
+import { builtInApplication } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
@@ -24,42 +24,18 @@ const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT],
   'data-layout': state.facet(EDITOR_DOCUMENT)?.layout.type ?? 'loading',
 }));
 
-// Returns a language for `.late` files whose support loads when `loaded` resolves.
-function lateLanguage(loaded: Promise<void>): LanguageDescription {
-  return LanguageDescription.of({
-    name: 'Late',
-    extensions: ['late'],
-    load: async () => {
-      await loaded;
-      return new LanguageSupport(
-        StreamLanguage.define({
-          token: (stream) => {
-            stream.skipToEnd();
-            return null;
-          },
-        }),
-      );
-    },
-  });
-}
-
 // Renders a `UnifiedLayout` with `props` in the app's contexts, and returns its view and a way to render it again.
 async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-  });
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   const servers = new LanguageServers(editor);
   const session = { current: null };
   const tree = (next: Partial<UnifiedLayoutProps>) => (
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
           <LanguageServersContext value={servers}>
             <div style={{ height: 300 }}>
               <UnifiedLayout
@@ -73,8 +49,8 @@ async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorMana
               />
             </div>
           </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>
   );
   const screen = await render(tree(props));
@@ -168,7 +144,23 @@ describe('UnifiedLayout', () => {
       load = resolve;
     });
     const editor = new EditorManager();
-    editor.languages.add([lateLanguage(loaded)]);
+    editor.languages.add([
+      LanguageDescription.of({
+        name: 'Late',
+        extensions: ['late'],
+        load: async () => {
+          await loaded;
+          return new LanguageSupport(
+            StreamLanguage.define({
+              token: (stream) => {
+                stream.skipToEnd();
+                return null;
+              },
+            }),
+          );
+        },
+      }),
+    ]);
     const { view } = await mount({ relativePath: 'main.late', base: BASE }, editor);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(changedLines(view())).toBe(0);

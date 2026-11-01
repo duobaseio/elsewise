@@ -1,4 +1,3 @@
-import { LSPPlugin } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import { ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
@@ -22,10 +21,11 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import { CompareToolbarItem } from '@/editor/diff/compare';
 import { useEditorManager } from '@/editor/editor-manager';
-import { DiagnosticsSummary } from '@/editor/stripe/diagnostics-summary';
+import { DiagnosticsSummary } from '@/editor/scrollbar-markers/diagnostics-summary';
 
 interface Mounted extends EditorToolbarProps {
   dom: HTMLElement;
@@ -124,6 +124,7 @@ export function useToolbarExtension(): { toolbar: Extension; portal: ReactNode }
  */
 function Toolbar({ view, subscribe }: EditorToolbarProps) {
   const added = useEditorManager((editor) => editor.toolbarItems);
+  const application = useApplicationManager();
   const commands = useCommandManager();
   const registered = useCommandManager((commands) => commands.commands);
   const keys = useCommandManager((commands) => commands.keymap.commands);
@@ -149,6 +150,8 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
       const command = registered.get(item.command);
       if (command === undefined) {
         console.warn(`Unknown command ${item.command} in toolbar`);
+      } else if (command.scope === 'terminal') {
+        console.warn(`Terminal command ${item.command} in editor toolbar`);
       } else {
         entries.push({ type: 'command', id: command.id, order, command, icon: item.icon });
       }
@@ -159,7 +162,6 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
 
   useEffect(() => {
     const evaluate = () => {
-      const lsp = LSPPlugin.get(view);
       const next = new Map<string, { enabled: boolean; active?: boolean }>();
       for (const entry of entries) {
         if (entry.type !== 'command') {
@@ -169,17 +171,11 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
         const { command } = entry;
         try {
           const shown =
-            command.scope === 'application'
-              ? command.shown?.(commands.application)
-              : command.shown?.(commands.application, view, lsp);
+            command.scope === 'application' ? command.shown?.(application) : command.shown?.(application, view);
           const enabled =
-            command.scope === 'application'
-              ? command.enabled?.(commands.application)
-              : command.enabled?.(commands.application, view, lsp);
+            command.scope === 'application' ? command.enabled?.(application) : command.enabled?.(application, view);
           const active =
-            command.scope === 'application'
-              ? command.active?.(commands.application)
-              : command.active?.(commands.application, view, lsp);
+            command.scope === 'application' ? command.active?.(application) : command.active?.(application, view);
           if (shown !== false) {
             next.set(command.id, { enabled: enabled !== false, active });
           }
@@ -199,7 +195,7 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
 
     evaluate();
     return subscribe(evaluate);
-  }, [entries, commands, view, subscribe]);
+  }, [entries, application, view, subscribe]);
 
   return (
     <TooltipProvider>

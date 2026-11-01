@@ -42,7 +42,7 @@ const CHROME = {
   ],
   unnecessary: ['.cm-lintRange-unnecessary, .cm-lintRange-unnecessary *', 'color'],
 } as const satisfies Record<
-  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'stripe' | 'diff' | Diagnostic['severity']>,
+  Exclude<keyof ActiveTheme['editor'], 'tokens' | 'scrollbarMarkers' | 'diff' | Diagnostic['severity']>,
   readonly [selector: string, property: string]
 >;
 
@@ -113,19 +113,19 @@ const STRIKEOUTS: Partial<Record<string, { ascent: number; position: number; siz
 };
 
 /**
- * The stripe's width in pixels, which the vertical scrollbar's track matches.
+ * The vertical scrollbar's width in pixels, which its markers match.
  */
-export const STRIPE_WIDTH = 10;
+export const SCROLLBAR_WIDTH = 10;
 
 /**
- * The height of a mark on one line, in pixels, and the least of one spanning lines.
+ * The height of a marker on one line, in pixels, and the least of one spanning lines.
  */
-export const STRIPE_MIN_HEIGHT = 2;
+export const SCROLLBAR_MARKER_MIN_HEIGHT = 2;
 
 /**
- * The pixels above and below a mark that still count as pointing at it.
+ * The pixels above and below a marker that still count as pointing at it.
  */
-export const STRIPE_TOLERANCE = 2 * STRIPE_MIN_HEIGHT;
+export const SCROLLBAR_MARKER_TOLERANCE = 2 * SCROLLBAR_MARKER_MIN_HEIGHT;
 
 /**
  * The styles that don't depend on the theme.
@@ -137,6 +137,7 @@ export const METRICS = EditorView.theme({
   '.cm-panels': { backgroundColor: 'transparent', color: 'inherit', zIndex: 'auto' },
   '.cm-panels-top': { borderBottom: 'none' },
   '.cm-searchMatch-selected, .cm-lsp-rename-field': { outline: '1px solid transparent', outlineOffset: '0' },
+  '.cm-searchMatch-selected .cm-searchMatch': { backgroundColor: 'transparent', outline: 'none' },
 
   '.cm-content': { paddingBottom: '8rem' },
 
@@ -145,9 +146,10 @@ export const METRICS = EditorView.theme({
     fontVariantLigatures: 'var(--font-mono-ligatures)',
     fontSize: 'var(--text-code)',
     lineHeight: 'var(--text-code--line-height)',
+    scrollbarGutter: 'stable',
   },
-  // The vertical track is as wide as the stripe's marks, with the thumb kept as wide as the horizontal one.
-  '.cm-scroller::-webkit-scrollbar': { width: `${STRIPE_WIDTH}px`, height: '6px' },
+  // The vertical track is as wide as the markers over it, with the thumb kept as wide as the horizontal one.
+  '.cm-scroller::-webkit-scrollbar': { width: `${SCROLLBAR_WIDTH}px`, height: '6px' },
   '.cm-scroller::-webkit-scrollbar-track, .cm-scroller::-webkit-scrollbar-corner': { background: 'none' },
   '.cm-scroller::-webkit-scrollbar-thumb': {
     backgroundColor: 'var(--border)',
@@ -155,46 +157,46 @@ export const METRICS = EditorView.theme({
     backgroundClip: 'content-box',
     border: '1px solid transparent',
   },
-  '.cm-scroller::-webkit-scrollbar-thumb:vertical': { borderWidth: `1px ${(STRIPE_WIDTH - 4) / 2}px` },
+  '.cm-scroller::-webkit-scrollbar-thumb:vertical': { borderWidth: `1px ${(SCROLLBAR_WIDTH - 4) / 2}px` },
 
-  // The scrollbar that the editor draws itself, as wide as the stripe that marks it, with a thumb like a native one.
-  '.cm-scrollbar': { position: 'absolute', right: '0', width: `${STRIPE_WIDTH}px` },
+  // The scrollbar that the editor draws itself, as wide as the markers over it, with a thumb like a native one.
+  '.cm-scrollbar': { position: 'absolute', right: '0', width: `${SCROLLBAR_WIDTH}px` },
   '.cm-scrollbar-thumb': {
     position: 'absolute',
-    left: `${(STRIPE_WIDTH - 4) / 2}px`,
-    right: `${(STRIPE_WIDTH - 4) / 2}px`,
+    left: `${(SCROLLBAR_WIDTH - 4) / 2}px`,
+    right: `${(SCROLLBAR_WIDTH - 4) / 2}px`,
     borderRadius: '2px',
     backgroundColor: 'var(--border)',
   },
   '.cm-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
   '.cm-scrollbar-thumb[data-active]': { backgroundColor: 'var(--disabled)' },
 
-  '.cm-stripe': {
+  '.cm-scrollbar-markers': {
     position: 'absolute',
     right: '0',
-    width: `${STRIPE_WIDTH}px`,
+    width: `${SCROLLBAR_WIDTH}px`,
     pointerEvents: 'none',
     overflow: 'hidden',
   },
-  // The padding is the tolerance, outside the painted mark but inside the pointer's target.
-  '.cm-stripe-mark': {
+  // The padding is the tolerance, outside the painted marker but inside the pointer's target.
+  '.cm-scrollbar-marker': {
     position: 'absolute',
     left: '0',
     right: '0',
     boxSizing: 'border-box',
-    padding: `${STRIPE_TOLERANCE}px 0`,
+    padding: `${SCROLLBAR_MARKER_TOLERANCE}px 0`,
     pointerEvents: 'auto',
     cursor: 'pointer',
   },
   // Painted apart from the target, so the corners round.
-  '.cm-stripe-mark::before': {
+  '.cm-scrollbar-marker::before': {
     content: '""',
     position: 'absolute',
-    inset: `${STRIPE_TOLERANCE}px 0`,
+    inset: `${SCROLLBAR_MARKER_TOLERANCE}px 0`,
     borderRadius: '2px',
   },
-  '.cm-stripe-tooltip': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px` },
-  '.cm-toolbar': { position: 'absolute', right: `${STRIPE_WIDTH + 4}px`, marginTop: '4px' },
+  '.cm-scrollbar-marker-tooltip': { position: 'absolute', right: `${SCROLLBAR_WIDTH + 4}px` },
+  '.cm-toolbar': { position: 'absolute', right: `${SCROLLBAR_WIDTH + 4}px`, marginTop: '4px' },
 
   '.cm-scroller::-webkit-scrollbar-thumb:hover': { backgroundColor: 'var(--input)' },
   '.cm-scroller::-webkit-scrollbar-thumb:active': { backgroundColor: 'var(--disabled)' },
@@ -353,6 +355,7 @@ export const METRICS = EditorView.theme({
   // The list is replaced whenever the options change, so the hint is put after it by `order`.
   '.cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]': { color: 'inherit' },
   '.cm-tooltip.cm-tooltip-autocomplete': { display: 'flex', flexDirection: 'column' },
+  '.cm-completion-undocumented .cm-completionInfo': { display: 'none' },
   '.cm-completionKind': { flex: 'none', width: '16px', marginRight: '6px' },
   // A row that doesn't fit cuts the text after its label first, then the label. The detail is cut at 40% of the row.
   '.cm-completionLabel, .cm-completionTail, .cm-completionDetail': {
@@ -465,7 +468,7 @@ export const METRICS = EditorView.theme({
   },
   '.cm-actions-divider': { height: '1px', margin: '4px 2px', backgroundColor: 'var(--border)' },
   '.cm-actions-hint': { borderTop: '1px solid var(--border)' },
-  // The line for a diagnostic's fixes, empty until the server answers, and if it has none.
+  // The line for a diagnostic's fixes, empty until the server responds, and if it has none.
   '.cm-actions-hover': {
     marginTop: '6px',
     fontSize: 'var(--text-sm)',
@@ -563,8 +566,8 @@ export function useThemeExtension(): Extension {
       };
     }
 
-    for (const [kind, color] of Object.entries(editor.stripe)) {
-      spec[`.cm-stripe-mark-${kind}::before`] = { backgroundColor: color };
+    for (const [kind, color] of Object.entries(editor.scrollbarMarkers)) {
+      spec[`.cm-scrollbar-marker-${kind}::before`] = { backgroundColor: color };
     }
 
     const dots = `<svg xmlns="http://www.w3.org/2000/svg" width="4" height="3"><circle cx="1.5" cy="1.5" r=".8" fill="${editor.hint}"/></svg>`;

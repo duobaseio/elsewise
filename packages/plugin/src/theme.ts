@@ -8,6 +8,7 @@ export type TextStyle = z.infer<typeof TextStyle>;
 /**
  * A theme for the interface, editor and terminal.
  */
+// TODO: Link the docs on bundling a theme with a plugin, once they exist.
 export const Theme = z.lazy(() =>
   z
     .object({
@@ -130,11 +131,11 @@ export const ThemeVariant = z.lazy(() =>
         unnecessary: Color,
 
         /**
-         * The stripe marks drawn over the scrollbar.
+         * The markers drawn over the scrollbar.
          *
          * Each defaults to one of the current theme's colors instead of Elsewise's default theme.
          */
-        stripe: z
+        scrollbarMarkers: z
           .object({
             /**
              * Defaults to the interface's `error`.
@@ -263,6 +264,15 @@ export const ThemeVariant = z.lazy(() =>
         cursor: Color,
         cursorAccent: Color,
         selection: Color,
+        /**
+         * Transparency is blended onto the terminal's `background`.
+         */
+        searchMatch: Color,
+        /**
+         * Transparency is blended onto the terminal's `background`.
+         */
+        searchMatchSelected: Color,
+        searchMatchSelectedBorder: Color,
         black: Color,
         red: Color,
         green: Color,

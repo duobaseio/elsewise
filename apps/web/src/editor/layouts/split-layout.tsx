@@ -12,7 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { EditorContextMenu } from '@/editor/context-menu';
+import { EditorContextMenu } from '@/editor/context-menu/context-menu';
 import { drawDiffs, revertGutter } from '@/editor/diff/diff';
 import { useRevertButtons } from '@/editor/diff/revert-buttons';
 import { useEditorManager } from '@/editor/editor-manager';
@@ -272,7 +272,7 @@ export function SplitLayout({ relativePath, base, target, extensions, session, h
       <div className="min-h-0 flex-1">
         <EditorContextMenu view={clicked}>
           <div
-            className="h-full [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-hidden [&_.cm-mergeViewEditor]:h-full [&_.cm-mergeViewEditors]:h-full [&_.cm-mergeView_.cm-editor]:h-full! [&_.cm-mergeView_.cm-editor_.cm-scroller]:overflow-y-auto! [&_.cm-mergeViewEditor:first-child]:border-r [&_.cm-mergeViewEditor:first-child]:grow-0! [&_.cm-mergeViewEditor:first-child]:basis-(--split)! [&_.cm-mergeViewEditor:first-child_.cm-stripe]:hidden [&_.cm-mergeViewEditor:first-child_.cm-scroller::-webkit-scrollbar]:w-0! [&_.cm-mergeViewEditor:last-child_.cm-scroller::-webkit-scrollbar-thumb:vertical]:bg-transparent!"
+            className="h-full [&_.cm-mergeView]:h-full [&_.cm-mergeView]:overflow-hidden [&_.cm-mergeViewEditor]:h-full [&_.cm-mergeViewEditors]:h-full [&_.cm-mergeView_.cm-editor]:h-full! [&_.cm-mergeView_.cm-editor_.cm-scroller]:overflow-y-auto! [&_.cm-mergeViewEditor:first-child]:border-r [&_.cm-mergeViewEditor:first-child]:grow-0! [&_.cm-mergeViewEditor:first-child]:basis-(--split)! [&_.cm-mergeViewEditor:first-child_.cm-scrollbar-markers]:hidden [&_.cm-mergeViewEditor:first-child_.cm-scroller::-webkit-scrollbar]:w-0! [&_.cm-mergeViewEditor:last-child_.cm-scroller::-webkit-scrollbar-thumb:vertical]:bg-transparent!"
             ref={host}
             // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
             style={

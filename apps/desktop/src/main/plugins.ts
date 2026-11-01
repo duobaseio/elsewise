@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type InstalledPlugin, type InvalidPlugin, PluginEntry } from '@elsewise/bridge';
+import { type InstalledPlugin, type InvalidPlugin, PluginEntry, PluginId } from '@elsewise/bridge';
 import { dataLocalDir, writeJsonSync } from '@elsewise/core';
-import { Manifest } from '@elsewise/plugin';
+import { Keymap, Manifest, Theme } from '@elsewise/plugin';
 import { ipcMain } from 'electron';
 import * as z from 'zod';
+import { readJsonFolder } from '../fs/json-folder';
 
 const PLUGINS = path.join(dataLocalDir(), 'plugins.json');
 const ROOT = path.join(dataLocalDir(), 'plugins');
@@ -12,8 +13,9 @@ const ROOT = path.join(dataLocalDir(), 'plugins');
 /**
  * Handles the renderer's `plugins:load` and `plugins:save`.
  *
- * A load returns each folder in `<data folder>/plugins` with its `manifest.json`, and whether `<data folder>/plugins.json`
- * enables it.
+ * A load returns each folder in `<data folder>/plugins` with its `manifest.json`, the themes and keymaps in its bundle,
+ * and whether `<data folder>/plugins.json` enables it. Given an id, it returns only that folder, or `undefined` if there
+ * is none.
  *
  * A save replaces `plugins.json`.
  *
@@ -21,32 +23,46 @@ const ROOT = path.join(dataLocalDir(), 'plugins');
  * dropped.
  */
 export function handlePlugins(): void {
-  ipcMain.handle('plugins:load', (): (InstalledPlugin | InvalidPlugin)[] => {
-    // No `plugins.json` means no entries, so every plugin is disabled.
-    let entries: PluginEntry[] = [];
-    try {
-      entries = validate(JSON.parse(fs.readFileSync(PLUGINS, 'utf8')));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+  ipcMain.handle(
+    'plugins:load',
+    (_event, id?: unknown): (InstalledPlugin | InvalidPlugin)[] | InstalledPlugin | InvalidPlugin | undefined => {
+      // No `plugins.json` means no entries, so every plugin is disabled.
+      let entries: PluginEntry[] = [];
+      try {
+        entries = validate(JSON.parse(fs.readFileSync(PLUGINS, 'utf8')));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error;
+        }
+      }
+      const enabled = new Set(entries.filter((entry) => entry.enabled).map((entry) => entry.id));
+
+      if (id !== undefined) {
+        const parsed = PluginId.safeParse(id);
+        if (!parsed.success) {
+          throw new Error('plugins: not a plugin id');
+        }
+
+        return fs.statSync(path.join(ROOT, parsed.data), { throwIfNoEntry: false })?.isDirectory()
+          ? load(parsed.data, enabled.has(parsed.data))
+          : undefined;
+      }
+
+      let folders: string[];
+      try {
+        folders = fs
+          .readdirSync(ROOT)
+          .filter((folder) => fs.statSync(path.join(ROOT, folder), { throwIfNoEntry: false })?.isDirectory());
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return [];
+        }
         throw error;
       }
-    }
-    const enabled = new Set(entries.filter((entry) => entry.enabled).map((entry) => entry.id));
 
-    let folders: string[];
-    try {
-      folders = fs
-        .readdirSync(ROOT)
-        .filter((folder) => fs.statSync(path.join(ROOT, folder), { throwIfNoEntry: false })?.isDirectory());
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-        return [];
-      }
-      throw error;
-    }
-
-    return folders.sort().map((folder) => load(folder, enabled.has(folder)));
-  });
+      return folders.sort().map((folder) => load(folder, enabled.has(folder)));
+    },
+  );
   ipcMain.handle('plugins:save', (_event, plugins: unknown) => {
     writeJsonSync(PLUGINS, validate(plugins));
   });
@@ -103,5 +119,16 @@ function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin
     return { id: folder, enabled, error: `${file} declares the id ${manifest.data.id}, not its folder's name` };
   }
 
-  return { manifest: manifest.data, enabled, url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.main}` };
+  return {
+    manifest: manifest.data,
+    enabled,
+    themes: readJsonFolder(path.join(ROOT, folder, 'bundle', 'themes'), Theme).map((entry) =>
+      'error' in entry ? entry : { id: entry.id, theme: entry.content },
+    ),
+    keymaps: readJsonFolder(path.join(ROOT, folder, 'bundle', 'keymaps'), Keymap).map((entry) =>
+      'error' in entry ? entry : { id: entry.id, keymap: entry.content },
+    ),
+    // TODO: Leave out for a manifest without `main`, once plugins without code are decided.
+    url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.main}`,
+  };
 }

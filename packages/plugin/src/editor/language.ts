@@ -10,6 +10,11 @@ import type { Disposable } from '../plugin.ts';
  */
 export interface EditorLanguages {
   /**
+   * The languages, most recently added first, then the built-in ones.
+   */
+  readonly languages: readonly LanguageDescription[];
+
+  /**
    * Adds `languages`, which take precedence over the built-in languages for the same files.
    *
    * Returns a disposable that removes the `languages`.

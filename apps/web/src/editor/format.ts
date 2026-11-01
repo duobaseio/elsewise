@@ -2,10 +2,16 @@ import { diff } from '@codemirror/merge';
 import { ChangeSet, type EditorState, StateEffect, StateField } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand, type EditorFormatter } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_COMMANDS,
+  DEFAULT_KEYS,
+  type EditorCommand,
+  type EditorFormatter,
+} from '@elsewise/plugin';
 
 /**
- * The edits made since each pending {@link FORMAT} started, which its formatter's changes are mapped through.
+ * The edits made since each pending {@link EDITOR_FORMAT} started, which its formatter's changes are mapped through.
  */
 export const format = StateField.define<ReadonlyMap<object, ChangeSet>>({
   create: () => new Map(),
@@ -32,9 +38,10 @@ export const format = StateField.define<ReadonlyMap<object, ChangeSet>>({
 
 const trackEdits = StateEffect.define<{ request: object; track: boolean }>();
 
-export const FORMAT: EditorCommand = {
+export const EDITOR_FORMAT: EditorCommand = {
   scope: 'editor',
   id: DEFAULT_COMMANDS.editor.edit.format,
+  group: DEFAULT_COMMAND_GROUPS.editor.edit,
   label: 'Format',
   defaultKeys: DEFAULT_KEYS.editor.edit.format,
   // Formats only the selection when there is one, with the first formatter that is enabled.

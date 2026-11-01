@@ -46,6 +46,7 @@ afterEach(() => {
   for (const view of views.splice(0)) {
     view.destroy();
   }
+  vi.restoreAllMocks();
 });
 
 // Opens `doc` on a running server behind `fake`, with the cursor at its `|`, `extensions` after the rest, and the
@@ -119,7 +120,7 @@ describe('serverCompletion', () => {
     });
   });
 
-  test("shows each item's kind as letterform", async () => {
+  test('shows item kind as letterform', async () => {
     const view = await open(
       transport([
         { label: 'send', kind: CompletionItemKind.Method },
@@ -191,7 +192,7 @@ describe('serverCompletion', () => {
     expect(view.state.doc.toString()).toBe('channel.select(x)');
   });
 
-  test("makes item's additional edits", async () => {
+  test('makes additional edits', async () => {
     const view = await open(
       transport([
         {
@@ -213,7 +214,7 @@ describe('serverCompletion', () => {
     expect(view.state.doc.toString()).toBe('use seq::sequence;\nsequence');
   });
 
-  test("makes snippet's additional edits", async () => {
+  test('makes snippet additional edits', async () => {
     const view = await open(
       transport([
         {
@@ -237,7 +238,7 @@ describe('serverCompletion', () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe('use seq::sequence;\nsequence(x)'));
   });
 
-  test("makes resolved item's additional edits with insertion, undone together", async () => {
+  test('makes resolved additional edits with insertion, undone together', async () => {
     const fake = transport([{ label: 'sequence' }], {
       sequence: {
         detail: 'Update import from "seq"',
@@ -281,7 +282,7 @@ describe('serverCompletion', () => {
     expect(fake.methods).toContain('completionItem/resolve');
   });
 
-  test("resolves selected item's documentation, detail as definition", async () => {
+  test('resolves selected item documentation, detail as definition', async () => {
     const fake = transport([{ label: 'send', detail: 'pub fn send(&self)' }], {
       send: { documentation: { kind: 'markdown', value: 'Sends `bytes`.' } },
     });
@@ -302,7 +303,7 @@ describe('serverCompletion', () => {
     expect(fake.methods.filter((method) => method === 'completionItem/resolve')).toHaveLength(1);
   });
 
-  test('shows no documentation for item without any', async () => {
+  test('shows no documentation for undocumented item', async () => {
     const fake = transport([{ label: 'send' }]);
     const view = await open(fake, 'channel.se|');
 
@@ -313,7 +314,7 @@ describe('serverCompletion', () => {
     expect(view.dom.querySelector('.cm-completionInfo')).toBeNull();
   });
 
-  test('shows no documentation when turned off', async () => {
+  test('skips disabled documentation', async () => {
     const fake = transport([{ label: 'send', detail: 'pub fn send(&self)' }], {
       send: { documentation: { kind: 'markdown', value: 'Sends `bytes`.' } },
     });
@@ -376,7 +377,7 @@ describe('serverCompletion', () => {
     );
   });
 
-  test("runs item's command on server after insertion", async () => {
+  test('runs item command on server after insertion', async () => {
     const fake = new StubTransport(
       { textDocumentSync: 2, completionProvider: {}, executeCommandProvider: { commands: ['send.hint'] } },
       {
@@ -401,7 +402,7 @@ describe('serverCompletion', () => {
     expect(methods.lastIndexOf('textDocument/didChange')).toBeLessThan(methods.indexOf('workspace/executeCommand'));
   });
 
-  test("runs item's command with plugin's handler instead", async () => {
+  test('runs item command with plugin handler instead', async () => {
     const fake = transport([{ label: 'send' }]);
     let inserted: string | undefined;
     const hint = vi.fn((_client: LSPClient, view: EditorView) => {
@@ -421,7 +422,7 @@ describe('serverCompletion', () => {
     expect(fake.methods).not.toContain('workspace/executeCommand');
   });
 
-  test("runs resolved item's command", async () => {
+  test('runs resolved item command', async () => {
     const hint = vi.fn();
     const view = await open(
       transport([{ label: 'send' }], { send: { command: { title: 'Hint', command: 'editor.hint' } } }),
@@ -436,7 +437,7 @@ describe('serverCompletion', () => {
     await vi.waitFor(() => expect(hint).toHaveBeenCalledWith(expect.anything(), view, []));
   });
 
-  test("runs item's command when resolved without one", async () => {
+  test('runs item command dropped on resolve', async () => {
     const hint = vi.fn();
     const view = await open(
       transport([{ label: 'send', command: { title: 'Hint', command: 'editor.hint' } }], {
@@ -453,7 +454,7 @@ describe('serverCompletion', () => {
     await vi.waitFor(() => expect(hint).toHaveBeenCalledWith(expect.anything(), view, []));
   });
 
-  test('says when command failed', async () => {
+  test('reports failed command', async () => {
     const add = vi.spyOn(toast, 'add');
     const view = await open(
       transport([{ label: 'send', command: { title: 'Hint', command: 'editor.hint' } }]),

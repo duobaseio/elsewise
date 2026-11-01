@@ -1,7 +1,22 @@
-import type { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
+import type { Terminal } from '@xterm/xterm';
 import type { Key, Keys } from './keymap.ts';
 import type { Application, Disposable } from './plugin.ts';
+
+/**
+ * The ids of the built-in groups.
+ */
+export const DEFAULT_COMMAND_GROUPS = {
+  application: { id: 'elsewise.application' },
+  editor: {
+    id: 'elsewise.editor',
+    edit: 'elsewise.editor.edit',
+    navigate: 'elsewise.editor.navigate',
+    code: 'elsewise.editor.code',
+    diff: 'elsewise.editor.diff',
+  },
+  terminal: { id: 'elsewise.terminal' },
+} as const;
 
 /**
  * The ids of the built-in commands.
@@ -91,6 +106,21 @@ export const DEFAULT_COMMANDS = {
       findUsages: 'elsewise.editor.lsp.findUsages',
       rename: 'elsewise.editor.lsp.rename',
       showSignatureHelp: 'elsewise.editor.lsp.showSignatureHelp',
+    },
+  },
+  terminal: {
+    clipboard: {
+      copy: 'elsewise.terminal.clipboard.copy',
+      paste: 'elsewise.terminal.clipboard.paste',
+    },
+    search: {
+      find: 'elsewise.terminal.search.find',
+    },
+    selection: {
+      selectAll: 'elsewise.terminal.selection.selectAll',
+    },
+    buffer: {
+      clear: 'elsewise.terminal.buffer.clear',
     },
   },
 } as const;
@@ -188,6 +218,21 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       showSignatureHelp: ['Mod-p'],
     },
   },
+  terminal: {
+    clipboard: {
+      copy: [{ key: 'Ctrl-Shift-c', mac: 'Mod-c' }],
+      paste: [{ key: 'Ctrl-Shift-v', mac: 'Mod-v' }],
+    },
+    search: {
+      find: [{ key: 'Ctrl-Shift-f', mac: 'Mod-f' }],
+    },
+    selection: {
+      selectAll: [{ key: 'Ctrl-Shift-a', mac: 'Mod-a' }],
+    },
+    buffer: {
+      clear: [{ mac: 'Mod-k' }],
+    },
+  },
 };
 
 type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<T[K]> };
@@ -202,23 +247,34 @@ export interface Commands {
   readonly keymap: ActiveKeymap;
 
   /**
+   * Adds `groups`.
+   *
+   * A group with an already existing id, or in a group that does not exist, is rejected. Groups are listed in order
+   * of addition.
+   *
+   * Returns a disposable that removes the added `groups`, the groups in them, and the commands in any of those.
+   */
+  addGroups(groups: readonly CommandGroup[]): Disposable;
+
+  /**
    * Adds `commands`.
    *
-   * A command with an already existing id is rejected. Commands that share a key are tried from the last added to the
-   * first, until one applies.
+   * A command with an already existing id or an unknown group is rejected. Commands that share a key are tried from
+   * the last added to the first, until one applies.
    *
    * Returns a disposable that removes the added `commands`.
    */
-  add(commands: readonly (ApplicationCommand | EditorCommand)[]): Disposable;
+  add(commands: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): Disposable;
 
   /**
-   * Runs the command with `id` against an optional `target`.
+   * Runs the command with `id` against an optional `target`, an editor for an editor command or a terminal for a
+   * terminal command. Without `target`, it runs against the active editor or terminal.
    *
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
    *
    * Returns whether the command ran and applied.
    */
-  run(id: string, target?: EditorView): boolean;
+  run(id: string, target?: EditorView | Terminal): boolean;
 }
 
 /**
@@ -240,18 +296,47 @@ export interface ActiveKeymap {
 }
 
 /**
+ * A group for visually organizing commands.
+ */
+export interface CommandGroup {
+  /**
+   * The group's id, namespaced by the plugin's, e.g. `io.example.tone`. Omitted if the id already exists.
+   */
+  readonly id: string;
+
+  /**
+   * The id of the group it is listed in, e.g. `io.example`. Omitted if the group does not exist.
+   *
+   * See {@link DEFAULT_COMMAND_GROUPS} for the built-in groups.
+   */
+  readonly in?: string;
+
+  /**
+   * The user-facing label.
+   */
+  readonly label: string;
+}
+
+/**
  * An action that a user can invoke.
  */
 export interface Command {
   /**
    * The surface the command runs in.
    */
-  readonly scope: 'application' | 'editor';
+  readonly scope: 'application' | 'editor' | 'terminal';
 
   /**
    * The command's id, namespaced by the plugin's, e.g. `io.example.rename`.
    */
   readonly id: string;
+
+  /**
+   * The group's id, used for visually organizing commands.
+   *
+   * See {@link DEFAULT_COMMAND_GROUPS} for the built-in groups.
+   */
+  readonly group: string;
 
   /**
    * The label shown in menus, e.g. `Rename…`.
@@ -299,8 +384,7 @@ export interface ApplicationCommand extends Command {
 /**
  * A command that runs in an active editor.
  *
- * Its keys fire while an editor has focus. `lsp` is the editor's connection to its language server, or `null` without
- * one.
+ * Its keys fire while an editor has focus.
  */
 export interface EditorCommand extends Command {
   readonly scope: 'editor';
@@ -310,23 +394,58 @@ export interface EditorCommand extends Command {
    *
    * A disabled command is greyed out in menus, and pressing its keys does not run it.
    */
-  enabled?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  enabled?(application: Application, view: EditorView): boolean;
 
   /**
    * Returns whether the command is shown in menus. Defaults to true.
    */
-  shown?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  shown?(application: Application, view: EditorView): boolean;
 
   /**
    * Returns whether the command's effect is active, e.g. the source that the file is compared with. Menus show a
    * check beside an active command. Defaults to none, for a command that is neither.
    */
-  active?(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  active?(application: Application, view: EditorView): boolean;
 
   /**
    * Runs the command against `view`.
    *
    * Returns whether the command applied. If it did not, its keys fall through to the next command.
    */
-  run(application: Application, view: EditorView, lsp: LSPPlugin | null): boolean;
+  run(application: Application, view: EditorView): boolean;
+}
+
+/**
+ * A command that runs in an active terminal.
+ *
+ * Its keys fire while a terminal has focus, instead of being sent to the shell.
+ */
+export interface TerminalCommand extends Command {
+  readonly scope: 'terminal';
+
+  /**
+   * Returns whether the command can run. Defaults to true.
+   *
+   * A disabled command is greyed out in menus, and pressing its keys does not run it.
+   */
+  enabled?(application: Application, terminal: Terminal): boolean;
+
+  /**
+   * Returns whether the command is shown in menus. Defaults to true.
+   */
+  shown?(application: Application, terminal: Terminal): boolean;
+
+  /**
+   * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
+   * a command that is neither.
+   */
+  active?(application: Application, terminal: Terminal): boolean;
+
+  /**
+   * Runs the command against `terminal`.
+   *
+   * Returns whether the command applied. If it did not, its keys fall through to the next command, and then to the
+   * shell.
+   */
+  run(application: Application, terminal: Terminal): boolean;
 }

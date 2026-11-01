@@ -22,14 +22,6 @@ const SEND = {
   parameters: [{ label: [8, 20] as [number, number] }, { label: [22, 39] as [number, number] }],
 };
 
-// Returns a transport to a server that answers every signature help request with `help`.
-function transport(help: SignatureHelp): StubTransport {
-  return new StubTransport(
-    { textDocumentSync: 2, signatureHelpProvider: { triggerCharacters: ['(', ','] } },
-    { 'textDocument/signatureHelp': () => help },
-  );
-}
-
 let rust: LanguageSupport;
 
 beforeAll(async () => {
@@ -44,13 +36,17 @@ afterEach(() => {
   }
 });
 
-// Opens `channel.send` on a server that answers with `help`, types `(`, and returns the rows once shown.
+// Opens `channel.send` on a server that responds with `help`, types `(`, and returns the rows once shown.
 async function open(help: SignatureHelp): Promise<[EditorView, HTMLElement[]]> {
   const server: LanguageServer = {
     id: 'rust',
     name: 'Rust',
     languages: { Rust: 'rust' },
-    start: () => transport(help),
+    start: () =>
+      new StubTransport(
+        { textDocumentSync: 2, signatureHelpProvider: { triggerCharacters: ['(', ','] } },
+        { 'textDocument/signatureHelp': () => help },
+      ),
   };
   const instance = new LanguageServerInstance(server, ROOT);
   await instance.start();
@@ -72,15 +68,12 @@ async function open(help: SignatureHelp): Promise<[EditorView, HTMLElement[]]> {
     selection: { anchor: doc.length + 1 },
     userEvent: 'input.type',
   });
-  return [view, await rows(view)];
-}
-
-async function rows(view: EditorView): Promise<HTMLElement[]> {
-  return vi.waitFor(() => {
+  const rows = await vi.waitFor(() => {
     const rows = [...view.dom.querySelectorAll<HTMLElement>('.cm-lsp-signatures li')];
     expect(rows).not.toHaveLength(0);
     return rows;
   });
+  return [view, rows];
 }
 
 function press(view: EditorView, key: string): boolean {
@@ -98,7 +91,7 @@ describe('serverSignatureHelp', () => {
     expect(shown.map((row) => row.textContent)).toEqual(['fn send(bytes: Bytes)', SEND.label]);
   });
 
-  test("marks each signature's active parameter, given by offsets or as whole word", async () => {
+  test('marks active parameter of each signature, given by offsets or as whole word', async () => {
     const [, shown] = await open({
       signatures: [
         SEND,
@@ -113,7 +106,7 @@ describe('serverSignatureHelp', () => {
     expect(string.querySelector('.cm-lsp-active-parameter')?.textContent).toBe('timeout');
   });
 
-  test("prefers signature's own active parameter", async () => {
+  test('prefers active parameter set on signature', async () => {
     const [, [row]] = await open({
       signatures: [{ label: 'fn send(s: String)', parameters: [{ label: 's' }], activeParameter: 0 }],
       activeSignature: 0,

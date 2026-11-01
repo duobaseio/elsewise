@@ -115,7 +115,7 @@ describe('completion', () => {
     expect(color(session)).toBe(getComputedStyle(session).color);
   });
 
-  test("draws SVG icon's shape in tag color", async () => {
+  test('draws SVG icon shape in tag color', async () => {
     const circle = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/></svg>';
     const svg = `data:image/svg+xml,${encodeURIComponent(circle)}`;
     const view = open('channel.se|', [

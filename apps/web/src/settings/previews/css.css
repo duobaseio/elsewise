@@ -1,0 +1,80 @@
+/* Status page: sessions grid and channel badges. */
+@import url("fonts.css") layer(base);
+@layer base, components;
+
+:root {
+  --ink: #1c1917;
+  --paper: #fafaf9;
+  --accent: rgb(180 83 9);
+  --gap: 0.75rem;
+  --row-height: calc(var(--gap) * 3 + 1.25rem);
+}
+
+@layer components {
+  .sessions {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) 2fr auto;
+    grid-template-areas:
+      "id worktree pending"
+      "id attached pending";
+    gap: var(--gap);
+    font-size: clamp(0.875rem, 0.5rem + 1vw, 1.125rem);
+  }
+  .session > .id {
+    grid-area: id;
+    font-weight: 600;
+  }
+  .session:nth-child(2n + 1) {
+    background: color-mix(in oklch, var(--paper) 92%, var(--ink));
+  }
+  .session:not(.attached) .pending::before {
+    content: "\201C";
+    margin-inline-end: 0.25em;
+    color: var(--accent);
+  }
+  .session:hover + .session,
+  .session:focus-within ~ .session {
+    opacity: 0.85;
+  }
+
+  #retries [data-attempt="3"] {
+    color: var(--accent) !important;
+  }
+
+  a[href^="/sessions/"]:hover {
+    text-decoration-thickness: 2px;
+    transform: rotate(-1deg);
+  }
+}
+
+@media (prefers-color-scheme: dark) and (min-width: 48rem) {
+  :root {
+    --ink: #fafaf9;
+    --paper: #1c1917;
+  }
+
+  .sessions {
+    grid-template-columns: minmax(8rem, 1fr) 2fr minmax(4rem, auto);
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .pending {
+    animation: pulse 800ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes pulse {
+  from {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+    transform: translateY(-1px);
+  }
+
+  to {
+    opacity: 1;
+  }
+}

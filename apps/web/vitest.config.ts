@@ -18,8 +18,9 @@ export default defineConfig({
           css: { include: [/elsewise\.css/] },
         },
       },
-      browserProject('browser', ['src/**/*.browser.test.tsx'], { frozenMotion: false }),
-      browserProject('visual', ['test/visual/**/*.test.{ts,tsx}'], { frozenMotion: true }),
+      // Run one after the other, since together they slow each other past the tests' waits.
+      browserProject('browser', ['src/**/*.browser.test.tsx'], { frozenMotion: false, groupOrder: 0 }),
+      browserProject('visual', ['test/visual/**/*.test.{ts,tsx}'], { frozenMotion: true, groupOrder: 1 }),
     ],
   },
 });
@@ -27,7 +28,7 @@ export default defineConfig({
 function browserProject(
   name: string,
   include: readonly string[],
-  { frozenMotion }: { frozenMotion: boolean },
+  { frozenMotion, groupOrder }: { frozenMotion: boolean; groupOrder: number },
 ): TestProjectInlineConfiguration {
   return {
     extends: true,
@@ -59,11 +60,21 @@ function browserProject(
         '@lezer/highlight',
         'vscode-languageserver-protocol',
         'w3c-keyname',
+        '@xterm/addon-clipboard',
+        '@xterm/addon-fit',
+        '@xterm/addon-ligatures',
+        '@xterm/addon-search',
+        '@xterm/addon-unicode11',
+        '@xterm/addon-web-links',
+        '@xterm/addon-webgl',
+        '@xterm/xterm',
         // The languages the tests load, which `language-data` imports on demand.
         '@codemirror/language-data > @codemirror/lang-html',
         '@codemirror/language-data > @codemirror/lang-rust',
+        '@base-ui/react/combobox',
         // The components' own dependencies, which the app cannot resolve by name.
         '@elsewise/components > @base-ui/react/*',
+        '@elsewise/components > dockview-react',
         '@elsewise/components > @phosphor-icons/react',
         '@elsewise/components > @pierre/trees',
         '@elsewise/components > @pierre/trees/react',
@@ -75,6 +86,7 @@ function browserProject(
     test: {
       name,
       include: [...include],
+      sequence: { groupOrder },
       setupFiles: ['./test/browser-setup.ts', ...(frozenMotion ? ['./test/visual-setup.ts'] : [])],
       // Mirrors the components' browser projects; see their `vitest.config.ts` for why each option is what it is.
       browser: {
@@ -83,6 +95,7 @@ function browserProject(
         provider: playwright({
           launchOptions: {
             args: ['--disable-gpu', '--force-color-profile=srgb', '--disable-lcd-text'],
+            ...(frozenMotion ? {} : { ignoreDefaultArgs: ['--hide-scrollbars'] }),
           },
           contextOptions: {
             deviceScaleFactor: 2,

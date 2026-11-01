@@ -7,7 +7,7 @@
 //
 // Commands typed into the terminal try out how Elsewise shows what servers report, on every connection:
 //   message <error|warning|info> <text>  sends `window/showMessage`
-//   fail [method]                         answers the next request, or the next one for `method`, with an error
+//   fail [method]                         responds to the next request, or the next one for `method`, with an error
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import path from 'node:path';

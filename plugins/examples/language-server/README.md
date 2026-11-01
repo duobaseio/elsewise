@@ -48,7 +48,7 @@ To see how Elsewise shows what a server reports, type these into the terminal ru
 connection:
 
 - `message <error|warning|info> <text>` sends the message, e.g. `message warning Indexing is slow`.
-- `fail [method]` answers the next request, or the next one for `method`, with an error, e.g. `fail
+- `fail [method]` responds to the next request, or the next one for `method`, with an error, e.g. `fail
   textDocument/definition` and then F12.
 
 Stopping `serve` while Elsewise runs shows that the server stopped; running Elsewise without it shows that it failed to

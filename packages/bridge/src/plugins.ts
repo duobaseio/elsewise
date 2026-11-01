@@ -1,4 +1,4 @@
-import { Manifest, PluginId } from '@elsewise/plugin';
+import { Keymap, Manifest, PluginId, Theme } from '@elsewise/plugin';
 import * as z from 'zod';
 
 export { PluginId };
@@ -15,6 +15,13 @@ export interface PluginsBridge {
    * Returns every installed plugin, enabled or not, and every folder whose manifest is missing or malformed.
    */
   load(): Promise<(InstalledPlugin | InvalidPlugin)[]>;
+
+  /**
+   * Returns the installed plugin with `id`, or `undefined` if none is installed.
+   *
+   * Throws an error if `id` is not a plugin id.
+   */
+  load(id: string): Promise<InstalledPlugin | InvalidPlugin | undefined>;
 
   /**
    * Replaces whether each plugin is enabled with `entries`.
@@ -37,8 +44,22 @@ export const InstalledPlugin = z.object({
    */
   enabled: z.boolean(),
   /**
+   * The themes in the plugin's `bundle/themes` folder, each identified by its file name without `.json`.
+   * `dusk` for `dusk.json`, or with why it could not be read.
+   */
+  themes: z.array(
+    z.union([z.object({ id: z.string(), theme: Theme }), z.object({ id: z.string(), error: z.string() })]),
+  ),
+  /**
+   * The keymaps in the plugin's `bundle/keymaps` folder, each identified by its file name without `.json`.
+   */
+  keymaps: z.array(
+    z.union([z.object({ id: z.string(), keymap: Keymap }), z.object({ id: z.string(), error: z.string() })]),
+  ),
+  /**
    * The URL of the plugin's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`.
    */
+  // TODO: Make optional with the manifest's `main`, once plugins without code are decided.
   url: z.string(),
 });
 

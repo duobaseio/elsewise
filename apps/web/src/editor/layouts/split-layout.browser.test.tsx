@@ -6,43 +6,32 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import { SplitLayout, type SplitLayoutProps } from '@/editor/layouts/split-layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
+import { builtInApplication } from '../../../test/commands';
 
 const BASE = ['alpha', 'beta', 'gamma', 'delta', 'epsilon'].join('\n');
 // Changes `beta` on line 2 and deletes `delta`.
 const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
-
-// Puts the document's layout into the content's `data-layout`, or `loading` while it is null.
-const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
-  const layout = state.facet(EDITOR_DOCUMENT)?.layout;
-  return { 'data-layout': layout === undefined ? 'loading' : layout.type === 'split' ? layout.side : layout.type };
-});
 
 // Renders a `SplitLayout` with `props` in the app's contexts, and returns its sides' views and a way to render it
 // again.
 async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-  });
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   const servers = new LanguageServers(editor);
   const session = { current: null };
   const ratio = { current: 0.5 };
   const tree = (next: Partial<SplitLayoutProps>) => (
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
           <LanguageServersContext value={servers}>
             <div style={{ height: 200 }}>
               <SplitLayout
@@ -56,8 +45,8 @@ async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManage
               />
             </div>
           </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>
   );
   const screen = await render(tree(props));
@@ -105,7 +94,7 @@ describe('SplitLayout', () => {
     expect(base().dom.getBoundingClientRect().right).toBeLessThanOrEqual(target().dom.getBoundingClientRect().left);
   });
 
-  test('marks changes on both sides', async () => {
+  test('marks changed lines on both sides', async () => {
     const { base, target } = await mount({});
 
     await expect.poll(() => changedLines(target())).toBe(1);
@@ -114,7 +103,15 @@ describe('SplitLayout', () => {
 
   test('describes sides to plugins', async () => {
     const editor = new EditorManager();
-    editor.addExtensions([LAYOUT_ATTRIBUTE]);
+    // Puts the document's layout into the content's `data-layout`, or `loading` while it is null.
+    editor.addExtensions([
+      EditorView.contentAttributes.compute([EDITOR_DOCUMENT], (state) => {
+        const layout = state.facet(EDITOR_DOCUMENT)?.layout;
+        return {
+          'data-layout': layout === undefined ? 'loading' : layout.type === 'split' ? layout.side : layout.type,
+        };
+      }),
+    ]);
     const { base, target } = await mount({}, editor);
 
     await expect.poll(() => base().contentDOM.dataset.layout).toBe('base');
@@ -378,12 +375,12 @@ describe('SplitLayout', () => {
     await expect.poll(() => top(base())).toBe(top(target()));
   });
 
-  test('hides stripe of base', async () => {
+  test('hides scrollbar markers of base', async () => {
     const { base, target } = await mount({});
 
     const display = (view: EditorView) => {
-      const stripe = view.dom.querySelector('.cm-stripe');
-      return stripe === null ? null : getComputedStyle(stripe).display;
+      const markers = view.dom.querySelector('.cm-scrollbar-markers');
+      return markers === null ? null : getComputedStyle(markers).display;
     };
     expect(display(base())).toBe('none');
     expect(display(target())).not.toBe('none');

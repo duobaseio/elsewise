@@ -2,17 +2,16 @@ import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import type {
   Commands,
-  ContextMenu,
   ContextMenuGroup,
-  ContextMenuItem,
-  ContextMenuSubmenuItem,
   Disposable,
   Editor,
   EditorDocument,
   EditorToolbarItem,
 } from '@elsewise/plugin';
-import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
-import { DEFAULT_CONTEXT_MENU } from '@/editor/default-context-menu';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
+import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
+import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { DiffManager } from '@/editor/diff/diff-manager';
 import { LanguageManager } from '@/editor/language-manager';
 
@@ -31,8 +30,7 @@ export class EditorManager implements Editor {
   private current: EditorView | null = null;
   private addedExtensions: readonly (readonly (Extension | ((document: EditorDocument) => Extension))[])[] = [];
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
-  private addedContextMenus: readonly (readonly Partial<ContextMenu>[])[] = [[DEFAULT_CONTEXT_MENU]];
-  private currentContextMenu: ContextMenu = this.merge(this.addedContextMenus.flat());
+  private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
   private addedToolbarItems: readonly (readonly EditorToolbarItem[])[] = [];
   private currentToolbarItems: readonly EditorToolbarItem[] = [];
 
@@ -77,22 +75,14 @@ export class EditorManager implements Editor {
   }
 
   /**
-   * The active editor context menu.
+   * The context menu's deduplicated groups, one per id, in order of first addition.
    */
-  get contextMenu(): ContextMenu {
-    return this.currentContextMenu;
+  get contextMenu(): readonly ContextMenuGroup[] {
+    return this.contextMenus.groups;
   }
 
-  addContextMenus(menus: readonly Partial<ContextMenu>[]): Disposable {
-    const added = [...menus];
-    this.addedContextMenus = [...this.addedContextMenus, added];
-    this.currentContextMenu = this.merge(this.addedContextMenus.flat());
-    this.notify();
-    return () => {
-      this.addedContextMenus = this.addedContextMenus.filter((other) => other !== added);
-      this.currentContextMenu = this.merge(this.addedContextMenus.flat());
-      this.notify();
-    };
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    return this.contextMenus.add(groups);
   }
 
   /**
@@ -112,42 +102,6 @@ export class EditorManager implements Editor {
       this.currentToolbarItems = this.addedToolbarItems.flat();
       this.notify();
     };
-  }
-
-  // Returns `menus` as one: the first submenu or group added with an id wins, and the items are in order of addition.
-  private merge(menus: readonly Partial<ContextMenu>[]): ContextMenu {
-    const submenus: Record<string, string> = {};
-    const groups: Record<string, ContextMenuGroup> = {};
-    const items: Record<string, (ContextMenuItem | ContextMenuSubmenuItem)[]> = {};
-    for (const menu of menus) {
-      for (const [id, submenu] of Object.entries(menu.submenus ?? {})) {
-        if (Object.hasOwn(submenus, id)) {
-          console.warn(`Context submenu ${id} was already added`);
-          continue;
-        }
-
-        submenus[id] = submenu;
-      }
-
-      for (const [id, group] of Object.entries(menu.groups ?? {})) {
-        if (Object.hasOwn(groups, id)) {
-          console.warn(`Context menu group ${id} was already added`);
-          continue;
-        }
-
-        groups[id] = group;
-      }
-
-      for (const [id, added] of Object.entries(menu.items ?? {})) {
-        if (Object.hasOwn(items, id)) {
-          items[id].push(...added);
-        } else {
-          items[id] = [...added];
-        }
-      }
-    }
-
-    return { submenus, groups, items };
   }
 
   /**
@@ -173,19 +127,13 @@ export class EditorManager implements Editor {
   }
 }
 
-export const EditorManagerContext = createContext<EditorManager | null>(null);
-
 /**
  * Returns the code editor as plugins see it.
  */
 export function useEditorManager(): EditorManager;
 export function useEditorManager<T>(select: (editor: EditorManager) => T): T;
 export function useEditorManager<T>(select?: (editor: EditorManager) => T): EditorManager | T {
-  const editor = useContext(EditorManagerContext);
-  if (editor === null) {
-    throw new Error('Missing EditorManagerContext');
-  }
-
+  const editor = useApplicationManager().editor;
   const subscribe = useCallback((listener: () => void) => editor.subscribe(listener), [editor]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? editor : select(editor)));
 }

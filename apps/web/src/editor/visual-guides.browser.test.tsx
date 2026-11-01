@@ -1,7 +1,6 @@
 import { Compartment, EditorState } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
-import { afterEach, beforeEach, expect, test } from 'vitest';
-
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { visualGuides } from '@/editor/visual-guides';
 
 const GUIDES = new Compartment();
@@ -31,32 +30,47 @@ function guides(): HTMLElement[] {
   return [...view.scrollDOM.querySelectorAll<HTMLElement>('.cm-visual-guide')];
 }
 
-function expectedLeft(column: number): number {
-  const line = view.contentDOM.querySelector('.cm-line');
-  if (line === null) {
-    throw new Error('no line');
-  }
-  return Number.parseFloat(getComputedStyle(line).paddingLeft) + column * view.defaultCharacterWidth;
-}
+describe('visualGuides', () => {
+  test('draws guide at each column', () => {
+    const line = view.contentDOM.querySelector('.cm-line');
+    if (line === null) {
+      throw new Error('no line');
+    }
+    const padding = Number.parseFloat(getComputedStyle(line).paddingLeft);
+    const content = view.contentDOM.getBoundingClientRect().left;
+    const lefts = guides().map((guide) => guide.getBoundingClientRect().left - content);
+    expect(lefts).toHaveLength(2);
+    expect(lefts[0]).toBeCloseTo(padding + 40 * view.defaultCharacterWidth, 0);
+    expect(lefts[1]).toBeCloseTo(padding + 80 * view.defaultCharacterWidth, 0);
+  });
 
-test("draws one guide per column at column's x", () => {
-  const content = view.contentDOM.getBoundingClientRect().left;
-  const lefts = guides().map((guide) => guide.getBoundingClientRect().left - content);
-  expect(lefts).toHaveLength(2);
-  expect(lefts[0]).toBeCloseTo(expectedLeft(40), 0);
-  expect(lefts[1]).toBeCloseTo(expectedLeft(80), 0);
-});
+  test('replaces guides on reconfigure', async () => {
+    view.dispatch({ effects: GUIDES.reconfigure(visualGuides([])) });
+    await new Promise(requestAnimationFrame);
+    expect(guides()).toHaveLength(0);
 
-test('reconfiguring replaces set', async () => {
-  view.dispatch({ effects: GUIDES.reconfigure(visualGuides([])) });
-  await new Promise(requestAnimationFrame);
-  expect(guides()).toHaveLength(0);
+    view.dispatch({ effects: GUIDES.reconfigure(visualGuides([100])) });
+    await new Promise(requestAnimationFrame);
+    expect(guides()).toHaveLength(1);
+  });
 
-  view.dispatch({ effects: GUIDES.reconfigure(visualGuides([100])) });
-  await new Promise(requestAnimationFrame);
-  expect(guides()).toHaveLength(1);
-});
+  test('spans content height', () => {
+    expect(guides()[0].getBoundingClientRect().height).toBeGreaterThanOrEqual(view.contentHeight);
+  });
 
-test('guide spans content height', () => {
-  expect(guides()[0].getBoundingClientRect().height).toBeGreaterThanOrEqual(view.contentHeight);
+  test('spans scroller as horizontal scrollbar appears', async () => {
+    view.dom.style.height = '200px';
+    view.dom.style.width = `${120 * view.defaultCharacterWidth}px`;
+    // Redraws the guides at the new height.
+    view.dispatch({ effects: GUIDES.reconfigure(visualGuides([40, 80])) });
+    const scroller = view.scrollDOM;
+    await expect.poll(() => guides()[0].offsetHeight).toBe(scroller.clientHeight);
+
+    // Narrower than the guides, before the layer's next measure cycle.
+    view.dom.style.width = `${20 * view.defaultCharacterWidth}px`;
+
+    expect(scroller.offsetHeight - scroller.clientHeight).toBeGreaterThan(0);
+    expect(scroller.scrollHeight).toBe(scroller.clientHeight);
+    expect(guides()[0].offsetHeight).toBe(scroller.clientHeight);
+  });
 });

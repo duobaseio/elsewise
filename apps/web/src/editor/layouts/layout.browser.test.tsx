@@ -5,6 +5,7 @@ import { Compartment, EditorState, type Extension, Facet, Prec, StateField } fro
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import {
+  DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   EDITOR_DOCUMENT,
   type EditorCommand,
@@ -17,10 +18,9 @@ import { type RefObject, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { AppearanceManager } from '@/appearance/appearance-manager';
-import { resolveActiveTheme, THEMES } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { resolveActiveTheme } from '@/appearance/themes';
+import { ApplicationManagerContext } from '@/application-context';
+import { EditorManager } from '@/editor/editor-manager';
 import {
   applyPlugins,
   type EditorSource,
@@ -31,7 +31,9 @@ import {
   usePlugins,
 } from '@/editor/layouts/layout';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
+import { builtInApplication } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
 
 const BASE: EditorDocumentLayout = { type: 'split', side: 'base' };
@@ -104,19 +106,14 @@ async function mount(
 ) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  const commands = new CommandManager({
-    appearance: new AppearanceManager(
-      'light',
-      resolveActiveTheme([], { source: 'elsewise', name: 'elsewise' }, 'light'),
-    ),
-    editor,
-  });
+  const application = builtInApplication({ editor });
+  const commands = application.commands;
   let setSource: (source: EditorSource) => void = () => {};
   let setCode: (code: string) => void = () => {};
   const screen = await render(
     <QueryClientProvider client={client}>
-      <EditorManagerContext value={editor}>
-        <CommandManagerContext value={commands}>
+      <PluginStoreContext value={new PluginStore()}>
+        <ApplicationManagerContext value={application}>
           <LanguageServersContext value={new LanguageServers(editor)}>
             <Layout
               initialSource={type === 'workingTree' ? { type, root } : { type }}
@@ -131,8 +128,8 @@ async function mount(
               }}
             />
           </LanguageServersContext>
-        </CommandManagerContext>
-      </EditorManagerContext>
+        </ApplicationManagerContext>
+      </PluginStoreContext>
     </QueryClientProvider>,
   );
   const view = () => {
@@ -218,7 +215,7 @@ afterEach(() => {
 
 // Returns the CSS color of Elsewise's `role` token at `brightness`.
 function tokenColor(role: 'keyword' | 'comment', brightness: 'light' | 'dark'): string {
-  const { tokens } = resolveActiveTheme(THEMES, { source: 'elsewise', name: 'elsewise' }, brightness).editor;
+  const { tokens } = resolveActiveTheme(undefined, brightness).editor;
   const hex = tokens[role]?.color;
   if (hex === undefined) {
     throw new Error(`missing ${role} color`);
@@ -273,6 +270,20 @@ describe('useEditorExtensions', () => {
       settings(monospace);
 
       await expect.poll(() => view().defaultCharacterWidth).toBe(width);
+    });
+
+    test('remeasures line height', async () => {
+      notifyManager.setScheduler((callback) => callback());
+      document.documentElement.style.setProperty('--text-code--line-height', '18px');
+      const { view, settings } = await mount('workingTree', { code: 'fn main() {}' });
+      await expect.poll(() => view().defaultLineHeight).toBe(18);
+
+      // Changes the CSS variable that the editor's theme reads the line height from along with the settings, as the
+      // app does.
+      document.documentElement.style.setProperty('--text-code--line-height', '30px');
+      settings(withSettings({}, { font: { ...DEFAULT_SETTINGS.appearance.editor.font, lineHeight: 2.5 } }));
+
+      await expect.poll(() => view().defaultLineHeight).toBe(30);
     });
 
     test('edits with undo history', async () => {
@@ -341,7 +352,16 @@ describe('useEditorExtensions', () => {
       built.dispatch({ selection: { anchor: 3 } });
       const run = vi.fn<EditorCommand['run']>(() => true);
 
-      commands.add([{ id: 'test.command', label: 'Test', scope: 'editor', defaultKeys: ['F20'], run }]);
+      commands.add([
+        {
+          id: 'test.command',
+          label: 'Test',
+          scope: 'editor',
+          group: DEFAULT_COMMAND_GROUPS.editor.id,
+          defaultKeys: ['F20'],
+          run,
+        },
+      ]);
 
       await expect
         .poll(() => {
@@ -577,7 +597,16 @@ describe('useEditorExtensions', () => {
       const built = view();
       const run = vi.fn<EditorCommand['run']>(() => true);
 
-      commands.add([{ id: 'test.command', label: 'Test', scope: 'editor', defaultKeys: ['Ctrl-k'], run }]);
+      commands.add([
+        {
+          id: 'test.command',
+          label: 'Test',
+          scope: 'editor',
+          group: DEFAULT_COMMAND_GROUPS.editor.id,
+          defaultKeys: ['Ctrl-k'],
+          run,
+        },
+      ]);
       await new Promise((resolve) => setTimeout(resolve));
       view().contentDOM.dispatchEvent(
         new KeyboardEvent('keydown', { key: 'k', code: 'KeyK', keyCode: 75, ctrlKey: true, bubbles: true }),
@@ -732,15 +761,16 @@ function Language({
 // Renders `useLanguage` for `path`, and returns its latest result and a way to change the path.
 async function mountLanguage(editor: EditorManager, path: string) {
   let latest: ReturnType<typeof useLanguage> | undefined;
+  const application = builtInApplication({ editor });
   const ui = (path: string) => (
-    <EditorManagerContext value={editor}>
+    <ApplicationManagerContext value={application}>
       <Language
         path={path}
         onLanguage={(language) => {
           latest = language;
         }}
       />
-    </EditorManagerContext>
+    </ApplicationManagerContext>
   );
   const screen = await render(ui(path));
   return { latest: () => latest, path: (path: string) => screen.rerender(ui(path)) };
@@ -822,7 +852,6 @@ describe('useLanguage', () => {
     expect(latest()).toEqual({ name: 'Toy', language: null });
   });
 });
-
 const LAYOUT: EditorDocumentLayout = { type: 'editor' };
 const VALUES = Facet.define<string>();
 
@@ -840,7 +869,7 @@ function Plugins({
   document: EditorDocument | null;
   onPlugins: (plugins: Extension) => void;
 }) {
-  onPlugins(usePlugins(view, document));
+  onPlugins(usePlugins(view, document, LAYOUT));
   return null;
 }
 
@@ -848,7 +877,7 @@ function Plugins({
 async function pluginValues(editor: EditorManager, document: EditorDocument | null): Promise<readonly string[]> {
   let latest: Extension = [];
   await render(
-    <EditorManagerContext value={editor}>
+    <ApplicationManagerContext value={builtInApplication({ editor })}>
       <Plugins
         view={{ current: null }}
         document={document}
@@ -856,7 +885,7 @@ async function pluginValues(editor: EditorManager, document: EditorDocument | nu
           latest = plugins;
         }}
       />
-    </EditorManagerContext>,
+    </ApplicationManagerContext>,
   );
   return EditorState.create({ extensions: latest }).facet(VALUES);
 }
@@ -902,9 +931,9 @@ describe('usePlugins', () => {
     const editor = new EditorManager();
     const view = new EditorView({ state: EditorState.create({ extensions: PLUGINS.of([]) }) });
     await render(
-      <EditorManagerContext value={editor}>
+      <ApplicationManagerContext value={builtInApplication({ editor })}>
         <Plugins view={{ current: view }} document={null} onPlugins={() => {}} />
-      </EditorManagerContext>,
+      </ApplicationManagerContext>,
     );
 
     editor.addExtensions([attribute('plugin')]);
@@ -933,7 +962,6 @@ describe('applyPlugins', () => {
     view.destroy();
   });
 });
-
 const COMPARTMENT = new Compartment();
 
 function Compartmented({ view, value }: { view: RefObject<EditorView | null>; value: Extension }) {

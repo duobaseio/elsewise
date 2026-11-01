@@ -1,15 +1,19 @@
 import { Toaster } from '@elsewise/components/components/toast';
-import { createRootRoute, Outlet } from '@tanstack/react-router';
+import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { useActiveTheme } from '@/appearance/themes';
-import { CommandManager, CommandManagerContext } from '@/command/command-manager';
-import { installApplicationKeys, useKeymap } from '@/command/keymap';
+import { ApplicationManagerContext } from '@/application-context';
+import { ApplicationManager } from '@/application-manager';
+import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
 import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
-import { EditorManager, EditorManagerContext } from '@/editor/editor-manager';
+import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
-import { PluginLoader, usePlugins } from '@/plugins/loader';
+import { usePluginStore } from '@/plugins/plugin-store';
+import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
+import { TerminalManager } from '@/terminal/terminal-manager';
 
 import '../styles.css';
 
@@ -34,27 +38,31 @@ const GENERIC_FAMILIES = new Set([
 ]);
 
 function RootComponent() {
-  const installed = usePlugins();
+  const plugins = usePluginStore();
   const brightness = useBrightness();
   const theme = useActiveTheme();
-  const keymap = useKeymap();
+  const { keymap } = useSelectedKeymap();
+  const router = useRouter();
 
-  const [{ appearance, commands, editor, languageServers, loader }] = useState(() => {
-    const appearance = new AppearanceManager(brightness, theme);
-    const editor = new EditorManager();
-    const commands = new CommandManager({ appearance, editor });
+  const [{ application, languageServers }] = useState(() => {
+    const application = new ApplicationManager(
+      new AppearanceManager(brightness, theme),
+      new EditorManager(),
+      router,
+      new SettingsPanelManager(Object.values(DEFAULT_PANELS)),
+      new TerminalManager(),
+      keymap,
+    );
 
     // TODO: Replace with actual diffs once git daemon is ready
-    editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
+    application.editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
 
     return {
-      appearance,
-      commands,
-      editor,
-      languageServers: new LanguageServers(editor),
-      loader: new PluginLoader(appearance, commands),
+      application,
+      languageServers: new LanguageServers(application.editor),
     };
   });
+  const { appearance, commands } = application;
 
   useCurrentTheme(appearance);
   useCurrentFonts();
@@ -66,30 +74,20 @@ function RootComponent() {
   useEffect(() => installApplicationKeys(window, commands), [commands]);
 
   useEffect(() => {
-    void (async () => {
-      const id = (plugin: (typeof installed)[number]) => ('error' in plugin ? plugin.id : plugin.manifest.id);
-      for (const plugin of installed
-        .filter((plugin) => plugin.enabled)
-        .toSorted((a, b) => id(a).localeCompare(id(b)))) {
-        if ('error' in plugin) {
-          console.error(`Plugin ${plugin.id} failed to load: ${plugin.error}`);
-        } else {
-          await loader.load(plugin.manifest.id, plugin.url);
-        }
-      }
-    })();
-  }, [loader, installed]);
+    void plugins.enableAll(application);
+    return () => {
+      void plugins.disableAll();
+    };
+  }, [plugins, application]);
 
   return (
-    <EditorManagerContext value={editor}>
-      <CommandManagerContext value={commands}>
-        <LanguageServersContext value={languageServers}>
-          <Toaster>
-            <Outlet />
-          </Toaster>
-        </LanguageServersContext>
-      </CommandManagerContext>
-    </EditorManagerContext>
+    <ApplicationManagerContext value={application}>
+      <LanguageServersContext value={languageServers}>
+        <Toaster>
+          <Outlet />
+        </Toaster>
+      </LanguageServersContext>
+    </ApplicationManagerContext>
   );
 }
 
@@ -141,6 +139,12 @@ function useCurrentFonts() {
       }
 
       style.setProperty(`--text-${text}`, `${font.size}px`);
+      if ('lineHeight' in font) {
+        // The gutter shares the editor's line grid.
+        const grid = `round(calc(var(--text-${text}) * ${font.lineHeight}), 1px)`;
+        style.setProperty(`--text-${text}--line-height`, grid);
+        style.setProperty(`--text-${text}-gutter--line-height`, grid);
+      }
       style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
     }
   }, [general, editor]);

@@ -52,7 +52,7 @@ function applyEdit(stub: StubTransport, edit: WorkspaceEdit) {
   return stub.request('workspace/applyEdit', { edit });
 }
 
-describe('workspace/applyEdit', () => {
+describe('applyWorkspaceEdit', () => {
   test('applies `changes` to open file, in one undo step', async () => {
     const { view, stub } = await open();
 
@@ -76,7 +76,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe('const sum = 1;\nconst other = 2;');
   });
 
-  test("refuses edits to version that isn't open file's", async () => {
+  test('refuses edits to mismatched version', async () => {
     const { instance, view, stub } = await open();
     const version = (instance.client.workspace.getFile(URI)?.version ?? 0) + 1;
 
@@ -125,7 +125,7 @@ describe('workspace/applyEdit', () => {
     expect(view.state.doc.toString()).toBe('const total = 1; // total\nconst other = 2;');
   });
 
-  test("maps edits through typing since server's last version", async () => {
+  test('maps edits through typing since last sync', async () => {
     const { view, stub } = await open();
     view.dispatch({ changes: { from: 0, insert: 'export ' } });
 

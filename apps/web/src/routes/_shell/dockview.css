@@ -127,12 +127,21 @@
 }
 
 /*
- * The default resize is semantically wrong.
+ * The default resize is semantically wrong, as are dockview's one-way cursors for a sash at a panel's limit. A drag past
+ * the limit leaves the sash behind, so the dock keeps the cursor while the sash is held.
  */
-.dockview-theme-elsewise .dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash.dv-enabled {
+.dockview-theme-elsewise
+  .dv-split-view-container.dv-horizontal
+  > .dv-sash-container
+  > .dv-sash:is(.dv-enabled, .dv-minimum, .dv-maximum),
+.dockview-theme-elsewise:has(.dv-split-view-container.dv-horizontal > .dv-sash-container > .dv-sash:active) {
   cursor: col-resize;
 }
 
-.dockview-theme-elsewise .dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash.dv-enabled {
+.dockview-theme-elsewise
+  .dv-split-view-container.dv-vertical
+  > .dv-sash-container
+  > .dv-sash:is(.dv-enabled, .dv-minimum, .dv-maximum),
+.dockview-theme-elsewise:has(.dv-split-view-container.dv-vertical > .dv-sash-container > .dv-sash:active) {
   cursor: row-resize;
 }

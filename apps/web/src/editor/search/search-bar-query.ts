@@ -38,12 +38,42 @@ function find(state: EditorState): { ranges: readonly { from: number; to: number
 }
 
 /**
+ * The current match, which stays as the cursor moves off it.
+ */
+export const currentMatch = StateField.define<{ from: number; to: number } | null>({
+  create: (state) => under(state, null),
+  update(value, transaction) {
+    const { state, startState, changes } = transaction;
+    if (!transaction.docChanged && !transaction.selection && state.field(matches) === startState.field(matches)) {
+      return value;
+    }
+
+    return under(state, value && { from: changes.mapPos(value.from, 1), to: changes.mapPos(value.to, -1) });
+  },
+});
+
+// Returns the current match, the first of:
+// * The exact match, e.g., typing in search field, or using find previous/next.
+// * The match the cursor is in.
+// * `previous`, if it still matches.
+function under(state: EditorState, previous: { from: number; to: number } | null): { from: number; to: number } | null {
+  const { ranges } = state.field(matches);
+  const { from, to, head } = state.selection.main;
+  return (
+    ranges.find((range) => range.from === from && range.to === to) ??
+    ranges.find((range) => range.from <= head && head <= range.to) ??
+    ranges.find((range) => range.from === previous?.from && range.to === previous.to) ??
+    null
+  );
+}
+
+/**
  * A search query's matches.
  */
 export interface Matches {
   total: number;
   /**
-   * The 1-based index of the selected match, or `null` if no match is selected.
+   * The 1-based index of the current match, or `null` if there is none.
    */
   current: number | null;
   /**
@@ -83,11 +113,11 @@ export function useSearchBarQuery({
   const replace = state.field(replaceRow, false) ?? false;
   const query = getSearchQuery(state);
   const found = state.field(matches);
-  const { from, to } = state.selection.main;
+  const current = state.field(currentMatch);
   const counted = useMemo((): Matches => {
-    const index = found.ranges.findIndex((range) => range.from === from && range.to === to);
+    const index = current ? found.ranges.indexOf(current) : -1;
     return { total: found.ranges.length, current: index === -1 ? null : index + 1, limited: found.limited };
-  }, [found, from, to]);
+  }, [found, current]);
 
   return { state, replace, query, matches: counted };
 }

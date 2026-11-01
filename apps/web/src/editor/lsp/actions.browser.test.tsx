@@ -1,12 +1,13 @@
 import { history, undo } from '@codemirror/commands';
 import { forEachDiagnostic, setDiagnostics } from '@codemirror/lint';
-import { EditorState, type Extension } from '@codemirror/state';
+import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { CodeActionParams } from 'vscode-languageserver-protocol';
 import { actions as editorActions } from '@/editor/actions';
+import { diagnostics } from '@/editor/diagnostics';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { commandsExtension } from '../../../test/commands';
 import { StubTransport } from '../../../test/stub-transport';
@@ -51,21 +52,20 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// Opens `DOC` with the cursor in `shout`, on a server with `DIAGNOSTIC` that answers code actions with `actions`, and
-// the plugin's `commandHandlers`.
+// Opens `DOC` with the cursor in `shout`, on a server with `DIAGNOSTIC` that responds to code actions with `actions`,
+// and the plugin's `commandHandlers`.
 async function open(
   actions: (params: CodeActionParams) => unknown,
   capabilities: object = {},
-  answers: ConstructorParameters<typeof StubTransport>[1] = {},
+  handlers: ConstructorParameters<typeof StubTransport>[1] = {},
   commandHandlers: LanguageServer['commandHandlers'] = {},
-  extensions: Extension = [],
 ): Promise<{ view: EditorView; stub: StubTransport }> {
   const stub = new StubTransport(
     { textDocumentSync: 2, diagnosticProvider: {}, codeActionProvider: true, ...capabilities },
     {
       'textDocument/diagnostic': () => ({ kind: 'full', items: [DIAGNOSTIC] }),
       'textDocument/codeAction': actions,
-      ...answers,
+      ...handlers,
     },
   );
   const instance = new LanguageServerInstance(
@@ -86,10 +86,10 @@ async function open(
       selection: { anchor: 16 },
       extensions: [
         instance.client.plugin(URI, 'typescript'),
+        diagnostics,
         editorActions(),
         commandsExtension(),
         history(),
-        extensions,
       ],
     }),
     parent: document.body,
@@ -164,7 +164,7 @@ describe('serverActions', () => {
     await vi.waitFor(() => expect(view.state.doc.toString()).toBe(IMPORT + DOC));
   });
 
-  test("runs action's command on server", async () => {
+  test('runs action command on server', async () => {
     const { view, stub } = await open(
       () => [{ title: 'Run it', command: 'fix.run', arguments: [1] }],
       {},
@@ -184,7 +184,7 @@ describe('serverActions', () => {
     });
   });
 
-  test("runs action's command with plugin's handler instead", async () => {
+  test('runs action command with plugin handler instead', async () => {
     const run = vi.fn();
     const { view, stub } = await open(
       () => [{ title: 'Run it', command: 'fix.run', arguments: [1] }],
@@ -200,7 +200,7 @@ describe('serverActions', () => {
     expect(stub.methods).not.toContain('workspace/executeCommand');
   });
 
-  test("applies command's edit in one undo step", async () => {
+  test('applies command edit in one undo step', async () => {
     let server: StubTransport | undefined;
     let response: Promise<unknown> | undefined;
     const { view, stub } = await open(

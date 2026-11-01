@@ -30,6 +30,7 @@ const others = (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) 
 
 if (command === 'add') {
   const bundle = path.resolve('bundle');
+  // TODO: Check the manifest's `main` instead, and skip a plugin without one, once plugins without code are decided.
   if (!fs.existsSync(path.join(bundle, 'main.js'))) {
     console.error(`[plugin] ${path.join(bundle, 'main.js')} not found (is the plugin built?)`);
     process.exit(1);

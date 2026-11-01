@@ -15,7 +15,7 @@ export const buttonVariants = cva(
           'bg-secondary text-secondary-foreground hover:bg-secondary-hover aria-expanded:bg-secondary aria-expanded:text-secondary-foreground',
         ghost: 'hover:overlay-hover aria-expanded:bg-layer-selected aria-expanded:text-foreground',
         destructive: 'bg-error-wash text-error hover:bg-destructive-hover focus-visible:border-destructive/40',
-        link: 'text-link underline-offset-4 hover:text-link-hover hover:underline',
+        link: 'cursor-pointer text-link underline-offset-4 hover:text-link-hover hover:underline',
       },
       size: {
         default: 'h-8 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2',

@@ -1,0 +1,46 @@
+# Daemon configuration: sessions are kept alive and attached to channels.
+---
+daemon:
+  name: elsewise-daemon
+  version: !!str 0.4.1
+  started: 2026-09-17T08:41:03Z
+  listen:
+    host: 127.0.0.1
+    port: 7331
+    tls: ~
+
+defaults: &defaults
+  retries: 3
+  backoff_ms: 250 # doubled on every attempt
+  backoff_factor: 1.5
+  subscribe: true
+  filters: [pending, attached, detached]
+
+channels:
+  - name: editor.sessions
+    <<: *defaults
+    description: >
+      Session lifecycle events: attach, detach and replay,
+      folded into a single line when the daemon reads it.
+
+  - name: editor.edits
+    <<: *defaults
+    subscribe: false
+    retries: !!int "0"
+    limits: {pending: 4096, bytes: 0x10000}
+    description: "Raw edit stream.\tOne event per keystroke, with no batching or debounce; never subscribe from the UI."
+
+sessions:
+  - id: s-4f2a
+    worktree: 'feature/menu'
+    pending: 12
+    attached_at: 2026-09-17 08:41:03
+
+  - id: s-9c10
+    worktree: main
+    pending: 0
+    attached_at: null
+
+replay: |
+  Pending edits are replayed in order after a restart.
+  Retries are bounded by defaults.retries; the last failure is logged.

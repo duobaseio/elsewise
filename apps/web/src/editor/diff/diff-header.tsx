@@ -1,4 +1,3 @@
-import { LSPPlugin } from '@codemirror/lsp-client';
 import type { EditorView } from '@codemirror/view';
 import { Button } from '@elsewise/components/components/button';
 import { Icon, type IconName } from '@elsewise/components/components/icon';
@@ -6,6 +5,7 @@ import { Toggle } from '@elsewise/components/components/toggle';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { DEFAULT_COMMANDS } from '@elsewise/plugin';
 import { type RefObject, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import type { DiffState } from '@/editor/diff/diff';
 import { DiffSourceMenu } from '@/editor/diff/diff-source-menu';
@@ -43,6 +43,7 @@ export interface DiffHeaderProps {
 }
 
 export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
+  const application = useApplicationManager();
   const commands = useCommandManager();
   const subscribe = useCallback((listener: () => void) => diff.subscribe(listener), [diff]);
   const layout = useSyncExternalStore(subscribe, () => diff.layout);
@@ -53,7 +54,6 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
       const editor = view.current;
       const next = new Map<string, Control>();
       if (editor !== null) {
-        const lsp = LSPPlugin.get(editor);
         for (const [id] of GROUPS.flat()) {
           const command = commands.commands.get(id);
           if (command?.scope !== 'editor') {
@@ -61,11 +61,11 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
           }
 
           try {
-            if (command.shown?.(commands.application, editor, lsp) !== false) {
+            if (command.shown?.(application, editor) !== false) {
               next.set(id, {
                 label: command.label,
-                enabled: command.enabled?.(commands.application, editor, lsp) !== false,
-                active: command.active?.(commands.application, editor, lsp),
+                enabled: command.enabled?.(application, editor) !== false,
+                active: command.active?.(application, editor),
               });
             }
           } catch (error) {
@@ -90,7 +90,7 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
     return () => {
       unsubscribe();
     };
-  }, [commands, view, diff]);
+  }, [application, commands, view, diff]);
 
   // Runs the command with `id` in the target, which keeps the focus.
   const run = (id: string) => {

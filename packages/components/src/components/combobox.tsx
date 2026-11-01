@@ -33,7 +33,7 @@ function labelsOf(items: Items): { key: string; label: ReactNode }[] {
       return labelsOf(item.items).map(({ key, label }) => ({ key: `${index}:${key}`, label }));
     }
     if (item && typeof item === 'object' && 'label' in item) {
-      return [{ key: String(item.value), label: item.label as ReactNode }];
+      return [{ key: String(index), label: item.label as ReactNode }];
     }
     return [];
   });

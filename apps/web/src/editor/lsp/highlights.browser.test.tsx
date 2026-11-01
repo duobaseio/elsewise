@@ -6,9 +6,10 @@ import type { LanguageServer } from '@elsewise/plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { DocumentHighlightParams } from 'vscode-languageserver-protocol';
+import { diagnostics } from '@/editor/diagnostics';
 import { highlightUsages } from '@/editor/lsp/highlights';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
-import { stripe } from '@/editor/stripe/stripe';
+import { scrollbarMarkers } from '@/editor/scrollbar-markers/scrollbar-markers';
 import { StubTransport } from '../../../test/stub-transport';
 
 const URI = 'file:///worktree/main.rs';
@@ -97,32 +98,32 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(highlighted(view)).toEqual(['total (write)', 'total', 'total']));
   });
 
-  test('marks usages on stripe until cleared', async () => {
-    const { view } = await open({ documentHighlightProvider: true }, 0, stripe());
+  test('marks usages on scrollbar until cleared', async () => {
+    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, scrollbarMarkers()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
     // Two, since two usages share a line.
-    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(2));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(2));
 
     view.dispatch({ selection: { anchor: 0, head: 3 } });
 
-    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(0));
+    await vi.waitFor(() => expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(0));
   });
 
-  test('jumps to usage from its mark, keeping highlights', async () => {
-    const { view } = await open({ documentHighlightProvider: true }, 0, stripe());
+  test('jumps to usage from marker, keeping highlights', async () => {
+    const { view } = await open({ documentHighlightProvider: true }, 0, [diagnostics, scrollbarMarkers()]);
     view.dispatch({ selection: { anchor: DOC.indexOf('total + ') + 2 } });
-    const mark = await vi.waitFor(() => {
-      const marks = view.dom.querySelectorAll<HTMLElement>('.cm-stripe-mark-usage');
-      expect(marks).toHaveLength(2);
-      return marks[0];
+    const marker = await vi.waitFor(() => {
+      const markers = view.dom.querySelectorAll<HTMLElement>('.cm-scrollbar-marker-usage');
+      expect(markers).toHaveLength(2);
+      return markers[0];
     });
 
     // Held long enough for a frame to pass, as a person's click is.
-    await userEvent.click(page.elementLocator(mark), { delay: 100 });
+    await userEvent.click(page.elementLocator(marker), { delay: 100 });
     await rest();
 
     expect(view.state.selection.main.head).toBe(DOC.indexOf('total'));
-    expect(view.dom.querySelectorAll('.cm-stripe-mark-usage')).toHaveLength(2);
+    expect(view.dom.querySelectorAll('.cm-scrollbar-marker-usage')).toHaveLength(2);
     expect(highlighted(view)).toHaveLength(3);
   });
 
@@ -139,7 +140,7 @@ describe('serverHighlights', () => {
     expect(asked).toHaveLength(1);
   });
 
-  test('clears highlights at once when caret leaves them, and asks again', async () => {
+  test('clears highlights at once on leaving them, and asks again', async () => {
     const { view, asked } = await open();
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -162,7 +163,7 @@ describe('serverHighlights', () => {
     expect(asked).toEqual([]);
   });
 
-  test('clears highlights when document changes', async () => {
+  test('clears highlights on edit', async () => {
     const { view } = await open();
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
@@ -172,7 +173,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test('drops answer arriving after caret moved', async () => {
+  test('drops response arriving after caret moved', async () => {
     const { view, asked } = await open(undefined, 300);
     view.dispatch({ selection: { anchor: 6 } });
     await vi.waitFor(() => expect(asked).toHaveLength(1));
@@ -183,7 +184,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test("doesn't ask server that can't highlight", async () => {
+  test('skips server without capability', async () => {
     const { view, asked } = await open({});
 
     view.dispatch({ selection: { anchor: 6 } });
@@ -193,7 +194,7 @@ describe('serverHighlights', () => {
     expect(highlighted(view)).toEqual([]);
   });
 
-  test('highlights nothing when turned off', async () => {
+  test('highlights nothing while off', async () => {
     const { view, asked } = await open(undefined, 0, highlightUsages.of(false));
 
     view.dispatch({ selection: { anchor: 6 } });
@@ -203,7 +204,7 @@ describe('serverHighlights', () => {
     expect(asked).toEqual([]);
   });
 
-  test('clears when turned off, highlights again when turned on', async () => {
+  test('clears once off, highlights again once on', async () => {
     const setting = new Compartment();
     const { view } = await open(undefined, 0, setting.of(highlightUsages.of(true)));
     view.dispatch({ selection: { anchor: 6 } });
@@ -216,7 +217,7 @@ describe('serverHighlights', () => {
     await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));
   });
 
-  describe('with a grammar', () => {
+  describe('with grammar', () => {
     test('highlights name', async () => {
       const { view, asked } = await open(undefined, 0, rust);
 
@@ -238,7 +239,7 @@ describe('serverHighlights', () => {
       expect(asked).toEqual([]);
     });
 
-    test('clears highlights at once when caret moves from name onto keyword', async () => {
+    test('clears highlights at once on moving onto keyword', async () => {
       const { view, asked } = await open(undefined, 0, rust);
       view.dispatch({ selection: { anchor: 6 } });
       await vi.waitFor(() => expect(highlighted(view)).toHaveLength(3));

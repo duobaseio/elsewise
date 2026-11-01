@@ -1,3 +1,4 @@
+import type { Keymap, Theme } from '@elsewise/plugin';
 import * as z from 'zod';
 import { PluginId } from './plugins.js';
 
@@ -7,6 +8,7 @@ export type ThemeId = z.infer<typeof ThemeId>;
 export type BundledTheme = z.infer<typeof BundledTheme>;
 export type Font = z.infer<typeof Font>;
 export type FontSize = z.infer<typeof FontSize>;
+export type LineHeight = z.infer<typeof LineHeight>;
 export type EditorLanguageSettings = z.infer<typeof EditorLanguageSettings>;
 export type LineSeparator = z.infer<typeof LineSeparator>;
 export type DiffLayout = z.infer<typeof DiffLayout>;
@@ -18,6 +20,36 @@ export type BundledKeymap = z.infer<typeof BundledKeymap>;
  * The allowed font sizes.
  */
 export const FONT_SIZES = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] as const;
+
+/**
+ * The CodeMirror names of the default languages.
+ */
+export const DEFAULT_LANGUAGES = [
+  'C',
+  'C#',
+  'C++',
+  'CSS',
+  'Dart',
+  'Go',
+  'HTML',
+  'Java',
+  'JavaScript',
+  'JSON',
+  'Kotlin',
+  'Markdown',
+  'Objective-C',
+  'PHP',
+  'ProtoBuf',
+  'Python',
+  'Ruby',
+  'Rust',
+  'SQL',
+  'Swift',
+  'TOML',
+  'TypeScript',
+  'XML',
+  'YAML',
+] as const;
 
 /**
  * The persisted application and plugins' settings.
@@ -49,6 +81,51 @@ export interface SettingsBridge {
    * Throws an error if `value` is not JSON-serializable.
    */
   savePlugin<T>(plugin: string, value: T & Json<T>): Promise<void>;
+
+  /**
+   * Returns the user's themes in `<config folder>/themes`, each identified by its file name without `.json`, or with why
+   * it could not be read.
+   */
+  loadUserThemes(): Promise<({ id: string; theme: Theme } | { id: string; error: string })[]>;
+
+  /**
+   * Saves the user's theme with `id`, replacing any existing one.
+   *
+   * Throws an error if `id` is invalid or `theme` is malformed.
+   */
+  saveUserTheme(id: string, theme: Theme): Promise<void>;
+
+  /**
+   * Deletes the user's theme with `id`, if any.
+   *
+   * Throws an error if `id` is invalid.
+   */
+  deleteUserTheme(id: string): Promise<void>;
+
+  /**
+   * Returns the user's keymaps in `<config folder>/keymaps`, each identified by its file name without `.json`, or with
+   * why it could not be read.
+   */
+  loadUserKeymaps(): Promise<({ id: string; keymap: Keymap } | { id: string; error: string })[]>;
+
+  /**
+   * Saves the user's keymap with `id`, replacing any existing one.
+   *
+   * Throws an error if `id` is invalid or `keymap` is malformed.
+   */
+  saveUserKeymap(id: string, keymap: Keymap): Promise<void>;
+
+  /**
+   * Deletes the user's keymap with `id`, if any.
+   *
+   * Throws an error if `id` is invalid.
+   */
+  deleteUserKeymap(id: string): Promise<void>;
+
+  /**
+   * Calls `handler` when the user's themes or keymaps change on disk.
+   */
+  onChange(handler: (changed: 'themes' | 'keymaps') => void): void;
 }
 
 /**
@@ -68,7 +145,7 @@ export const Settings = z.lazy(() =>
             /**
              * The interface's theme.
              */
-            theme: ThemeId.catch({ source: 'elsewise', name: 'elsewise' }),
+            theme: ThemeId.catch({ source: 'elsewise', id: 'elsewise' }),
             font: font(13),
             /**
              * Whether the file tree shows a git status's letter, e.g. `M`.
@@ -87,7 +164,7 @@ export const Settings = z.lazy(() =>
              * The editor's theme, or `null` to follow the interface's.
              */
             theme: ThemeId.nullable().catch(null),
-            font: font(12),
+            font: font(12, 1.54),
             lineNumbers: z.boolean().catch(true),
             lineWrapping: z.boolean().catch(false),
             /**
@@ -99,9 +176,9 @@ export const Settings = z.lazy(() =>
              */
             highlightUsages: z.boolean().catch(true),
             /**
-             * Whether the stripe over the scrollbar marks the diagnostics, search matches and usages.
+             * Whether to show markers over the scrollbar.
              */
-            stripe: z.boolean().catch(true),
+            scrollbarMarkers: z.boolean().catch(true),
             /**
              * The default layout when viewing a diff.
              */
@@ -130,7 +207,7 @@ export const Settings = z.lazy(() =>
                   )
                   .catch({}),
               )
-              .catch({}),
+              .catch(Object.fromEntries(DEFAULT_LANGUAGES.map((language) => [language, {}]))),
           }),
         ),
         terminal: z.preprocess(
@@ -140,9 +217,19 @@ export const Settings = z.lazy(() =>
              * The terminal's theme, or `null` to follow the interface's.
              */
             theme: ThemeId.nullable().catch(null),
-            font: font(12),
+            font: font(12, 1.0625),
             cursorStyle: CursorStyle.catch('block'),
             cursorBlink: z.boolean().catch(true),
+            copyOnSelect: z.boolean().catch(false),
+            /**
+             * Whether Option-click selects text on macOS while a program tracks the mouse, e.g. tmux, instead of sending
+             * the click to it.
+             */
+            macOptionClickForcesSelection: z.boolean().catch(false),
+            /**
+             * Whether Option represents Meta on macOS instead of typing special characters.
+             */
+            macOptionIsMeta: z.boolean().catch(false),
             /**
              * The number of lines kept above the screen.
              */
@@ -154,7 +241,7 @@ export const Settings = z.lazy(() =>
     /**
      * The current keymap.
      */
-    keymap: KeymapId.catch({ source: 'elsewise', name: 'elsewise' }),
+    keymap: KeymapId.catch({ source: 'elsewise', id: 'elsewise' }),
   }),
 );
 
@@ -162,11 +249,13 @@ export const Settings = z.lazy(() =>
  * A theme and where it comes from:
  *
  * - `elsewise`: bundled with Elsewise.
+ * - `user`: created by the user, e.g. by changing a bundled or plugin theme.
  * - `plugin`: provided by the plugin whose id is `plugin`.
  */
 export const ThemeId = z.discriminatedUnion('source', [
-  z.strictObject({ source: z.literal('elsewise'), name: z.lazy(() => BundledTheme) }),
-  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
+  z.strictObject({ source: z.literal('elsewise'), id: z.lazy(() => BundledTheme) }),
+  z.strictObject({ source: z.literal('user'), id: z.string().min(1) }),
+  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, id: z.string().min(1) }),
 ]);
 
 /**
@@ -187,19 +276,28 @@ export const Brightness = z.enum(['light', 'dark', 'system']);
 
 export const FontSize = z.literal(FONT_SIZES);
 
+/**
+ * A multiple of the font size in the editor, and of the glyph height in the terminal.
+ */
+export const LineHeight = z.number().min(1).max(2.5);
+
 export const Font = z.object({
   /**
    * A font family, or `null` for the default.
    */
   family: z.string().min(1).nullable(),
   size: FontSize,
+  lineHeight: LineHeight.optional(),
   ligatures: z.boolean(),
 });
 
-function font(size: FontSize) {
+function font(size: FontSize): z.ZodType<Omit<Font, 'lineHeight'>>;
+function font(size: FontSize, lineHeight: LineHeight): z.ZodType<Required<Font>>;
+function font(size: FontSize, lineHeight?: LineHeight): z.ZodType {
   const font = z.object({
     family: Font.shape.family.catch(null),
     size: FontSize.catch(size),
+    ...(lineHeight === undefined ? {} : { lineHeight: LineHeight.catch(lineHeight) }),
     ligatures: Font.shape.ligatures.catch(true),
   });
   return font.catch(() => font.parse({}));
@@ -231,11 +329,13 @@ export const CursorStyle = z.enum(['block', 'underline', 'bar']);
  * A keymap and where it comes from:
  *
  * - `elsewise`: bundled with Elsewise.
+ * - `user`: created by the user, e.g. by changing a bundled or plugin keymap.
  * - `plugin`: provided by the plugin whose id is `plugin`.
  */
 export const KeymapId = z.discriminatedUnion('source', [
-  z.strictObject({ source: z.literal('elsewise'), name: z.lazy(() => BundledKeymap) }),
-  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, name: z.string().min(1) }),
+  z.strictObject({ source: z.literal('elsewise'), id: z.lazy(() => BundledKeymap) }),
+  z.strictObject({ source: z.literal('user'), id: z.string().min(1) }),
+  z.strictObject({ source: z.literal('plugin'), plugin: PluginId, id: z.string().min(1) }),
 ]);
 
 /**

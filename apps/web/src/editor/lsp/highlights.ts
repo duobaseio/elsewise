@@ -10,7 +10,7 @@ import {
 } from 'vscode-languageserver-protocol';
 import { closeHoverOnClick } from '@/editor/hover';
 import { symbol } from '@/editor/lsp/symbol';
-import { type StripeMark, stripeMarks } from '@/editor/stripe/stripe';
+import { type ScrollbarMarker, scrollbarMarkerSources } from '@/editor/scrollbar-markers/scrollbar-markers';
 
 const READ = Decoration.mark({ class: 'cm-lsp-highlight' });
 const WRITE = Decoration.mark({ class: 'cm-lsp-highlight cm-lsp-highlight-write' });
@@ -31,19 +31,19 @@ export function serverHighlights(): LSPClientExtension {
     editorExtension: [
       highlights,
       closeHoverOnClick.compute([highlightUsages], (state) => state.facet(highlightUsages)),
-      stripeMarks.of({
+      scrollbarMarkerSources.of({
         // Whatever may change the highlights, since they are dropped without an effect.
         update: (update) =>
           update.docChanged ||
           update.selectionSet ||
           update.focusChanged ||
           update.transactions.some((tr) => tr.effects.some((effect) => effect.is(showHighlights))),
-        marks(view) {
-          const marks: StripeMark[] = [];
+        markers(view) {
+          const markers: ScrollbarMarker[] = [];
           view.plugin(highlights)?.decorations.between(0, view.state.doc.length, (from, to) => {
-            marks.push({ from, to, kind: 'usage' });
+            markers.push({ from, to, kind: 'usage' });
           });
-          return marks;
+          return markers;
         },
       }),
     ],
@@ -55,7 +55,7 @@ const highlights = ViewPlugin.fromClass(
     decorations: DecorationSet = Decoration.none;
     frame: number | undefined;
     /**
-     * The request awaiting its answer, which is dropped when the caret or document changes first.
+     * The request in flight, which is dropped when the caret or document changes first.
      */
     request: { drop: boolean } | null = null;
 

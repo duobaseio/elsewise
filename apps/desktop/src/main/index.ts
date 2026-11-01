@@ -5,8 +5,8 @@ import { app, BrowserWindow, nativeTheme, protocol, shell } from 'electron';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
-import { handleSettings } from './settings';
-import { loadWindow, saveWindow } from './window';
+import { handleSettings, watchUserThemesAndKeymaps } from './settings';
+import { closeAfterRenderer, loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
 app.setPath('userData', path.join(dataLocalDir(), 'chromium'));
@@ -28,7 +28,10 @@ app.whenReady().then(() => {
   handleAppScheme();
   handlePlugins();
   handleSettings();
+
   installMenu();
+  watchUserThemesAndKeymaps();
+
   createWindow();
 
   app.on('activate', () => {
@@ -37,6 +40,12 @@ app.whenReady().then(() => {
     }
   });
 });
+
+// Quits on a signal as the app menu would, e.g. when the dev runner stops or restarts Electron, so the renderer can
+// disable its plugins first.
+for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+  process.on(signal, () => app.quit());
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -59,6 +68,7 @@ function createWindow() {
   });
 
   saveWindow(main);
+  closeAfterRenderer(main);
 
   const dev = process.env.ELECTRON_RENDERER_URL;
   if (dev) {

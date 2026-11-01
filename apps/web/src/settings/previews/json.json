@@ -1,0 +1,42 @@
+{
+  "daemon": {
+    "name": "elsewise-daemon",
+    "version": "0.4.1",
+    "description": "Keeps editing sessions and attaches them to channels.\nOwner: René",
+    "listen": {
+      "host": "127.0.0.1",
+      "port": 7331,
+      "tls": null
+    },
+    "limits": {
+      "sessions": 64,
+      "pendingEdits": 4096,
+      "idleTimeoutMs": 300000,
+      "backoffFactor": 1.5,
+      "maxBackoffMs": 3.0e4,
+      "clockSkewMs": -250
+    }
+  },
+  "channels": [
+    {
+      "name": "editor.sessions",
+      "subscribe": true,
+      "retries": 3,
+      "filters": ["pending", "attached", "detached"],
+      "description": "Session lifecycle events: attach, detach, replay and the rename after a folder move."
+    },
+    {
+      "name": "editor.edits",
+      "subscribe": false,
+      "retries": 0,
+      "filters": [],
+      "description": null
+    }
+  ],
+  "sessions": [
+    { "id": "s-4f2a", "worktree": "feature/menu", "pending": 12, "attached_at": 1758098463 },
+    { "id": "s-9c10", "worktree": "main", "pending": 0, "attached_at": null }
+  ],
+  "overrides": {},
+  "tags": []
+}
