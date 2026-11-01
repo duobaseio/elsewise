@@ -10,8 +10,8 @@ import { userKeymapsQuery } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { Keymap } from '@/routes/settings/local/appearance/keymap';
 import { settingsQuery } from '@/settings/settings';
-import { builtInApplication } from '../../../../../commands';
-import { THEMES } from '../../../../../sheet';
+import { builtInApplication } from '../../../../../../commands';
+import { THEMES } from '../../../../../../sheet';
 
 const SETTINGS = 'elsewise.application.settings.open';
 

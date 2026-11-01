@@ -1,5 +1,6 @@
 import { DEFAULT_ROUTES } from '@elsewise/plugin';
 import { createFileRoute, Navigate } from '@tanstack/react-router';
+import { Suspense } from 'react';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';
 import { PanelError } from '../-panel-error';
 
@@ -12,5 +13,9 @@ function LocalPanel() {
     return <Navigate replace to={DEFAULT_ROUTES.settings.general} />;
   }
 
-  return <panel.component />;
+  return (
+    <Suspense>
+      <panel.component />
+    </Suspense>
+  );
 }

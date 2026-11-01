@@ -9,7 +9,7 @@ import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { General } from '@/routes/settings/local/appearance/general';
 import { settingsQuery } from '@/settings/settings';
 
-import { THEMES } from '../../../../../sheet';
+import { THEMES } from '../../../../../../sheet';
 
 // Renders the general page on a sheet in `theme`.
 async function mount(theme: (typeof THEMES)[number]) {

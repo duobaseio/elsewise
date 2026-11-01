@@ -12,7 +12,7 @@ import { KeymapRow } from './-keymap-row';
 
 export { KEYMAP_TERMS } from './-keymap-row';
 
-export const Route = createFileRoute('/settings/local/appearance/keymap')({ component: Keymap });
+export const Route = createFileRoute('/settings/local/appearance/keymap/')({ component: Keymap });
 
 export function Keymap() {
   const [filter, setFilter] = useState<CommandFilter>({ text: '' });

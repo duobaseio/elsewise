@@ -8,7 +8,7 @@ import { render } from 'vitest-browser-react';
 import { PluginStoreContext } from '@/plugins/plugin-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
-import { pluginStore } from '../../../../../test/plugins';
+import { pluginStore } from '../../../../../../test/plugins';
 
 const FIND = 'elsewise.editor.search.find';
 
@@ -414,6 +414,7 @@ describe('Keymap', () => {
     await userEvent.click(row(FIND), { button: 'right' });
     await userEvent.click(page.getByRole('menuitem', { name: new RegExp(`^Remove ${formatKey('F9')}`) }));
     await expect.poll(() => keys(FIND)).toEqual([formatKey('Mod-Shift-x')]);
+    await expect.element(row(FIND)).toHaveFocus();
 
     await userEvent.keyboard('{Meta>}z{/Meta}');
 
@@ -426,6 +427,7 @@ describe('Keymap', () => {
     const { saveUserKeymap } = await mount(SELECT_MINE);
     await userEvent.click(row(FIND), { button: 'right' });
     await userEvent.click(page.getByRole('menuitem', { name: new RegExp(`^Remove ${formatKey('F9')}`) }));
+    await expect.element(row(FIND)).toHaveFocus();
     await userEvent.keyboard('{Meta>}z{/Meta}');
     await expect.poll(() => keys(FIND)).toEqual([formatKey('Mod-Shift-x'), formatKey('F9')]);
 
@@ -440,6 +442,7 @@ describe('Keymap', () => {
     await mount(SELECT_MINE);
     await userEvent.click(row(FIND), { button: 'right' });
     await userEvent.click(page.getByRole('menuitem', { name: new RegExp(`^Remove ${formatKey('F9')}`) }));
+    await expect.element(row(FIND)).toHaveFocus();
     await userEvent.keyboard('{Meta>}z{/Meta}');
     await expect.poll(() => keys(FIND)).toEqual([formatKey('Mod-Shift-x'), formatKey('F9')]);
 

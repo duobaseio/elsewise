@@ -1,5 +1,4 @@
 import type { CursorStyle, Settings } from '@elsewise/bridge';
-import { Input } from '@elsewise/components/components/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
@@ -8,15 +7,15 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { SettingsSearchTerm } from '@elsewise/plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import type { ITerminalAddon } from '@xterm/xterm';
-import { useState } from 'react';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { Terminal as TerminalView } from '@/terminal/terminal';
-import { FontRows } from './-font-rows';
-import { LineHeightInput } from './-line-height-input';
-import { ThemeSelect } from './-theme';
+import { FontRows } from '../-font-rows';
+import { LineHeightInput } from '../-line-height-input';
+import { ThemeSelect } from '../-theme';
+import { ScrollbackInput } from './-scrollback-input';
 
-export const Route = createFileRoute('/settings/local/appearance/terminal')({ component: Terminal });
+export const Route = createFileRoute('/settings/local/appearance/terminal/')({ component: Terminal });
 
 export const TERMINAL_TERMS = {
   theme: { label: 'Theme', keywords: ['colors', 'color scheme', 'ansi', 'palette', 'light', 'dark'] },
@@ -39,8 +38,6 @@ export const TERMINAL_TERMS = {
 >;
 
 const CURSOR_STYLES: Record<CursorStyle, string> = { block: 'Block', underline: 'Underline', bar: 'Bar' };
-
-const SCROLLBACK_LIMIT = { min: 1000, max: 100000 } as const;
 
 const PROMPT = '\x1b[32m➜\x1b[0m \x1b[36melsewise\x1b[0m \x1b[35mgit:(main)\x1b[0m ';
 
@@ -201,50 +198,12 @@ export function Terminal() {
         label={TERMINAL_TERMS.scrollback.label}
         description="The maximum number of lines the terminal keeps in its buffer, between 1,000 and 100,000."
       >
-        <ScrollbackInput onChange={(scrollback) => set({ scrollback })} value={terminal.scrollback} />
+        <ScrollbackInput
+          label={TERMINAL_TERMS.scrollback.label}
+          onChange={(scrollback) => set({ scrollback })}
+          value={terminal.scrollback}
+        />
       </Row>
     </SplitPage>
   );
-}
-
-function ScrollbackInput({ value, onChange }: { value: number; onChange: (value: number) => void }) {
-  const [draft, setDraft] = useState(String(value));
-  const [previous, setPrevious] = useState(value);
-
-  if (previous !== value) {
-    setPrevious(value);
-    if (parseScrollback(draft) !== value) {
-      setDraft(String(value));
-    }
-  }
-
-  const valid = parseScrollback(draft) !== undefined;
-
-  return (
-    <Input
-      aria-invalid={!valid}
-      aria-label={TERMINAL_TERMS.scrollback.label}
-      className="h-7 w-24 rounded-[min(var(--radius-md),12px)] text-sm"
-      inputMode="numeric"
-      onBlur={() => {
-        if (!valid) {
-          setDraft(String(value));
-        }
-      }}
-      onChange={(event) => {
-        const next = event.target.value;
-        setDraft(next);
-        const scrollback = parseScrollback(next);
-        if (scrollback !== undefined && scrollback !== value) {
-          onChange(scrollback);
-        }
-      }}
-      value={draft}
-    />
-  );
-}
-
-function parseScrollback(text: string): number | undefined {
-  const lines = Number(text);
-  return /^\d+$/.test(text) && lines >= SCROLLBACK_LIMIT.min && lines <= SCROLLBACK_LIMIT.max ? lines : undefined;
 }

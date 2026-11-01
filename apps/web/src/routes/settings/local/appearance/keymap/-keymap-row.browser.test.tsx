@@ -6,9 +6,9 @@ import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { userKeymapsQuery } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
-import { KeymapActions, KeymapSelect } from '@/routes/settings/local/appearance/-keymap-row';
+import { KeymapActions, KeymapSelect } from '@/routes/settings/local/appearance/keymap/-keymap-row';
 import { settingsQuery } from '@/settings/settings';
-import { pluginStore } from '../../../../../test/plugins';
+import { pluginStore } from '../../../../../../test/plugins';
 
 afterEach(() => {
   window.bridge = undefined;

@@ -177,17 +177,10 @@ describe('Terminal', () => {
     expect(document.querySelector('[aria-label="Option as Meta"]')).toBeNull();
   });
 
-  test('saves scrollback within limits', async () => {
+  test('saves scrollback', async () => {
     const save = await mount();
-    const input = page.getByRole('textbox', { name: 'Scrollback' });
 
-    await userEvent.fill(input, '500');
-    await expect.element(input).toHaveAttribute('aria-invalid', 'true');
-    await userEvent.fill(input, '200000');
-    await expect.element(input).toHaveAttribute('aria-invalid', 'true');
-    expect(save).not.toHaveBeenCalled();
-
-    await userEvent.fill(input, '20000');
+    await userEvent.fill(page.getByRole('textbox', { name: 'Scrollback' }), '20000');
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(withTerminal({ scrollback: 20000 }));

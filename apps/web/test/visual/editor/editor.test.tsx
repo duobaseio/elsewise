@@ -229,7 +229,11 @@ const RUST: LanguageServer = {
           const value = HOVERS[position.line];
           return value === undefined ? null : { contents: { kind: 'markdown', value } };
         },
-        'textDocument/diagnostic': () => ({ kind: 'full', items: DIAGNOSTICS }),
+        // The ranges are the sample's, so it leaves them unchanged once the sample is edited.
+        'textDocument/diagnostic': () =>
+          stub.methods.includes('textDocument/didChange')
+            ? { kind: 'unchanged', resultId: 'sample' }
+            : { kind: 'full', resultId: 'sample', items: DIAGNOSTICS },
         'textDocument/completion': ({ position }: CompletionParams) => (position.character > 8 ? MEMBERS : STATEMENTS),
         'completionItem/resolve': (item: CompletionItem) => {
           const value = RESOLVED[item.label];

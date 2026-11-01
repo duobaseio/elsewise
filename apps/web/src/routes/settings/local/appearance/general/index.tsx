@@ -7,10 +7,10 @@ import { DEFAULT_ROUTES, type SettingsSearchTerm } from '@elsewise/plugin';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
-import { FontRows } from './-font-rows';
-import { ThemeSelect } from './-theme';
+import { FontRows } from '../-font-rows';
+import { ThemeSelect } from '../-theme';
 
-export const Route = createFileRoute('/settings/local/appearance/general')({ component: General });
+export const Route = createFileRoute('/settings/local/appearance/general/')({ component: General });
 
 export const GENERAL_TERMS = {
   brightness: { label: 'Brightness', keywords: ['theme', 'dark mode', 'system', 'light', 'dark'] },

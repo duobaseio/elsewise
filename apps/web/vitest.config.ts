@@ -18,8 +18,9 @@ export default defineConfig({
           css: { include: [/elsewise\.css/] },
         },
       },
-      browserProject('browser', ['src/**/*.browser.test.tsx'], { frozenMotion: false }),
-      browserProject('visual', ['test/visual/**/*.test.{ts,tsx}'], { frozenMotion: true }),
+      // Run one after the other, since together they slow each other past the tests' waits.
+      browserProject('browser', ['src/**/*.browser.test.tsx'], { frozenMotion: false, groupOrder: 0 }),
+      browserProject('visual', ['test/visual/**/*.test.{ts,tsx}'], { frozenMotion: true, groupOrder: 1 }),
     ],
   },
 });
@@ -27,7 +28,7 @@ export default defineConfig({
 function browserProject(
   name: string,
   include: readonly string[],
-  { frozenMotion }: { frozenMotion: boolean },
+  { frozenMotion, groupOrder }: { frozenMotion: boolean; groupOrder: number },
 ): TestProjectInlineConfiguration {
   return {
     extends: true,
@@ -85,6 +86,7 @@ function browserProject(
     test: {
       name,
       include: [...include],
+      sequence: { groupOrder },
       setupFiles: ['./test/browser-setup.ts', ...(frozenMotion ? ['./test/visual-setup.ts'] : [])],
       // Mirrors the components' browser projects; see their `vitest.config.ts` for why each option is what it is.
       browser: {
