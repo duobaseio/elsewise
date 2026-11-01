@@ -41,7 +41,7 @@ function RootComponent() {
   const plugins = usePluginStore();
   const brightness = useBrightness();
   const theme = useActiveTheme();
-  const keymap = useSelectedKeymap();
+  const { keymap } = useSelectedKeymap();
   const router = useRouter();
 
   const [{ application, languageServers }] = useState(() => {

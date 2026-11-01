@@ -16,6 +16,7 @@ import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ShellProjectWorktreeRouteImport } from './routes/_shell/$project/$worktree'
 import { Route as SettingsLocalIdRouteImport } from './routes/settings/local/$id'
 import { Route as SettingsLocalAppearanceGeneralRouteImport } from './routes/settings/local/appearance/general'
+import { Route as SettingsLocalAppearanceKeymapRouteImport } from './routes/settings/local/appearance/keymap'
 import { Route as SettingsLocalAppearanceTerminalRouteImport } from './routes/settings/local/appearance/terminal'
 import { Route as SettingsRemoteRemoteIdRouteImport } from './routes/settings/remote/$remote/$id'
 import { Route as SettingsLocalAppearanceEditorIndexRouteImport } from './routes/settings/local/appearance/editor/index'
@@ -56,6 +57,12 @@ const SettingsLocalAppearanceGeneralRoute =
     path: '/local/appearance/general',
     getParentRoute: () => SettingsRouteRoute,
   } as any)
+const SettingsLocalAppearanceKeymapRoute =
+  SettingsLocalAppearanceKeymapRouteImport.update({
+    id: '/local/appearance/keymap',
+    path: '/local/appearance/keymap',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 const SettingsLocalAppearanceTerminalRoute =
   SettingsLocalAppearanceTerminalRouteImport.update({
     id: '/local/appearance/terminal',
@@ -87,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/$project/$worktree': typeof ShellProjectWorktreeRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
   '/settings/local/appearance/general': typeof SettingsLocalAppearanceGeneralRoute
+  '/settings/local/appearance/keymap': typeof SettingsLocalAppearanceKeymapRoute
   '/settings/local/appearance/terminal': typeof SettingsLocalAppearanceTerminalRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
   '/$project/$worktree': typeof ShellProjectWorktreeRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
   '/settings/local/appearance/general': typeof SettingsLocalAppearanceGeneralRoute
+  '/settings/local/appearance/keymap': typeof SettingsLocalAppearanceKeymapRoute
   '/settings/local/appearance/terminal': typeof SettingsLocalAppearanceTerminalRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -112,6 +121,7 @@ export interface FileRoutesById {
   '/_shell/$project/$worktree': typeof ShellProjectWorktreeRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
   '/settings/local/appearance/general': typeof SettingsLocalAppearanceGeneralRoute
+  '/settings/local/appearance/keymap': typeof SettingsLocalAppearanceKeymapRoute
   '/settings/local/appearance/terminal': typeof SettingsLocalAppearanceTerminalRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/$project/$worktree'
     | '/settings/local/$id'
     | '/settings/local/appearance/general'
+    | '/settings/local/appearance/keymap'
     | '/settings/local/appearance/terminal'
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/editor/$language'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/$project/$worktree'
     | '/settings/local/$id'
     | '/settings/local/appearance/general'
+    | '/settings/local/appearance/keymap'
     | '/settings/local/appearance/terminal'
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/editor/$language'
@@ -150,6 +162,7 @@ export interface FileRouteTypes {
     | '/_shell/$project/$worktree'
     | '/settings/local/$id'
     | '/settings/local/appearance/general'
+    | '/settings/local/appearance/keymap'
     | '/settings/local/appearance/terminal'
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/editor/$language'
@@ -213,6 +226,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsLocalAppearanceGeneralRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/local/appearance/keymap': {
+      id: '/settings/local/appearance/keymap'
+      path: '/local/appearance/keymap'
+      fullPath: '/settings/local/appearance/keymap'
+      preLoaderRoute: typeof SettingsLocalAppearanceKeymapRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/local/appearance/terminal': {
       id: '/settings/local/appearance/terminal'
       path: '/local/appearance/terminal'
@@ -260,6 +280,7 @@ interface SettingsRouteRouteChildren {
   SettingsIndexRoute: typeof SettingsIndexRoute
   SettingsLocalIdRoute: typeof SettingsLocalIdRoute
   SettingsLocalAppearanceGeneralRoute: typeof SettingsLocalAppearanceGeneralRoute
+  SettingsLocalAppearanceKeymapRoute: typeof SettingsLocalAppearanceKeymapRoute
   SettingsLocalAppearanceTerminalRoute: typeof SettingsLocalAppearanceTerminalRoute
   SettingsRemoteRemoteIdRoute: typeof SettingsRemoteRemoteIdRoute
   SettingsLocalAppearanceEditorLanguageRoute: typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -270,6 +291,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsIndexRoute: SettingsIndexRoute,
   SettingsLocalIdRoute: SettingsLocalIdRoute,
   SettingsLocalAppearanceGeneralRoute: SettingsLocalAppearanceGeneralRoute,
+  SettingsLocalAppearanceKeymapRoute: SettingsLocalAppearanceKeymapRoute,
   SettingsLocalAppearanceTerminalRoute: SettingsLocalAppearanceTerminalRoute,
   SettingsRemoteRemoteIdRoute: SettingsRemoteRemoteIdRoute,
   SettingsLocalAppearanceEditorLanguageRoute:

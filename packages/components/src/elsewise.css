@@ -7,7 +7,7 @@
   --card-foreground: var(--foreground);
   --popover: #ffffff;
   --popover-foreground: var(--foreground);
-  --scrim: rgba(28, 36, 48, 0.45);
+  --scrim: rgba(47, 41, 32, 0.35);
   --shadow-elevated: 0 8px 28px rgba(28, 36, 48, 0.14);
 
   /* Ink */
@@ -86,7 +86,7 @@
   --card-foreground: var(--foreground);
   --popover: #262e39;
   --popover-foreground: var(--foreground);
-  --scrim: rgba(0, 0, 0, 0.55);
+  --scrim: rgba(0, 0, 0, 0.45);
   --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.45);
 
   /* Ink */

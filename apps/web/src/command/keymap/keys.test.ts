@@ -103,20 +103,23 @@ describe('normalizeKey', () => {
     expect(normalizeKey('Control-k', 'linux')).toBe('Ctrl-k');
     expect(normalizeKey('c-k', 'linux')).toBe('Ctrl-k');
     expect(normalizeKey('a-k', 'linux')).toBe('Alt-k');
-    expect(normalizeKey('s-k', 'linux')).toBe('Shift-k');
+    expect(normalizeKey('s-1', 'linux')).toBe('Shift-1');
   });
 
   test('orders modifiers', () => {
-    expect(normalizeKey('Alt-Ctrl-Meta-Shift-k', 'linux')).toBe('Shift-Meta-Ctrl-Alt-k');
+    expect(normalizeKey('Alt-Ctrl-Meta-Shift-1', 'linux')).toBe('Shift-Meta-Ctrl-Alt-1');
   });
 
   test('dedupes modifiers', () => {
     expect(normalizeKey('Ctrl-Control-k', 'linux')).toBe('Ctrl-k');
   });
 
-  test('keeps case', () => {
+  test('folds Shift and letter into uppercase letter', () => {
     expect(normalizeKey('Mod-K', 'linux')).toBe('Ctrl-K');
-    expect(normalizeKey('Mod-Shift-K', 'linux')).toBe('Shift-Ctrl-K');
+    expect(normalizeKey('Mod-Shift-k', 'linux')).toBe('Ctrl-K');
+    expect(normalizeKey('Mod-Shift-K', 'linux')).toBe('Ctrl-K');
+    expect(normalizeKey('Shift-1', 'linux')).toBe('Shift-1');
+    expect(normalizeKey('Shift-F6', 'linux')).toBe('Shift-F6');
   });
 
   test('names Space', () => {
@@ -133,12 +136,12 @@ describe('normalizeKey', () => {
   });
 
   test('resolves Mod to Meta on mac', () => {
-    expect(normalizeKey('Shift-Mod-k', 'mac')).toBe('Shift-Meta-k');
+    expect(normalizeKey('Shift-Mod-1', 'mac')).toBe('Shift-Meta-1');
   });
 
   test('resolves Mod to Ctrl elsewhere', () => {
-    expect(normalizeKey('Shift-Mod-k', 'windows')).toBe('Shift-Ctrl-k');
-    expect(normalizeKey('Shift-Mod-k', 'linux')).toBe('Shift-Ctrl-k');
+    expect(normalizeKey('Shift-Mod-1', 'windows')).toBe('Shift-Ctrl-1');
+    expect(normalizeKey('Shift-Mod-1', 'linux')).toBe('Shift-Ctrl-1');
   });
 
   test('dedupes resolved modifier', () => {

@@ -17,6 +17,7 @@ export const DEFAULT_ROUTES = {
      */
     last: '/settings',
     general: '/settings/local/appearance/general',
+    keymap: '/settings/local/appearance/keymap',
     editor: '/settings/local/appearance/editor',
     terminal: '/settings/local/appearance/terminal',
   },

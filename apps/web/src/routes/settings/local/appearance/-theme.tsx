@@ -70,7 +70,7 @@ export function ThemeSelect(
       }}
       value={selected}
     >
-      <ComboboxTrigger aria-label={props.label} className="w-60" size="sm">
+      <ComboboxTrigger aria-label={props.label} autoWidth size="sm">
         <ComboboxValue />
       </ComboboxTrigger>
       {/* Theme names come from plugins and users, so the popup grows to fit the longest instead of the trigger. */}

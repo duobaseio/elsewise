@@ -27,8 +27,8 @@ export function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        // `--scrim` is a named color per theme, not ink at an alpha: at 45% it
-        // is opaque enough that a backdrop blur behind it reads as nothing, so
+        // `--scrim` is a named color per theme, not ink at an alpha: it is
+        // opaque enough that a backdrop blur behind it reads as nothing, so
         // the stock `backdrop-blur-xs` came off with the stock `black/10`.
         'fixed inset-0 isolate z-50 bg-scrim duration-100 ease-linear data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75',
         className,
@@ -57,7 +57,7 @@ export function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-base text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 ease-out-expo outline-none motion-reduce:[--tw-enter-scale:1]! data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75',
+          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-5 text-base text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 ease-out-expo outline-none motion-reduce:[--tw-enter-scale:1]! data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75',
           // The close button is out of flow, so nothing stops a long title from
           // running under it. The reservation belongs here rather than on the
           // header, which has no way to know whether the button is showing.
@@ -70,7 +70,7 @@ export function DialogContent({
         {showCloseButton && (
           <DialogPrimitive.Close
             data-slot="dialog-close"
-            render={<Button variant="ghost" className="absolute top-2 right-2" size="icon-sm" />}
+            render={<Button variant="ghost" className="absolute top-3 right-3" size="icon-sm" />}
           >
             <Icon name="close" />
             <span className="sr-only">Close</span>
@@ -99,7 +99,7 @@ export function DialogFooter({
       className={cn(
         // The negative margins pull the bar out to the popup's own edges, which
         // is why it needs the matching `rounded-b-xl` to stay inside the corner.
-        '-mx-4 -mb-4 flex flex-row justify-end gap-2 rounded-b-xl border-border border-t bg-surface-2 p-4',
+        '-mx-5 -mb-5 flex flex-row justify-end gap-2 rounded-b-xl border-border border-t bg-surface-2 px-5 py-4',
         className,
       )}
       {...props}
@@ -129,7 +129,7 @@ export function DialogDescription({ className, ...props }: DialogPrimitive.Descr
       className={cn(
         // The description is the dialog's body copy, so it stays at the chrome
         // anchor and lets the ink ramp carry the drop from the title.
-        'text-base text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
+        'text-pretty text-base text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground',
         className,
       )}
       {...props}

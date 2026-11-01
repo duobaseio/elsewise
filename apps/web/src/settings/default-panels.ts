@@ -1,6 +1,7 @@
 import { DEFAULT_SETTINGS_GROUPS, type LocalSettingsPanel, type SettingsPanel } from '@elsewise/plugin';
 import { EDITOR_TERMS, Editor } from '@/routes/settings/local/appearance/editor';
 import { GENERAL_TERMS, General } from '@/routes/settings/local/appearance/general';
+import { KEYMAP_TERMS, Keymap } from '@/routes/settings/local/appearance/keymap';
 import { TERMINAL_TERMS, Terminal } from '@/routes/settings/local/appearance/terminal';
 import type { FileRouteTypes } from '@/routeTree.gen';
 
@@ -13,6 +14,15 @@ export const DEFAULT_PANELS = {
     route: '/settings/local/appearance/general',
     terms: GENERAL_TERMS,
     component: General,
+  },
+  keymap: {
+    scope: 'local',
+    id: 'io.duobase.elsewise.settings.keymap',
+    label: 'Keymap',
+    in: DEFAULT_SETTINGS_GROUPS.appearance,
+    route: '/settings/local/appearance/keymap',
+    terms: KEYMAP_TERMS,
+    component: Keymap,
   },
   editor: {
     scope: 'local',

@@ -28,7 +28,7 @@ terminal background to Elsewise's terminal background.
     - Dialogs and toasts are `rounded-xl`
     - Tooltips are chip scale, `rounded-md`, arrowless
     - No inverse-surface tooltips: the solid ink slab means a control that is *on*, never a surface
-- **Scrim:** `rgba(28,36,48,.45)` / `rgba(0,0,0,.55)`
+- **Scrim:** `rgba(47,41,32,.35)` / `rgba(0,0,0,.45)` — a shadow on the paper, not ink, so it is warm by day
 - **Shadow:** `0 8px 28px rgba(28,36,48,.14)` / `0 8px 28px rgba(0,0,0,.45)` — floating dock groups only
 
 #### Ink (text)

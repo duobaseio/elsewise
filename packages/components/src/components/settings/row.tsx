@@ -58,7 +58,7 @@ export function Row({ id, label, description, help, inherited, onReset, children
         <div className="-mx-1.5 flex items-center gap-2 self-start rounded-sm px-1.5 in-data-highlighted:bg-match-wash">
           <span id={`${id}-label`}>{label}</span>
           {onReset !== undefined && (
-            <span aria-label="Overridden" className="size-1.5 rounded-full bg-foreground" role="img" />
+            <span aria-label="Modified" className="size-1.5 rounded-full bg-foreground" role="img" />
           )}
         </div>
         {(description !== undefined || help !== undefined) && (

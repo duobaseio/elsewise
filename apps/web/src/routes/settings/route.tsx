@@ -161,7 +161,7 @@ function Settings() {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="min-h-0 flex-1 overflow-y-auto">
+        <main className="min-h-0 flex-1 overflow-y-auto [container-type:size]">
           <HighlightProvider id={highlight}>
             <Outlet />
           </HighlightProvider>
@@ -222,7 +222,11 @@ function Item({
           className="relative flex size-4 shrink-0 cursor-default items-center justify-center rounded-sm text-text-3 outline-none after:absolute after:-inset-2 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
         >
           <Icon
-            className={open ? 'size-3.5 transition-transform' : 'size-3.5 -rotate-90 transition-transform'}
+            className={
+              open
+                ? 'size-3.5 transition-transform duration-125 ease-out-expo motion-reduce:transition-none'
+                : 'size-3.5 -rotate-90 transition-transform duration-125 ease-out-expo motion-reduce:transition-none'
+            }
             name="expand"
           />
         </CollapsibleTrigger>

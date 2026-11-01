@@ -10,6 +10,7 @@
   },
   "description": "Elsewise's design system.",
   "exports": {
+    "./components/accordion": "./src/components/accordion.tsx",
     "./components/button": "./src/components/button.tsx",
     "./components/checkbox": "./src/components/checkbox.tsx",
     "./components/collapsible": "./src/components/collapsible.tsx",
@@ -24,6 +25,7 @@
     "./components/kbd": "./src/components/kbd.tsx",
     "./components/label": "./src/components/label.tsx",
     "./components/letter-icon": "./src/components/letter-icon.tsx",
+    "./components/popover": "./src/components/popover.tsx",
     "./components/select": "./src/components/select.tsx",
     "./components/separator": "./src/components/separator.tsx",
     "./components/settings": "./src/components/settings.tsx",

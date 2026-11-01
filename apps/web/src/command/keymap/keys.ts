@@ -73,7 +73,8 @@ export function eventKeys(event: KeyboardEvent, platform: Platform): string[] {
 /**
  * Returns `key` as CodeMirror normalizes it for `platform`, or null if it is invalid.
  *
- * For example, `Alt-Mod-K` becomes `Meta-Alt-K` on a Mac and `Ctrl-Alt-K` elsewhere.
+ * For example, `Alt-Mod-K` becomes `Meta-Alt-K` on a Mac and `Ctrl-Alt-K` elsewhere. Shift and a letter is the uppercase
+ * letter, as the keypress names it, so `Mod-Shift-k` and `Mod-K` are the same key.
  */
 export function normalizeKey(key: string, platform: Platform): string | null {
   const parsed = parseKey(key);
@@ -84,11 +85,12 @@ export function normalizeKey(key: string, platform: Platform): string | null {
   const modifiers = new Set(
     [...parsed.modifiers].map((modifier) => (modifier === 'mod' ? (platform === 'mac' ? 'meta' : 'ctrl') : modifier)),
   );
+  const letter = /^[a-z]$/iu.test(parsed.name);
   return [
-    ...(modifiers.has('shift') ? ['Shift'] : []),
+    ...(modifiers.has('shift') && !letter ? ['Shift'] : []),
     ...(modifiers.has('meta') ? ['Meta'] : []),
     ...(modifiers.has('ctrl') ? ['Ctrl'] : []),
     ...(modifiers.has('alt') ? ['Alt'] : []),
-    parsed.name === 'Space' ? ' ' : parsed.name,
+    parsed.name === 'Space' ? ' ' : letter && modifiers.has('shift') ? parsed.name.toUpperCase() : parsed.name,
   ].join('-');
 }

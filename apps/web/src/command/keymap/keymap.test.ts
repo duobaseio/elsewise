@@ -1,4 +1,4 @@
-import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledPlugin, type InvalidPlugin, type KeymapId } from '@elsewise/bridge';
 import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
@@ -9,10 +9,15 @@ import {
   installApplicationKeys,
   type LoadedKeymap,
   resolveKeymap,
+  useCopyKeymap,
+  useDeleteKeymap,
   useLoadedKeymaps,
+  useRenameKeymap,
   userKeymapsQuery,
+  useUpdateKeymap,
 } from '@/command/keymap/keymap';
 import { PluginStoreContext } from '@/plugins/plugin-store';
+import { settingsQuery } from '@/settings/settings';
 import { builtInCommands } from '../../../test/commands';
 import { pluginStore } from '../../../test/plugins';
 
@@ -58,6 +63,40 @@ async function keymaps(
   return result.filter(({ id }) => id.source !== 'elsewise');
 }
 
+// Returns what `use` returns with `selected` selected, `plugins` installed and the user's `keymaps`, and the client and
+// bridge it updates.
+async function probe<T>(
+  use: () => T,
+  selected: KeymapId,
+  plugins: readonly (InstalledPlugin | InvalidPlugin)[],
+  user: InstalledPlugin['keymaps'] = [],
+) {
+  const bridge = {
+    loadUserKeymaps: vi.fn(async () => user),
+    saveUserKeymap: vi.fn(async () => {}),
+    deleteUserKeymap: vi.fn(async () => {}),
+    save: vi.fn(async () => {}),
+  };
+  vi.stubGlobal('window', { bridge: { settings: bridge } });
+  const store = await pluginStore(plugins);
+  const client = new QueryClient();
+  client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_SETTINGS, keymap: selected });
+  client.setQueryData(userKeymapsQuery.queryKey, user);
+  let result: T | undefined;
+  function Probe() {
+    result = use();
+    return null;
+  }
+  renderToString(
+    createElement(
+      QueryClientProvider,
+      { client },
+      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+    ),
+  );
+  return { result: result as T, client, bridge };
+}
+
 // Returns a window with application keys installed for `added`, which are added in order.
 function install(...added: ApplicationCommand[]) {
   const window = new EventTarget() as Window;
@@ -98,8 +137,8 @@ function command(id: string, run: () => boolean, enabled = true): ApplicationCom
 
 describe('resolveKeymap', () => {
   test('finds keymap by id', () => {
-    expect(resolveKeymap([ELSEWISE, ECLIPSE], ECLIPSE.id)).toBe(ECLIPSE.keymap);
-    expect(resolveKeymap([ELSEWISE, ECLIPSE], ELSEWISE.id)).toBe(ELSEWISE.keymap);
+    expect(resolveKeymap([ELSEWISE, ECLIPSE], ECLIPSE.id)).toBe(ECLIPSE);
+    expect(resolveKeymap([ELSEWISE, ECLIPSE], ELSEWISE.id)).toBe(ELSEWISE);
   });
 
   test('distinguishes plugins with same keymap name', () => {
@@ -108,11 +147,11 @@ describe('resolveKeymap', () => {
       keymap: { name: 'Eclipse', keys: {} },
     };
 
-    expect(resolveKeymap([ECLIPSE, other], other.id)).toBe(other.keymap);
+    expect(resolveKeymap([ECLIPSE, other], other.id)).toBe(other);
   });
 
   test('falls back to Elsewise', () => {
-    expect(resolveKeymap([ELSEWISE], ECLIPSE.id)).toEqual(ELSEWISE.keymap);
+    expect(resolveKeymap([ELSEWISE], ECLIPSE.id)).toEqual(ELSEWISE);
   });
 });
 
@@ -224,5 +263,246 @@ describe('useLoadedKeymaps', () => {
         [{ id: 'mine', error: 'mine.json is not JSON' }],
       ),
     ).toEqual([]);
+  });
+});
+
+describe('useUpdateKeymap', () => {
+  const KEYS = { 'io.example.rename': ['Ctrl-k'] };
+
+  test('saves into user keymap', async () => {
+    const unreadable = { id: 'theirs', error: 'theirs.json is not JSON' };
+    const {
+      result: { update },
+      client,
+      bridge,
+    } = await probe(
+      useUpdateKeymap,
+      { source: 'user', id: 'mine' },
+      [],
+      [{ id: 'mine', keymap: ECLIPSE.keymap }, unreadable],
+    );
+    update((keys) => ({ ...keys, ...KEYS }));
+
+    const keymap = { name: 'Eclipse', keys: KEYS };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([{ id: 'mine', keymap }, unreadable]);
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('mine', keymap));
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'mine' });
+    expect(bridge.save).not.toHaveBeenCalled();
+  });
+
+  test('copies then selects', async () => {
+    const {
+      result: { update },
+      client,
+      bridge,
+    } = await probe(useUpdateKeymap, ECLIPSE.id, [plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }])]);
+    update((keys) => ({ ...keys, ...KEYS }));
+
+    const keymap = { name: 'Eclipse copy', keys: KEYS };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([{ id: 'eclipse-copy', keymap }]);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'eclipse-copy' });
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('eclipse-copy', keymap));
+  });
+
+  test('keeps edit over refetch in flight', async () => {
+    const mine = { id: 'mine', keymap: ECLIPSE.keymap };
+    const {
+      result: { update },
+      client,
+      bridge,
+    } = await probe(useUpdateKeymap, { source: 'user', id: 'mine' }, [], [mine]);
+    let load = () => {};
+    bridge.loadUserKeymaps.mockReturnValueOnce(new Promise((resolve) => (load = () => resolve([mine]))));
+    const refetch = client.refetchQueries(userKeymapsQuery);
+
+    update((keys) => ({ ...keys, ...KEYS }));
+    load();
+    await refetch;
+
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([
+      { id: 'mine', keymap: { name: 'Eclipse', keys: KEYS } },
+    ]);
+  });
+
+  test('undoes last edit', async () => {
+    const {
+      result: { update, undo },
+      bridge,
+    } = await probe(useUpdateKeymap, { source: 'user', id: 'mine' }, [], [{ id: 'mine', keymap: ECLIPSE.keymap }]);
+    update((keys) => ({ ...keys, ...KEYS }));
+    undo();
+
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledTimes(2));
+    expect(bridge.saveUserKeymap).toHaveBeenNthCalledWith(2, 'mine', ECLIPSE.keymap);
+  });
+
+  test('redoes undone edit', async () => {
+    const {
+      result: { update, undo, redo },
+      bridge,
+    } = await probe(useUpdateKeymap, { source: 'user', id: 'mine' }, [], [{ id: 'mine', keymap: ECLIPSE.keymap }]);
+    update((keys) => ({ ...keys, ...KEYS }));
+    undo();
+    redo();
+
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledTimes(3));
+    expect(bridge.saveUserKeymap).toHaveBeenNthCalledWith(3, 'mine', { name: 'Eclipse', keys: KEYS });
+  });
+
+  test('drops redo after new edit', async () => {
+    const other = { 'io.example.find': ['Ctrl-f'] };
+    const {
+      result: { update, undo, redo },
+      client,
+    } = await probe(useUpdateKeymap, { source: 'user', id: 'mine' }, [], [{ id: 'mine', keymap: ECLIPSE.keymap }]);
+    update((keys) => ({ ...keys, ...KEYS }));
+    undo();
+    update((keys) => ({ ...keys, ...other }));
+    redo();
+
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([
+      { id: 'mine', keymap: { name: 'Eclipse', keys: other } },
+    ]);
+  });
+
+  test('clears history on keymap change', async () => {
+    const {
+      result: { update, undo },
+      client,
+      bridge,
+    } = await probe(
+      useUpdateKeymap,
+      { source: 'user', id: 'mine' },
+      [],
+      [
+        { id: 'mine', keymap: ECLIPSE.keymap },
+        { id: 'other', keymap: ECLIPSE.keymap },
+      ],
+    );
+    update((keys) => ({ ...keys, ...KEYS }));
+    client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'other' } });
+    undo();
+
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([
+      { id: 'mine', keymap: { name: 'Eclipse', keys: KEYS } },
+      { id: 'other', keymap: ECLIPSE.keymap },
+    ]);
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledOnce());
+  });
+
+  test('undoes into copy after copy on change', async () => {
+    const {
+      result: { update, undo },
+      client,
+      bridge,
+    } = await probe(useUpdateKeymap, ECLIPSE.id, [plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }])]);
+    update((keys) => ({ ...keys, ...KEYS }));
+    undo();
+
+    const keymap = { name: 'Eclipse copy', keys: {} };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([{ id: 'eclipse-copy', keymap }]);
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledTimes(2));
+    expect(bridge.saveUserKeymap).toHaveBeenNthCalledWith(2, 'eclipse-copy', keymap);
+  });
+});
+
+describe('useCopyKeymap', () => {
+  test('copies bundled keymap and selects copy', async () => {
+    const { result: copy, client, bridge } = await probe(useCopyKeymap, ELSEWISE.id, []);
+
+    expect(copy(ELSEWISE.keymap)).toBe('elsewise-copy');
+    const keymap = { name: 'Elsewise copy', keys: ELSEWISE.keymap.keys };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([{ id: 'elsewise-copy', keymap }]);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'elsewise-copy' });
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('elsewise-copy', keymap));
+    await vi.waitFor(() =>
+      expect(bridge.save).toHaveBeenCalledExactlyOnceWith({
+        ...DEFAULT_SETTINGS,
+        keymap: { source: 'user', id: 'elsewise-copy' },
+      }),
+    );
+  });
+
+  test('copies plugin keymap', async () => {
+    const {
+      result: copy,
+      client,
+      bridge,
+    } = await probe(useCopyKeymap, ECLIPSE.id, [plugin('io.example', [{ id: 'Eclipse', keymap: ECLIPSE.keymap }])]);
+
+    expect(copy(ECLIPSE.keymap)).toBe('eclipse-copy');
+    const keymap = { name: 'Eclipse copy', keys: {} };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([{ id: 'eclipse-copy', keymap }]);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'eclipse-copy' });
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('eclipse-copy', keymap));
+  });
+
+  test('numbers taken copy', async () => {
+    const taken = { id: 'elsewise-copy', error: 'elsewise-copy.json is not JSON' };
+    const { result: copy, client, bridge } = await probe(useCopyKeymap, ELSEWISE.id, [], [taken]);
+
+    expect(copy(ELSEWISE.keymap)).toBe('elsewise-copy-2');
+    const keymap = { name: 'Elsewise copy 2', keys: ELSEWISE.keymap.keys };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([taken, { id: 'elsewise-copy-2', keymap }]);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'elsewise-copy-2' });
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('elsewise-copy-2', keymap));
+  });
+
+  test('starts id with letter or digit', async () => {
+    const { result: copy } = await probe(useCopyKeymap, ELSEWISE.id, []);
+
+    expect(copy({ ...ELSEWISE.keymap, name: '._Vim' })).toBe('vim-copy');
+    expect(copy({ ...ELSEWISE.keymap, name: '日本語' })).toBe('copy');
+  });
+});
+
+describe('useRenameKeymap', () => {
+  test('renames user keymap in place', async () => {
+    const other = { id: 'other', keymap: ECLIPSE.keymap };
+    const {
+      result: rename,
+      client,
+      bridge,
+    } = await probe(
+      useRenameKeymap,
+      { source: 'user', id: 'mine' },
+      [],
+      [{ id: 'mine', keymap: ECLIPSE.keymap }, other],
+    );
+    rename('mine', 'Renamed');
+
+    const renamed = { id: 'mine', keymap: { name: 'Renamed', keys: ECLIPSE.keymap.keys } };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([renamed, other]);
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('mine', renamed.keymap));
+  });
+
+  test('ignores unknown keymap', async () => {
+    const { result: rename, client, bridge } = await probe(useRenameKeymap, ELSEWISE.id, []);
+    rename('mine', 'Renamed');
+
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([]);
+    expect(bridge.saveUserKeymap).not.toHaveBeenCalled();
+  });
+});
+
+describe('useDeleteKeymap', () => {
+  test('deletes and selects Elsewise', async () => {
+    const other = { id: 'other', keymap: ECLIPSE.keymap };
+    const {
+      result: remove,
+      client,
+      bridge,
+    } = await probe(
+      useDeleteKeymap,
+      { source: 'user', id: 'mine' },
+      [],
+      [{ id: 'mine', keymap: ECLIPSE.keymap }, other],
+    );
+    remove('mine');
+
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([other]);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual(DEFAULT_SETTINGS.keymap);
+    await vi.waitFor(() => expect(bridge.deleteUserKeymap).toHaveBeenCalledExactlyOnceWith('mine'));
+    await vi.waitFor(() => expect(bridge.save).toHaveBeenCalledExactlyOnceWith(DEFAULT_SETTINGS));
   });
 });

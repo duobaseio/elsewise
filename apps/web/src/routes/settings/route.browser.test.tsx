@@ -161,7 +161,7 @@ describe('Settings', () => {
       .getByRole('link')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['General', 'Editor', 'Terminal', 'Words', 'Hooks', 'Broken']);
+    expect(links).toEqual(['General', 'Keymap', 'Editor', 'Terminal', 'Words', 'Hooks', 'Broken']);
   });
 
   test('lists languages under editor, sorted by label, expanded when open', async () => {
@@ -174,7 +174,7 @@ describe('Settings', () => {
       .getByRole('link')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['General', 'Editor', 'Elm', 'JavaScript/JSX', 'Markdown', 'Terminal']);
+    expect(links).toEqual(['General', 'Keymap', 'Editor', 'Elm', 'JavaScript/JSX', 'Markdown', 'Terminal']);
 
     await userEvent.click(sidebar().getByRole('link', { name: 'JavaScript/JSX' }));
     await expect.element(page.getByRole('heading', { name: 'JavaScript/JSX' })).toBeVisible();
@@ -384,6 +384,16 @@ describe('Search', () => {
     await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}f{/Meta}' : '{Control>}f{/Control}');
 
     await expect.element(page.getByPlaceholder('Search')).toHaveFocus();
+  });
+
+  test('leaves find shortcut to page search', async () => {
+    await mount(['/settings/local/appearance/keymap']);
+    await expect.element(page.getByRole('textbox', { name: 'Search commands' })).toBeVisible();
+
+    await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}f{/Meta}' : '{Control>}f{/Control}');
+
+    await expect.element(page.getByRole('textbox', { name: 'Search commands' })).toHaveFocus();
+    await expect.element(page.getByRole('combobox', { name: 'Search' })).not.toHaveFocus();
   });
 });
 

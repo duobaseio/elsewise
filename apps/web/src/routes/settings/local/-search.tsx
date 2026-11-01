@@ -30,6 +30,11 @@ export function Search() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      // A page with its own search, like Keymap, handles Mod-f first.
+      if (event.defaultPrevented) {
+        return;
+      }
+
       if (event.key === 'f' && (PLATFORM === 'mac' ? event.metaKey : event.ctrlKey)) {
         event.preventDefault();
         input.current?.focus();
@@ -46,7 +51,6 @@ export function Search() {
       filter={null}
       inputValue={query}
       items={hits}
-      // The input is ours to clear on selection, so nothing of the picked row may be written back into it.
       itemToStringLabel={() => ''}
       onInputValueChange={(value) => {
         setQuery(value);
