@@ -32,6 +32,10 @@ declare global {
      */
     bridge?: {
       /**
+       * The embedder's version, following SemVer, e.g. `1.2.3`.
+       */
+      version?: string;
+      /**
        * See {@link PluginsBridge}.
        */
       plugins?: PluginsBridge;

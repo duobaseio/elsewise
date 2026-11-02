@@ -1,6 +1,9 @@
 import type { PluginsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
 import { contextBridge, ipcRenderer } from 'electron';
 
+// The app's version from package.json, defined by bundle.mjs.
+declare const ELSEWISE_VERSION: string;
+
 const plugins: PluginsBridge = {
   load: (id?: string) => ipcRenderer.invoke('plugins:load', id),
   save: (installed) => ipcRenderer.invoke('plugins:save', installed),
@@ -45,6 +48,7 @@ const window: WindowBridge = {
 };
 
 contextBridge.exposeInMainWorld('bridge', {
+  version: ELSEWISE_VERSION,
   plugins,
   settings,
   window,
