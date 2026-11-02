@@ -1,5 +1,5 @@
+import type { Disposable } from '@elsewise/plugin';
 import type { ComponentType } from 'react';
-import type { Disposable } from './plugin.ts';
 
 /**
  * The ids of the settings sidebar's built-in groups.

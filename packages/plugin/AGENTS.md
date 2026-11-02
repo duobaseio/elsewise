@@ -1,7 +1,8 @@
 # Plugin
 
-What a plugin is, regardless of where its parts run: its `manifest.json`. `@elsewise/frontend-plugin` and
-`@elsewise/daemon-plugin` depend on it and re-export it; the hosts read it to load a plugin.
+What a plugin is, regardless of where its parts run: its `manifest.json`, and the types a part's main module uses on
+either side. `@elsewise/frontend-plugin` and `@elsewise/daemon-plugin` depend on it and re-export it; the hosts read
+it to load a plugin.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin <script>`.
 

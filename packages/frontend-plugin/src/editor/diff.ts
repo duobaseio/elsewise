@@ -1,5 +1,5 @@
 import type { EditorView } from '@codemirror/view';
-import type { Disposable } from '../plugin.ts';
+import type { Disposable } from '@elsewise/plugin';
 
 /**
  * The ids of the built-in diff sources.

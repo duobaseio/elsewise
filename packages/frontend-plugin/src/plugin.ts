@@ -1,3 +1,4 @@
+import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command.ts';
 import type { Editor } from './editor/editor.ts';
@@ -77,18 +78,6 @@ export interface Plugin {
 }
 
 /**
- * The plugin's information which is passed to a plugin main module's default export function.
- *
- * See {@link Plugin}.
- */
-export interface PluginInfo {
-  /**
-   * The plugin's id.
-   */
-  readonly id: string;
-}
-
-/**
  * The application.
  */
 export interface Application {
@@ -159,10 +148,3 @@ export interface ActiveTheme {
    */
   readonly terminal: Readonly<Required<ThemeVariant['terminal']>>;
 }
-
-/**
- * A function that releases a resource when called.
- *
- * Elsewise waits for it if it returns a promise.
- */
-export type Disposable = () => void | Promise<void>;

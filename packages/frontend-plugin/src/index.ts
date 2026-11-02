@@ -1,4 +1,11 @@
-export { DaemonManifestPart, FrontendManifestPart, Manifest, PluginId } from '@elsewise/plugin';
+export {
+  DaemonManifestPart,
+  type Disposable,
+  FrontendManifestPart,
+  Manifest,
+  PluginId,
+  type PluginInfo,
+} from '@elsewise/plugin';
 export type {
   ActiveKeymap,
   ApplicationCommand,
@@ -56,15 +63,7 @@ export {
   type EditorToolbarProps,
 } from './editor/toolbar.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
-export {
-  type ActiveTheme,
-  type Appearance,
-  type Application,
-  DEFAULT_ROUTES,
-  type Disposable,
-  type Plugin,
-  type PluginInfo,
-} from './plugin.ts';
+export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin.ts';
 export {
   DEFAULT_SETTINGS_GROUPS,
   type LocalSettingsPanel,

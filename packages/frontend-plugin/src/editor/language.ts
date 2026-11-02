@@ -2,8 +2,8 @@ import type { LanguageDescription } from '@codemirror/language';
 import type { LSPClient, LSPClientExtension } from '@codemirror/lsp-client';
 import type { Extension } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
+import type { Disposable } from '@elsewise/plugin';
 import type { CompletionItem, CompletionParams, ConfigurationParams } from 'vscode-languageserver-protocol';
-import type { Disposable } from '../plugin.ts';
 
 /**
  * The languages and their language servers.

@@ -388,6 +388,22 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  packages/daemon-plugin:
+    dependencies:
+      '@elsewise/plugin':
+        specifier: workspace:*
+        version: link:../plugin
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.5.14
+        version: 2.5.15
+      '@types/node':
+        specifier: ^26.4.1
+        version: 26.6.5
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   packages/frontend-plugin:
     dependencies:
       '@codemirror/autocomplete':
