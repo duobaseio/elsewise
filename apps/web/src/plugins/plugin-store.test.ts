@@ -26,7 +26,13 @@ function setUp() {
 
 // Returns the enabled plugin `id` whose main module is at `url`.
 function installed(id: string, url: string): InstalledPlugin {
-  return { manifest: { id, name: id, version: '1.0.0', main: 'main.js' }, enabled: true, themes: [], keymaps: [], url };
+  return {
+    manifest: { id, name: id, version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
+    enabled: true,
+    themes: [],
+    keymaps: [],
+    url,
+  };
 }
 
 // What the plugins below did, in order. They reach it as the global `events`.

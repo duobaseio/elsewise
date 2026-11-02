@@ -13,7 +13,7 @@ import { THEMES } from '../../../../../sheet';
 const NIGHT = { name: 'Night', dark: { interface: { background: '#000000' }, editor: {}, terminal: {} } };
 
 const PLUGIN: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [{ id: 'night', theme: NIGHT }],
   keymaps: [],

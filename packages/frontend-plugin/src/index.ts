@@ -1,3 +1,4 @@
+export { DaemonManifestPart, FrontendManifestPart, Manifest, PluginId } from '@elsewise/plugin';
 export type {
   ActiveKeymap,
   ApplicationCommand,
@@ -55,7 +56,6 @@ export {
   type EditorToolbarProps,
 } from './editor/toolbar.ts';
 export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
-export { Manifest, PluginId } from './manifest.ts';
 export {
   type ActiveTheme,
   type Appearance,

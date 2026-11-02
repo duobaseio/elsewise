@@ -29,7 +29,13 @@ afterEach(() => {
 
 // Returns the plugin `id` with `themes`.
 function plugin(id: string, themes: InstalledPlugin['themes'], enabled = true): InstalledPlugin {
-  return { manifest: { id, name: id, version: '1.0.0', main: 'main.js' }, enabled, themes, keymaps: [], url: '' };
+  return {
+    manifest: { id, name: id, version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
+    enabled,
+    themes,
+    keymaps: [],
+    url: '',
+  };
 }
 
 // Returns what `useLoadedThemes` returns with `plugins` installed and the user's `themes`.

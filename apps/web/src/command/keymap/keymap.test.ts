@@ -35,7 +35,13 @@ afterEach(() => {
 
 // Returns the plugin `id` with `keymaps`.
 function plugin(id: string, keymaps: InstalledPlugin['keymaps'], enabled = true): InstalledPlugin {
-  return { manifest: { id, name: id, version: '1.0.0', main: 'main.js' }, enabled, themes: [], keymaps, url: '' };
+  return {
+    manifest: { id, name: id, version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
+    enabled,
+    themes: [],
+    keymaps,
+    url: '',
+  };
 }
 
 // Returns what `useLoadedKeymaps` returns with `plugins` installed and the user's `keymaps`, leaving out Elsewise's.

@@ -16,7 +16,7 @@ const NIGHT = { name: 'Night', dark: { interface: { background: '#000000' }, edi
 
 // A plugin with a theme named like the user's.
 const PLUGIN: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [{ id: 'night', theme: NIGHT }],
   keymaps: [],

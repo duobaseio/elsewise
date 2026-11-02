@@ -11,6 +11,7 @@ on:
       - packages/components/**
       - packages/core/**
       - packages/frontend-plugin/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -23,6 +24,7 @@ on:
       - packages/components/**
       - packages/core/**
       - packages/frontend-plugin/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml

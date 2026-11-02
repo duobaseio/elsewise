@@ -26,7 +26,7 @@ const SETTINGS: Settings = {
 
 // A plugin that previews a language of its own and replaces Rust's preview.
 const PREVIEWS: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
   keymaps: [],

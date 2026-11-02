@@ -20,7 +20,7 @@ const COPY = 'elsewise.terminal.clipboard.copy';
 
 // A plugin with a keymap that adds groups at the top level and in Editor, one of them without commands.
 const PLUGIN: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
   keymaps: [{ id: 'vim', keymap: { name: 'Vim', keys: { [FIND]: ['F9'] } } }],

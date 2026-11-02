@@ -59,7 +59,7 @@ export const InstalledPlugin = z.object({
   /**
    * The URL of the plugin's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`.
    */
-  // TODO: Make optional with the manifest's `main`, once plugins without code are decided.
+  // TODO: Make optional, for a manifest without a frontend part, once the hosts check the manifest's host range.
   url: z.string(),
 });
 

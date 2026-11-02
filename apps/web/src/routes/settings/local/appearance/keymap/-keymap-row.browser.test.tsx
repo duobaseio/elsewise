@@ -25,7 +25,13 @@ describe('KeymapSelect', () => {
 
   // A plugin with a keymap named like the user's.
   const PLUGIN: InstalledPlugin = {
-    manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+    manifest: {
+      id: 'io.example',
+      name: 'Example',
+      version: '1.0.0',
+      elsewise: '^1.0.0',
+      frontend: { main: 'main.js' },
+    },
     enabled: true,
     themes: [],
     keymaps: [{ id: 'vim', keymap: VIM }],

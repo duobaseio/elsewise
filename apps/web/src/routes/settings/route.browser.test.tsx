@@ -12,7 +12,7 @@ import { pluginStore } from '../../../test/plugins';
 
 // A plugin that adds local panels, one of them throwing, and a remote panel.
 const PANELS: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
   keymaps: [],

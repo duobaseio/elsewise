@@ -18,7 +18,7 @@ vi.mock('@elsewise/core', async (importOriginal) => {
 const ENTRIES_FILE = path.join(dataLocalDir(), 'plugins.json');
 const PLUGINS_FOLDER = path.join(dataLocalDir(), 'plugins');
 const ENTRY = { id: 'hello', enabled: true };
-const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', main: 'main.js' };
+const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } };
 const URL = 'app://elsewise/plugins/hello/bundle/main.js';
 
 const NOTHING = { themes: [], keymaps: [] };
@@ -98,18 +98,18 @@ describe('plugins:load', () => {
 
   test("reads plugin's manifest without unknown properties", () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { id: 'hello', name: 'Hello', version: '1.0.0', extra: 'ignored' });
+    install('hello', { ...MANIFEST, extra: 'ignored', frontend: { entry: 'ignored' } });
 
     expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: true }]);
   });
 
-  test("resolves url from manifest's main", () => {
+  test("resolves url from frontend part's main", () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { ...MANIFEST, main: 'dist/index.js' });
+    install('hello', { ...MANIFEST, frontend: { main: 'dist/index.js' } });
 
     expect(handler('plugins:load')()).toEqual([
       {
-        manifest: { ...MANIFEST, main: 'dist/index.js' },
+        manifest: { ...MANIFEST, frontend: { main: 'dist/index.js' } },
         ...NOTHING,
         url: 'app://elsewise/plugins/hello/bundle/dist/index.js',
         enabled: true,

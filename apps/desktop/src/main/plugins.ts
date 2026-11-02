@@ -128,7 +128,8 @@ function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin
     keymaps: readJsonFolder(path.join(ROOT, folder, 'bundle', 'keymaps'), Keymap).map((entry) =>
       'error' in entry ? entry : { id: entry.id, keymap: entry.content },
     ),
-    // TODO: Leave out for a manifest without `main`, once plugins without code are decided.
-    url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.main}`,
+    // TODO: Leave out for a manifest without a frontend part, and serve from `bundle/frontend`, once the hosts check
+    // the manifest's host range.
+    url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.frontend?.main ?? 'main.js'}`,
   };
 }
