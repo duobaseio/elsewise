@@ -1,4 +1,4 @@
-import { peer } from '@elsewise/plugin/build';
+import { peer } from '@elsewise/frontend-plugin/build';
 import { defineConfig } from 'vite';
 
 export default defineConfig({

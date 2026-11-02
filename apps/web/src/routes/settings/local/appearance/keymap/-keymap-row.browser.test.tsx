@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type InstalledPlugin, type KeymapId, type Settings } from '@elsewise/bridge';
-import type { Keymap } from '@elsewise/plugin';
+import type { Keymap } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

@@ -1,4 +1,4 @@
-import type { LanguageServerTransport } from '@elsewise/plugin';
+import type { LanguageServerTransport } from '@elsewise/frontend-plugin';
 
 type Response = { result?: unknown; error?: { code: number; message: string } };
 

@@ -1,4 +1,4 @@
-import type { LocalSettingsPanel, RemoteSettingsPanel } from '@elsewise/plugin';
+import type { LocalSettingsPanel, RemoteSettingsPanel } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 

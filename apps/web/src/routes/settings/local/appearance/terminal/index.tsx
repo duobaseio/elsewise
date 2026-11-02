@@ -4,7 +4,7 @@ import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { SettingsSearchTerm } from '@elsewise/plugin';
+import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import type { ITerminalAddon } from '@xterm/xterm';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';

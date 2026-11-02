@@ -3,7 +3,7 @@ import { Button } from '@elsewise/components/components/button';
 import { Icon, type IconName } from '@elsewise/components/components/icon';
 import { Toggle } from '@elsewise/components/components/toggle';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import { DEFAULT_COMMANDS } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS } from '@elsewise/frontend-plugin';
 import { type RefObject, useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';

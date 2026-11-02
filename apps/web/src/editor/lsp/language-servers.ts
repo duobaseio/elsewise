@@ -2,7 +2,7 @@ import { LSPClient, type LSPPlugin } from '@codemirror/lsp-client';
 import { type Extension, Facet } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
+import type { Disposable, LanguageServer, LanguageServerTransport } from '@elsewise/frontend-plugin';
 import DOMPurify from 'dompurify';
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
 import {

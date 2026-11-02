@@ -6,7 +6,7 @@ import {
   DEFAULT_EDITOR_CONTEXT_MENU,
   DEFAULT_KEYS,
   type EditorCommand,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 
 const { actions, clipboard, navigate, diff, refactor } = DEFAULT_EDITOR_CONTEXT_MENU;
 const { compare } = diff.items;

@@ -34,7 +34,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { Row } from '@elsewise/components/components/settings';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import type { Keymap, SettingsSearchTerm } from '@elsewise/plugin';
+import type { Keymap, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { Fragment, type Ref, type RefObject, useMemo, useRef, useState } from 'react';
 import {
   sameKeymap,

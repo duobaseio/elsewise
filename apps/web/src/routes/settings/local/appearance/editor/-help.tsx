@@ -1,7 +1,7 @@
 import { Icon } from '@elsewise/components/components/icon';
 import { letterformClass } from '@elsewise/components/components/letter-icon';
 import { cn } from '@elsewise/components/lib/utils';
-import type { ActiveTheme } from '@elsewise/plugin';
+import type { ActiveTheme } from '@elsewise/frontend-plugin';
 import type { CSSProperties, ReactNode } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
 import { SCROLLBAR_WIDTH } from '@/editor/theme';

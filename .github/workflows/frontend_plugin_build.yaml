@@ -1,18 +1,18 @@
-name: Plugin Build
+name: Frontend Plugin Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/plugin_build.yaml
-      - packages/plugin/**
+      - .github/workflows/frontend_plugin_build.yaml
+      - packages/frontend-plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/plugin_build.yaml
-      - packages/plugin/**
+      - .github/workflows/frontend_plugin_build.yaml
+      - packages/frontend-plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Plugin
+    name: Build Frontend Plugin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,5 +35,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/plugin check
-      - run: pnpm --filter @elsewise/plugin typecheck
+      - run: pnpm --filter @elsewise/frontend-plugin check
+      - run: pnpm --filter @elsewise/frontend-plugin typecheck

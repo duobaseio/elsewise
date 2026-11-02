@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type InstalledPlugin, type InvalidPlugin, type KeymapId } from '@elsewise/bridge';
-import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/plugin';
+import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';

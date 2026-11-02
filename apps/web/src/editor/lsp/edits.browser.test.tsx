@@ -1,7 +1,7 @@
 import { history, undo } from '@codemirror/commands';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test } from 'vitest';
 import type { WorkspaceEdit } from 'vscode-languageserver-protocol';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';

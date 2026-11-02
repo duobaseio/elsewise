@@ -1,5 +1,5 @@
 import type { Platform } from '@elsewise/components/lib/platform';
-import type { Application, Keymap } from '@elsewise/plugin';
+import type { Application, Keymap } from '@elsewise/frontend-plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { AppearanceManager } from '@/appearance/appearance-manager';
 import { CommandManager } from '@/command/command-manager';

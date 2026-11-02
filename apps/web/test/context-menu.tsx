@@ -3,7 +3,7 @@ import { foldGutter, LanguageDescription } from '@codemirror/language';
 import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem } from '@elsewise/frontend-plugin';
 import { useEffect, useRef } from 'react';
 import { expect } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

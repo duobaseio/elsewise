@@ -22,12 +22,12 @@
   },
   "peerDependencies": {
     "@codemirror/language": "^6.12.4",
-    "@elsewise/plugin": "workspace:*",
+    "@elsewise/frontend-plugin": "workspace:*",
     "vscode-languageserver-protocol": "^3.18.4"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
-    "@elsewise/plugin": "workspace:*",
+    "@elsewise/frontend-plugin": "workspace:*",
     "tsserver": "npm:typescript@^6.0.3",
     "typescript": "^7.0.2",
     "typescript-language-server": "6.0.1",

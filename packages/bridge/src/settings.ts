@@ -1,4 +1,4 @@
-import type { Keymap, Theme } from '@elsewise/plugin';
+import type { Keymap, Theme } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
 import { PluginId } from './plugins.js';
 

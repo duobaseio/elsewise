@@ -11,7 +11,7 @@ import {
   type EditorDiffContent,
   type EditorDiffSource,
   type LanguageServer,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';

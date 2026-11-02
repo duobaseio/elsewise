@@ -1,6 +1,6 @@
 import { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { describe, expect, test } from 'vitest';
 import { LanguageManager } from '@/editor/language-manager';
 

@@ -1,6 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type TerminalCommand } from '@elsewise/frontend-plugin';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { editorKeymap, terminalKeymap } from '@/command/keymap/keymap';

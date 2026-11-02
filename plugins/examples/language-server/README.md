@@ -1,6 +1,6 @@
 # Language server example
 
-A plugin that adds TypeScript's language server to the code editor using [`@elsewise/plugin`](../../../packages/plugin):
+A plugin that adds TypeScript's language server to the code editor using [`@elsewise/frontend-plugin`](../../../packages/frontend-plugin):
 diagnostics, completion, hover, signature help, go to definition, find usages, rename, formatting and code actions in
 TypeScript and JavaScript files. A refactor that makes up a name, e.g. extracting a constant, starts renaming it, through
 a handler for the server's `_typescript.rename` request. Completing a function or method adds its parentheses and opens

@@ -7,7 +7,7 @@ import type {
   Editor,
   EditorDocument,
   EditorToolbarItem,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';

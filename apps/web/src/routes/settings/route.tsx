@@ -26,7 +26,7 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
 } from '@elsewise/components/components/sidebar';
-import { DEFAULT_SETTINGS_GROUPS } from '@elsewise/plugin';
+import { DEFAULT_SETTINGS_GROUPS } from '@elsewise/frontend-plugin';
 import {
   createFileRoute,
   Link,

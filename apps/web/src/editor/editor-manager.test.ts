@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import type { ContextMenuGroup, ContextMenuItem, EditorToolbarItem } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, EditorToolbarItem } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { EditorManager } from '@/editor/editor-manager';

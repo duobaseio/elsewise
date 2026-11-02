@@ -19,7 +19,7 @@ export const PEER_MODULES = [
   '@codemirror/search',
   '@codemirror/state',
   '@codemirror/view',
-  '@elsewise/plugin',
+  '@elsewise/frontend-plugin',
   '@elsewise/components/',
   '@lezer/common',
   '@lezer/highlight',

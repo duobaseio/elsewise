@@ -1,4 +1,4 @@
-import { type ContextMenuGroup, DEFAULT_COMMANDS, DEFAULT_TERMINAL_CONTEXT_MENU } from '@elsewise/plugin';
+import { type ContextMenuGroup, DEFAULT_COMMANDS, DEFAULT_TERMINAL_CONTEXT_MENU } from '@elsewise/frontend-plugin';
 
 const { search, clipboard, buffer } = DEFAULT_TERMINAL_CONTEXT_MENU;
 

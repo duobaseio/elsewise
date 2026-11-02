@@ -3,7 +3,7 @@
 The contract between Elsewise and its plugins: what a plugin's main module exports, and what Elsewise provides it when
 enabling it. Elsewise implements the contract; plugins build against it.
 
-Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin <script>`.
+Run pnpm from the **repo root**: `pnpm --filter @elsewise/frontend-plugin <script>`.
 
 This is a **source package**: `exports` points straight at `src/` and there is no build step.
 

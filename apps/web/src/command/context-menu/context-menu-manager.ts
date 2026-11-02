@@ -1,4 +1,4 @@
-import type { ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem, Disposable } from '@elsewise/plugin';
+import type { ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem, Disposable } from '@elsewise/frontend-plugin';
 
 /**
  * A context menu's groups, which plugins add to.

@@ -1,7 +1,7 @@
 import { forEachDiagnostic, type Diagnostic as LintDiagnostic, linter } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { EditorDiagnostic, LanguageServer } from '@elsewise/plugin';
+import type { EditorDiagnostic, LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, DocumentDiagnosticParams, InitializeParams } from 'vscode-languageserver-protocol';
 import { pullAllDiagnostics } from '@/editor/lsp/diagnostics';

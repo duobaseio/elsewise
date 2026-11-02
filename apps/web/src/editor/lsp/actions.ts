@@ -1,7 +1,7 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorState, type Text } from '@codemirror/state';
 import type { EditorView } from '@codemirror/view';
-import { DEFAULT_ACTION_SOURCES, type EditorActionSource } from '@elsewise/plugin';
+import { DEFAULT_ACTION_SOURCES, type EditorActionSource } from '@elsewise/frontend-plugin';
 import {
   type CodeAction,
   type CodeActionParams,

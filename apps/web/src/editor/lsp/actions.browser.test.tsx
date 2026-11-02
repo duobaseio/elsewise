@@ -3,7 +3,7 @@ import { forEachDiagnostic, setDiagnostics } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import type { CodeActionParams } from 'vscode-languageserver-protocol';
 import { actions as editorActions } from '@/editor/actions';

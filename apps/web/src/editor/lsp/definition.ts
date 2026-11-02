@@ -10,7 +10,7 @@ import {
   type EditorCommand,
   type EditorNavigation,
   type EditorNavigationSource,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import type { DefinitionParams, Location, LocationLink } from 'vscode-languageserver-protocol';
 import { COMMANDS } from '@/editor/editor-manager';
 import { navigable } from '@/editor/lsp/symbol';

@@ -40,7 +40,7 @@ import {
   DEFAULT_KEYS,
   EDITOR_DOCUMENT,
   type EditorCommand,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { toggleReplaceRow } from '@/editor/search/search-bar-query';
 
 const { caret, edit, fold, history, search } = DEFAULT_COMMANDS.editor;

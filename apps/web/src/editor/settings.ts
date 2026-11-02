@@ -1,7 +1,7 @@
 import { indentUnit } from '@codemirror/language';
 import { EditorState, type Extension, Prec } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
-import type { EditorDocumentLayout } from '@elsewise/plugin';
+import type { EditorDocumentLayout } from '@elsewise/frontend-plugin';
 import { useMemo } from 'react';
 import { completionDocumentation } from '@/editor/completion';
 import { highlightUsages } from '@/editor/lsp/highlights';

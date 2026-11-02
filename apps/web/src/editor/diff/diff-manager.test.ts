@@ -1,4 +1,4 @@
-import type { EditorDiffSource } from '@elsewise/plugin';
+import type { EditorDiffSource } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DiffManager } from '@/editor/diff/diff-manager';
 

@@ -6,7 +6,7 @@ import {
 } from '@elsewise/components/components/accordion';
 import { Icon } from '@elsewise/components/components/icon';
 import { cn } from '@elsewise/components/lib/utils';
-import type { ApplicationCommand, CommandGroup, EditorCommand, TerminalCommand } from '@elsewise/plugin';
+import type { ApplicationCommand, CommandGroup, EditorCommand, TerminalCommand } from '@elsewise/frontend-plugin';
 import { type FocusEvent, Fragment, type KeyboardEvent, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { useSelectedKeymap, useUpdateKeymap } from '@/command/keymap/keymap';

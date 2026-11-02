@@ -2,7 +2,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
-import { DEFAULT_COMMANDS } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS } from '@elsewise/frontend-plugin';
 import { type ISearchOptions, type ISearchResultChangeEvent, SearchAddon } from '@xterm/addon-search';
 import type { Terminal } from '@xterm/xterm';
 import { type KeyboardEvent, type RefObject, useEffect, useMemo, useRef, useState } from 'react';

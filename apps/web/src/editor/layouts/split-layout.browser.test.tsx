@@ -1,7 +1,7 @@
 import { openSearchPanel } from '@codemirror/search';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import { DEFAULT_COMMANDS, EDITOR_DOCUMENT } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, EDITOR_DOCUMENT } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

@@ -1,5 +1,5 @@
 import type { InstalledPlugin } from '@elsewise/bridge';
-import { DEFAULT_COMMAND_GROUPS } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS } from '@elsewise/frontend-plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';

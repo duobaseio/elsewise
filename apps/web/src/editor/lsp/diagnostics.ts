@@ -2,7 +2,7 @@ import { type Diagnostic, forEachDiagnostic, setDiagnostics, setDiagnosticsEffec
 import { type LSPClient, type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Annotation, EditorState } from '@codemirror/state';
 import { type EditorView, type PluginValue, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import type { EditorDiagnostic } from '@elsewise/plugin';
+import type { EditorDiagnostic } from '@elsewise/frontend-plugin';
 import {
   DiagnosticSeverity,
   DiagnosticTag,

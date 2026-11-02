@@ -1,4 +1,4 @@
-import type { ContextMenuGroup } from '@elsewise/plugin';
+import type { ContextMenuGroup } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';

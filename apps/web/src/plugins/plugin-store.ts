@@ -1,5 +1,12 @@
 import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
-import type { Disposable, Keymap, Manifest, Plugin as PluginImplementation, PluginInfo, Theme } from '@elsewise/plugin';
+import type {
+  Disposable,
+  Keymap,
+  Manifest,
+  Plugin as PluginImplementation,
+  PluginInfo,
+  Theme,
+} from '@elsewise/frontend-plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import type { ApplicationManager } from '@/application-manager';
 

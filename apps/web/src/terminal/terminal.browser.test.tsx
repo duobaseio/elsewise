@@ -1,6 +1,6 @@
 import type { Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMANDS, Theme } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, Theme } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

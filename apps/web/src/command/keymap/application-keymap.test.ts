@@ -5,7 +5,7 @@ import {
   type EditorCommand,
   Keymap,
   type Keys,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EMPTY_KEYMAP } from '../../../test/commands';

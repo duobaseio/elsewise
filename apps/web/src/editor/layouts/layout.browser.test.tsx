@@ -12,7 +12,7 @@ import {
   type EditorDocument,
   type EditorDocumentLayout,
   type LanguageServer,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';

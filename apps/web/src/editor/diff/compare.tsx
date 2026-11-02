@@ -1,7 +1,7 @@
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import type { EditorToolbarProps } from '@elsewise/plugin';
+import type { EditorToolbarProps } from '@elsewise/frontend-plugin';
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { EDITOR_DIFF } from '@/editor/diff/diff';
 import { DiffSourceMenu } from '@/editor/diff/diff-source-menu';

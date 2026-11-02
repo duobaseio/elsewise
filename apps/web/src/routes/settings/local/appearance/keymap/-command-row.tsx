@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTitle } from '@elsewise/components/comp
 import { useHighlight } from '@elsewise/components/components/settings';
 import { formatKey, PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
-import type { Keymap } from '@elsewise/plugin';
+import type { Keymap } from '@elsewise/frontend-plugin';
 import { type ComponentProps, useRef, useState } from 'react';
 import { normalizeKey, recordKey } from '@/command/keymap/keys';
 

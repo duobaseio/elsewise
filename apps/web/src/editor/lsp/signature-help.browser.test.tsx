@@ -3,7 +3,7 @@ import { HighlightStyle, LanguageDescription, type LanguageSupport, syntaxHighli
 import { languages } from '@codemirror/language-data';
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { tags as t } from '@lezer/highlight';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { SignatureHelp } from 'vscode-languageserver-protocol';

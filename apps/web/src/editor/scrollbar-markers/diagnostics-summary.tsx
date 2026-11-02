@@ -2,7 +2,7 @@ import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Kbd } from '@elsewise/components/components/kbd';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import { DEFAULT_COMMANDS, type EditorToolbarProps } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, type EditorToolbarProps } from '@elsewise/frontend-plugin';
 import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 import { useMemo, useSyncExternalStore } from 'react';
 import { useCommandManager } from '@/command/command-manager';

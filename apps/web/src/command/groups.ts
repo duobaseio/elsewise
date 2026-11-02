@@ -1,4 +1,4 @@
-import { type CommandGroup, DEFAULT_COMMAND_GROUPS } from '@elsewise/plugin';
+import { type CommandGroup, DEFAULT_COMMAND_GROUPS } from '@elsewise/frontend-plugin';
 
 const { application, editor, terminal } = DEFAULT_COMMAND_GROUPS;
 

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { type InstalledPlugin, type InvalidPlugin, PluginEntry, PluginId } from '@elsewise/bridge';
 import { dataLocalDir, writeJsonSync } from '@elsewise/core';
-import { Keymap, Manifest, Theme } from '@elsewise/plugin';
+import { Keymap, Manifest, Theme } from '@elsewise/frontend-plugin';
 import { ipcMain } from 'electron';
 import * as z from 'zod';
 import { readJsonFolder } from '../fs/json-folder';

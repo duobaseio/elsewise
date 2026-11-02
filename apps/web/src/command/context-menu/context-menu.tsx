@@ -12,7 +12,7 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { Application, ContextMenuGroup } from '@elsewise/plugin';
+import type { Application, ContextMenuGroup } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';

@@ -1,7 +1,7 @@
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorState } from '@codemirror/state';
 import type { EditorView, Tooltip } from '@codemirror/view';
-import { DEFAULT_HOVER_SECTIONS, type EditorHoverSource } from '@elsewise/plugin';
+import { DEFAULT_HOVER_SECTIONS, type EditorHoverSource } from '@elsewise/frontend-plugin';
 import type { Hover, HoverParams } from 'vscode-languageserver-protocol';
 import { documentation } from '@/editor/lsp/documentation';
 

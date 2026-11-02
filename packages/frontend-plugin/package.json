@@ -1,5 +1,5 @@
 {
-  "name": "@elsewise/plugin",
+  "name": "@elsewise/frontend-plugin",
   "private": true,
   "type": "module",
   "devEngines": {

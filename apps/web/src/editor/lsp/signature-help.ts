@@ -3,7 +3,7 @@ import { LSPPlugin } from '@codemirror/lsp-client';
 import { type Extension, Prec, StateEffect, StateField } from '@codemirror/state';
 import { type EditorView, keymap, showTooltip, type Tooltip, ViewPlugin, type ViewUpdate } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/frontend-plugin';
 import { highlightCode } from '@lezer/highlight';
 import {
   type SignatureHelp,

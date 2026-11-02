@@ -1,4 +1,4 @@
-import { Keymap, Manifest, PluginId, Theme } from '@elsewise/plugin';
+import { Keymap, Manifest, PluginId, Theme } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
 
 export { PluginId };

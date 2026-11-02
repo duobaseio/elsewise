@@ -10,7 +10,7 @@ import type {
   EditorCommand,
   Keymap,
   TerminalCommand,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';

@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
-import type { SettingsSearchTerm } from '@elsewise/plugin';
+import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';

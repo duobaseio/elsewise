@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS_GROUPS, type LocalSettingsPanel, type SettingsPanel } from '@elsewise/plugin';
+import { DEFAULT_SETTINGS_GROUPS, type LocalSettingsPanel, type SettingsPanel } from '@elsewise/frontend-plugin';
 import { EDITOR_TERMS, Editor } from '@/routes/settings/local/appearance/editor';
 import { GENERAL_TERMS, General } from '@/routes/settings/local/appearance/general';
 import { KEYMAP_TERMS, Keymap } from '@/routes/settings/local/appearance/keymap';

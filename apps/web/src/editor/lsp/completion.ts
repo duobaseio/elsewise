@@ -9,7 +9,7 @@ import {
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { type ChangeDesc, type ChangeSpec, EditorState, MapMode, type Text } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
-import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
+import type { EditorCompletion, LanguageServer } from '@elsewise/frontend-plugin';
 import {
   type CompletionItem,
   CompletionItemKind,

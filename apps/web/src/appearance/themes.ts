@@ -1,5 +1,5 @@
 import { BundledTheme, type ThemeId } from '@elsewise/bridge';
-import { type ActiveTheme, Theme } from '@elsewise/plugin';
+import { type ActiveTheme, Theme } from '@elsewise/frontend-plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { usePluginStore } from '@/plugins/plugin-store';

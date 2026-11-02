@@ -1,7 +1,7 @@
 # Editor example
 
 A toy plugin that adds to the code editor, e.g. completions, a color picker and a hover section, and a theme, using
-[`@elsewise/plugin`](../../../packages/plugin).
+[`@elsewise/frontend-plugin`](../../../packages/frontend-plugin).
 
 ## Running scripts
 

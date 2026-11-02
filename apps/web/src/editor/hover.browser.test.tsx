@@ -1,7 +1,7 @@
 import { type Diagnostic, linter, setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
-import type { EditorActionSource, EditorDiagnostic } from '@elsewise/plugin';
+import type { EditorActionSource, EditorDiagnostic } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';

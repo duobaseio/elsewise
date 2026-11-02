@@ -16,7 +16,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
-import type { SettingsSearchTerm } from '@elsewise/plugin';
+import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { Fragment, type ReactNode, useEffect, useState } from 'react';
 import { type FontChoice, installedFonts } from '@/settings/fonts';
 

@@ -80,9 +80,9 @@ importers:
       '@elsewise/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@elsewise/plugin':
+      '@elsewise/frontend-plugin':
         specifier: workspace:*
-        version: link:../../packages/plugin
+        version: link:../../packages/frontend-plugin
       '@elsewise/web':
         specifier: workspace:*
         version: link:../web
@@ -152,9 +152,9 @@ importers:
       '@elsewise/components':
         specifier: workspace:*
         version: link:../../packages/components
-      '@elsewise/plugin':
+      '@elsewise/frontend-plugin':
         specifier: workspace:*
-        version: link:../../packages/plugin
+        version: link:../../packages/frontend-plugin
       '@lezer/common':
         specifier: ^1.5.3
         version: 1.5.3
@@ -264,9 +264,9 @@ importers:
 
   packages/bridge:
     dependencies:
-      '@elsewise/plugin':
+      '@elsewise/frontend-plugin':
         specifier: workspace:*
-        version: link:../plugin
+        version: link:../frontend-plugin
       zod:
         specifier: ^4.6.5
         version: 4.6.7
@@ -381,7 +381,7 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  packages/plugin:
+  packages/frontend-plugin:
     dependencies:
       '@codemirror/autocomplete':
         specifier: ^6.20.3
@@ -485,9 +485,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.14
         version: 2.5.15
-      '@elsewise/plugin':
+      '@elsewise/frontend-plugin':
         specifier: workspace:*
-        version: link:../../../packages/plugin
+        version: link:../../../packages/frontend-plugin
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -510,9 +510,9 @@ importers:
       '@biomejs/biome':
         specifier: ^2.5.14
         version: 2.5.15
-      '@elsewise/plugin':
+      '@elsewise/frontend-plugin':
         specifier: workspace:*
-        version: link:../../../packages/plugin
+        version: link:../../../packages/frontend-plugin
       tsserver:
         specifier: npm:typescript@^6.0.3
         version: typescript@6.0.3
