@@ -1,3 +1,4 @@
+import { validRange } from 'semver';
 import { describe, expect, test } from 'vitest';
 import { Manifest } from './manifest.ts';
 
@@ -88,5 +89,10 @@ describe('Manifest', () => {
 
   test.each(NOT_RANGES)('rejects range %j', (range) => {
     expect(Manifest.safeParse({ ...MINIMAL, elsewise: range, frontend: {} }).success).toBe(false);
+  });
+
+  // The hosts check ranges with semver, which must parse every range the manifest accepts.
+  test.each(RANGES)('accepts range %j that semver parses', (range) => {
+    expect(validRange(range)).not.toBeNull();
   });
 });

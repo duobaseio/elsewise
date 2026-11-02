@@ -4,24 +4,26 @@ import * as z from 'zod';
 export { PluginId };
 
 export type InstalledPlugin = z.infer<typeof InstalledPlugin>;
+export type IncompatiblePlugin = z.infer<typeof IncompatiblePlugin>;
 export type InvalidPlugin = z.infer<typeof InvalidPlugin>;
 export type PluginEntry = z.infer<typeof PluginEntry>;
 
 /**
- * The plugins installed on this machine: the folders in `<frontend data folder>/plugins`.
+ * The plugins installed on this machine in `<frontend data folder>/plugins`.
  */
 export interface PluginsBridge {
   /**
-   * Returns every installed plugin, enabled or not, and every folder whose manifest is missing or malformed.
+   * Returns every installed plugin, enabled or not, every incompatible plugin, and every folder whose manifest is
+   * missing or malformed.
    */
-  load(): Promise<(InstalledPlugin | InvalidPlugin)[]>;
+  load(): Promise<(InstalledPlugin | IncompatiblePlugin | InvalidPlugin)[]>;
 
   /**
    * Returns the installed plugin with `id`, or `undefined` if none is installed.
    *
    * Throws an error if `id` is not a plugin id.
    */
-  load(id: string): Promise<InstalledPlugin | InvalidPlugin | undefined>;
+  load(id: string): Promise<InstalledPlugin | IncompatiblePlugin | InvalidPlugin | undefined>;
 
   /**
    * Replaces whether each plugin is enabled with `entries`.
@@ -57,10 +59,28 @@ export const InstalledPlugin = z.object({
     z.union([z.object({ id: z.string(), keymap: Keymap }), z.object({ id: z.string(), error: z.string() })]),
   ),
   /**
-   * The URL of the plugin's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`.
+   * The URL of the plugin's frontend part's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`. Absent
+   * for a plugin without a frontend part.
    */
-  // TODO: Make optional, for a manifest without a frontend part, once the hosts check the manifest's host range.
-  url: z.string(),
+  url: z.string().optional(),
+});
+
+/**
+ * A plugin which is compatible with eithr Elsewise or other dependent plugins.
+ */
+export const IncompatiblePlugin = z.object({
+  /**
+   * The plugin's `manifest.json`.
+   */
+  manifest: Manifest,
+  /**
+   * Whether the plugin is enabled.
+   */
+  enabled: z.boolean(),
+  /**
+   * The manifest field which range is not satisfied.
+   */
+  unsatisfied: z.literal('elsewise'),
 });
 
 /**

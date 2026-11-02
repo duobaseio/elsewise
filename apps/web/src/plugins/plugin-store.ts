@@ -1,4 +1,4 @@
-import type { InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
+import type { IncompatiblePlugin, InstalledPlugin, InvalidPlugin } from '@elsewise/bridge';
 import type {
   Disposable,
   Keymap,
@@ -12,7 +12,7 @@ import type { ApplicationManager } from '@/application-manager';
 
 export type Plugin =
   | { readonly id: string; readonly status: 'invalid'; readonly error: string }
-  | { readonly id: string; readonly status: 'disabled' | 'failed'; readonly manifest: Manifest }
+  | { readonly id: string; readonly status: 'disabled' | 'failed' | 'incompatible'; readonly manifest: Manifest }
   | {
       readonly id: string;
       readonly status: 'enabled';
@@ -27,7 +27,7 @@ export type Plugin =
 const DISPOSE_TIMEOUT = 15_000;
 
 interface Entry {
-  plugin: InstalledPlugin | InvalidPlugin;
+  plugin: InstalledPlugin | IncompatiblePlugin | InvalidPlugin;
   /** The status of a valid plugin. */
   status: Exclude<Plugin['status'], 'invalid'>;
   /** The plugin's running code, while enabled. */
@@ -81,7 +81,10 @@ export class PluginStore {
     this.publish();
   }
 
-  private async sync(id: string, plugin: InstalledPlugin | InvalidPlugin | undefined): Promise<void> {
+  private async sync(
+    id: string,
+    plugin: InstalledPlugin | IncompatiblePlugin | InvalidPlugin | undefined,
+  ): Promise<void> {
     if (plugin === undefined) {
       // Queues the teardown before dropping the entry, so no enable can queue after it.
       const disabled = this.disable(id);
@@ -90,11 +93,11 @@ export class PluginStore {
       return;
     }
 
-    if ('error' in plugin) {
+    if ('error' in plugin || 'unsatisfied' in plugin) {
       await this.disable(id);
     }
 
-    if (!('error' in plugin) && plugin.enabled) {
+    if (!('error' in plugin) && !('unsatisfied' in plugin) && plugin.enabled) {
       for (const theme of plugin.themes) {
         if ('error' in theme) {
           console.error(`Plugin ${id}'s theme ${theme.id} failed to load: ${theme.error}`);
@@ -117,7 +120,7 @@ export class PluginStore {
   }
 
   /**
-   * Enables every plugin that is flagged enabled, in id order, and logs the invalid ones.
+   * Enables every plugin that is flagged enabled, in id order, and logs the invalid and incompatible ones.
    */
   async enableAll(application: ApplicationManager): Promise<void> {
     for (const state of this.snapshot) {
@@ -130,7 +133,11 @@ export class PluginStore {
         continue;
       }
 
-      // TODO: Skip a plugin without a main module, once plugins without code are decided.
+      if (state.status === 'incompatible') {
+        console.error(`Plugin ${state.id} needs Elsewise ${state.manifest.elsewise}`);
+        continue;
+      }
+
       await this.enable(state.id, application);
     }
   }
@@ -138,7 +145,7 @@ export class PluginStore {
   /**
    * Enables the plugin with `id` in `application`, importing its code first.
    *
-   * Does nothing if the plugin is invalid, not installed or already enabled.
+   * Does nothing if the plugin is invalid, incompatible, not installed or already enabled.
    */
   async enable(id: string, application: ApplicationManager): Promise<void> {
     const entry = this.entries.get(id);
@@ -149,7 +156,7 @@ export class PluginStore {
     entry.pending = entry.pending
       .then(async () => {
         const { plugin } = entry;
-        if (entry.enabled || 'error' in plugin) {
+        if (entry.enabled || 'error' in plugin || 'unsatisfied' in plugin) {
           return;
         }
 
@@ -157,6 +164,11 @@ export class PluginStore {
           entry.status = 'enabled';
           this.publish();
         }
+
+        if (plugin.url === undefined) {
+          return;
+        }
+
         try {
           // As modules are cached by URLs, using a counter makes a reload import the plugin's current code.
           // Unlike a query, a fragment never reaches the server.
@@ -184,6 +196,7 @@ export class PluginStore {
               ),
             );
           }
+
           if (created.onThemeChange) {
             listeners.push(
               application.appearance.onThemeChange((theme) =>
@@ -191,6 +204,7 @@ export class PluginStore {
               ),
             );
           }
+
           if (created.onKeymapChange) {
             listeners.push(
               application.commands.onKeymapChange((keymap) =>
@@ -255,7 +269,7 @@ export class PluginStore {
           }
         }
 
-        if (!('error' in entry.plugin) && entry.status !== 'disabled') {
+        if (!('error' in entry.plugin) && !('unsatisfied' in entry.plugin) && entry.status !== 'disabled') {
           entry.status = 'disabled';
           this.publish();
         }
@@ -272,6 +286,11 @@ export class PluginStore {
         if ('error' in plugin) {
           return { id, status: 'invalid', error: plugin.error };
         }
+
+        if ('unsatisfied' in plugin) {
+          return { id, status: 'incompatible', manifest: plugin.manifest };
+        }
+
         if (status === 'enabled') {
           return {
             id,

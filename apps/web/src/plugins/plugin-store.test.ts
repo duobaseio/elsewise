@@ -15,7 +15,7 @@ function setUp() {
   const application = builtInApplication({ appearance, editor });
   const store = new PluginStore();
   // Installs the plugin `id` with its main module at `url`, enables it, and returns its status.
-  async function enable(id: string, url: string) {
+  async function enable(id: string, url: string | undefined) {
     vi.stubGlobal('window', { bridge: { plugins: { load: async () => installed(id, url) } } });
     await store.load(id);
     await store.enable(id, application);
@@ -24,14 +24,20 @@ function setUp() {
   return { appearance, editor, commands: application.commands, application, store, enable };
 }
 
-// Returns the enabled plugin `id` whose main module is at `url`.
-function installed(id: string, url: string): InstalledPlugin {
+// Returns the enabled plugin `id` whose main module is at `url`, or whose frontend part is absent when `undefined`.
+function installed(id: string, url: string | undefined): InstalledPlugin {
   return {
-    manifest: { id, name: id, version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
+    manifest: {
+      id,
+      name: id,
+      version: '1.0.0',
+      elsewise: '^1.0.0',
+      ...(url !== undefined && { frontend: { main: 'main.js' } }),
+    },
     enabled: true,
     themes: [],
     keymaps: [],
-    url,
+    ...(url !== undefined && { url }),
   };
 }
 
@@ -342,6 +348,25 @@ describe('enable', () => {
     await enable('b', RECORDING);
 
     expect(events).toEqual(['enable started', 'enable b']);
+  });
+
+  test('skips incompatible plugin', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([{ ...installed('a', RECORDING), unsatisfied: 'elsewise' }]);
+    await store.enable('a', application);
+
+    expect(store.plugins[0]).toEqual({ id: 'a', status: 'incompatible', manifest: installed('a', RECORDING).manifest });
+    expect(events).toEqual([]);
+  });
+
+  test('enables plugin without frontend part without importing', async () => {
+    const { store, enable } = setUp();
+    await expect(enable('a', undefined)).resolves.toBe('enabled');
+    await store.disable('a');
+
+    expect(store.plugins[0]?.status).toBe('disabled');
+    expect(error).not.toHaveBeenCalled();
   });
 
   test('skips invalid plugin', async () => {

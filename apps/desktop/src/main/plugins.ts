@@ -1,9 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { type InstalledPlugin, type InvalidPlugin, PluginEntry, PluginId } from '@elsewise/bridge';
+import {
+  type IncompatiblePlugin,
+  type InstalledPlugin,
+  type InvalidPlugin,
+  PluginEntry,
+  PluginId,
+} from '@elsewise/bridge';
 import { frontendDataDir, writeJsonSync } from '@elsewise/core';
 import { Keymap, Manifest, Theme } from '@elsewise/frontend-plugin';
-import { ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
+import { satisfies } from 'semver';
 import * as z from 'zod';
 import { readJsonFolder } from '../fs/json-folder';
 
@@ -25,7 +32,15 @@ const ROOT = path.join(frontendDataDir(), 'plugins');
 export function handlePlugins(): void {
   ipcMain.handle(
     'plugins:load',
-    (_event, id?: unknown): (InstalledPlugin | InvalidPlugin)[] | InstalledPlugin | InvalidPlugin | undefined => {
+    (
+      _event,
+      id?: unknown,
+    ):
+      | (InstalledPlugin | IncompatiblePlugin | InvalidPlugin)[]
+      | InstalledPlugin
+      | IncompatiblePlugin
+      | InvalidPlugin
+      | undefined => {
       // No `plugins.json` means no entries, so every plugin is disabled.
       let entries: PluginEntry[] = [];
       try {
@@ -89,9 +104,8 @@ function validate(entries: unknown): PluginEntry[] {
   });
 }
 
-// Returns the plugin in `folder` with its manifest, or with why it failed when it has none, it is malformed, or it
-// declares an id other than `folder`.
-function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin {
+// Loads the plugin in `folder`, or reports why it is invalid or incompatible.
+function load(folder: string, enabled: boolean): InstalledPlugin | IncompatiblePlugin | InvalidPlugin {
   const file = path.join(ROOT, folder, 'manifest.json');
   let json: string;
   try {
@@ -119,6 +133,10 @@ function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin
     return { id: folder, enabled, error: `${file} declares the id ${manifest.data.id}, not its folder's name` };
   }
 
+  if (!satisfies(app.getVersion(), manifest.data.elsewise)) {
+    return { manifest: manifest.data, enabled, unsatisfied: 'elsewise' };
+  }
+
   return {
     manifest: manifest.data,
     enabled,
@@ -128,8 +146,7 @@ function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin
     keymaps: readJsonFolder(path.join(ROOT, folder, 'bundle', 'keymaps'), Keymap).map((entry) =>
       'error' in entry ? entry : { id: entry.id, keymap: entry.content },
     ),
-    // TODO: Leave out for a manifest without a frontend part, and serve from `bundle/frontend`, once the hosts check
-    // the manifest's host range.
-    url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.frontend?.main ?? 'main.js'}`,
+    // TODO: Serve from `frontend/`, once plugins are built per part.
+    ...(manifest.data.frontend && { url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.frontend.main}` }),
   };
 }
