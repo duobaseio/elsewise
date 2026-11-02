@@ -102,7 +102,7 @@ describe('plugins:load', () => {
 
   test("reads plugin's manifest without unknown properties", () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { ...MANIFEST, extra: 'ignored', frontend: { entry: 'ignored' } });
+    install('hello', { ...MANIFEST, extra: 'ignored', frontend: { main: 'main.js', entry: 'ignored' } });
 
     expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: true }]);
   });
@@ -147,6 +147,16 @@ describe('plugins:load', () => {
 
     expect(handler('plugins:load')()).toEqual([
       { manifest: { ...MANIFEST, elsewise }, enabled: true, unsatisfied: 'elsewise' },
+    ]);
+  });
+
+  test('returns plugin whose frontend part has no main without url, with its themes', () => {
+    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
+    install('hello', { ...MANIFEST, frontend: {} });
+    frontend('hello', 'themes/dusk.json', DUSK);
+
+    expect(handler('plugins:load')()).toEqual([
+      { manifest: { ...MANIFEST, frontend: {} }, themes: [{ id: 'dusk', theme: DUSK }], keymaps: [], enabled: true },
     ]);
   });
 

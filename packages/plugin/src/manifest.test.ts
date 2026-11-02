@@ -52,12 +52,12 @@ const NOT_RANGES = [
 ];
 
 describe('Manifest', () => {
-  test('gives a part without a main the default', () => {
-    expect(Manifest.parse({ ...MINIMAL, frontend: {}, daemon: {} })).toEqual({
-      ...MINIMAL,
-      frontend: { main: 'main.js' },
-      daemon: { main: 'main.js' },
-    });
+  test('gives daemon part without main the default', () => {
+    expect(Manifest.parse({ ...MINIMAL, daemon: {} })).toEqual({ ...MINIMAL, daemon: { main: 'main.js' } });
+  });
+
+  test('keeps frontend part without main without one', () => {
+    expect(Manifest.parse({ ...MINIMAL, frontend: {} })).toEqual({ ...MINIMAL, frontend: {} });
   });
 
   test('keeps pairing ranges and dependencies', () => {

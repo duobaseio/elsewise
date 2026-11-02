@@ -1,5 +1,19 @@
 {
   "name": "Dusk",
+  "light": {
+    "interface": {
+      "background": "#e9edf3",
+      "foreground": "#1c2430"
+    },
+    "editor": {
+      "background": "#e9edf3",
+      "foreground": "#1c2430"
+    },
+    "terminal": {
+      "background": "#e9edf3",
+      "foreground": "#1c2430"
+    }
+  },
   "dark": {
     "interface": {
       "background": "#1c2430",

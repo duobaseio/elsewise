@@ -86,10 +86,9 @@ export const FrontendManifestPart = z.object({
   dependencies: z.record(PluginId, z.string().regex(RANGE)).optional(),
 
   /**
-   * The main module's path. Cannot be blank. Defaults to `main.js`.
+   * The main module's path. Undefined if the plugin ships only themes and/or keymaps.
    */
-  // TODO: Make optional, so a plugin can ship only themes and keymaps, once plugins without code are decided.
-  main: z.string().regex(/\S/).default('main.js'),
+  main: z.string().regex(/\S/).optional(),
 
   /**
    * The compatible versions of the plugin's daemon part, e.g. `^1.3.0`. Defaults to the same version.

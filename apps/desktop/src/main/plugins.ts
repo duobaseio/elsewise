@@ -146,6 +146,8 @@ function load(folder: string, enabled: boolean): InstalledPlugin | IncompatibleP
     keymaps: readJsonFolder(path.join(ROOT, folder, 'frontend', 'keymaps'), Keymap).map((entry) =>
       'error' in entry ? entry : { id: entry.id, keymap: entry.content },
     ),
-    ...(manifest.data.frontend && { url: `app://elsewise/plugins/${folder}/frontend/${manifest.data.frontend.main}` }),
+    ...(manifest.data.frontend?.main !== undefined && {
+      url: `app://elsewise/plugins/${folder}/frontend/${manifest.data.frontend.main}`,
+    }),
   };
 }

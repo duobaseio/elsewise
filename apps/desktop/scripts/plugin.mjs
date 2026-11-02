@@ -4,8 +4,9 @@
 //   node <path>/plugin.mjs remove <id>
 //
 // `add` takes the id from the plugin's manifest.json, copies it to <frontend data folder>/plugins/<id>/, and
-// links <frontend data folder>/plugins/<id>/frontend to the plugin's dist/frontend/, so a rebuild needs no second
-// `add`, but a change to the manifest does. Restart Elsewise to load the change.
+// links <frontend data folder>/plugins/<id>/frontend to the plugin's dist/frontend/, or to its frontend/ when the
+// manifest names no main module, as a plugin without code has no build. A rebuild needs no second `add`, but a change
+// to the manifest does. Restart Elsewise to load the change.
 // TODO: Link dist/daemon into the daemon's plugins folder, once the daemon loads plugins.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,10 +37,11 @@ if (command === 'add') {
     process.exit(1);
   }
 
-  const frontend = path.resolve('dist', 'frontend');
-  const main = path.join(frontend, manifest.frontend.main ?? 'main.js');
-  if (!fs.existsSync(main)) {
-    console.error(`[plugin] ${main} not found (is the plugin built?)`);
+  const { main } = manifest.frontend;
+  const frontend = main === undefined ? path.resolve('frontend') : path.resolve('dist', 'frontend');
+  const required = main === undefined ? frontend : path.join(frontend, main);
+  if (!fs.existsSync(required)) {
+    console.error(`[plugin] ${required} not found${main === undefined ? '' : ' (is the plugin built?)'}`);
     process.exit(1);
   }
 

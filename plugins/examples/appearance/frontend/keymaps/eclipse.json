@@ -9,7 +9,6 @@
     "elsewise.editor.edit.deleteLine": ["Mod-d"],
     "elsewise.editor.edit.duplicateLine": ["Mod-Alt-ArrowDown"],
     "elsewise.editor.edit.duplicateLineUp": ["Mod-Alt-ArrowUp"],
-    "elsewise.editor.search.goToLine": ["Mod-l"],
-    "io.duobase.elsewise.examples.editor.shrug": ["Mod-Shift-s"]
+    "elsewise.editor.search.goToLine": ["Mod-l"]
   }
 }
