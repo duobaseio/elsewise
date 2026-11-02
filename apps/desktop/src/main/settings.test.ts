@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import { configLocalDir, dataLocalDir } from '@elsewise/core';
+import { configLocalDir, frontendDataDir } from '@elsewise/core';
 import { BrowserWindow, ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handleSettings, watchUserThemesAndKeymaps } from './settings';
@@ -16,17 +16,17 @@ vi.mock('@elsewise/core', async (importOriginal) => {
   return {
     ...(await importOriginal<typeof import('@elsewise/core')>()),
     configLocalDir: () => join(home, 'config'),
-    dataLocalDir: () => join(home, 'data'),
+    frontendDataDir: () => join(home, 'frontend'),
   };
 });
 
 const FILE = path.join(configLocalDir(), 'settings.json');
-const PLUGIN_FILE = path.join(dataLocalDir(), 'plugins', 'hello', 'settings.json');
+const PLUGIN_FILE = path.join(frontendDataDir(), 'plugins', 'hello', 'settings.json');
 
 afterEach(() => {
   vi.restoreAllMocks();
   fs.rmSync(configLocalDir(), { recursive: true, force: true });
-  fs.rmSync(dataLocalDir(), { recursive: true, force: true });
+  fs.rmSync(frontendDataDir(), { recursive: true, force: true });
 });
 
 afterAll(() => {
@@ -434,7 +434,7 @@ describe('settings:save-plugin', () => {
   test('writes the settings beside the plugin and reads them back', () => {
     handler('settings:save-plugin')({}, 'com.acme.hello', { greeting: 'hi' });
 
-    const file = path.join(dataLocalDir(), 'plugins', 'com.acme.hello', 'settings.json');
+    const file = path.join(frontendDataDir(), 'plugins', 'com.acme.hello', 'settings.json');
     expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual({ greeting: 'hi' });
     expect(handler('settings:load-plugin')({}, 'com.acme.hello')).toEqual({ greeting: 'hi' });
   });

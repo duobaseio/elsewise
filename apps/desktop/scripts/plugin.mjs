@@ -3,12 +3,12 @@
 //   node <path>/plugin.mjs add           after building the plugin into bundle/
 //   node <path>/plugin.mjs remove <id>
 //
-// `add` takes the id from the plugin's manifest.json, copies it to <data folder>/plugins/<id>/, and links
-// <data folder>/plugins/<id>/bundle to the plugin's bundle/, so a rebuild needs no second `add`, but a change to the
-// manifest does. Restart Elsewise to load the change.
+// `add` takes the id from the plugin's manifest.json, copies it to <frontend data folder>/plugins/<id>/, and
+// links <frontend data folder>/plugins/<id>/bundle to the plugin's bundle/, so a rebuild needs no second `add`, but
+// a change to the manifest does. Restart Elsewise to load the change.
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataLocalDir, writeJsonSync } from '@elsewise/core';
+import { frontendDataDir, writeJsonSync } from '@elsewise/core';
 
 const [command, argument] = process.argv.slice(2);
 if (!(command === 'add' && argument === undefined) && !(command === 'remove' && argument !== undefined)) {
@@ -22,8 +22,8 @@ if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id ?? '')) {
   process.exit(1);
 }
 
-const file = path.join(dataLocalDir(), 'plugins.json');
-const folder = path.join(dataLocalDir(), 'plugins', id);
+const file = path.join(frontendDataDir(), 'plugins.json');
+const folder = path.join(frontendDataDir(), 'plugins', id);
 const others = (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : []).filter(
   (plugin) => plugin.id !== id,
 );

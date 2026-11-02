@@ -1,21 +1,21 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { type InstalledPlugin, type InvalidPlugin, PluginEntry, PluginId } from '@elsewise/bridge';
-import { dataLocalDir, writeJsonSync } from '@elsewise/core';
+import { frontendDataDir, writeJsonSync } from '@elsewise/core';
 import { Keymap, Manifest, Theme } from '@elsewise/frontend-plugin';
 import { ipcMain } from 'electron';
 import * as z from 'zod';
 import { readJsonFolder } from '../fs/json-folder';
 
-const PLUGINS = path.join(dataLocalDir(), 'plugins.json');
-const ROOT = path.join(dataLocalDir(), 'plugins');
+const PLUGINS = path.join(frontendDataDir(), 'plugins.json');
+const ROOT = path.join(frontendDataDir(), 'plugins');
 
 /**
  * Handles the renderer's `plugins:load` and `plugins:save`.
  *
- * A load returns each folder in `<data folder>/plugins` with its `manifest.json`, the themes and keymaps in its bundle,
- * and whether `<data folder>/plugins.json` enables it. Given an id, it returns only that folder, or `undefined` if there
- * is none.
+ * A load returns each folder in `<frontend data folder>/plugins` with its `manifest.json`, the themes and keymaps in
+ * its bundle, and whether `<frontend data folder>/plugins.json` enables it. Given an id, it returns only that folder,
+ * or `undefined` if there is none.
  *
  * A save replaces `plugins.json`.
  *

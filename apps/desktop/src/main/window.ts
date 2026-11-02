@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataLocalDir, writeJsonSync } from '@elsewise/core';
+import { frontendDataDir, writeJsonSync } from '@elsewise/core';
 import { app, type BrowserWindow, type Rectangle, screen } from 'electron';
 
 interface Window extends Rectangle {
@@ -29,7 +29,7 @@ export function saveWindow(window: BrowserWindow): void {
       return;
     }
 
-    writeJsonSync(path.join(dataLocalDir(), 'window.json'), { ...loadLayouts(), [layoutKey()]: latest });
+    writeJsonSync(path.join(frontendDataDir(), 'window.json'), { ...loadLayouts(), [layoutKey()]: latest });
   }
 
   function schedule(): void {
@@ -100,7 +100,7 @@ function layoutKey(): string {
 function loadLayouts(): Record<string, Window> {
   let parsed: unknown;
   try {
-    parsed = JSON.parse(fs.readFileSync(path.join(dataLocalDir(), 'window.json'), 'utf8'));
+    parsed = JSON.parse(fs.readFileSync(path.join(frontendDataDir(), 'window.json'), 'utf8'));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
       console.error('window: unreadable, starting from defaults', error);

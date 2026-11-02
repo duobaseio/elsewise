@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataLocalDir } from '@elsewise/core';
+import { frontendDataDir } from '@elsewise/core';
 import { ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handlePlugins } from './plugins';
@@ -12,11 +12,11 @@ vi.mock('@elsewise/core', async (importOriginal) => {
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const data = mkdtempSync(join(tmpdir(), 'elsewise-'));
-  return { ...(await importOriginal<typeof import('@elsewise/core')>()), dataLocalDir: () => data };
+  return { ...(await importOriginal<typeof import('@elsewise/core')>()), frontendDataDir: () => data };
 });
 
-const ENTRIES_FILE = path.join(dataLocalDir(), 'plugins.json');
-const PLUGINS_FOLDER = path.join(dataLocalDir(), 'plugins');
+const ENTRIES_FILE = path.join(frontendDataDir(), 'plugins.json');
+const PLUGINS_FOLDER = path.join(frontendDataDir(), 'plugins');
 const ENTRY = { id: 'hello', enabled: true };
 const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } };
 const URL = 'app://elsewise/plugins/hello/bundle/main.js';
@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(dataLocalDir(), { recursive: true, force: true });
+  fs.rmSync(frontendDataDir(), { recursive: true, force: true });
 });
 
 // Returns the handler `handlePlugins` registers for `channel`.

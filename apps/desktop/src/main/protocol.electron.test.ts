@@ -4,7 +4,7 @@ import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
-import { dataLocalDir } from '@elsewise/core';
+import { frontendDataDir } from '@elsewise/core';
 import electron from 'electron';
 import { _electron, type ElectronApplication } from 'playwright';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -52,7 +52,7 @@ beforeEach(() => {
   vi.stubEnv('XDG_DATA_HOME', path.join(home, 'data'));
   vi.stubEnv('LOCALAPPDATA', home);
 
-  const plugin = path.join(dataLocalDir(), 'plugins', 'test', 'bundle');
+  const plugin = path.join(frontendDataDir(), 'plugins', 'test', 'bundle');
   fs.mkdirSync(plugin, { recursive: true });
   fs.writeFileSync(path.join(plugin, 'main.js'), 'export const loaded = true;');
   fs.writeFileSync(path.join(plugin, 'page.html'), '<!doctype html><title>test</title>');

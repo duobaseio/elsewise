@@ -8,7 +8,7 @@ export type InvalidPlugin = z.infer<typeof InvalidPlugin>;
 export type PluginEntry = z.infer<typeof PluginEntry>;
 
 /**
- * The plugins installed on this machine: the folders in `<data folder>/plugins`.
+ * The plugins installed on this machine: the folders in `<frontend data folder>/plugins`.
  */
 export interface PluginsBridge {
   /**
@@ -32,7 +32,7 @@ export interface PluginsBridge {
 }
 
 /**
- * A plugin installed on this machine: a folder in `<data folder>/plugins` with a `manifest.json`.
+ * A plugin installed on this machine: a folder in `<frontend data folder>/plugins` with a `manifest.json`.
  */
 export const InstalledPlugin = z.object({
   /**
@@ -64,7 +64,7 @@ export const InstalledPlugin = z.object({
 });
 
 /**
- * A folder in `<data folder>/plugins` whose `manifest.json` is missing or malformed.
+ * A folder in `<frontend data folder>/plugins` whose `manifest.json` is missing or malformed.
  */
 export const InvalidPlugin = z.object({
   /**
@@ -82,7 +82,7 @@ export const InvalidPlugin = z.object({
 });
 
 /**
- * An entry in `<data folder>/plugins.json`.
+ * An entry in `<frontend data folder>/plugins.json`.
  */
 export const PluginEntry = z.object({
   /**

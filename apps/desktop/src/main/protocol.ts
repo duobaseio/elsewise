@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { dataLocalDir } from '@elsewise/core';
+import { frontendDataDir } from '@elsewise/core';
 import { net, session } from 'electron';
 
 const MIME_TYPES: Record<string, string> = {
@@ -25,14 +25,14 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 const RENDERER = path.join(__dirname, '../renderer');
-const PLUGINS = path.join(dataLocalDir(), 'plugins');
+const PLUGINS = path.join(frontendDataDir(), 'plugins');
 // A plugin's bundle, and nothing else in its folder: `settings.json` sits beside it.
 const BUNDLE = /^\/plugins\/([A-Za-z0-9][A-Za-z0-9._-]*)\/bundle\/(.*)$/;
 
 /**
  * Serves `app://elsewise/` from two folders:
  *
- * - `/plugins/<id>/bundle/<path>` → `<data folder>/plugins/<id>/bundle/<path>`, an installed plugin's bundle
+ * - `/plugins/<id>/bundle/<path>` → `<frontend data folder>/plugins/<id>/bundle/<path>`, an installed plugin's bundle
  * - any other `<path>` → `<renderer>/<path>`, the Elsewise applications
  *
  * Any other `/plugins/…` path → 404: a plugin's folder also holds its settings.

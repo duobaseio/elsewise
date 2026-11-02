@@ -26,7 +26,7 @@ vi.mock('electron', () => ({
   },
   session: { defaultSession: { protocol: { handle: vi.fn() } } },
 }));
-vi.mock('@elsewise/core', () => ({ dataLocalDir: () => DATA }));
+vi.mock('@elsewise/core', () => ({ frontendDataDir: () => DATA }));
 
 beforeEach(() => {
   files.clear();

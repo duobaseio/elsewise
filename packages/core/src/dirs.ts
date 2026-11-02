@@ -28,6 +28,11 @@ export function dataLocalDir(): string {
   }
 }
 
+/** Returns the directory where the frontend's state lives. */
+export function frontendDataDir(): string {
+  return path.join(dataLocalDir(), 'frontend');
+}
+
 /** Returns the directory where the daemon's state lives. */
 export function daemonDataDir(): string {
   return path.join(dataLocalDir(), 'daemon');

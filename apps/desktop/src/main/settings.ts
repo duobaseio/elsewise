@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DEFAULT_SETTINGS, PluginId, Settings } from '@elsewise/bridge';
-import { configLocalDir, dataLocalDir, writeJsonSync } from '@elsewise/core';
+import { configLocalDir, frontendDataDir, writeJsonSync } from '@elsewise/core';
 import { Keymap, Theme } from '@elsewise/frontend-plugin';
 import { BrowserWindow, ipcMain } from 'electron';
 import { readJsonFolder } from '../fs/json-folder';
@@ -9,7 +9,8 @@ import { readJsonFolder } from '../fs/json-folder';
 /**
  * Handles the renderer's settings channels:
  * - `settings:load` and `settings:save` read and replace `<config folder>/settings.json`.
- * - `settings:load-plugin` and `settings:save-plugin` read and replace `<data folder>/plugins/<id>/settings.json`.
+ * - `settings:load-plugin` and `settings:save-plugin` read and replace
+ *   `<frontend data folder>/plugins/<id>/settings.json`.
  * - `settings:load-user-themes`, `settings:save-user-theme` and `settings:delete-user-theme` read, replace and delete
  *   the user's themes in `<config folder>/themes`.
  * - `settings:load-user-keymaps`, `settings:save-user-keymap` and `settings:delete-user-keymap` do the same for the
@@ -80,7 +81,7 @@ function pluginFile(plugin: unknown): string {
     throw new Error(`settings: invalid plugin id ${JSON.stringify(plugin)}`);
   }
 
-  return path.join(dataLocalDir(), 'plugins', id.data, 'settings.json');
+  return path.join(frontendDataDir(), 'plugins', id.data, 'settings.json');
 }
 
 function userFile(folder: 'themes' | 'keymaps', id: unknown): string {
