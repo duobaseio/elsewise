@@ -26,18 +26,15 @@ const MIME_TYPES: Record<string, string> = {
 
 const RENDERER = path.join(__dirname, '../renderer');
 const PLUGINS = path.join(frontendDataDir(), 'plugins');
-// A plugin's bundle, and nothing else in its folder: `settings.json` sits beside it.
-const BUNDLE = /^\/plugins\/([A-Za-z0-9][A-Za-z0-9._-]*)\/bundle\/(.*)$/;
+const PLUGIN = /^\/plugins\/([A-Za-z0-9][A-Za-z0-9._-]*)\/(.*)$/;
 
 /**
  * Serves `app://elsewise/` from two folders:
  *
- * - `/plugins/<id>/bundle/<path>` → `<frontend data folder>/plugins/<id>/bundle/<path>`, an installed plugin's bundle
+ * - `/plugins/<id>/<path>` → `<frontend data folder>/plugins/<id>/<path>`, an installed plugin's folder
  * - any other `<path>` → `<renderer>/<path>`, the Elsewise applications
  *
- * Any other `/plugins/…` path → 404: a plugin's folder also holds its settings.
- *
- * When there is no file in a plugin's bundle → 404. When there is none in `<renderer>`, the response depends on the
+ * When there is no file in a plugin's folder → 404. When there is none in `<renderer>`, the response depends on the
  * request's `Accept` header:
  * - includes `text/html`, so a page load of a route →`<renderer>/index.html`, for the router to render
  * - anything else, so a missing module or asset → 404
@@ -59,13 +56,13 @@ export function handleAppScheme(): void {
     let root: string;
     let subpath: string;
     if (pathname.startsWith('/plugins/')) {
-      const bundle = BUNDLE.exec(pathname);
-      if (!bundle) {
+      const plugin = PLUGIN.exec(pathname);
+      if (!plugin) {
         return new Response(null, { status: 404 });
       }
 
-      root = path.join(PLUGINS, bundle[1], 'bundle');
-      subpath = bundle[2];
+      root = path.join(PLUGINS, plugin[1]);
+      subpath = plugin[2];
     } else {
       root = RENDERER;
       subpath = pathname.slice(1);

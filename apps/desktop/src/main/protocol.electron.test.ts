@@ -10,9 +10,9 @@ import { _electron, type ElectronApplication } from 'playwright';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const DESKTOP = path.join(__dirname, '../..');
-const PLUGIN_PAGE = 'app://elsewise/plugins/test/bundle/page.html';
+const PLUGIN_PAGE = 'app://elsewise/plugins/test/frontend/page.html';
 // Evaluated in a page, as a string so that Vitest leaves the import alone.
-const IMPORT_PLUGIN = `import('app://elsewise/plugins/test/bundle/main.js').then((module) => module.loaded, () => 'refused')`;
+const IMPORT_PLUGIN = `import('app://elsewise/plugins/test/frontend/main.js').then((module) => module.loaded, () => 'refused')`;
 
 // Two pages on origins of their own: the dev server's, and some other site's.
 let servers: http.Server[];
@@ -52,7 +52,7 @@ beforeEach(() => {
   vi.stubEnv('XDG_DATA_HOME', path.join(home, 'data'));
   vi.stubEnv('LOCALAPPDATA', home);
 
-  const plugin = path.join(frontendDataDir(), 'plugins', 'test', 'bundle');
+  const plugin = path.join(frontendDataDir(), 'plugins', 'test', 'frontend');
   fs.mkdirSync(plugin, { recursive: true });
   fs.writeFileSync(path.join(plugin, 'main.js'), 'export const loaded = true;');
   fs.writeFileSync(path.join(plugin, 'page.html'), '<!doctype html><title>test</title>');

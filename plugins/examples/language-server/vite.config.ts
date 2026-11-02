@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   build: {
-    outDir: 'bundle',
+    outDir: 'dist/frontend',
     lib: { entry: 'src/main.ts', formats: ['es'], fileName: 'main' },
     rolldownOptions: { external: peer },
   },

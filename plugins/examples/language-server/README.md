@@ -20,7 +20,7 @@ Run pnpm from the repo root, filtered to the package:
 pnpm --filter @elsewise/plugin-example-language-server build      # also: serve, typecheck, check
 ```
 
-`build` bundles the plugin into `bundle/main.js`.
+`build` bundles the plugin into `dist/frontend/main.js`.
 
 ## Trying it
 
@@ -32,7 +32,7 @@ pnpm --filter @elsewise/plugin-example-language-server build      # also: serve,
    node ../../../apps/desktop/scripts/plugin.mjs add
    ```
 
-   `add` takes the plugin's id from `manifest.json`, and links the bundle, so a rebuild needs no second `add`, but a
+   `add` takes the plugin's id from `manifest.json`, and links `dist/frontend`, so a rebuild needs no second `add`, but a
    change to the manifest does.
 
 2. Serve the language server, and leave it running:

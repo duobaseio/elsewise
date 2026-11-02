@@ -21,8 +21,8 @@ const ROOT = path.join(frontendDataDir(), 'plugins');
  * Handles the renderer's `plugins:load` and `plugins:save`.
  *
  * A load returns each folder in `<frontend data folder>/plugins` with its `manifest.json`, the themes and keymaps in
- * its bundle, and whether `<frontend data folder>/plugins.json` enables it. Given an id, it returns only that folder,
- * or `undefined` if there is none.
+ * its frontend part, and whether `<frontend data folder>/plugins.json` enables it. Given an id, it returns only that
+ * folder, or `undefined` if there is none.
  *
  * A save replaces `plugins.json`.
  *
@@ -140,13 +140,12 @@ function load(folder: string, enabled: boolean): InstalledPlugin | IncompatibleP
   return {
     manifest: manifest.data,
     enabled,
-    themes: readJsonFolder(path.join(ROOT, folder, 'bundle', 'themes'), Theme).map((entry) =>
+    themes: readJsonFolder(path.join(ROOT, folder, 'frontend', 'themes'), Theme).map((entry) =>
       'error' in entry ? entry : { id: entry.id, theme: entry.content },
     ),
-    keymaps: readJsonFolder(path.join(ROOT, folder, 'bundle', 'keymaps'), Keymap).map((entry) =>
+    keymaps: readJsonFolder(path.join(ROOT, folder, 'frontend', 'keymaps'), Keymap).map((entry) =>
       'error' in entry ? entry : { id: entry.id, keymap: entry.content },
     ),
-    // TODO: Serve from `frontend/`, once plugins are built per part.
-    ...(manifest.data.frontend && { url: `app://elsewise/plugins/${folder}/bundle/${manifest.data.frontend.main}` }),
+    ...(manifest.data.frontend && { url: `app://elsewise/plugins/${folder}/frontend/${manifest.data.frontend.main}` }),
   };
 }

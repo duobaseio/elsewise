@@ -46,20 +46,20 @@ export const InstalledPlugin = z.object({
    */
   enabled: z.boolean(),
   /**
-   * The themes in the plugin's `bundle/themes` folder, each identified by its file name without `.json`.
+   * The themes in the plugin's `frontend/themes` folder, each identified by its file name without `.json`.
    * `dusk` for `dusk.json`, or with why it could not be read.
    */
   themes: z.array(
     z.union([z.object({ id: z.string(), theme: Theme }), z.object({ id: z.string(), error: z.string() })]),
   ),
   /**
-   * The keymaps in the plugin's `bundle/keymaps` folder, each identified by its file name without `.json`.
+   * The keymaps in the plugin's `frontend/keymaps` folder, each identified by its file name without `.json`.
    */
   keymaps: z.array(
     z.union([z.object({ id: z.string(), keymap: Keymap }), z.object({ id: z.string(), error: z.string() })]),
   ),
   /**
-   * The URL of the plugin's frontend part's main module, e.g. `app://elsewise/plugins/hello/bundle/main.js`. Absent
+   * The URL of the plugin's frontend part's main module, e.g. `app://elsewise/plugins/hello/frontend/main.js`. Absent
    * for a plugin without a frontend part.
    */
   url: z.string().optional(),
