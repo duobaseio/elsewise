@@ -10,7 +10,7 @@
   },
   "description": "An example plugin that adds to the code editor.",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node -e \"fs.copyFileSync('manifest.json', 'dist/manifest.json')\"",
     "typecheck": "tsc --noEmit",
     "format": "biome format",
     "lint": "biome lint",

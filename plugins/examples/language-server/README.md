@@ -20,7 +20,7 @@ Run pnpm from the repo root, filtered to the package:
 pnpm --filter @elsewise/plugin-example-language-server build      # also: serve, typecheck, check
 ```
 
-`build` bundles the plugin into `dist/frontend/main.js`.
+`build` bundles the plugin into `dist/frontend/main.js`, and copies `manifest.json` into `dist/`.
 
 ## Trying it
 
@@ -29,10 +29,10 @@ pnpm --filter @elsewise/plugin-example-language-server build      # also: serve,
    ```bash
    pnpm --filter @elsewise/plugin-example-language-server build
    cd plugins/examples/language-server
-   node ../../../apps/desktop/scripts/plugin.mjs add
+   node ../../../apps/desktop/scripts/plugin.mjs add dist
    ```
 
-   `add` takes the plugin's id from `manifest.json`, and links `dist/frontend`, so a rebuild needs no second `add`, but a
+   `add` takes the plugin's id from `dist/manifest.json`, and links `dist/frontend`, so a rebuild needs no second `add`, but a
    change to the manifest does.
 
 2. Serve the language server, and leave it running:

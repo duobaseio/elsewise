@@ -54,7 +54,7 @@ export const Manifest = z.lazy(() =>
       version: z.string().regex(SEMVER),
 
       /**
-       * The versions of Elsewise the plugin works with, e.g. `^1.2.0`. The app and the daemon each refuse a plugin
+       * The version range of Elsewise the plugin works with, e.g. `^1.2.0`. The app and the daemon each refuse a plugin
        * that excludes their version.
        */
       elsewise: z.string().regex(RANGE),

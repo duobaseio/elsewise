@@ -10,7 +10,7 @@
   },
   "description": "An example plugin that adds TypeScript's language server, typescript-language-server, to the code editor.",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node -e \"fs.copyFileSync('manifest.json', 'dist/manifest.json')\"",
     "serve": "node scripts/serve.mjs",
     "typecheck": "tsc --noEmit",
     "format": "biome format",

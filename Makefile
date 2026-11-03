@@ -8,6 +8,8 @@ BOLD  := \033[1m
 RESET := \033[0m
 
 TOOLS := tools
+# The starter plugin is its own pnpm workspace, which `pnpm -r` from the root does not see.
+STARTER := plugins/starter
 BUF   := pnpm --filter @elsewise/transport exec buf
 PROTO := ../../../proto
 
@@ -54,6 +56,8 @@ bootstrap bs: doctor install generate
 install i:
 	@echo "$(BLUE)pnpm install$(RESET)"
 	@pnpm install
+	@echo "$(BLUE)cd $(STARTER) && pnpm install$(RESET)"
+	@cd $(STARTER) && pnpm install
 	@echo "$(BLUE)cd $(TOOLS) && flutter pub get$(RESET)"
 	@cd $(TOOLS) && flutter pub get
 	@echo "$(GREEN)✓ dependencies installed$(RESET)"
@@ -73,6 +77,8 @@ lint l:
 	@pnpm -r check
 	@echo "$(BLUE)pnpm -r typecheck$(RESET)"
 	@pnpm -r typecheck
+	@echo "$(BLUE)cd $(STARTER) && pnpm check && pnpm typecheck$(RESET)"
+	@cd $(STARTER) && pnpm check && pnpm typecheck
 	@echo "$(BLUE)buf lint proto$(RESET)"
 	@$(BUF) lint $(PROTO)
 	@echo "$(BLUE)buf format --diff --exit-code proto$(RESET)"

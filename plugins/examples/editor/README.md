@@ -11,8 +11,8 @@ Run pnpm from the repo root, filtered to the package:
 pnpm --filter @elsewise/plugin-example-editor build      # also: typecheck, check
 ```
 
-`build` bundles the plugin into `dist/frontend/main.js`. The modules that Elsewise shares with its plugins, e.g.
-CodeMirror, are left out of the bundle.
+`build` bundles the plugin into `dist/frontend/main.js`, and copies `manifest.json` into `dist/`. The modules that
+Elsewise shares with its plugins, e.g. CodeMirror, are left out of the bundle.
 
 ## Trying it
 
@@ -21,10 +21,10 @@ CodeMirror, are left out of the bundle.
    ```bash
    pnpm --filter @elsewise/plugin-example-editor build
    cd plugins/examples/editor
-   node ../../../apps/desktop/scripts/plugin.mjs add
+   node ../../../apps/desktop/scripts/plugin.mjs add dist
    ```
 
-   `add` takes the plugin's id from `manifest.json`, and links `dist/frontend`, so a rebuild needs no second `add`, but a
+   `add` takes the plugin's id from `dist/manifest.json`, and links `dist/frontend`, so a rebuild needs no second `add`, but a
    change to the manifest does.
 
 2. Run Elsewise, e.g. `pnpm --filter @elsewise/web dev` and `pnpm --filter @elsewise/desktop dev`. Its editor shows

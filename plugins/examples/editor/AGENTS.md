@@ -5,7 +5,8 @@ menu items.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin-example-editor <script>`.
 
-`build` bundles `src/main.ts` into `dist/frontend/main.js`, the plugin's main module.
+`build` bundles `src/main.ts` into `dist/frontend/main.js`, the plugin's main module, and copies `manifest.json`
+into `dist/`.
 
 ## Rules
 
