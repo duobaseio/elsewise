@@ -3,7 +3,6 @@ import type { SettingsBridge } from './settings.js';
 import type { WindowBridge } from './window.js';
 
 export {
-  IncompatiblePlugin,
   InstalledPlugin,
   InvalidPlugin,
   PluginEntry,

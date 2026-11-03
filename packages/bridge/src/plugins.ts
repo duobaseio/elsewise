@@ -4,7 +4,6 @@ import * as z from 'zod';
 export { PluginId };
 
 export type InstalledPlugin = z.infer<typeof InstalledPlugin>;
-export type IncompatiblePlugin = z.infer<typeof IncompatiblePlugin>;
 export type InvalidPlugin = z.infer<typeof InvalidPlugin>;
 export type PluginEntry = z.infer<typeof PluginEntry>;
 
@@ -13,17 +12,16 @@ export type PluginEntry = z.infer<typeof PluginEntry>;
  */
 export interface PluginsBridge {
   /**
-   * Returns every installed plugin, enabled or not, every incompatible plugin, and every folder whose manifest is
-   * missing or malformed.
+   * Returns every installed plugin, enabled or not, and every folder whose manifest is missing or malformed.
    */
-  load(): Promise<(InstalledPlugin | IncompatiblePlugin | InvalidPlugin)[]>;
+  load(): Promise<(InstalledPlugin | InvalidPlugin)[]>;
 
   /**
    * Returns the installed plugin with `id`, or `undefined` if none is installed.
    *
    * Throws an error if `id` is not a plugin id.
    */
-  load(id: string): Promise<InstalledPlugin | IncompatiblePlugin | InvalidPlugin | undefined>;
+  load(id: string): Promise<InstalledPlugin | InvalidPlugin | undefined>;
 
   /**
    * Replaces whether each plugin is enabled with `entries`.
@@ -63,24 +61,6 @@ export const InstalledPlugin = z.object({
    * for a plugin without a frontend part.
    */
   url: z.string().optional(),
-});
-
-/**
- * A plugin which is compatible with eithr Elsewise or other dependent plugins.
- */
-export const IncompatiblePlugin = z.object({
-  /**
-   * The plugin's `manifest.json`.
-   */
-  manifest: Manifest,
-  /**
-   * Whether the plugin is enabled.
-   */
-  enabled: z.boolean(),
-  /**
-   * The manifest field which range is not satisfied.
-   */
-  unsatisfied: z.literal('elsewise'),
 });
 
 /**

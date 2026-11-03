@@ -67,10 +67,6 @@ importers:
         version: 5.0.5(@types/node@26.6.5)(@vitest/browser-playwright@5.0.5)(@vitest/ui@5.0.5)(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   apps/desktop:
-    dependencies:
-      semver:
-        specifier: ^7.8.5
-        version: 7.8.5
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.5.14
@@ -93,9 +89,6 @@ importers:
       '@types/node':
         specifier: ^26.4.1
         version: 26.6.5
-      '@types/semver':
-        specifier: ^7.8.0
-        version: 7.8.0
       electron:
         specifier: 44.9.3
         version: 44.9.3(supports-color@7.2.0)
@@ -198,6 +191,9 @@ importers:
       '@xterm/xterm':
         specifier: ^6.0.0
         version: 6.0.0
+      dependency-graph:
+        specifier: ^1.0.0
+        version: 1.0.0
       dockview-react:
         specifier: ^8.4.0
         version: 8.6.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -213,6 +209,9 @@ importers:
       react-dom:
         specifier: ^19.3.0
         version: 19.3.1(react@19.3.1)
+      semver:
+        specifier: ^7.8.5
+        version: 7.8.5
       vscode-languageserver-protocol:
         specifier: ^3.18.4
         version: 3.18.4
@@ -238,6 +237,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.3.0
         version: 19.3.0(@types/react@19.3.0)
+      '@types/semver':
+        specifier: ^7.8.0
+        version: 7.8.0
       '@vitejs/plugin-react':
         specifier: ^6.1.1
         version: 6.1.2(vite@8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
@@ -2420,6 +2422,10 @@ packages:
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
     engines: {node: '>= 0.8'}
+
+  dependency-graph@1.0.0:
+    resolution: {integrity: sha512-cW3gggJ28HZ/LExwxP2B++aiKxhJXMSIt9K48FOXQkm+vuG5gyatXnLsONRJdzO/7VfjDIiaOOa/bs4l464Lwg==}
+    engines: {node: '>=4'}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -6424,6 +6430,8 @@ snapshots:
   delayed-stream@1.0.0: {}
 
   depd@2.0.0: {}
+
+  dependency-graph@1.0.0: {}
 
   detect-libc@2.1.2: {}
 

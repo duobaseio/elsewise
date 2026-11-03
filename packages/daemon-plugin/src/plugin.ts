@@ -25,11 +25,17 @@ export interface Plugin {
    * Throwing an error causes the plugin to be disabled (without calling `onDisable`). It is the plugin's responsibility
    * to safely dispose of any added items in such cases.
    */
-  // TODO: Pass the daemon, once it has an API for plugins.
-  onEnable?(): Disposable[] | undefined | Promise<Disposable[] | undefined>;
+  onEnable?(daemon: Daemon): Disposable[] | undefined | Promise<Disposable[] | undefined>;
 
   /**
    * Called when the plugin is disabled, before the disposables `onEnable` returned are disposed.
    */
-  onDisable?(): void | Promise<void>;
+  onDisable?(daemon: Daemon): void | Promise<void>;
 }
+
+/**
+ * The daemon.
+ */
+// TODO: Add what the daemon provides a plugin, once it has an API for plugins.
+// biome-ignore lint/suspicious/noEmptyInterface: Nothing to provide yet, see above.
+export interface Daemon {}

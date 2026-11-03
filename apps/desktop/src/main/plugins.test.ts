@@ -5,10 +5,7 @@ import { ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handlePlugins } from './plugins';
 
-// Hoisted with the mock below, which the imports above already use.
-const state = vi.hoisted(() => ({ version: '1.0.0' }));
-
-vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() }, app: { getVersion: () => state.version } }));
+vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
 // The real `writeJsonSync`, but in a temporary folder rather than the user's data folder.
 vi.mock('@elsewise/core', async (importOriginal) => {
   const { mkdtempSync } = await import('node:fs');
@@ -39,7 +36,6 @@ const MALFORMED: [string, unknown, RegExp][] = [
 ];
 
 afterEach(() => {
-  state.version = '1.0.0';
   fs.rmSync(ENTRIES_FILE, { recursive: true, force: true });
   fs.rmSync(PLUGINS_FOLDER, { recursive: true, force: true });
   vi.restoreAllMocks();
@@ -118,35 +114,6 @@ describe('plugins:load', () => {
         url: 'app://elsewise/plugins/hello/frontend/dist/index.js',
         enabled: true,
       },
-    ]);
-  });
-
-  test.each([
-    ['1.0.0', '^1.0.0'],
-    ['1.9.3', '^1.2.0'],
-    ['2.0.0', '>=1.0.0'],
-    ['1.1.0-beta.1', '>=1.1.0-beta.0'],
-  ])('returns plugin whose range includes version %s', (version, elsewise) => {
-    state.version = version;
-    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { ...MANIFEST, elsewise });
-
-    expect(handler('plugins:load')()).toEqual([
-      { manifest: { ...MANIFEST, elsewise }, ...NOTHING, url: URL, enabled: true },
-    ]);
-  });
-
-  test.each([
-    ['0.9.0', '^1.0.0'],
-    ['2.0.0', '^1.0.0'],
-    ['1.1.0-beta.1', '^1.0.0'],
-  ])('returns plugin whose range excludes version %s as incompatible', (version, elsewise) => {
-    state.version = version;
-    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { ...MANIFEST, elsewise });
-
-    expect(handler('plugins:load')()).toEqual([
-      { manifest: { ...MANIFEST, elsewise }, enabled: true, unsatisfied: 'elsewise' },
     ]);
   });
 

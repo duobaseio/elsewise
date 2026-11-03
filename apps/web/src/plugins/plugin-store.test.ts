@@ -350,14 +350,30 @@ describe('enable', () => {
     expect(events).toEqual(['enable started', 'enable b']);
   });
 
-  test('skips incompatible plugin', async () => {
+  test('skips plugin whose range excludes version', async () => {
     const { application } = setUp();
-    vi.stubGlobal('window', {});
-    const store = await pluginStore([{ ...installed('a', RECORDING), unsatisfied: 'elsewise' }]);
+    vi.stubGlobal('window', { bridge: { version: '2.0.0' } });
+    const store = await pluginStore([installed('a', RECORDING)]);
     await store.enable('a', application);
 
-    expect(store.plugins[0]).toEqual({ id: 'a', status: 'incompatible', manifest: installed('a', RECORDING).manifest });
+    expect(store.plugins[0]).toEqual({
+      id: 'a',
+      status: 'incompatible',
+      manifest: installed('a', RECORDING).manifest,
+      unsatisfied: { elsewise: '^1.0.0' },
+    });
+    expect(error.mock.calls).toEqual([['Plugin a cannot be enabled: needs Elsewise ^1.0.0']]);
     expect(events).toEqual([]);
+  });
+
+  test('enables plugin whose range includes version', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', { bridge: { version: '1.4.0' } });
+    const store = await pluginStore([installed('a', RECORDING)]);
+    await store.enable('a', application);
+
+    expect(store.plugins[0]?.status).toBe('enabled');
+    expect(events).toEqual(['enable a']);
   });
 
   test('enables plugin without frontend part without importing', async () => {
@@ -377,7 +393,86 @@ describe('enable', () => {
 
     expect(store.plugins[0]?.status).toBe('invalid');
   });
+
+  test('enables dependencies first', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([
+      dependent('a', { b: '^1.0.0' }),
+      dependent('b', { c: '^1.0.0' }),
+      installed('c', TRACKED),
+    ]);
+    await store.enable('a', application);
+
+    expect(events).toEqual(['enable c', 'enable b', 'enable a']);
+  });
+
+  test('enables waiting dependents', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([dependent('a', { b: '^1.0.0' }), installed('b', TRACKED)]);
+    await store.enableAll(application);
+    await store.disable('b');
+
+    expect(store.plugins[0]).toMatchObject({
+      status: 'incompatible',
+      unsatisfied: { dependency: 'b', cause: 'incompatible' },
+    });
+
+    await store.enable('b', application);
+
+    expect(events).toEqual(['enable b', 'enable a', 'dispose a', 'dispose b', 'enable b', 'enable a']);
+    expect(store.plugins.map(({ status }) => status)).toEqual(['enabled', 'enabled']);
+  });
+
+  test('refuses dependent whose dependency is uninstalled while enabling', async () => {
+    const gate = Promise.withResolvers<void>();
+    vi.stubGlobal('gate', gate.promise);
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([installed('a', SLOW), dependent('b', { a: '^1.0.0' })]);
+
+    const enabled = store.enable('b', application);
+    await vi.waitFor(() => expect(events).toContain('enable started'));
+    vi.stubGlobal('window', { bridge: { plugins: { load: async () => undefined } } });
+    const unloaded = store.load('a');
+    gate.resolve();
+    await Promise.all([enabled, unloaded]);
+
+    expect(events).toEqual(['enable started', 'enable finished', 'dispose']);
+    expect(store.plugins).toEqual([
+      expect.objectContaining({ id: 'b', status: 'incompatible', unsatisfied: { dependency: 'a', cause: 'missing' } }),
+    ]);
+  });
 });
+
+// Records enabling and disposing by id.
+const TRACKED = plugin(`
+  export default function ({ id }) {
+    return {
+      onEnable() {
+        events.push('enable ' + id);
+        return [() => events.push('dispose ' + id)];
+      },
+    };
+  }
+`);
+
+const FAILING = plugin(`
+  export default function () {
+    return {
+      onEnable() {
+        throw new Error('boom');
+      },
+    };
+  }
+`);
+
+// Returns the enabled plugin `id`, tracked, whose frontend part depends on `dependencies`, at `version`.
+function dependent(id: string, dependencies: Record<string, string>, version = '1.0.0'): InstalledPlugin {
+  const plugin = installed(id, TRACKED);
+  return { ...plugin, manifest: { ...plugin.manifest, version, frontend: { main: 'main.js', dependencies } } };
+}
 
 describe('disable', () => {
   test('disposes in reverse order', async () => {
@@ -540,6 +635,29 @@ describe('disable', () => {
 
     expect(events).toEqual(['enable started', 'enable finished', 'dispose']);
   });
+
+  test('disables dependents first', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([
+      dependent('a', { b: '^1.0.0' }),
+      dependent('b', { c: '^1.0.0' }),
+      installed('c', TRACKED),
+    ]);
+    await store.enableAll(application);
+    await store.disable('c');
+
+    expect(events).toEqual(['enable c', 'enable b', 'enable a', 'dispose a', 'dispose b', 'dispose c']);
+    expect(store.plugins[0]).toMatchObject({
+      status: 'incompatible',
+      unsatisfied: { dependency: 'b', cause: 'incompatible' },
+    });
+    expect(store.plugins[1]).toMatchObject({
+      status: 'incompatible',
+      unsatisfied: { dependency: 'c', cause: 'incompatible' },
+    });
+    expect(store.plugins[2]?.status).toBe('disabled');
+  });
 });
 
 describe('enableAll', () => {
@@ -556,6 +674,112 @@ describe('enableAll', () => {
 
     expect(events).toEqual(['enable a', 'enable b']);
     expect(error.mock.calls).toEqual([['Plugin d failed to load: manifest.json does not exist']]);
+  });
+
+  test('enables dependency before dependent', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([dependent('a', { b: '^1.0.0' }), installed('b', TRACKED)]);
+    await store.enableAll(application);
+
+    expect(events).toEqual(['enable b', 'enable a']);
+    expect(store.plugins.map(({ status }) => status)).toEqual(['enabled', 'enabled']);
+  });
+
+  test('enables chain in dependency order', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([
+      dependent('a', { b: '^1.0.0' }),
+      dependent('b', { c: '^1.0.0' }),
+      installed('c', TRACKED),
+      installed('d', TRACKED),
+    ]);
+    await store.enableAll(application);
+
+    expect(events).toEqual(['enable c', 'enable b', 'enable a', 'enable d']);
+  });
+
+  test.each([
+    ['missing', undefined, 'not installed'],
+    ['invalid', { id: 'b', enabled: true, error: 'manifest.json does not exist' }, 'invalid'],
+    [
+      'incompatible',
+      { ...installed('b', TRACKED), manifest: { ...installed('b', TRACKED).manifest, elsewise: '^2.0.0' } },
+      'incompatible',
+    ],
+    ['disabled', { ...installed('b', TRACKED), enabled: false }, 'disabled'],
+    [
+      'version',
+      { ...installed('b', TRACKED), manifest: { ...installed('b', TRACKED).manifest, version: '2.0.0' } },
+      'not within ^1.0.0',
+    ],
+  ])('marks dependent of %s dependency incompatible', async (_, b, what) => {
+    const { application } = setUp();
+    vi.stubGlobal('window', { bridge: { version: '1.0.0' } });
+    const store = await pluginStore([dependent('a', { b: '^1.0.0' }), ...(b === undefined ? [] : [b])]);
+    await store.enableAll(application);
+
+    const cause = b === undefined ? 'missing' : 'incompatible';
+    expect(store.plugins[0]).toMatchObject({ status: 'incompatible', unsatisfied: { dependency: 'b', cause } });
+    expect(error.mock.calls).toContainEqual([`Plugin a cannot be enabled: depends on b, which is ${what}`]);
+    expect(events).not.toContain('enable a');
+  });
+
+  test('marks dependent of failed dependency incompatible', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([dependent('a', { b: '^1.0.0' }), installed('b', FAILING)]);
+    await store.enableAll(application);
+
+    expect(store.plugins.map(({ status }) => status)).toEqual(['incompatible', 'failed']);
+    expect(store.plugins[0]).toMatchObject({ unsatisfied: { dependency: 'b', cause: 'incompatible' } });
+    expect(error.mock.calls).toContainEqual(['Plugin a cannot be enabled: depends on b, which is failed']);
+  });
+
+  test('marks transitive dependents incompatible', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([dependent('a', { b: '^1.0.0' }), dependent('b', { c: '^1.0.0' })]);
+    await store.enableAll(application);
+
+    expect(store.plugins[0]).toMatchObject({ unsatisfied: { dependency: 'b', cause: 'incompatible' } });
+    expect(store.plugins[1]).toMatchObject({ unsatisfied: { dependency: 'c', cause: 'missing' } });
+    expect(events).toEqual([]);
+  });
+
+  test('marks cycle incompatible and enables rest', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([
+      dependent('a', { b: '^1.0.0' }),
+      dependent('b', { a: '^1.0.0' }),
+      dependent('c', { a: '^1.0.0' }),
+      installed('d', TRACKED),
+    ]);
+    await store.enableAll(application);
+
+    expect(store.plugins.map(({ status }) => status)).toEqual([
+      'incompatible',
+      'incompatible',
+      'incompatible',
+      'enabled',
+    ]);
+    expect(store.plugins[0]).toMatchObject({ unsatisfied: { cycle: ['a', 'b'] } });
+    expect(store.plugins[1]).toMatchObject({ unsatisfied: { cycle: ['a', 'b'] } });
+    expect(store.plugins[2]).toMatchObject({ unsatisfied: { dependency: 'a', cause: 'incompatible' } });
+    expect(error.mock.calls).toContainEqual(['Plugin a cannot be enabled: is in a dependency cycle with b']);
+    expect(events).toEqual(['enable d']);
+  });
+
+  test('marks self-dependency incompatible', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([dependent('a', { a: '^1.0.0' })]);
+    await store.enableAll(application);
+
+    expect(store.plugins[0]).toMatchObject({ status: 'incompatible', unsatisfied: { cycle: ['a'] } });
+    expect(error.mock.calls).toContainEqual(['Plugin a cannot be enabled: depends on itself']);
   });
 });
 
@@ -596,9 +820,64 @@ describe('disableAll', () => {
     expect(events.toSorted()).toEqual(['dispose a', 'dispose b', 'enable a', 'enable a', 'enable b', 'enable b']);
     expect(store.plugins.map(({ status }) => status)).toEqual(['enabled', 'enabled']);
   });
+
+  test('disables dependents first', async () => {
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([installed('a', TRACKED), dependent('b', { a: '^1.0.0' })]);
+    await store.enableAll(application);
+    await store.disableAll();
+
+    expect(events).toEqual(['enable a', 'enable b', 'dispose b', 'dispose a']);
+    expect(store.plugins.map(({ status }) => status)).toEqual(['disabled', 'disabled']);
+  });
+
+  test('waits for dependent to dispose before dependency', async () => {
+    const gate = Promise.withResolvers<void>();
+    vi.stubGlobal('gate', gate.promise);
+    // Disposes only once the global `gate` resolves.
+    const slow = plugin(`
+      export default function ({ id }) {
+        return {
+          onEnable: () => [async () => { events.push('disposing ' + id); await gate; events.push('dispose ' + id); }],
+        };
+      }
+    `);
+    const { application } = setUp();
+    vi.stubGlobal('window', {});
+    const b = { ...dependent('b', { a: '^1.0.0' }), url: slow };
+    const store = await pluginStore([installed('a', TRACKED), b]);
+    await store.enableAll(application);
+
+    const disabled = store.disableAll();
+    await vi.waitFor(() => expect(events).toContain('disposing b'));
+    expect(events).not.toContain('dispose a');
+
+    gate.resolve();
+    await disabled;
+
+    expect(events).toEqual(['enable a', 'disposing b', 'dispose b', 'dispose a']);
+  });
 });
 
 describe('loadAll', () => {
+  test('marks plugin whose range excludes version incompatible', async () => {
+    vi.stubGlobal('window', { bridge: { version: '2.0.0' } });
+    const store = await pluginStore([installed('a', RECORDING)]);
+
+    expect(store.plugins[0]).toMatchObject({ status: 'incompatible', unsatisfied: { elsewise: '^1.0.0' } });
+  });
+
+  test('marks plugin whose dependency is missing incompatible', async () => {
+    vi.stubGlobal('window', {});
+    const store = await pluginStore([dependent('a', { b: '^1.0.0' })]);
+
+    expect(store.plugins[0]).toMatchObject({
+      status: 'incompatible',
+      unsatisfied: { dependency: 'b', cause: 'missing' },
+    });
+  });
+
   test('reads none without bridge', async () => {
     vi.stubGlobal('window', {});
     const store = new PluginStore();
@@ -744,6 +1023,38 @@ describe('load', () => {
     await store.load('b');
 
     expect(store.plugins.map(({ id }) => id)).toEqual(['a', 'b', 'c']);
+  });
+
+  test('disposes uninstalled dependency after its dependents', async () => {
+    const { application, store } = setUp();
+    vi.stubGlobal('window', {});
+    const plugins = [dependent('a', { b: '^1.0.0' }), dependent('b', { c: '^1.0.0' }), installed('c', TRACKED)];
+    vi.stubGlobal('window', { bridge: { plugins: { load: async () => plugins } } });
+    await store.loadAll();
+    await store.enableAll(application);
+    vi.stubGlobal('window', { bridge: { plugins: { load: async () => undefined } } });
+    await store.load('c');
+
+    expect(events).toEqual(['enable c', 'enable b', 'enable a', 'dispose a', 'dispose b', 'dispose c']);
+    expect(store.plugins.map(({ id, status }) => [id, status])).toEqual([
+      ['a', 'incompatible'],
+      ['b', 'incompatible'],
+    ]);
+  });
+
+  test('disables plugin that becomes incompatible', async () => {
+    vi.stubGlobal('window', { bridge: { version: '1.0.0' } });
+    const { store, enable } = setUp();
+    await enable('a', RECORDING);
+    const excluded = {
+      ...installed('a', RECORDING),
+      manifest: { ...installed('a', RECORDING).manifest, elsewise: '^2.0.0' },
+    };
+    vi.stubGlobal('window', { bridge: { version: '1.0.0', plugins: { load: async () => excluded } } });
+    await store.load('a');
+
+    expect(store.plugins[0]).toMatchObject({ status: 'incompatible', unsatisfied: { elsewise: '^2.0.0' } });
+    expect(events).toEqual(['enable a', 'dispose second', 'dispose first']);
   });
 });
 

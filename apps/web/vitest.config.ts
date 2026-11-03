@@ -60,6 +60,8 @@ function browserProject(
         '@lezer/highlight',
         'vscode-languageserver-protocol',
         'w3c-keyname',
+        'dependency-graph',
+        'semver',
         '@xterm/addon-clipboard',
         '@xterm/addon-fit',
         '@xterm/addon-ligatures',

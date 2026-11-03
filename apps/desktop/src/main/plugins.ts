@@ -1,16 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {
-  type IncompatiblePlugin,
-  type InstalledPlugin,
-  type InvalidPlugin,
-  PluginEntry,
-  PluginId,
-} from '@elsewise/bridge';
+import { type InstalledPlugin, type InvalidPlugin, PluginEntry, PluginId } from '@elsewise/bridge';
 import { frontendDataDir, writeJsonSync } from '@elsewise/core';
 import { Keymap, Manifest, Theme } from '@elsewise/frontend-plugin';
-import { app, ipcMain } from 'electron';
-import { satisfies } from 'semver';
+import { ipcMain } from 'electron';
 import * as z from 'zod';
 import { readJsonFolder } from '../fs/json-folder';
 
@@ -32,15 +25,7 @@ const ROOT = path.join(frontendDataDir(), 'plugins');
 export function handlePlugins(): void {
   ipcMain.handle(
     'plugins:load',
-    (
-      _event,
-      id?: unknown,
-    ):
-      | (InstalledPlugin | IncompatiblePlugin | InvalidPlugin)[]
-      | InstalledPlugin
-      | IncompatiblePlugin
-      | InvalidPlugin
-      | undefined => {
+    (_event, id?: unknown): (InstalledPlugin | InvalidPlugin)[] | InstalledPlugin | InvalidPlugin | undefined => {
       // No `plugins.json` means no entries, so every plugin is disabled.
       let entries: PluginEntry[] = [];
       try {
@@ -104,8 +89,8 @@ function validate(entries: unknown): PluginEntry[] {
   });
 }
 
-// Loads the plugin in `folder`, or reports why it is invalid or incompatible.
-function load(folder: string, enabled: boolean): InstalledPlugin | IncompatiblePlugin | InvalidPlugin {
+// Loads the plugin in `folder`, or reports why it is invalid.
+function load(folder: string, enabled: boolean): InstalledPlugin | InvalidPlugin {
   const file = path.join(ROOT, folder, 'manifest.json');
   let json: string;
   try {
@@ -131,10 +116,6 @@ function load(folder: string, enabled: boolean): InstalledPlugin | IncompatibleP
 
   if (manifest.data.id !== folder) {
     return { id: folder, enabled, error: `${file} declares the id ${manifest.data.id}, not its folder's name` };
-  }
-
-  if (!satisfies(app.getVersion(), manifest.data.elsewise)) {
-    return { manifest: manifest.data, enabled, unsatisfied: 'elsewise' };
   }
 
   return {
