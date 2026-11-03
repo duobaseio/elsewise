@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
 import { formatKey } from '@elsewise/components/lib/platform';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
@@ -19,7 +19,7 @@ const DUPLICATE = 'elsewise.editor.edit.duplicateLine';
 const COPY = 'elsewise.terminal.clipboard.copy';
 
 // A plugin with a keymap that adds groups at the top level and in Editor, one of them without commands.
-const PLUGIN: InstalledPlugin = {
+const PLUGIN: InstalledFrontendPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
@@ -62,7 +62,7 @@ afterEach(() => {
 
 // Opens the Keymap page with `settings`, `plugins` installed and `keymap` as the user keymap `mine`. Returns the
 // bridge's saves and deletes.
-async function mount(settings: Settings = DEFAULT_SETTINGS, plugins: InstalledPlugin[] = [], keymap = MINE) {
+async function mount(settings: Settings = DEFAULT_SETTINGS, plugins: InstalledFrontendPlugin[] = [], keymap = MINE) {
   const save = vi.fn(async () => {});
   const saveUserKeymap = vi.fn(async () => {});
   const deleteUserKeymap = vi.fn(async () => {});

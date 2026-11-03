@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { frontendDataDir } from '@elsewise/core';
+import { frontendDataDir } from '@elsewise/core/node';
 import { net, session } from 'electron';
 
 const MIME_TYPES: Record<string, string> = {

@@ -9,6 +9,12 @@ export interface DataDirectory {
 
   /** The SQLite database file. */
   database: string;
+
+  /** The folder with one folder per installed plugin. */
+  plugins: string;
+
+  /** The file listing which plugins are enabled. */
+  pluginsManifest: string;
 }
 
 /**
@@ -29,6 +35,8 @@ export function dataDirectory(root: string): DataDirectory {
   return {
     root,
     database: path.join(root, 'elsewise.db'),
+    plugins: path.join(root, 'plugins'),
+    pluginsManifest: path.join(root, 'plugins.json'),
   };
 }
 

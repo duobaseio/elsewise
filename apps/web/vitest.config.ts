@@ -60,8 +60,6 @@ function browserProject(
         '@lezer/highlight',
         'vscode-languageserver-protocol',
         'w3c-keyname',
-        'dependency-graph',
-        'semver',
         '@xterm/addon-clipboard',
         '@xterm/addon-fit',
         '@xterm/addon-ligatures',
@@ -83,6 +81,8 @@ function browserProject(
         '@elsewise/components > class-variance-authority',
         '@elsewise/components > clsx',
         '@elsewise/components > tailwind-merge',
+        '@elsewise/core > dependency-graph',
+        '@elsewise/core > semver',
       ],
     },
     test: {

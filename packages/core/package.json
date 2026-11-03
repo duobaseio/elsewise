@@ -8,19 +8,30 @@
       "onFail": "error"
     }
   },
-  "description": "Node-side code shared by every Elsewise process.",
+  "description": "Code shared by the frontend, desktop app and daemon.",
+  "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./node": "./src/node/index.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"
   },
+  "dependencies": {
+    "@elsewise/plugin": "workspace:*",
+    "dependency-graph": "^1.0.0",
+    "semver": "^7.8.5",
+    "zod": "^4.6.5"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@types/node": "^26.4.1",
-    "typescript": "^7.0.2"
+    "@types/semver": "^7.8.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
   }
 }

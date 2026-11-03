@@ -1,10 +1,10 @@
 import type { ServiceImpl } from '@elsewise/transport';
-import manifest from '../../package.json' with { type: 'json' };
 import type { InfoService } from '../gen/elsewise/daemon/info/v1/info_service_pb';
+import { VERSION } from '../global';
 
 /** The `InfoService`. */
 export class InfoServiceImpl implements ServiceImpl<typeof InfoService> {
   getInfo() {
-    return { version: manifest.version };
+    return { version: VERSION };
   }
 }

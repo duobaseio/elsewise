@@ -1,4 +1,4 @@
-import type { InstalledPlugin, ThemeId } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin, ThemeId } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -15,7 +15,7 @@ const MISSING: ThemeId = { source: 'plugin', plugin: 'io.missing', id: 'dusk' };
 const NIGHT = { name: 'Night', dark: { interface: { background: '#000000' }, editor: {}, terminal: {} } };
 
 // A plugin with a theme named like the user's.
-const PLUGIN: InstalledPlugin = {
+const PLUGIN: InstalledFrontendPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [{ id: 'night', theme: NIGHT }],

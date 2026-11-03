@@ -20,7 +20,7 @@ let url: string;
 beforeEach(async () => {
   dataDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-'));
   codeDirectory = await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-code-'));
-  daemon = createDaemon({ dataDirectory, codeDirectory });
+  daemon = await createDaemon({ dataDirectory, codeDirectory });
   server = await startWebSocketServer(daemon, { port: 0, token: TOKEN });
   url = `ws://127.0.0.1:${server.port}`;
 });

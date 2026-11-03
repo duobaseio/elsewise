@@ -3,14 +3,15 @@
 //   node <path>/plugin.mjs add           after building the plugin into dist/
 //   node <path>/plugin.mjs remove <id>
 //
-// `add` takes the id from the plugin's manifest.json, copies it to <frontend data folder>/plugins/<id>/, and
-// links <frontend data folder>/plugins/<id>/frontend to the plugin's dist/frontend/, or to its frontend/ when the
-// manifest names no main module, as a plugin without code has no build. A rebuild needs no second `add`, but a change
-// to the manifest does. Restart Elsewise to load the change.
-// TODO: Link dist/daemon into the daemon's plugins folder, once the daemon loads plugins.
+// `add` takes the id from the plugin's manifest.json and installs each part it has on that part's side: the frontend
+// part under <frontend data folder>, the daemon part under <daemon data folder>, or the folder ELSEWISE_DAEMON_DATA
+// names. On each side, it copies the manifest to plugins/<id>/ and links plugins/<id>/<part> to the plugin's
+// dist/<part>/, or to its frontend/ when the manifest names no frontend main module, as a plugin without code has no
+// build. A rebuild needs no second `add`, but a change to the manifest does. Restart Elsewise, and the daemon, to
+// load the change.
 import fs from 'node:fs';
 import path from 'node:path';
-import { frontendDataDir, writeJsonSync } from '@elsewise/core';
+import { daemonDataDir, frontendDataDir, writeJsonSync } from '@elsewise/core/node';
 
 const [command, argument] = process.argv.slice(2);
 if (!(command === 'add' && argument === undefined) && !(command === 'remove' && argument !== undefined)) {
@@ -25,36 +26,54 @@ if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(id ?? '')) {
   process.exit(1);
 }
 
-const file = path.join(frontendDataDir(), 'plugins.json');
-const folder = path.join(frontendDataDir(), 'plugins', id);
-const others = (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : []).filter(
-  (plugin) => plugin.id !== id,
-);
+const sides = {
+  frontend: frontendDataDir(),
+  daemon: process.env.ELSEWISE_DAEMON_DATA ?? daemonDataDir(),
+};
 
 if (command === 'add') {
-  if (manifest.frontend === undefined) {
-    console.error('[plugin] manifest.json has no frontend part');
+  if (manifest.frontend === undefined && manifest.daemon === undefined) {
+    console.error('[plugin] manifest.json has neither a frontend nor a daemon part');
     process.exit(1);
   }
 
-  const { main } = manifest.frontend;
-  const frontend = main === undefined ? path.resolve('frontend') : path.resolve('dist', 'frontend');
-  const required = main === undefined ? frontend : path.join(frontend, main);
-  if (!fs.existsSync(required)) {
-    console.error(`[plugin] ${required} not found${main === undefined ? '' : ' (is the plugin built?)'}`);
-    process.exit(1);
+  // Every part is checked before any side changes, so a missing build leaves nothing half-installed.
+  const sources = {};
+  for (const part of Object.keys(sides).filter((part) => manifest[part] !== undefined)) {
+    // A frontend part without a main module ships only data, straight from frontend/.
+    const main = part === 'frontend' ? manifest.frontend.main : (manifest.daemon.main ?? 'main.js');
+    const source = main === undefined ? path.resolve(part) : path.resolve('dist', part);
+    const required = main === undefined ? source : path.join(source, main);
+    if (!fs.existsSync(required)) {
+      console.error(`[plugin] ${required} not found${main === undefined ? '' : ' (is the plugin built?)'}`);
+      process.exit(1);
+    }
+    sources[part] = source;
   }
 
-  fs.mkdirSync(folder, { recursive: true });
-  fs.copyFileSync('manifest.json', path.join(folder, 'manifest.json'));
-  fs.rmSync(path.join(folder, 'frontend'), { recursive: true, force: true });
-  // A junction, as Windows only lets administrators create symbolic links.
-  fs.symlinkSync(frontend, path.join(folder, 'frontend'), 'junction');
-  writeJsonSync(file, [...others, { id, enabled: true }]);
-  console.log(`[plugin] added ${id} to ${file}`);
+  for (const [part, source] of Object.entries(sources)) {
+    const folder = path.join(sides[part], 'plugins', id);
+    fs.mkdirSync(folder, { recursive: true });
+    fs.copyFileSync('manifest.json', path.join(folder, 'manifest.json'));
+    fs.rmSync(path.join(folder, part), { recursive: true, force: true });
+    // A junction, as Windows only lets administrators create symbolic links.
+    fs.symlinkSync(source, path.join(folder, part), 'junction');
+    flag(part, true);
+  }
 } else {
-  // Removes the plugin's settings too, which sit in its folder.
-  fs.rmSync(folder, { recursive: true, force: true });
-  writeJsonSync(file, others);
-  console.log(`[plugin] removed ${id} from ${file}`);
+  for (const part of Object.keys(sides)) {
+    // Removes the plugin's settings too, which sit in its folder.
+    fs.rmSync(path.join(sides[part], 'plugins', id), { recursive: true, force: true });
+    flag(part, false);
+  }
+}
+
+// Flags the plugin in the side's plugins.json, or drops it.
+function flag(part, enabled) {
+  const file = path.join(sides[part], 'plugins.json');
+  const others = (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : []).filter(
+    (plugin) => plugin.id !== id,
+  );
+  writeJsonSync(file, enabled ? [...others, { id, enabled }] : others);
+  console.log(`[plugin] ${enabled ? 'added' : 'removed'} ${id} ${enabled ? 'to' : 'from'} ${file}`);
 }

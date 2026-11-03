@@ -1,11 +1,10 @@
-import { Keymap, Manifest, PluginId, Theme } from '@elsewise/frontend-plugin';
+import { InstalledPlugin, InvalidPlugin, PluginEntry } from '@elsewise/core';
+import { Keymap, PluginId, Theme } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
 
-export { PluginId };
+export { InvalidPlugin, PluginEntry, PluginId };
 
-export type InstalledPlugin = z.infer<typeof InstalledPlugin>;
-export type InvalidPlugin = z.infer<typeof InvalidPlugin>;
-export type PluginEntry = z.infer<typeof PluginEntry>;
+export type InstalledFrontendPlugin = z.infer<typeof InstalledFrontendPlugin>;
 
 /**
  * The plugins installed on this machine in `<frontend data folder>/plugins`.
@@ -14,14 +13,14 @@ export interface PluginsBridge {
   /**
    * Returns every installed plugin, enabled or not, and every folder whose manifest is missing or malformed.
    */
-  load(): Promise<(InstalledPlugin | InvalidPlugin)[]>;
+  load(): Promise<(InstalledFrontendPlugin | InvalidPlugin)[]>;
 
   /**
    * Returns the installed plugin with `id`, or `undefined` if none is installed.
    *
    * Throws an error if `id` is not a plugin id.
    */
-  load(id: string): Promise<InstalledPlugin | InvalidPlugin | undefined>;
+  load(id: string): Promise<InstalledFrontendPlugin | InvalidPlugin | undefined>;
 
   /**
    * Replaces whether each plugin is enabled with `entries`.
@@ -32,17 +31,9 @@ export interface PluginsBridge {
 }
 
 /**
- * A plugin installed on this machine: a folder in `<frontend data folder>/plugins` with a `manifest.json`.
+ * A plugin installed on this machine with its frontend part.
  */
-export const InstalledPlugin = z.object({
-  /**
-   * The plugin's `manifest.json`.
-   */
-  manifest: Manifest,
-  /**
-   * Whether the plugin is enabled.
-   */
-  enabled: z.boolean(),
+export const InstalledFrontendPlugin = InstalledPlugin.extend({
   /**
    * The themes in the plugin's `frontend/themes` folder, each identified by its file name without `.json`.
    * `dusk` for `dusk.json`, or with why it could not be read.
@@ -56,41 +47,4 @@ export const InstalledPlugin = z.object({
   keymaps: z.array(
     z.union([z.object({ id: z.string(), keymap: Keymap }), z.object({ id: z.string(), error: z.string() })]),
   ),
-  /**
-   * The URL of the plugin's frontend part's main module, e.g. `app://elsewise/plugins/hello/frontend/main.js`. Absent
-   * for a plugin without a frontend part.
-   */
-  url: z.string().optional(),
-});
-
-/**
- * A folder in `<frontend data folder>/plugins` whose `manifest.json` is missing or malformed.
- */
-export const InvalidPlugin = z.object({
-  /**
-   * The name of the folder.
-   */
-  id: z.string(),
-  /**
-   * Whether the plugin is enabled.
-   */
-  enabled: z.boolean(),
-  /**
-   * Why the plugin's `manifest.json` could not be read.
-   */
-  error: z.string(),
-});
-
-/**
- * An entry in `<frontend data folder>/plugins.json`.
- */
-export const PluginEntry = z.object({
-  /**
-   * The plugin's id, as its manifest declares.
-   */
-  id: PluginId,
-  /**
-   * Whether the plugin is enabled.
-   */
-  enabled: z.boolean(),
 });

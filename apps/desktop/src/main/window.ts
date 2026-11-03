@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { frontendDataDir, writeJsonSync } from '@elsewise/core';
+import { frontendDataDir, writeJsonSync } from '@elsewise/core/node';
 import { app, type BrowserWindow, type Rectangle, screen } from 'electron';
 
 interface Window extends Rectangle {

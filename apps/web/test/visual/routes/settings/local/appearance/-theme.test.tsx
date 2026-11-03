@@ -1,4 +1,4 @@
-import type { InstalledPlugin } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { expect, onTestFinished, test } from 'vitest';
@@ -12,7 +12,7 @@ import { THEMES } from '../../../../../sheet';
 
 const NIGHT = { name: 'Night', dark: { interface: { background: '#000000' }, editor: {}, terminal: {} } };
 
-const PLUGIN: InstalledPlugin = {
+const PLUGIN: InstalledFrontendPlugin = {
   manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [{ id: 'night', theme: NIGHT }],

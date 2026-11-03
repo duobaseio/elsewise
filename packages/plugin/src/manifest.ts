@@ -105,7 +105,7 @@ export const DaemonManifestPart = z.object({
    * The plugins the daemon part depends on, each by id with the range of compatible versions,
    * e.g. `{ "io.example.git": "^2.1.0" }`.
    */
-  // TODO: Check at install and before enabling, once the daemon loads plugins.
+  // TODO: Check at install, once there is a marketplace.
   dependencies: z.record(PluginId, z.string().regex(RANGE)).optional(),
 
   /**

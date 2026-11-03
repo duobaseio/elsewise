@@ -1,4 +1,4 @@
-import { BundledTheme, type InstalledPlugin, type InvalidPlugin } from '@elsewise/bridge';
+import { BundledTheme, type InstalledFrontendPlugin, type InvalidPlugin } from '@elsewise/bridge';
 import { Theme, type ThemeVariant } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 // Returns the plugin `id` with `themes`.
-function plugin(id: string, themes: InstalledPlugin['themes'], enabled = true): InstalledPlugin {
+function plugin(id: string, themes: InstalledFrontendPlugin['themes'], enabled = true): InstalledFrontendPlugin {
   return {
     manifest: { id, name: id, version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
     enabled,
@@ -40,8 +40,8 @@ function plugin(id: string, themes: InstalledPlugin['themes'], enabled = true): 
 
 // Returns what `useLoadedThemes` returns with `plugins` installed and the user's `themes`.
 async function themes(
-  plugins: readonly (InstalledPlugin | InvalidPlugin)[],
-  user: InstalledPlugin['themes'] = [],
+  plugins: readonly (InstalledFrontendPlugin | InvalidPlugin)[],
+  user: InstalledFrontendPlugin['themes'] = [],
 ): Promise<readonly LoadedTheme[]> {
   // The store reads the plugins through the bridge, which Node lacks.
   vi.stubGlobal('window', {});

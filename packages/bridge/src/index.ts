@@ -3,7 +3,7 @@ import type { SettingsBridge } from './settings.js';
 import type { WindowBridge } from './window.js';
 
 export {
-  InstalledPlugin,
+  InstalledFrontendPlugin,
   InvalidPlugin,
   PluginEntry,
   PluginId,

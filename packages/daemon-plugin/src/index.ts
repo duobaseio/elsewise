@@ -6,4 +6,4 @@ export {
   PluginId,
   type PluginInfo,
 } from '@elsewise/plugin';
-export type { Plugin } from './plugin.ts';
+export type { Daemon, Plugin } from './plugin.ts';

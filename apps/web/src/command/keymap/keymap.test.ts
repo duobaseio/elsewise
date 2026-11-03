@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin, type InvalidPlugin, type KeymapId } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type InvalidPlugin, type KeymapId } from '@elsewise/bridge';
 import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
@@ -34,7 +34,7 @@ afterEach(() => {
 });
 
 // Returns the plugin `id` with `keymaps`.
-function plugin(id: string, keymaps: InstalledPlugin['keymaps'], enabled = true): InstalledPlugin {
+function plugin(id: string, keymaps: InstalledFrontendPlugin['keymaps'], enabled = true): InstalledFrontendPlugin {
   return {
     manifest: { id, name: id, version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
     enabled,
@@ -46,8 +46,8 @@ function plugin(id: string, keymaps: InstalledPlugin['keymaps'], enabled = true)
 
 // Returns what `useLoadedKeymaps` returns with `plugins` installed and the user's `keymaps`, leaving out Elsewise's.
 async function keymaps(
-  plugins: readonly (InstalledPlugin | InvalidPlugin)[],
-  user: InstalledPlugin['keymaps'] = [],
+  plugins: readonly (InstalledFrontendPlugin | InvalidPlugin)[],
+  user: InstalledFrontendPlugin['keymaps'] = [],
 ): Promise<readonly LoadedKeymap[]> {
   // The store reads the plugins through the bridge, which Node lacks.
   vi.stubGlobal('window', {});
@@ -74,8 +74,8 @@ async function keymaps(
 async function probe<T>(
   use: () => T,
   selected: KeymapId,
-  plugins: readonly (InstalledPlugin | InvalidPlugin)[],
-  user: InstalledPlugin['keymaps'] = [],
+  plugins: readonly (InstalledFrontendPlugin | InvalidPlugin)[],
+  user: InstalledFrontendPlugin['keymaps'] = [],
 ) {
   const bridge = {
     loadUserKeymaps: vi.fn(async () => user),

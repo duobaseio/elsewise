@@ -47,8 +47,8 @@ vi.mock('electron', async () => {
     },
   };
 });
-vi.mock('@elsewise/core', async (original) => ({
-  ...(await original<typeof import('@elsewise/core')>()),
+vi.mock('@elsewise/core/node', async (original) => ({
+  ...(await original<typeof import('@elsewise/core/node')>()),
   frontendDataDir: () => state.dir,
 }));
 

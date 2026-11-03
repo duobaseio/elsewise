@@ -1,18 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { frontendDataDir } from '@elsewise/core';
+import { frontendDataDir } from '@elsewise/core/node';
 import { ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handlePlugins } from './plugins';
 
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
 // The real `writeJsonSync`, but in a temporary folder rather than the user's data folder.
-vi.mock('@elsewise/core', async (importOriginal) => {
+vi.mock('@elsewise/core/node', async (importOriginal) => {
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const data = mkdtempSync(join(tmpdir(), 'elsewise-'));
-  return { ...(await importOriginal<typeof import('@elsewise/core')>()), frontendDataDir: () => data };
+  return { ...(await importOriginal<typeof import('@elsewise/core/node')>()), frontendDataDir: () => data };
 });
 
 const ENTRIES_FILE = path.join(frontendDataDir(), 'plugins.json');
