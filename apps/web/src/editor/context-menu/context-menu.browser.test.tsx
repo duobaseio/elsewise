@@ -1,4 +1,4 @@
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, type EditorCommand } from '@elsewise/frontend-plugin';
 import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import type { ApplicationManager } from '@/application-manager';

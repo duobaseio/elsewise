@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import type { Daemon as DaemonApi } from '@elsewise/daemon-plugin';
 import { type Channel, serve } from '@elsewise/transport';
 import { openDatabase } from './database/database';
 import { codeDirectory, dataDirectory } from './directories';
@@ -12,6 +13,7 @@ import { ProjectService } from './gen/elsewise/daemon/project/v1/project_service
 import { MIGRATIONS } from './gen/migrations';
 import { type GitOptions, GitServiceImpl } from './git/service';
 import { InfoServiceImpl } from './info/service';
+import { PluginStore } from './plugins/plugin-store';
 import { type ProjectOptions, ProjectServiceImpl } from './project/service';
 import { ProjectStore } from './project/store';
 
@@ -40,8 +42,8 @@ export interface DaemonOptions {
   project?: Partial<ProjectOptions>;
 }
 
-/** Bootstraps the daemon. */
-export function createDaemon(options: DaemonOptions): Daemon {
+/** Bootstraps the daemon and starts enabling the plugins' daemon parts. */
+export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const data = dataDirectory(options.dataDirectory);
   fs.mkdirSync(data.root, { recursive: true });
   const { database, close } = openDatabase(data.database, MIGRATIONS);
@@ -70,6 +72,17 @@ export function createDaemon(options: DaemonOptions): Daemon {
     ...options.project,
   });
 
+  // TODO: Hand plugins what the daemon provides.
+  const api: DaemonApi = {};
+  const plugins = new PluginStore(data);
+  try {
+    await plugins.loadAll();
+  } catch (error) {
+    console.error('Plugins failed to load', error);
+  }
+  // Not awaited, so a slow plugin delays only itself and not the services.
+  void plugins.enableAll(api);
+
   return {
     register(channel) {
       serve(channel, InfoService, info);
@@ -77,6 +90,9 @@ export function createDaemon(options: DaemonOptions): Daemon {
       serve(channel, GitService, git);
       serve(channel, ProjectService, project);
     },
-    close,
+    async close() {
+      await plugins.disableAll();
+      await close();
+    },
   };
 }

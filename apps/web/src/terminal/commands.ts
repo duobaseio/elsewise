@@ -1,4 +1,9 @@
-import { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_COMMANDS,
+  DEFAULT_KEYS,
+  type TerminalCommand,
+} from '@elsewise/frontend-plugin';
 
 export const TERMINAL_COPY: TerminalCommand = {
   scope: 'terminal',

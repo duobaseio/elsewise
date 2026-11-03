@@ -6,7 +6,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type DiffLayout } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { EditorCompletion, LanguageServer } from '@elsewise/plugin';
+import type { EditorCompletion, LanguageServer } from '@elsewise/frontend-plugin';
 import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, onTestFinished, test, vi } from 'vitest';

@@ -5,7 +5,7 @@ import {
   type RemoteSettingsPanel,
   type Settings,
   type SettingsLanguagePreview,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { LANGUAGES } from '@/settings/languages';

@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type Keys, type TerminalCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type Keys, type TerminalCommand } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { CommandManager } from '@/command/command-manager';

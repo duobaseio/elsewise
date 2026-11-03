@@ -1,6 +1,6 @@
 import { Page } from '@elsewise/components/components/settings';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { CommandGroup } from '@elsewise/plugin';
+import type { CommandGroup } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';

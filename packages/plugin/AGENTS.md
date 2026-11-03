@@ -1,7 +1,8 @@
 # Plugin
 
-The contract between Elsewise and its plugins: what a plugin's main module exports, and what Elsewise provides it when
-enabling it. Elsewise implements the contract; plugins build against it.
+What a plugin is, regardless of where its parts run: its `manifest.json`, and the types a part's main module uses on
+either side. `@elsewise/frontend-plugin` and `@elsewise/daemon-plugin` depend on it and re-export it; the hosts read
+it to load a plugin.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin <script>`.
 
@@ -9,7 +10,7 @@ This is a **source package**: `exports` points straight at `src/` and there is n
 
 ## Rules
 
-- **Zod is the only dependency**, for the contract's schemas, e.g. `Theme`. React and CodeMirror are peer dependencies.
-- **Relative imports only**, with `.ts` extensions. No aliases. Node loads this source as-is when
-  `apps/web/vite.config.ts` imports it, and Node doesn't map `.js` to `.ts`.
+- **Zod is the only dependency**, for the manifest's schema.
+- **Nothing with identity.** Types, schemas and pure helpers only, since a plugin that imports it inlines its own copy.
+- **Relative imports only**, with `.ts` extensions. No aliases.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.

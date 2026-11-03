@@ -2,7 +2,7 @@ import { type Chunk, getChunks, getOriginalDoc, mergeViewSiblings } from '@codem
 import { type Extension, Facet, Prec, RangeSet } from '@codemirror/state';
 import { EditorView, GutterMarker, gutter, layer, RectangleMarker, ViewPlugin } from '@codemirror/view';
 import type { DiffLayout } from '@elsewise/bridge';
-import type { Disposable } from '@elsewise/plugin';
+import type { Disposable } from '@elsewise/frontend-plugin';
 import type { RevertButtons } from '@/editor/diff/revert-buttons';
 
 /**

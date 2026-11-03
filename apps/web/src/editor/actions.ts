@@ -9,7 +9,7 @@ import {
   type EditorActionSource,
   type EditorCommand,
   type EditorDiagnostic,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { diagnostics } from '@/editor/diagnostics';
 import { appendCode, hint } from '@/editor/tooltip';
 

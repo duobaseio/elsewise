@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -25,8 +25,8 @@ const SETTINGS: Settings = {
 };
 
 // A plugin that previews a language of its own and replaces Rust's preview.
-const PREVIEWS: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+const PREVIEWS: InstalledFrontendPlugin = {
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
   keymaps: [],
@@ -53,7 +53,7 @@ afterEach(() => {
 
 // Opens the page of `language` with `settings` and `plugins`, waiting for its heading `label`. Returns the bridge's
 // save and the router.
-async function mount(language: string, settings = SETTINGS, label = language, plugins: InstalledPlugin[] = []) {
+async function mount(language: string, settings = SETTINGS, label = language, plugins: InstalledFrontendPlugin[] = []) {
   const save = vi.fn(async () => {});
   window.bridge = {
     settings: {

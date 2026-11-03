@@ -7,7 +7,7 @@ import {
   DEFAULT_KEYS,
   EDITOR_DOCUMENT,
   type EditorCommand,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { EDITOR_DIFF } from '@/editor/diff/diff';
 
 export const EDITOR_UNSTAGED_DIFF: EditorCommand = {

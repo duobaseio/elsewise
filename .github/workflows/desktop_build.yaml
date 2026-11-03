@@ -10,6 +10,7 @@ on:
       - packages/bridge/**
       - packages/components/**
       - packages/core/**
+      - packages/frontend-plugin/**
       - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
@@ -22,6 +23,7 @@ on:
       - packages/bridge/**
       - packages/components/**
       - packages/core/**
+      - packages/frontend-plugin/**
       - packages/plugin/**
       - package.json
       - pnpm-lock.yaml

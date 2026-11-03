@@ -1,5 +1,5 @@
 import { getIndentUnit, indentUnit } from '@codemirror/language';
-import type { EditorFormatter } from '@elsewise/plugin';
+import type { EditorFormatter } from '@elsewise/frontend-plugin';
 import * as babel from 'prettier/plugins/babel';
 import * as estree from 'prettier/plugins/estree';
 import * as typescript from 'prettier/plugins/typescript';

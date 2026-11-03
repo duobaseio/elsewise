@@ -81,6 +81,8 @@ function browserProject(
         '@elsewise/components > class-variance-authority',
         '@elsewise/components > clsx',
         '@elsewise/components > tailwind-merge',
+        '@elsewise/core > dependency-graph',
+        '@elsewise/core > semver',
       ],
     },
     test: {

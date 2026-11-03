@@ -15,7 +15,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { cn } from '@elsewise/components/lib/utils';
-import { DEFAULT_COMMANDS } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS } from '@elsewise/frontend-plugin';
 import { type KeyboardEvent, type ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useCommandManager } from '@/command/command-manager';

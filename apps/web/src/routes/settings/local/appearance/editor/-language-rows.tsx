@@ -9,7 +9,7 @@ import {
 import { Input } from '@elsewise/components/components/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Row } from '@elsewise/components/components/settings';
-import type { SettingsSearchTerm } from '@elsewise/plugin';
+import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { type ReactNode, useState } from 'react';
 
 type Key = keyof EditorLanguageSettings;

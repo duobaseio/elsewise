@@ -6,7 +6,7 @@ import type { LSPClient } from '@codemirror/lsp-client';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import {
   type CompletionItem,

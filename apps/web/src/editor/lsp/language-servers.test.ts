@@ -1,6 +1,6 @@
 import { EditorState, Facet } from '@codemirror/state';
 import { toast } from '@elsewise/components/components/toast';
-import type { LanguageServer, LanguageServerTransport } from '@elsewise/plugin';
+import type { LanguageServer, LanguageServerTransport } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServerInstance, LanguageServers, serverUri } from '@/editor/lsp/language-servers';

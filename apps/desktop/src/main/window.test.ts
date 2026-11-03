@@ -47,9 +47,9 @@ vi.mock('electron', async () => {
     },
   };
 });
-vi.mock('@elsewise/core', async (original) => ({
-  ...(await original<typeof import('@elsewise/core')>()),
-  dataLocalDir: () => state.dir,
+vi.mock('@elsewise/core/node', async (original) => ({
+  ...(await original<typeof import('@elsewise/core/node')>()),
+  frontendDataDir: () => state.dir,
 }));
 
 // A 1920x1080 display whose top 25 pixels are a menu bar, and its key in `window.json`.

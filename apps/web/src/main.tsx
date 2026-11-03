@@ -1,4 +1,4 @@
-import { DEFAULT_ROUTES } from '@elsewise/plugin';
+import { DEFAULT_ROUTES } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createRouter, RouterProvider } from '@tanstack/react-router';
 import { createRoot } from 'react-dom/client';

@@ -10,7 +10,7 @@ import {
   type EditorCommand,
   type EditorToolbarItem,
   type EditorToolbarProps,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import {
   Component,
   type ComponentProps,

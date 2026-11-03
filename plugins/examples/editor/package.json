@@ -10,7 +10,7 @@
   },
   "description": "An example plugin that adds to the code editor.",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node -e \"fs.copyFileSync('manifest.json', 'dist/manifest.json')\"",
     "typecheck": "tsc --noEmit",
     "format": "biome format",
     "lint": "biome lint",
@@ -21,12 +21,12 @@
     "@codemirror/language": "^6.12.4",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.13",
-    "@elsewise/plugin": "workspace:*",
+    "@elsewise/frontend-plugin": "workspace:*",
     "@lezer/highlight": "^1.2.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
-    "@elsewise/plugin": "workspace:*",
+    "@elsewise/frontend-plugin": "workspace:*",
     "typescript": "^7.0.2",
     "vite": "^8.3.0"
   }

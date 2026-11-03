@@ -23,7 +23,8 @@
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@elsewise/plugin": "workspace:*",
+    "@elsewise/core": "workspace:*",
+    "@elsewise/frontend-plugin": "workspace:*",
     "zod": "^4.6.5"
   }
 }

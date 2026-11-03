@@ -2,7 +2,7 @@ import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { BundledKeymap, DEFAULT_SETTINGS, type KeymapId } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { Keymap } from '@elsewise/plugin';
+import { Keymap } from '@elsewise/frontend-plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import type { ITerminalAddon } from '@xterm/xterm';
 import { useMemo, useReducer, useRef } from 'react';

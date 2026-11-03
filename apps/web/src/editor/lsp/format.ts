@@ -1,7 +1,7 @@
 import { getIndentUnit, indentUnit } from '@codemirror/language';
 import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { EditorState } from '@codemirror/state';
-import { DEFAULT_FORMATTERS, type EditorFormatter } from '@elsewise/plugin';
+import { DEFAULT_FORMATTERS, type EditorFormatter } from '@elsewise/frontend-plugin';
 import type { DocumentFormattingParams, DocumentRangeFormattingParams, TextEdit } from 'vscode-languageserver-protocol';
 
 /**

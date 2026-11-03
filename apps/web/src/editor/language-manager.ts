@@ -1,6 +1,6 @@
 import type { LanguageDescription } from '@codemirror/language';
 import { languages as DEFAULT_LANGUAGES } from '@codemirror/language-data';
-import type { Disposable, EditorLanguages, LanguageServer } from '@elsewise/plugin';
+import type { Disposable, EditorLanguages, LanguageServer } from '@elsewise/frontend-plugin';
 
 /**
  * The languages and their language servers as plugins see them.

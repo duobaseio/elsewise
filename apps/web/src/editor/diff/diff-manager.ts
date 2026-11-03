@@ -1,5 +1,5 @@
 import type { EditorView } from '@codemirror/view';
-import type { Disposable, EditorDiffSource, EditorDiffs } from '@elsewise/plugin';
+import type { Disposable, EditorDiffSource, EditorDiffs } from '@elsewise/frontend-plugin';
 import { EDITOR_DIFF } from '@/editor/diff/diff';
 
 /**

@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { codeDir, daemonDataDir } from '@elsewise/core';
+import { codeDir, daemonDataDir } from '@elsewise/core/node';
 import { createDaemon } from './daemon';
 import { startWebSocketServer } from './websocket';
 
@@ -8,7 +8,7 @@ const token = process.env.ELSEWISE_DAEMON_TOKEN ?? randomBytes(32).toString('bas
 const dataDirectory = process.env.ELSEWISE_DAEMON_DATA ?? daemonDataDir();
 const codeDirectory = process.env.ELSEWISE_DAEMON_CODE ?? codeDir();
 
-const daemon = createDaemon({ dataDirectory, codeDirectory });
+const daemon = await createDaemon({ dataDirectory, codeDirectory });
 const server = await startWebSocketServer(daemon, { port, token });
 process.stdout.write(`${JSON.stringify({ port: server.port, token })}\n`);
 

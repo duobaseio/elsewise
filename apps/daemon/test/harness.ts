@@ -67,7 +67,7 @@ export class Harness<S extends DescService> {
     const nativeRoot = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-')));
     const data = dataDirectory(await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-data-'))));
     const code = codeDirectory(await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-code-'))));
-    const daemon = createDaemon({ dataDirectory: data.root, codeDirectory: code.root, ...options });
+    const daemon = await createDaemon({ dataDirectory: data.root, codeDirectory: code.root, ...options });
     const server = await startWebSocketServer(daemon, { port: 0, token: TOKEN });
     const socket = new WebSocket(`ws://127.0.0.1:${server.port}`, [PROTOCOL, TOKEN_PREFIX + TOKEN]);
     const channel = new Channel(await WebSocketWire.open(socket));

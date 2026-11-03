@@ -3,7 +3,7 @@ import { type LSPClientExtension, LSPPlugin } from '@codemirror/lsp-client';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, EditorView, keymap, showTooltip, type Tooltip, WidgetType } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/plugin';
+import { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS, type EditorCommand } from '@elsewise/frontend-plugin';
 import { highlightTree, tags } from '@lezer/highlight';
 import type {
   DocumentHighlight,

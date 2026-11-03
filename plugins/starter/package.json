@@ -1,0 +1,22 @@
+{
+  "name": "starter",
+  "private": true,
+  "type": "module",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "description": "An Elsewise plugin template with a frontend part and a daemon part",
+  "scripts": {
+    "build": "pnpm -r build && node -e \"fs.copyFileSync('manifest.json', 'dist/manifest.json')\"",
+    "typecheck": "pnpm -r typecheck",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14"
+  }
+}

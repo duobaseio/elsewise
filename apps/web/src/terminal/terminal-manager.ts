@@ -1,4 +1,4 @@
-import type { ContextMenuGroup, Disposable, Terminal } from '@elsewise/plugin';
+import type { ContextMenuGroup, Disposable, Terminal } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';

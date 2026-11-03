@@ -2,7 +2,7 @@ import { standardKeymap } from '@codemirror/commands';
 import { openSearchPanel, searchPanelOpen } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { DEFAULT_COMMANDS } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS } from '@elsewise/frontend-plugin';
 import { useEffect, useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

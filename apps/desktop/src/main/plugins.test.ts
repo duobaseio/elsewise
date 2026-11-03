@@ -1,25 +1,25 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { dataLocalDir } from '@elsewise/core';
+import { frontendDataDir } from '@elsewise/core/node';
 import { ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handlePlugins } from './plugins';
 
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
 // The real `writeJsonSync`, but in a temporary folder rather than the user's data folder.
-vi.mock('@elsewise/core', async (importOriginal) => {
+vi.mock('@elsewise/core/node', async (importOriginal) => {
   const { mkdtempSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
   const data = mkdtempSync(join(tmpdir(), 'elsewise-'));
-  return { ...(await importOriginal<typeof import('@elsewise/core')>()), dataLocalDir: () => data };
+  return { ...(await importOriginal<typeof import('@elsewise/core/node')>()), frontendDataDir: () => data };
 });
 
-const ENTRIES_FILE = path.join(dataLocalDir(), 'plugins.json');
-const PLUGINS_FOLDER = path.join(dataLocalDir(), 'plugins');
+const ENTRIES_FILE = path.join(frontendDataDir(), 'plugins.json');
+const PLUGINS_FOLDER = path.join(frontendDataDir(), 'plugins');
 const ENTRY = { id: 'hello', enabled: true };
-const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', main: 'main.js' };
-const URL = 'app://elsewise/plugins/hello/bundle/main.js';
+const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } };
+const URL = 'app://elsewise/plugins/hello/frontend/main.js';
 
 const NOTHING = { themes: [], keymaps: [] };
 const DUSK = { name: 'Dusk', dark: { interface: { background: '#1c2430' }, editor: {}, terminal: {} } };
@@ -42,7 +42,7 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(dataLocalDir(), { recursive: true, force: true });
+  fs.rmSync(frontendDataDir(), { recursive: true, force: true });
 });
 
 // Returns the handler `handlePlugins` registers for `channel`.
@@ -64,11 +64,11 @@ function install(folder: string, manifest: unknown) {
   );
 }
 
-// Writes `content` to `file` in the bundle of the plugin in `folder`, as is when a string and as JSON otherwise.
-function bundle(folder: string, file: string, content: unknown) {
-  fs.mkdirSync(path.dirname(path.join(PLUGINS_FOLDER, folder, 'bundle', file)), { recursive: true });
+// Writes `content` to `file` in the frontend part of the plugin in `folder`, as is when a string and as JSON otherwise.
+function frontend(folder: string, file: string, content: unknown) {
+  fs.mkdirSync(path.dirname(path.join(PLUGINS_FOLDER, folder, 'frontend', file)), { recursive: true });
   fs.writeFileSync(
-    path.join(PLUGINS_FOLDER, folder, 'bundle', file),
+    path.join(PLUGINS_FOLDER, folder, 'frontend', file),
     typeof content === 'string' ? content : JSON.stringify(content),
   );
 }
@@ -89,7 +89,7 @@ describe('plugins:load', () => {
       {
         manifest: { ...MANIFEST, id: 'goodbye' },
         ...NOTHING,
-        url: 'app://elsewise/plugins/goodbye/bundle/main.js',
+        url: 'app://elsewise/plugins/goodbye/frontend/main.js',
         enabled: false,
       },
       { manifest: MANIFEST, ...NOTHING, url: URL, enabled: true },
@@ -98,20 +98,43 @@ describe('plugins:load', () => {
 
   test("reads plugin's manifest without unknown properties", () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { id: 'hello', name: 'Hello', version: '1.0.0', extra: 'ignored' });
+    install('hello', { ...MANIFEST, extra: 'ignored', frontend: { main: 'main.js', entry: 'ignored' } });
 
     expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: true }]);
   });
 
-  test("resolves url from manifest's main", () => {
+  test("resolves url from frontend part's main", () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { ...MANIFEST, main: 'dist/index.js' });
+    install('hello', { ...MANIFEST, frontend: { main: 'dist/index.js' } });
 
     expect(handler('plugins:load')()).toEqual([
       {
-        manifest: { ...MANIFEST, main: 'dist/index.js' },
+        manifest: { ...MANIFEST, frontend: { main: 'dist/index.js' } },
         ...NOTHING,
-        url: 'app://elsewise/plugins/hello/bundle/dist/index.js',
+        url: 'app://elsewise/plugins/hello/frontend/dist/index.js',
+        enabled: true,
+      },
+    ]);
+  });
+
+  test('returns plugin whose frontend part has no main without url, with its themes', () => {
+    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
+    install('hello', { ...MANIFEST, frontend: {} });
+    frontend('hello', 'themes/dusk.json', DUSK);
+
+    expect(handler('plugins:load')()).toEqual([
+      { manifest: { ...MANIFEST, frontend: {} }, themes: [{ id: 'dusk', theme: DUSK }], keymaps: [], enabled: true },
+    ]);
+  });
+
+  test('returns plugin without frontend part without url', () => {
+    fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
+    install('hello', { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', daemon: {} });
+
+    expect(handler('plugins:load')()).toEqual([
+      {
+        manifest: { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', daemon: { main: 'main.js' } },
+        ...NOTHING,
         enabled: true,
       },
     ]);
@@ -167,17 +190,17 @@ describe('plugins:load', () => {
       {
         manifest: { ...MANIFEST, id: 'other' },
         ...NOTHING,
-        url: 'app://elsewise/plugins/other/bundle/main.js',
+        url: 'app://elsewise/plugins/other/frontend/main.js',
         enabled: false,
       },
     ]);
   });
 
-  test('reads themes and keymaps in bundle, sorted by id', () => {
+  test('reads themes and keymaps in frontend part, sorted by id', () => {
     install('hello', MANIFEST);
-    bundle('hello', 'themes/dusk.json', DUSK);
-    bundle('hello', 'themes/dawn.json', { ...DUSK, name: 'Dawn' });
-    bundle('hello', 'keymaps/emacs.json', EMACS);
+    frontend('hello', 'themes/dusk.json', DUSK);
+    frontend('hello', 'themes/dawn.json', { ...DUSK, name: 'Dawn' });
+    frontend('hello', 'keymaps/emacs.json', EMACS);
 
     expect(handler('plugins:load')()).toEqual([
       {
@@ -193,11 +216,11 @@ describe('plugins:load', () => {
     ]);
   });
 
-  test('ignores anything but JSON files in bundle', () => {
+  test('ignores anything but JSON files in frontend part', () => {
     install('hello', MANIFEST);
-    bundle('hello', 'themes/README.md', '# Dusk');
-    bundle('hello', 'themes/old.json/dusk.json', DUSK);
-    bundle('hello', 'keymaps/.DS_Store', '');
+    frontend('hello', 'themes/README.md', '# Dusk');
+    frontend('hello', 'themes/old.json/dusk.json', DUSK);
+    frontend('hello', 'keymaps/.DS_Store', '');
 
     expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
   });
@@ -208,8 +231,8 @@ describe('plugins:load', () => {
     ['has an invalid id', '-dusk', DUSK, /-dusk\.json has an invalid id/],
   ])('fails theme that %s', (_, id, content, error) => {
     install('hello', MANIFEST);
-    bundle('hello', `themes/${id}.json`, content);
-    bundle('hello', 'themes/other.json', DUSK);
+    frontend('hello', `themes/${id}.json`, content);
+    frontend('hello', 'themes/other.json', DUSK);
 
     expect(handler('plugins:load')()).toEqual([
       {
@@ -227,7 +250,7 @@ describe('plugins:load', () => {
 
   test('fails malformed keymap', () => {
     install('hello', MANIFEST);
-    bundle('hello', 'keymaps/emacs.json', { keys: {} });
+    frontend('hello', 'keymaps/emacs.json', { keys: {} });
 
     expect(handler('plugins:load')()).toEqual([
       {
@@ -243,7 +266,7 @@ describe('plugins:load', () => {
   test('skips themes when folder cannot be read', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     install('hello', MANIFEST);
-    bundle('hello', 'themes', '');
+    frontend('hello', 'themes', '');
 
     expect(handler('plugins:load')()).toEqual([{ manifest: MANIFEST, ...NOTHING, url: URL, enabled: false }]);
     expect(error).toHaveBeenCalledWith(expect.stringMatching(/themes: unreadable, skipping it/), expect.anything());

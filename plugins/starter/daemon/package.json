@@ -1,0 +1,16 @@
+{
+  "name": "starter-daemon",
+  "private": true,
+  "type": "module",
+  "description": "The starter's daemon part, which runs in the daemon.",
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@elsewise/daemon-plugin": "link:../../../packages/daemon-plugin",
+    "@types/node": "^26.4.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.0"
+  }
+}

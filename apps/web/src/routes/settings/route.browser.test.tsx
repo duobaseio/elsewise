@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
@@ -11,8 +11,8 @@ import { settingsQuery } from '@/settings/settings';
 import { pluginStore } from '../../../test/plugins';
 
 // A plugin that adds local panels, one of them throwing, and a remote panel.
-const PANELS: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+const PANELS: InstalledFrontendPlugin = {
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
   keymaps: [],
@@ -76,7 +76,7 @@ function sidebar() {
 }
 
 // Renders the app at the last of `entries`, with the others behind it in the history, and `plugins` installed.
-async function mount(entries: string[], plugins: InstalledPlugin[] = [], settings = DEFAULT_SETTINGS) {
+async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [], settings = DEFAULT_SETTINGS) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: entries }) });

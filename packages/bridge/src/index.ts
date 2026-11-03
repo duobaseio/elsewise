@@ -2,7 +2,13 @@ import type { PluginsBridge } from './plugins.js';
 import type { SettingsBridge } from './settings.js';
 import type { WindowBridge } from './window.js';
 
-export { InstalledPlugin, InvalidPlugin, PluginEntry, PluginId, type PluginsBridge } from './plugins.js';
+export {
+  InstalledFrontendPlugin,
+  InvalidPlugin,
+  PluginEntry,
+  PluginId,
+  type PluginsBridge,
+} from './plugins.js';
 export {
   Brightness,
   BundledKeymap,
@@ -31,6 +37,10 @@ declare global {
      * The APIs the embedder additionally provides.
      */
     bridge?: {
+      /**
+       * The embedder's version, following SemVer, e.g. `1.2.3`.
+       */
+      version?: string;
       /**
        * See {@link PluginsBridge}.
        */

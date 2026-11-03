@@ -1,0 +1,48 @@
+{
+  "name": "@elsewise/frontend-plugin",
+  "private": true,
+  "type": "module",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "description": "The API for a plugin's frontend part.",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./build": "./src/build.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check"
+  },
+  "dependencies": {
+    "@elsewise/plugin": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/lint": "^6.9.7",
+    "@codemirror/lsp-client": "^6.3.0",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.13",
+    "@lezer/highlight": "^1.2.5",
+    "@tanstack/react-router": "^1.170.38",
+    "@xterm/xterm": "^6.0.0",
+    "react": "^19.3.0",
+    "vscode-languageserver-protocol": "^3.18.4"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.14",
+    "@tanstack/react-router": "^1.170.38",
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}

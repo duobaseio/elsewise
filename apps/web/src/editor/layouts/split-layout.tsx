@@ -2,7 +2,7 @@ import { MergeView } from '@codemirror/merge';
 import { type Extension, Prec } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { iconUrl, useIcons } from '@elsewise/components/components/icon';
-import type { EditorDocumentLayout } from '@elsewise/plugin';
+import type { EditorDocumentLayout } from '@elsewise/frontend-plugin';
 import {
   type CSSProperties,
   type ReactNode,

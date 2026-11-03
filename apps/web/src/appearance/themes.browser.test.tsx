@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type ThemeId } from '@elsewise/bridge';
-import { type ActiveTheme, Theme } from '@elsewise/plugin';
+import { type ActiveTheme, Theme } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';

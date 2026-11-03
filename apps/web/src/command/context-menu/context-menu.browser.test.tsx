@@ -6,7 +6,7 @@ import {
   DEFAULT_COMMAND_GROUPS,
   type EditorCommand,
   type TerminalCommand,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

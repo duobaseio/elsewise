@@ -1,4 +1,4 @@
-import { DEFAULT_ROUTES } from '@elsewise/plugin';
+import { DEFAULT_ROUTES } from '@elsewise/frontend-plugin';
 import { createFileRoute, Navigate } from '@tanstack/react-router';
 import { Suspense } from 'react';
 import { useSettingsPanels } from '@/settings/settings-panel-manager';

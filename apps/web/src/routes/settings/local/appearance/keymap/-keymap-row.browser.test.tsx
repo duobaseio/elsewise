@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin, type KeymapId, type Settings } from '@elsewise/bridge';
-import type { Keymap } from '@elsewise/plugin';
+import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type KeymapId, type Settings } from '@elsewise/bridge';
+import type { Keymap } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -24,8 +24,14 @@ describe('KeymapSelect', () => {
   const VIM = { name: 'Vim', keys: {} };
 
   // A plugin with a keymap named like the user's.
-  const PLUGIN: InstalledPlugin = {
-    manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+  const PLUGIN: InstalledFrontendPlugin = {
+    manifest: {
+      id: 'io.example',
+      name: 'Example',
+      version: '1.0.0',
+      elsewise: '^1.0.0',
+      frontend: { main: 'main.js' },
+    },
     enabled: true,
     themes: [],
     keymaps: [{ id: 'vim', keymap: VIM }],

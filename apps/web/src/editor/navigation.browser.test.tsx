@@ -4,7 +4,7 @@ import { EditorState, StateEffect } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import { formatKey, PLATFORM } from '@elsewise/components/lib/platform';
-import type { EditorNavigation, EditorNavigationSource } from '@elsewise/plugin';
+import type { EditorNavigation, EditorNavigationSource } from '@elsewise/frontend-plugin';
 import { tags } from '@lezer/highlight';
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { navigation } from '@/editor/navigation';

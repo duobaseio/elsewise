@@ -5,7 +5,7 @@ import {
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
   DEFAULT_ROUTES,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
 import { LANGUAGES } from '@/settings/languages';

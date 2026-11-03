@@ -8,7 +8,7 @@ import {
   DEFAULT_KEYS,
   type EditorCommand,
   type EditorFormatter,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 
 /**
  * The edits made since each pending {@link EDITOR_FORMAT} started, which its formatter's changes are mapped through.

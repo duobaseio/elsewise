@@ -2,7 +2,7 @@ import { LanguageDescription, type LanguageSupport } from '@codemirror/language'
 import { languages } from '@codemirror/language-data';
 import { Compartment, EditorSelection, EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import type { DocumentHighlightParams } from 'vscode-languageserver-protocol';

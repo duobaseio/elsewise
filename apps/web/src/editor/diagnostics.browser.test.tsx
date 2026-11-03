@@ -2,7 +2,7 @@ import { foldEffect, foldedRanges } from '@codemirror/language';
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_COMMANDS, type EditorDiagnostic } from '@elsewise/plugin';
+import { DEFAULT_COMMANDS, type EditorDiagnostic } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { diagnostics } from '@/editor/diagnostics';
 import { hover } from '@/editor/hover';

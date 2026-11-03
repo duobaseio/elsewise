@@ -1,6 +1,6 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { EditorDocumentLayout } from '@elsewise/plugin';
+import type { EditorDocumentLayout } from '@elsewise/frontend-plugin';
 import { useEffect, useRef } from 'react';
 import { type EditorSource, useEditorExtensions } from '@/editor/layouts/layout';
 

@@ -4,7 +4,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, runScopeHandlers } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { EditorCompletion } from '@elsewise/plugin';
+import type { EditorCompletion } from '@elsewise/frontend-plugin';
 import { tags as t } from '@lezer/highlight';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { completion } from '@/editor/completion';

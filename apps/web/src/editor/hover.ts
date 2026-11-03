@@ -18,7 +18,7 @@ import {
   type EditorCommand,
   type EditorDiagnostic,
   type EditorHoverSource,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { actionsAt, apply, EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS } from '@/editor/editor-manager';

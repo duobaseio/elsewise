@@ -1,7 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { LanguageServerInstance } from '@/editor/lsp/language-servers';
 import { commandsExtension } from '../../../test/commands';

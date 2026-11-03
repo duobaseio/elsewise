@@ -2,7 +2,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import type { Diagnostic } from '@codemirror/lint';
 import type { Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { ActiveTheme, TextStyle } from '@elsewise/plugin';
+import type { ActiveTheme, TextStyle } from '@elsewise/frontend-plugin';
 import { type Tag, tags as t } from '@lezer/highlight';
 import { useMemo } from 'react';
 import { useActiveTheme } from '@/appearance/themes';

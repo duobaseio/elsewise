@@ -1,4 +1,4 @@
-import type { ActiveTheme, Appearance, Disposable } from '@elsewise/plugin';
+import type { ActiveTheme, Appearance, Disposable } from '@elsewise/frontend-plugin';
 
 export class AppearanceManager implements Appearance {
   private readonly brightnessListeners = new Set<(brightness: 'light' | 'dark') => void>();

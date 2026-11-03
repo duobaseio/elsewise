@@ -1,4 +1,9 @@
-import { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS, type TerminalCommand } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_COMMANDS,
+  DEFAULT_KEYS,
+  type TerminalCommand,
+} from '@elsewise/frontend-plugin';
 
 // TODO: Open the search directly once terminals have state that commands can reach.
 export const FIND = 'elsewise-terminal-find';

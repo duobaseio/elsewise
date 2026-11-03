@@ -1,4 +1,4 @@
-import type { LocalSettingsPanel, SettingsSearchTerm } from '@elsewise/plugin';
+import type { LocalSettingsPanel, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { describe, expect, test, vi } from 'vitest';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { type SettingsSearchHit, search } from '@/settings/search';

@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { PluginId } from '@elsewise/plugin';
+import { PluginId } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
 
 /**

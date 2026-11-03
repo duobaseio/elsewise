@@ -4,7 +4,7 @@ import { CharCategory, EditorState, type Extension, Facet, Prec, StateEffect, St
 import { type EditorView, keymap, ViewPlugin } from '@codemirror/view';
 import { letterformClass } from '@elsewise/components/components/letter-icon';
 import { cn } from '@elsewise/components/lib/utils';
-import type { EditorCompletion } from '@elsewise/plugin';
+import type { EditorCompletion } from '@elsewise/frontend-plugin';
 import { type Tag, tags as t } from '@lezer/highlight';
 import { hint } from '@/editor/tooltip';
 

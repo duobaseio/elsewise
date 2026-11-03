@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type InstalledPlugin, type Settings } from '@elsewise/bridge';
+import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, onTestFinished, test } from 'vitest';
@@ -12,8 +12,8 @@ import { THEMES } from '../../../sheet';
 
 // A plugin with a panel inside another, for a result's path. The tests open the outer one, which is blank, so that only
 // the sidebar and search show.
-const WORDS: InstalledPlugin = {
-  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', main: 'main.js' },
+const WORDS: InstalledFrontendPlugin = {
+  manifest: { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } },
   enabled: true,
   themes: [],
   keymaps: [],

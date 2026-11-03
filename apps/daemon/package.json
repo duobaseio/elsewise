@@ -1,6 +1,6 @@
 {
   "name": "@elsewise/daemon",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "devEngines": {
@@ -26,6 +26,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.1",
     "@elsewise/core": "workspace:*",
+    "@elsewise/daemon-plugin": "workspace:*",
     "@elsewise/transport": "workspace:*",
     "@parcel/watcher": "^2.6.0",
     "execa": "^10.1.1",

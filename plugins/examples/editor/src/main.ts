@@ -1,6 +1,11 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import type { EditorState } from '@codemirror/state';
-import { DEFAULT_EDITOR_CONTEXT_MENU, type EditorCommand, type Plugin, type PluginInfo } from '@elsewise/plugin';
+import {
+  DEFAULT_EDITOR_CONTEXT_MENU,
+  type EditorCommand,
+  type Plugin,
+  type PluginInfo,
+} from '@elsewise/frontend-plugin';
 import { colorHover, colorPicker } from './color-picker.ts';
 import { keys, reactions } from './completions.ts';
 

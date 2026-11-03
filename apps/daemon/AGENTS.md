@@ -15,6 +15,7 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/daemon <script>`.
 | `src/websocket.ts`           | The WebSocket server: one `Channel` per connection, token checked before the upgrade.   |
 | `src/directory-watcher.ts`   | The directory watcher the services share: one recursive subscription per watched root.  |
 | `src/directories.ts`         | The data directory, `elsewise.db`, and the code directory, `workspaces/<project>/`.     |
+| `src/plugins/`               | The plugin store: reads `plugins/` and `plugins.json` in the data directory, runs them. |
 | `src/database/`              | The SQLite database: a Kysely dialect over `node:sqlite`, migrations, `openDatabase`.   |
 | `src/<feature>/`             | One folder per service: its `ServiceImpl` in `service.ts`, beside what it is built on.  |
 | `src/gen/`                   | Generated code, gitignored; `pnpm generate` rebuilds it. See below.                     |
@@ -36,12 +37,12 @@ under `src/`, and one `serve` line in `daemon.ts`.
 `main.ts` prints one JSON line to stdout, `{"port":…,"token":…}`, and nothing else ever goes there: whoever spawned
 the daemon reads it to learn where to connect. Logs go to stderr.
 
-| Variable                | What it sets                                                           |
-|-------------------------|------------------------------------------------------------------------|
-| `ELSEWISE_DAEMON_PORT`  | The loopback port. Unset or `0` picks a free one.                      |
-| `ELSEWISE_DAEMON_TOKEN` | The token a client must offer. Unset generates a random one per start. |
-| `ELSEWISE_DAEMON_DATA`  | The data directory. Unset uses `daemonDataDir()` from `@elsewise/core`. |
-| `ELSEWISE_DAEMON_CODE`  | Where new projects and workspaces go. Unset uses `codeDir()` from core. |
+| Variable                | What it sets                                                                 |
+|-------------------------|------------------------------------------------------------------------------|
+| `ELSEWISE_DAEMON_PORT`  | The loopback port. Unset or `0` picks a free one.                            |
+| `ELSEWISE_DAEMON_TOKEN` | The token a client must offer. Unset generates a random one per start.       |
+| `ELSEWISE_DAEMON_DATA`  | The data directory. Unset uses `daemonDataDir()` from `@elsewise/core/node`. |
+| `ELSEWISE_DAEMON_CODE`  | Where new projects and workspaces go. Unset uses `codeDir()` from core.      |
 
 A client offers two WebSocket subprotocols, the one header a browser's `WebSocket` can set: `elsewise.daemon.v1`,
 and `elsewise.daemon.token.<token>` with the token as printed. The daemon refuses the upgrade without both and

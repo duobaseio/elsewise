@@ -1,8 +1,10 @@
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { build } from 'esbuild';
 
 const require = createRequire(import.meta.url);
+const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
 
 /** Bundles `@parcel/watcher` with its native binary for the platform the build runs on. */
 const nativeWatcher = {
@@ -30,6 +32,7 @@ await build({
   platform: 'node',
   format: 'esm',
   sourcemap: true,
+  define: { DAEMON_VERSION: JSON.stringify(version) },
   banner: { js: "import { createRequire } from 'node:module';\nconst require = createRequire(import.meta.url);" },
   plugins: [nativeWatcher],
   loader: { '.node': 'copy' },

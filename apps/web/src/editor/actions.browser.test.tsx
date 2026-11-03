@@ -5,7 +5,7 @@ import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension, StateEffect } from '@codemirror/state';
 import { EditorView, runScopeHandlers } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
-import type { EditorAction, EditorActionSource, EditorDiagnostic } from '@elsewise/plugin';
+import type { EditorAction, EditorActionSource, EditorDiagnostic } from '@elsewise/frontend-plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { actions } from '@/editor/actions';
 import { diagnostics } from '@/editor/diagnostics';

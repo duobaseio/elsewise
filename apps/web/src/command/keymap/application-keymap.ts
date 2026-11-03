@@ -1,5 +1,12 @@
 import { PLATFORM, type Platform } from '@elsewise/components/lib/platform';
-import type { ActiveKeymap, ApplicationCommand, EditorCommand, Key, Keymap, TerminalCommand } from '@elsewise/plugin';
+import type {
+  ActiveKeymap,
+  ApplicationCommand,
+  EditorCommand,
+  Key,
+  Keymap,
+  TerminalCommand,
+} from '@elsewise/frontend-plugin';
 import { normalizeKey } from '@/command/keymap/keys';
 
 /**

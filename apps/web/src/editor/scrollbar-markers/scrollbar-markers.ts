@@ -1,6 +1,6 @@
 import { type Extension, Facet } from '@codemirror/state';
 import { type EditorView, keymap, ViewPlugin, type ViewUpdate } from '@codemirror/view';
-import type { EditorDiagnostic } from '@elsewise/plugin';
+import type { EditorDiagnostic } from '@elsewise/frontend-plugin';
 import { diagnostics, SEVERITIES } from '@/editor/diagnostics';
 import { diagnosticsSection } from '@/editor/hover';
 import { jump } from '@/editor/scroll';

@@ -2,7 +2,7 @@ import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import type { EditorDiagnostic } from '@elsewise/plugin';
+import type { EditorDiagnostic } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';

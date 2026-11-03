@@ -1,4 +1,4 @@
-import { type ApplicationCommand, type ContextMenuGroup, DEFAULT_COMMAND_GROUPS } from '@elsewise/plugin';
+import { type ApplicationCommand, type ContextMenuGroup, DEFAULT_COMMAND_GROUPS } from '@elsewise/frontend-plugin';
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';

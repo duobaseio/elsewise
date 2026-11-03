@@ -8,6 +8,7 @@ on:
       - apps/web/**
       - packages/bridge/**
       - packages/components/**
+      - packages/frontend-plugin/**
       - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
@@ -18,6 +19,7 @@ on:
       - apps/web/**
       - packages/bridge/**
       - packages/components/**
+      - packages/frontend-plugin/**
       - packages/plugin/**
       - package.json
       - pnpm-lock.yaml

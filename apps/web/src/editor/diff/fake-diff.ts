@@ -1,4 +1,4 @@
-import { DEFAULT_DIFF_SOURCES, type EditorDiffSource } from '@elsewise/plugin';
+import { DEFAULT_DIFF_SOURCES, type EditorDiffSource } from '@elsewise/frontend-plugin';
 
 // TODO: Replace with the git sources once the daemon reads files at a revision, and take the file from `base` once it
 // has a parameter for it. Until then, the sources read the one file the editor shows from the dev server.

@@ -1,6 +1,6 @@
 import type { Extension } from '@codemirror/state';
 import type { Platform } from '@elsewise/components/lib/platform';
-import type { Keymap } from '@elsewise/plugin';
+import type { Keymap } from '@elsewise/frontend-plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import { createMemoryHistory, createRootRoute, createRouter } from '@tanstack/react-router';
 import { AppearanceManager } from '@/appearance/appearance-manager';

@@ -11,7 +11,11 @@ import {
 } from '@codemirror/view';
 import { toast } from '@elsewise/components/components/toast';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { DEFAULT_NAVIGATION_SOURCES, type EditorNavigation, type EditorNavigationSource } from '@elsewise/plugin';
+import {
+  DEFAULT_NAVIGATION_SOURCES,
+  type EditorNavigation,
+  type EditorNavigationSource,
+} from '@elsewise/frontend-plugin';
 import { tags } from '@lezer/highlight';
 import { hint } from '@/editor/tooltip';
 

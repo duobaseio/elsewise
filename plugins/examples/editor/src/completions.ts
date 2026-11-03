@@ -5,7 +5,7 @@ import {
   pickedCompletion,
 } from '@codemirror/autocomplete';
 import { EditorState } from '@codemirror/state';
-import type { EditorCompletion } from '@elsewise/plugin';
+import type { EditorCompletion } from '@elsewise/frontend-plugin';
 import { tags } from '@lezer/highlight';
 
 /**

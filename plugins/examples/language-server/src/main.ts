@@ -1,5 +1,10 @@
 import { getIndentUnit, indentUnit } from '@codemirror/language';
-import { DEFAULT_COMMANDS, type LanguageServerTransport, type Plugin, type PluginInfo } from '@elsewise/plugin';
+import {
+  DEFAULT_COMMANDS,
+  type LanguageServerTransport,
+  type Plugin,
+  type PluginInfo,
+} from '@elsewise/frontend-plugin';
 import {
   CompletionItemKind,
   type ConfigurationParams,

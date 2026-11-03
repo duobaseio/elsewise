@@ -5,8 +5,8 @@ menu items.
 
 Run pnpm from the **repo root**: `pnpm --filter @elsewise/plugin-example-editor <script>`.
 
-`build` bundles `src/main.ts` into `bundle/main.js`, the plugin's main module, and copies `public/` into `bundle/`:
-`public/themes/<id>.json` is a theme of the plugin, as `public/keymaps/<id>.json` would be a keymap.
+`build` bundles `src/main.ts` into `dist/frontend/main.js`, the plugin's main module, and copies `manifest.json`
+into `dist/`.
 
 ## Rules
 

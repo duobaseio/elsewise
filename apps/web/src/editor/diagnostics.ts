@@ -7,7 +7,7 @@ import {
   DEFAULT_KEYS,
   type EditorCommand,
   type EditorDiagnostic,
-} from '@elsewise/plugin';
+} from '@elsewise/frontend-plugin';
 import { COMMANDS } from '@/editor/editor-manager';
 import { jump } from '@/editor/scroll';
 

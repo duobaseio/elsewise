@@ -8,7 +8,7 @@ import { languages } from '@codemirror/language-data';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { LanguageServer } from '@elsewise/plugin';
+import type { LanguageServer } from '@elsewise/frontend-plugin';
 import { afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import type { Diagnostic, Hover } from 'vscode-languageserver-protocol';
 import { actions, EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';

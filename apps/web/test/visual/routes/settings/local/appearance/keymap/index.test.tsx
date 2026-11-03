@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import type { Keymap as KeymapFile } from '@elsewise/plugin';
+import type { Keymap as KeymapFile } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, onTestFinished, test } from 'vitest';
