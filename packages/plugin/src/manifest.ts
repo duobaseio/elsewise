@@ -93,7 +93,7 @@ export const FrontendManifestPart = z.object({
   /**
    * The compatible versions of the plugin's daemon part, e.g. `^1.3.0`. Defaults to the same version.
    */
-  // TODO: Check when a daemon reports its plugins, once the daemon loads plugins.
+  // TODO: Check against the other part's version, once the daemon reports its plugins to the app.
   daemon: z.string().regex(RANGE).optional(),
 });
 
@@ -116,6 +116,6 @@ export const DaemonManifestPart = z.object({
   /**
    * The compatible versions of the plugin's frontend part, e.g. `^1.2.0`. Defaults to the same version.
    */
-  // TODO: Check when a daemon reports its plugins, once the daemon loads plugins.
+  // TODO: Check against the other part's version, once the daemon reports its plugins to the app.
   frontend: z.string().regex(RANGE).optional(),
 });
