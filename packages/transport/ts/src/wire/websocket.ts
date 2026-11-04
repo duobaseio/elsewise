@@ -46,7 +46,8 @@ export class WebSocketWire extends SocketWire {
       this.#heard = false;
       this.send(PING);
     }, interval);
-    timer.unref?.(); // Never holds a Node process open.
+    // TODO: Remove the cast once the wire stops assuming Node's timers.
+    (timer as { unref?: () => void }).unref?.(); // Never holds a Node process open.
     this.#heartbeat = timer;
   }
 
@@ -62,7 +63,8 @@ export class WebSocketWire extends SocketWire {
       this.#drainPoll = undefined;
       this.drained();
     }, DRAIN_POLL_MS);
-    timer.unref?.(); // Never holds a Node process open.
+    // TODO: Remove the cast once the wire stops assuming Node's timers.
+    (timer as { unref?: () => void }).unref?.(); // Never holds a Node process open.
     this.#drainPoll = timer;
   }
 

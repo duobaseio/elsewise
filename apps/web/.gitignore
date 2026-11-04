@@ -6,3 +6,6 @@ dist/
 
 # Vitest writes screenshot diffs and attachments here.
 .vitest/
+
+# Generated protobuf-es bindings.
+src/gen/

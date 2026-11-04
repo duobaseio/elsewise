@@ -2,6 +2,7 @@ import path from 'node:path';
 import type { Brightness } from '@elsewise/bridge';
 import { dataLocalDir } from '@elsewise/core/node';
 import { app, BrowserWindow, nativeTheme, protocol, shell } from 'electron';
+import { handleDaemon } from './daemon';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
 import { handleAppScheme } from './protocol';
@@ -26,6 +27,7 @@ protocol.registerSchemesAsPrivileged([
 
 app.whenReady().then(() => {
   handleAppScheme();
+  handleDaemon();
   handlePlugins();
   handleSettings();
 

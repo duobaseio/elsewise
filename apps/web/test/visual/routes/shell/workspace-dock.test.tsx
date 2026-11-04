@@ -6,7 +6,7 @@ import { render } from 'vitest-browser-react';
 import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
-import { WorkTreeDock } from '@/routes/_shell/$project/$worktree';
+import { WorkspaceDock } from '@/routes/_shell/$project/$workspace';
 import { STUB_PANELS } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
@@ -20,7 +20,7 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
       data-testid="sheet"
       style={{ width: 1100, height: 700 }}
     >
-      <WorkTreeDock
+      <WorkspaceDock
         onDockviewReady={(readyApi) => {
           api = readyApi;
         }}
@@ -39,14 +39,14 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
   return api;
 }
 
-test.each(THEMES)('worktree dock default layout (%s)', async (theme) => {
+test.each(THEMES)('workspace dock default layout (%s)', async (theme) => {
   await mount(theme);
 
-  await expect(page.getByTestId('sheet')).toMatchScreenshot(`worktree-dock-default-${theme}`);
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-default-${theme}`);
 });
 
 async function addEditorGroupTerminals(api: DockviewApi) {
-  const editorGroup = api.getPanel('editor:$worktree.tsx')?.group;
+  const editorGroup = api.getPanel('editor:$workspace.tsx')?.group;
   if (!editorGroup) {
     throw new Error('no editor group');
   }
@@ -59,7 +59,7 @@ async function addEditorGroupTerminals(api: DockviewApi) {
       position: { referenceGroup: editorGroup },
     });
   }
-  api.getPanel('editor:$worktree.tsx')?.api.setActive();
+  api.getPanel('editor:$workspace.tsx')?.api.setActive();
   await vi.waitFor(() => {
     if (editorGroup.element.querySelectorAll('.dv-tab').length !== 3) {
       throw new Error('terminal tabs not added');
@@ -70,7 +70,7 @@ async function addEditorGroupTerminals(api: DockviewApi) {
 const EDITOR_TAB = '.dv-active-group .dv-tabs-container > .dv-tab:nth-child(1)';
 const HIDDEN_TAB = '.dv-active-group .dv-tabs-container > .dv-tab:nth-child(2)';
 
-test.each(THEMES)('worktree dock tab hover states (%s)', async (theme) => {
+test.each(THEMES)('workspace dock tab hover states (%s)', async (theme) => {
   await addEditorGroupTerminals(await mount(theme));
 
   await forcePseudoStates([
@@ -91,10 +91,10 @@ test.each(THEMES)('worktree dock tab hover states (%s)', async (theme) => {
     { selector: '.dv-tab:has([data-tool])', pseudoClasses: ['hover'] },
   ]);
 
-  await expect(page.getByTestId('sheet')).toMatchScreenshot(`worktree-dock-tab-hover-${theme}`);
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-hover-${theme}`);
 });
 
-test.each(THEMES)('worktree dock tab focus states (%s)', async (theme) => {
+test.each(THEMES)('workspace dock tab focus states (%s)', async (theme) => {
   await addEditorGroupTerminals(await mount(theme));
 
   await forcePseudoStates([
@@ -105,10 +105,10 @@ test.each(THEMES)('worktree dock tab focus states (%s)', async (theme) => {
     },
   ]);
 
-  await expect(page.getByTestId('sheet')).toMatchScreenshot(`worktree-dock-tab-focus-${theme}`);
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-focus-${theme}`);
 });
 
-test.each(THEMES)('worktree dock tree collapsed (%s)', async (theme) => {
+test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {
   const api = await mount(theme);
 
   api.getPanel('fileTree')?.group.api.setVisible(false);
@@ -119,5 +119,5 @@ test.each(THEMES)('worktree dock tree collapsed (%s)', async (theme) => {
     }
   });
 
-  await expect(page.getByTestId('sheet')).toMatchScreenshot(`worktree-dock-collapsed-${theme}`);
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-collapsed-${theme}`);
 });

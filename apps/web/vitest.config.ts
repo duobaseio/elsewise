@@ -42,6 +42,7 @@ function browserProject(
         'vitest-browser-react',
         'react-dom',
         'react-dom/server',
+        '@bufbuild/protobuf',
         '@tanstack/react-query',
         '@tanstack/react-router',
         'dockview-react',

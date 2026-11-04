@@ -21,7 +21,7 @@ import { Editor } from '@/editor/editor';
 import { useSettings } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
 // TODO: Back this with the daemon.
-import FAKE_CODE from './$worktree.tsx?raw';
+import FAKE_CODE from './$workspace.tsx?raw';
 
 declare global {
   interface ImportMetaEnv {
@@ -32,8 +32,8 @@ declare global {
   }
 }
 
-export const Route = createFileRoute('/_shell/$project/$worktree')({
-  component: WorkTreeDock,
+export const Route = createFileRoute('/_shell/$project/$workspace')({
+  component: WorkspaceDock,
 });
 
 type PanelKind = keyof typeof PANELS;
@@ -48,7 +48,7 @@ const PANELS = {
 
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 
-export function WorkTreeDock({
+export function WorkspaceDock({
   panels = PANELS,
   onDockviewReady,
 }: {
@@ -94,10 +94,10 @@ export function WorkTreeDock({
 
   const onReady = (event: DockviewReadyEvent) => {
     event.api.addPanel({
-      id: 'editor:$worktree.tsx',
+      id: 'editor:$workspace.tsx',
       component: 'editor' satisfies PanelKind,
-      title: '$worktree.tsx',
-      params: { path: 'apps/web/src/routes/_shell/$project/$worktree.tsx' },
+      title: '$workspace.tsx',
+      params: { path: 'apps/web/src/routes/_shell/$project/$workspace.tsx' },
       minimumWidth: 10,
       minimumHeight: 10,
     });
@@ -107,7 +107,7 @@ export function WorkTreeDock({
       tabComponent: 'fileTree' satisfies PanelKind,
       title: 'Files',
       params: { path: '/' },
-      position: { referencePanel: 'editor:$worktree.tsx', direction: 'right' },
+      position: { referencePanel: 'editor:$workspace.tsx', direction: 'right' },
       minimumWidth: 10,
       minimumHeight: 10,
       initialWidth: 350,
@@ -117,7 +117,7 @@ export function WorkTreeDock({
       component: 'terminal' satisfies PanelKind,
       title: 'zsh 1',
       params: { index: 1 },
-      position: { referencePanel: 'editor:$worktree.tsx', direction: 'below' },
+      position: { referencePanel: 'editor:$workspace.tsx', direction: 'below' },
       minimumWidth: 10,
       minimumHeight: 10,
       initialHeight: 200,
@@ -125,7 +125,7 @@ export function WorkTreeDock({
     setDockview(event.api);
 
     // TODO: Replace with actual active panel logic
-    event.api.getPanel('editor:$worktree.tsx')?.api.setActive();
+    event.api.getPanel('editor:$workspace.tsx')?.api.setActive();
     onDockviewReady?.(event.api);
   };
 

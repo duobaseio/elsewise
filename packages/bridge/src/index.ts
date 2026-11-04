@@ -1,7 +1,9 @@
+import type { DaemonBridge } from './daemon.js';
 import type { PluginsBridge } from './plugins.js';
 import type { SettingsBridge } from './settings.js';
 import type { WindowBridge } from './window.js';
 
+export { type DaemonBridge, DaemonConnection } from './daemon.js';
 export {
   InstalledFrontendPlugin,
   InvalidPlugin,
@@ -41,6 +43,10 @@ declare global {
        * The embedder's version, following SemVer, e.g. `1.2.3`.
        */
       version?: string;
+      /**
+       * See {@link DaemonBridge}.
+       */
+      daemon?: DaemonBridge;
       /**
        * See {@link PluginsBridge}.
        */

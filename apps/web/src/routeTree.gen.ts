@@ -9,11 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as ShellRouteRouteImport } from './routes/_shell/route'
 import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
-import { Route as ShellProjectWorktreeRouteImport } from './routes/_shell/$project/$worktree'
+import { Route as ShellProjectWorkspaceRouteImport } from './routes/_shell/$project/$workspace'
 import { Route as SettingsLocalIdRouteImport } from './routes/settings/local/$id'
 import { Route as SettingsRemoteRemoteIdRouteImport } from './routes/settings/remote/$remote/$id'
 import { Route as SettingsLocalAppearanceEditorIndexRouteImport } from './routes/settings/local/appearance/editor/index'
@@ -22,11 +22,6 @@ import { Route as SettingsLocalAppearanceGeneralIndexRouteImport } from './route
 import { Route as SettingsLocalAppearanceKeymapIndexRouteImport } from './routes/settings/local/appearance/keymap/index'
 import { Route as SettingsLocalAppearanceTerminalIndexRouteImport } from './routes/settings/local/appearance/terminal/index'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ShellRouteRoute = ShellRouteRouteImport.update({
   id: '/_shell',
   getParentRoute: () => rootRouteImport,
@@ -36,14 +31,19 @@ const SettingsRouteRoute = SettingsRouteRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShellIndexRoute = ShellIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ShellRouteRoute,
+} as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-const ShellProjectWorktreeRoute = ShellProjectWorktreeRouteImport.update({
-  id: '/$project/$worktree',
-  path: '/$project/$worktree',
+const ShellProjectWorkspaceRoute = ShellProjectWorkspaceRouteImport.update({
+  id: '/$project/$workspace',
+  path: '/$project/$workspace',
   getParentRoute: () => ShellRouteRoute,
 } as any)
 const SettingsLocalIdRoute = SettingsLocalIdRouteImport.update({
@@ -88,10 +88,10 @@ const SettingsLocalAppearanceTerminalIndexRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/': typeof ShellIndexRoute
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/': typeof SettingsIndexRoute
-  '/$project/$worktree': typeof ShellProjectWorktreeRoute
+  '/$project/$workspace': typeof ShellProjectWorkspaceRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -101,9 +101,9 @@ export interface FileRoutesByFullPath {
   '/settings/local/appearance/terminal/': typeof SettingsLocalAppearanceTerminalIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/': typeof ShellIndexRoute
   '/settings': typeof SettingsIndexRoute
-  '/$project/$worktree': typeof ShellProjectWorktreeRoute
+  '/$project/$workspace': typeof ShellProjectWorkspaceRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -114,11 +114,11 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/_shell': typeof ShellRouteRouteWithChildren
   '/settings': typeof SettingsRouteRouteWithChildren
+  '/_shell/': typeof ShellIndexRoute
   '/settings/': typeof SettingsIndexRoute
-  '/_shell/$project/$worktree': typeof ShellProjectWorktreeRoute
+  '/_shell/$project/$workspace': typeof ShellProjectWorkspaceRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
@@ -133,7 +133,7 @@ export interface FileRouteTypes {
     | '/'
     | '/settings'
     | '/settings/'
-    | '/$project/$worktree'
+    | '/$project/$workspace'
     | '/settings/local/$id'
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/editor/$language'
@@ -145,7 +145,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/settings'
-    | '/$project/$worktree'
+    | '/$project/$workspace'
     | '/settings/local/$id'
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/editor/$language'
@@ -155,11 +155,11 @@ export interface FileRouteTypes {
     | '/settings/local/appearance/terminal'
   id:
     | '__root__'
-    | '/'
     | '/_shell'
     | '/settings'
+    | '/_shell/'
     | '/settings/'
-    | '/_shell/$project/$worktree'
+    | '/_shell/$project/$workspace'
     | '/settings/local/$id'
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/editor/$language'
@@ -170,20 +170,12 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   ShellRouteRoute: typeof ShellRouteRouteWithChildren
   SettingsRouteRoute: typeof SettingsRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_shell': {
       id: '/_shell'
       path: ''
@@ -198,6 +190,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_shell/': {
+      id: '/_shell/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof ShellIndexRouteImport
+      parentRoute: typeof ShellRouteRoute
+    }
     '/settings/': {
       id: '/settings/'
       path: '/'
@@ -205,11 +204,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsIndexRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
-    '/_shell/$project/$worktree': {
-      id: '/_shell/$project/$worktree'
-      path: '/$project/$worktree'
-      fullPath: '/$project/$worktree'
-      preLoaderRoute: typeof ShellProjectWorktreeRouteImport
+    '/_shell/$project/$workspace': {
+      id: '/_shell/$project/$workspace'
+      path: '/$project/$workspace'
+      fullPath: '/$project/$workspace'
+      preLoaderRoute: typeof ShellProjectWorkspaceRouteImport
       parentRoute: typeof ShellRouteRoute
     }
     '/settings/local/$id': {
@@ -265,11 +264,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface ShellRouteRouteChildren {
-  ShellProjectWorktreeRoute: typeof ShellProjectWorktreeRoute
+  ShellIndexRoute: typeof ShellIndexRoute
+  ShellProjectWorkspaceRoute: typeof ShellProjectWorkspaceRoute
 }
 
 const ShellRouteRouteChildren: ShellRouteRouteChildren = {
-  ShellProjectWorktreeRoute: ShellProjectWorktreeRoute,
+  ShellIndexRoute: ShellIndexRoute,
+  ShellProjectWorkspaceRoute: ShellProjectWorkspaceRoute,
 }
 
 const ShellRouteRouteWithChildren = ShellRouteRoute._addFileChildren(
@@ -308,7 +309,6 @@ const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(
 )
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   ShellRouteRoute: ShellRouteRouteWithChildren,
   SettingsRouteRoute: SettingsRouteRouteWithChildren,
 }
