@@ -1,6 +1,6 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react/combobox';
 import { Button } from '@elsewise/components/components/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@elsewise/components/components/collapsible';
+import { Collapsible, CollapsibleContent } from '@elsewise/components/components/collapsible';
 import {
   Combobox,
   ComboboxCollection,
@@ -20,13 +20,16 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuChevron,
   SidebarMenuItem,
+  SidebarMenuRow,
+  SidebarMenuRowLabel,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
 } from '@elsewise/components/components/sidebar';
-import { DEFAULT_SETTINGS_GROUPS } from '@elsewise/frontend-plugin';
+import { DEFAULT_ROUTES, DEFAULT_SETTINGS_GROUPS } from '@elsewise/frontend-plugin';
 import {
   createFileRoute,
   Link,
@@ -102,7 +105,9 @@ function Settings() {
         <Header className="px-2" trafficLights>
           <Button
             className="ml-auto cursor-default text-text-3 [-webkit-app-region:no-drag]"
-            onClick={() => (router.history.canGoBack() ? router.history.back() : router.navigate({ to: '/' }))}
+            onClick={() =>
+              router.history.canGoBack() ? router.history.back() : router.navigate({ to: DEFAULT_ROUTES.home })
+            }
             size="sm"
             variant="ghost"
           >
@@ -136,10 +141,9 @@ function Settings() {
                             .sort((a, b) => a.label.localeCompare(b.label))}
                           key={panel.id}
                           label={panel.label}
+                          action={<AddLanguage languages={languages} />}
                           link={linkTo(panel, { remote })}
-                        >
-                          <AddLanguage languages={languages} />
-                        </Item>
+                        />
                       ) : (
                         <Item
                           entries={panels
@@ -173,17 +177,16 @@ function Settings() {
 
 type Entry = { key: string; label: string; link: ReturnType<typeof linkTo> };
 
-// A page, and the `entries` under it, with `children` after them.
 function Item({
   label,
   link,
   entries,
-  children,
+  action,
 }: {
   label: string;
   link: ReturnType<typeof linkTo>;
   entries: readonly Entry[];
-  children?: ReactNode;
+  action?: ReactNode;
 }) {
   const matchRoute = useMatchRoute();
   const active = Boolean(matchRoute(link));
@@ -197,11 +200,11 @@ function Item({
     }
   }, [activeInside]);
 
-  if (entries.length === 0 && children === undefined) {
+  if (entries.length === 0 && action === undefined) {
     return (
       <SidebarMenuItem>
         <SidebarMenuButton
-          className="cursor-default pl-8"
+          className="cursor-default"
           isActive={active}
           render={<Link draggable={false} replace {...link} />}
         >
@@ -213,34 +216,17 @@ function Item({
 
   return (
     <Collapsible onOpenChange={setOpen} open={open} render={<SidebarMenuItem />}>
-      <div
-        className="flex h-8 items-center gap-2 rounded-md pr-2 pl-2 hover:overlay-hover data-active:bg-layer-selected"
-        data-active={active ? '' : undefined}
-      >
-        <CollapsibleTrigger
-          aria-label={open ? `Collapse ${label}` : `Expand ${label}`}
-          className="relative flex size-4 shrink-0 cursor-default items-center justify-center rounded-sm text-text-3 outline-none after:absolute after:-inset-2 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
-        >
-          <Icon
-            className={
-              open
-                ? 'size-3.5 transition-transform duration-125 ease-out-expo motion-reduce:transition-none'
-                : 'size-3.5 -rotate-90 transition-transform duration-125 ease-out-expo motion-reduce:transition-none'
-            }
-            name="expand"
-          />
-        </CollapsibleTrigger>
-        <Link
-          className="flex h-full min-w-0 flex-1 cursor-default select-none items-center rounded-md outline-none focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
+      <SidebarMenuRow isActive={active}>
+        <SidebarMenuRowLabel
+          className="select-none"
           data-active={active ? '' : undefined}
-          draggable={false}
           onDoubleClick={() => setOpen((open) => !open)}
-          replace
-          {...link}
+          render={<Link draggable={false} replace {...link} />}
         >
           {label}
-        </Link>
-      </div>
+        </SidebarMenuRowLabel>
+        <SidebarMenuChevron aria-label={open ? `Collapse ${label}` : `Expand ${label}`} />
+      </SidebarMenuRow>
       <CollapsibleContent>
         <SidebarMenuSub>
           {entries.map((entry) => (
@@ -255,7 +241,7 @@ function Item({
               </SidebarMenuSubButton>
             </SidebarMenuSubItem>
           ))}
-          {children}
+          {action}
         </SidebarMenuSub>
       </CollapsibleContent>
     </Collapsible>
@@ -297,7 +283,7 @@ function AddLanguage({ languages }: { languages: readonly string[] }) {
           aria-label="Add language"
           render={
             <SidebarMenuSubButton
-              className="w-full cursor-default text-text-2 [&>svg]:size-3"
+              className="w-full cursor-default text-text-2 [&>svg]:size-2.75"
               render={<button type="button" />}
               size="sm"
             />

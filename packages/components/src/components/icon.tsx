@@ -10,6 +10,8 @@ import {
   CaretUpIcon,
   CheckCircleIcon,
   CheckIcon,
+  CircleHalfIcon,
+  CircleIcon,
   FolderIcon,
   FolderOpenIcon,
   GearIcon,
@@ -20,6 +22,7 @@ import {
   MinusIcon,
   PlusIcon,
   QuestionIcon,
+  RecordIcon,
   RowsIcon,
   SidebarIcon,
   SpinnerIcon,
@@ -73,6 +76,10 @@ const DEFAULT_ICONS = {
   'revert-chunk': CaretDoubleRightIcon,
   back: CaretLeftIcon,
   help: QuestionIcon,
+  idle: CircleIcon,
+  running: CircleHalfIcon,
+  waiting: (props: ComponentProps<'svg'>) => <RecordIcon weight="fill" {...props} />,
+  finished: (props: ComponentProps<'svg'>) => <CheckCircleIcon weight="fill" {...props} />,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

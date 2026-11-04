@@ -4,6 +4,7 @@ import type { AnyRouter } from '@tanstack/react-router';
 import type { AppearanceManager } from '@/appearance/appearance-manager';
 import { CommandManager } from '@/command/command-manager';
 import type { EditorManager } from '@/editor/editor-manager';
+import type { ProjectManager } from '@/projects/project-manager';
 import type { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import type { TerminalManager } from '@/terminal/terminal-manager';
 
@@ -15,9 +16,10 @@ export class ApplicationManager implements Application {
 
   constructor(
     readonly appearance: AppearanceManager,
-    readonly editor: EditorManager,
     readonly router: AnyRouter,
     readonly settings: SettingsPanelManager,
+    readonly projects: ProjectManager,
+    readonly editor: EditorManager,
     readonly terminal: TerminalManager,
     selected: Keymap,
     platform?: Platform,

@@ -185,12 +185,12 @@ export function DefaultTab(props: IDockviewPanelHeaderProps) {
   }, [props.containerApi]);
 
   return (
-    <div className="group/tab flex h-full items-center gap-1.5 px-2 text-base">
+    <div className="flex h-full items-center gap-1.5 px-2 text-base">
       <span>{props.api.title}</span>
       {closable && (
         <Button
           aria-label={`Close ${props.api.title}`}
-          className="size-4 text-text-3 opacity-0 focus-visible:opacity-100 group-hover/tab:opacity-100 in-[.dv-active-tab]:opacity-100"
+          className="size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100"
           onClick={(event) => {
             event.stopPropagation();
             props.api.close();

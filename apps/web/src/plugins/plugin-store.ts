@@ -73,6 +73,14 @@ export class PluginStore extends PluginResolver<
         ),
       );
     }
+
+    if (plugin.onWorkspaceChange) {
+      listeners.push(
+        application.projects.workspaces.onActiveChange((workspace) =>
+          this.call(id, 'onWorkspaceChange', () => plugin.onWorkspaceChange?.(workspace)),
+        ),
+      );
+    }
     return listeners;
   }
 

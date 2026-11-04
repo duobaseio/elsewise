@@ -31,6 +31,7 @@
     "./components/settings": "./src/components/settings.tsx",
     "./components/sidebar": "./src/components/sidebar.tsx",
     "./components/skeleton": "./src/components/skeleton.tsx",
+    "./components/status-indicator": "./src/components/status-indicator.tsx",
     "./components/switch": "./src/components/switch.tsx",
     "./components/toast": "./src/components/toast.tsx",
     "./components/toggle": "./src/components/toggle.tsx",

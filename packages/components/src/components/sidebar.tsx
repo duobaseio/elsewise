@@ -15,6 +15,7 @@ import {
 } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
+import { CollapsibleTrigger } from './collapsible';
 import { Icon } from './icon';
 import { Input } from './input';
 import { Separator } from './separator';
@@ -524,6 +525,81 @@ export function SidebarMenuAction({
   });
 }
 
+/**
+ * The row of a menu item that collapses: a `SidebarMenuRowLabel`, then a `SidebarMenuChevron`.
+ */
+export function SidebarMenuRow({
+  isActive = false,
+  className,
+  ...props
+}: ComponentProps<'div'> & {
+  isActive?: boolean;
+}) {
+  return (
+    <div
+      data-slot="sidebar-menu-row"
+      data-sidebar="menu-row"
+      data-active={isActive ? '' : undefined}
+      className={cn(
+        'flex h-8 items-center gap-1 rounded-md pr-1 hover:overlay-hover data-active:bg-layer-selected',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The label of a `SidebarMenuRow`, filling the space before its chevron.
+ */
+export function SidebarMenuRowLabel({
+  className,
+  render,
+  ...props
+}: useRender.ComponentProps<'button'> & ComponentProps<'button'>) {
+  return useRender({
+    defaultTagName: 'button',
+    props: mergeProps<'button'>(
+      {
+        className: cn(
+          'flex h-full min-w-0 flex-1 cursor-default items-center gap-2 rounded-md pl-2 text-left outline-none focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>span:last-child]:truncate',
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: 'sidebar-menu-row-label',
+      sidebar: 'menu-row-label',
+    },
+  });
+}
+
+/**
+ * The toggle at the end of a `SidebarMenuRow`, pointing right while collapsed and down while open.
+ */
+export function SidebarMenuChevron({
+  className,
+  ...props
+}: Omit<ComponentProps<typeof CollapsibleTrigger>, 'children'>) {
+  return (
+    <CollapsibleTrigger
+      data-sidebar="menu-chevron"
+      className={cn(
+        'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md text-text-3 outline-none focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring data-panel-open:[&>svg]:rotate-0',
+        className,
+      )}
+      {...props}
+    >
+      <Icon
+        className="size-3.5 -rotate-90 transition-transform duration-125 ease-out-expo motion-reduce:transition-none"
+        name="expand"
+      />
+    </CollapsibleTrigger>
+  );
+}
+
 export function SidebarMenuBadge({ className, ...props }: ComponentProps<'div'>) {
   return (
     <div
@@ -580,7 +656,7 @@ export function SidebarMenuSub({ className, ...props }: ComponentProps<'ul'>) {
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
       className={cn(
-        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-[1.5px] border-border px-2.5 py-0.5 group-data-[collapsible=icon]:hidden',
+        'ml-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-[1.5px] border-border py-0.5 pl-2.5 group-data-[collapsible=icon]:hidden',
         className,
       )}
       {...props}

@@ -4,6 +4,7 @@ import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
+import { Collapsible, CollapsibleContent } from '../../src/components/collapsible';
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +17,10 @@ import {
   SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
+  SidebarMenuChevron,
   SidebarMenuItem,
+  SidebarMenuRow,
+  SidebarMenuRowLabel,
   SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
@@ -58,6 +62,13 @@ const ROWS: readonly RowSpec[] = [
   { key: 'disabled', label: 'disabled', disabled: true },
 ];
 
+const COLLAPSIBLES = [
+  { key: 'open', label: 'open', open: true },
+  { key: 'closed', label: 'closed', open: false },
+  { key: 'row-hover', label: 'hover', open: false, forced: ['hover'] },
+  { key: 'row-selected', label: 'selected', open: false, active: true },
+] as const;
+
 // Ragged on purpose — the widths used to be rolled per mount.
 const SKELETONS = ['82%', '54%', '68%'] as const;
 
@@ -65,10 +76,12 @@ test.each(THEMES)('sidebar (%s)', async (theme) => {
   await render(<SidebarSheet theme={theme} />);
 
   await forcePseudoStates(
-    ROWS.filter((row) => row.forced).map((row) => ({
-      selector: `[data-visual-state="${row.key}"]`,
-      pseudoClasses: row.forced ?? [],
-    })),
+    [...ROWS, ...COLLAPSIBLES]
+      .filter((row) => 'forced' in row && row.forced)
+      .map((row) => ({
+        selector: `[data-visual-state="${row.key}"]`,
+        pseudoClasses: ('forced' in row && row.forced) || [],
+      })),
   );
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-${theme}`);
@@ -129,6 +142,31 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Collapsible</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {COLLAPSIBLES.map((row) => (
+                    <Collapsible defaultOpen={row.open} key={row.key} render={<SidebarMenuItem />}>
+                      <SidebarMenuRow data-visual-state={row.key} isActive={'active' in row && row.active}>
+                        <SidebarMenuRowLabel>
+                          <GitBranchIcon className="size-4 shrink-0" />
+                          <span>{row.label}</span>
+                        </SidebarMenuRowLabel>
+                        <SidebarMenuChevron />
+                      </SidebarMenuRow>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton>sub rest</SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

@@ -41,6 +41,10 @@ const ROLES = Object.keys({
   'revert-chunk': true,
   back: true,
   help: true,
+  idle: true,
+  running: true,
+  waiting: true,
+  finished: true,
 } as const satisfies Record<IconName, true>) as readonly IconName[];
 
 const PROPS: readonly { key: string; label: string; render: ReactNode }[] = [

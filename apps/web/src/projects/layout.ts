@@ -1,7 +1,7 @@
 import { DEFAULT_PROJECT_LAYOUT, type ProjectLayout } from '@elsewise/bridge';
-import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import { projectsQuery } from '@/projects/projects';
-import { workspacesQuery } from '@/projects/workspaces';
+import { type QueryClient, queryOptions, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
+import { projectsQuery } from '@/projects/project-manager';
+import { workspacesQuery } from '@/projects/workspace-manager';
 
 type ProjectEntry = ProjectLayout['daemons'][string]['projects'][number];
 
@@ -40,14 +40,13 @@ export function useProjectLayout(daemonId: string) {
  * Returns the functions that change the layout of the projects on the daemon with `daemonId`.
  */
 export function useUpdateProjectLayout(daemonId: string) {
-  const client = useQueryClient();
-  const { mutate } = useMutation({
-    mutationFn: async (layout: ProjectLayout) => window.bridge?.projects?.save(layout),
-    onError: (error: unknown) => {
-      console.error('projects: save failed', error);
-    },
-  });
+  return updateProjectLayout(useQueryClient(), daemonId);
+}
 
+/**
+ * Returns the functions that change the layout of the projects on the daemon with `daemonId`, in `client`'s cache.
+ */
+export function updateProjectLayout(client: QueryClient, daemonId: string) {
   // Applies `change` to the daemon's projects, each project shown listed first so the change keeps the order shown.
   const update = (change: (entries: ProjectEntry[]) => ProjectEntry[]) => {
     const next = client.setQueryData(projectLayoutQuery.queryKey, (layout) => {
@@ -63,8 +62,11 @@ export function useUpdateProjectLayout(daemonId: string) {
       const entries = [...shown, ...listed.filter((entry) => !shown.some((other) => other.id === entry.id))];
       return { ...layout, daemons: { ...layout.daemons, [daemonId]: { projects: change(entries) } } };
     });
+
     if (next) {
-      mutate(next);
+      Promise.resolve(window.bridge?.projects?.save(next)).catch((error: unknown) => {
+        console.error('projects: save failed', error);
+      });
     }
   };
 
@@ -93,6 +95,7 @@ export function useUpdateProjectLayout(daemonId: string) {
           const workspaces = [...shown, ...entry.workspaces.filter((id) => !shown.includes(id))].filter(
             (id) => id !== workspaceId,
           );
+
           return { ...entry, workspaces: [...workspaces.slice(0, index), workspaceId, ...workspaces.slice(index)] };
         }),
       ),

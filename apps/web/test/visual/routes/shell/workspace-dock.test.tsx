@@ -81,10 +81,6 @@ test.each(THEMES)('workspace dock tab hover states (%s)', async (theme) => {
     },
     { selector: HIDDEN_TAB, pseudoClasses: ['hover'] },
     {
-      selector: `${HIDDEN_TAB} [class*="group/tab"]`,
-      pseudoClasses: ['hover'],
-    },
-    {
       selector: '.dv-inactive-group .dv-tab.dv-active-tab',
       pseudoClasses: ['hover'],
     },

@@ -2,6 +2,8 @@ import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command';
 import type { Editor } from './editor/editor';
+import type { Projects } from './projects/projects';
+import type { Workspace } from './projects/workspaces';
 import type { Settings } from './settings';
 import type { Terminal } from './terminal';
 import type { ThemeVariant } from './theme';
@@ -12,6 +14,16 @@ import type { ThemeVariant } from './theme';
  * See {@link Application.router}.
  */
 export const DEFAULT_ROUTES = {
+  /**
+   * The page shown without a workspace.
+   */
+  home: '/',
+  /**
+   * Returns the path of the workspace with `workspaceId`, in the project with `projectId` on the daemon with
+   * `daemonId`.
+   */
+  workspace: (daemonId: string, projectId: string, workspaceId: string) =>
+    `/${encodeURIComponent(daemonId)}/${encodeURIComponent(projectId)}/${encodeURIComponent(workspaceId)}` as const,
   settings: {
     /**
      * The settings page last open, or General otherwise.
@@ -75,6 +87,11 @@ export interface Plugin {
    * Called with the new keymap when it changes, while the plugin is enabled.
    */
   onKeymapChange?(keymap: ActiveKeymap): void;
+
+  /**
+   * Called with the workspace shown when another is shown or it changes, while the plugin is enabled.
+   */
+  onWorkspaceChange?(workspace: Workspace | null): void;
 }
 
 /**
@@ -102,6 +119,11 @@ export interface Application {
    * The settings.
    */
   readonly settings: Settings;
+
+  /**
+   * The projects.
+   */
+  readonly projects: Projects;
 
   /**
    * The code editor.

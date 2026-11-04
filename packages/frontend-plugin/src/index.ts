@@ -64,6 +64,25 @@ export {
 } from './editor/toolbar';
 export { Key, Keymap, Keys, PlatformKey } from './keymap';
 export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin';
+export type {
+  CloneProgress,
+  ExistingProjectSource,
+  NewProjectSource,
+  Project,
+  ProjectClone,
+  ProjectId,
+  Projects,
+} from './projects/projects';
+export type {
+  ExistingWorkspaceSource,
+  NewWorkspaceSource,
+  Workspace,
+  WorkspaceId,
+  WorkspaceSource,
+  WorkspaceStatus,
+  WorkspaceStatusHandle,
+  Workspaces,
+} from './projects/workspaces';
 export {
   DEFAULT_SETTINGS_GROUPS,
   type LocalSettingsPanel,

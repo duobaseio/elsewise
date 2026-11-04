@@ -1,0 +1,132 @@
+import type { Workspaces } from './workspaces';
+
+/**
+ * The projects across daemons.
+ */
+export interface Projects {
+  /**
+   * The projects' workspaces.
+   */
+  readonly workspaces: Workspaces;
+
+  /**
+   * Returns the projects on the daemon with `daemonId`.
+   */
+  list(daemonId: string): Promise<readonly Project[]>;
+
+  /**
+   * Adds a project on the daemon with `daemonId`.
+   */
+  add(daemonId: string, source: NewProjectSource | ExistingProjectSource): Promise<Project>;
+
+  /**
+   * Clones a new project from `clone.url` on the daemon with `daemonId`.
+   *
+   * Calls `onProgress` as the clone advances. Aborting `signal` stops the clone, removes the folder and rejects.
+   */
+  clone(
+    daemonId: string,
+    clone: ProjectClone,
+    options?: { onProgress?: (progress: CloneProgress) => void; signal?: AbortSignal },
+  ): Promise<Project>;
+
+  /**
+   * Renames `project`.
+   */
+  rename(project: ProjectId, name: string): Promise<Project>;
+
+  /**
+   * Deletes `project` and its workspaces, closing whatever is open in them first. The daemon stops tracking them, and
+   * `deleteFiles` deletes their folders.
+   */
+  delete(project: ProjectId, options?: { deleteFiles?: boolean }): Promise<void>;
+}
+
+/**
+ * A project's id.
+ */
+export interface ProjectId {
+  readonly daemon: string;
+  readonly project: string;
+}
+
+/**
+ * A project.
+ */
+export interface Project {
+  readonly id: ProjectId;
+  readonly name: string;
+  /**
+   * `missing` if the folder is gone, `broken` if it is there but no longer a project.
+   */
+  readonly state: 'ok' | 'missing' | 'broken';
+
+  /**
+   * The main workspace's path.
+   */
+  readonly absolutePath: string;
+}
+
+/**
+ * A new, empty project the daemon creates.
+ */
+export interface NewProjectSource {
+  readonly type: 'new';
+  readonly name: string;
+
+  /**
+   * Defaults to a folder named after `name` in the daemon's projects directory.
+   */
+  readonly absolutePath?: string;
+}
+
+/**
+ * A folder on the daemon's machine, which no project has yet.
+ */
+export interface ExistingProjectSource {
+  readonly type: 'existing';
+
+  /**
+   * Defaults to the folder's name.
+   */
+  readonly name?: string;
+
+  readonly absolutePath: string;
+}
+
+/**
+ * A project to clone.
+ */
+export interface ProjectClone {
+  readonly url: string;
+
+  /**
+   * Defaults to the folder's name.
+   */
+  readonly name?: string;
+
+  /**
+   * Defaults to a folder in the daemon's projects directory.
+   */
+  readonly absolutePath?: string;
+}
+
+/**
+ * A git clone's progress.
+ */
+export interface CloneProgress {
+  readonly phase:
+    | 'enumerating'
+    | 'counting'
+    | 'compressing'
+    | 'receiving'
+    | 'resolving'
+    | 'unpacking'
+    | 'checking-out'
+    | 'other';
+
+  /**
+   * How much of the phase is done, from 0 to 100.
+   */
+  readonly percent: number;
+}

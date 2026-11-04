@@ -7,8 +7,8 @@ import { renderHook } from 'vitest-browser-react';
 import { LOCAL_DAEMON } from '@/daemon';
 import { ProjectSchema, WorkspaceSchema } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { projectLayoutQuery, useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
-import { projectsQuery } from '@/projects/projects';
-import { workspacesQuery } from '@/projects/workspaces';
+import { projectsQuery } from '@/projects/project-manager';
+import { workspacesQuery } from '@/projects/workspace-manager';
 
 afterEach(() => {
   window.bridge = undefined;
