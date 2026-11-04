@@ -173,7 +173,7 @@ describe('userThemesQuery', () => {
   test('returns none without bridge', async () => {
     vi.stubGlobal('window', {});
 
-    await expect(new QueryClient().fetchQuery(userThemesQuery)).resolves.toEqual([]);
+    await expect(new QueryClient().query(userThemesQuery)).resolves.toEqual([]);
   });
 
   test('logs unreadable theme', async () => {
@@ -184,7 +184,7 @@ describe('userThemesQuery', () => {
     ];
     vi.stubGlobal('window', { bridge: { settings: { loadUserThemes: async () => themes } } });
 
-    await expect(new QueryClient().fetchQuery(userThemesQuery)).resolves.toEqual(themes);
+    await expect(new QueryClient().query(userThemesQuery)).resolves.toEqual(themes);
     expect(error).toHaveBeenCalledExactlyOnceWith('Theme dawn failed to load: dawn.json is not JSON');
   });
 });

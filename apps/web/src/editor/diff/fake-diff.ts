@@ -2,7 +2,7 @@ import { DEFAULT_DIFF_SOURCES, type EditorDiffSource } from '@elsewise/frontend-
 
 // TODO: Replace with the git sources once the daemon reads files at a revision, and take the file from `base` once it
 // has a parameter for it. Until then, the sources read the one file the editor shows from the dev server.
-const PATH = 'apps/web/src/routes/_shell/$project/$workspace.tsx';
+const PATH = 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx';
 
 export const FAKE_UNSTAGED: EditorDiffSource = {
   id: DEFAULT_DIFF_SOURCES.unstaged,

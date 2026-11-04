@@ -6,7 +6,7 @@ import { render } from 'vitest-browser-react';
 import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
-import { WorkspaceDock } from '@/routes/_shell/$project/$workspace';
+import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace';
 import { STUB_PANELS } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';

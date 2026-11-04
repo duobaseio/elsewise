@@ -1,5 +1,6 @@
 import type { DaemonBridge } from './daemon';
 import type { PluginsBridge } from './plugins';
+import type { ProjectsBridge } from './projects';
 import type { SettingsBridge } from './settings';
 import type { WindowBridge } from './window';
 
@@ -11,6 +12,7 @@ export {
   PluginId,
   type PluginsBridge,
 } from './plugins';
+export { DEFAULT_PROJECT_LAYOUT, ProjectLayout, type ProjectsBridge } from './projects';
 export {
   Brightness,
   BundledKeymap,
@@ -55,6 +57,10 @@ declare global {
        * See {@link SettingsBridge}.
        */
       settings?: SettingsBridge;
+      /**
+       * See {@link ProjectsBridge}.
+       */
+      projects?: ProjectsBridge;
       /**
        * See {@link WindowBridge}.
        */

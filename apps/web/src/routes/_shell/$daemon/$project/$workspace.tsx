@@ -32,7 +32,7 @@ declare global {
   }
 }
 
-export const Route = createFileRoute('/_shell/$project/$workspace')({
+export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
   component: WorkspaceDock,
 });
 
@@ -97,7 +97,7 @@ export function WorkspaceDock({
       id: 'editor:$workspace.tsx',
       component: 'editor' satisfies PanelKind,
       title: '$workspace.tsx',
-      params: { path: 'apps/web/src/routes/_shell/$project/$workspace.tsx' },
+      params: { path: 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx' },
       minimumWidth: 10,
       minimumHeight: 10,
     });

@@ -5,6 +5,7 @@ import { app, BrowserWindow, dialog, nativeTheme, protocol, shell } from 'electr
 import { handleDaemon } from './daemon';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
+import { handleProjects } from './projects';
 import { handleAppScheme } from './protocol';
 import { handleSettings, watchUserThemesAndKeymaps } from './settings';
 import { closeAfterRenderer, loadWindow, saveWindow } from './window';
@@ -38,6 +39,7 @@ app.whenReady().then(() => {
   handleDaemon();
   handlePlugins();
   handleSettings();
+  handleProjects();
 
   installMenu();
   watchUserThemesAndKeymaps();

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 
-import type { WorkspaceDock } from '@/routes/_shell/$project/$workspace';
+import type { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace';
 
 type DockPanels = NonNullable<ComponentProps<typeof WorkspaceDock>['panels']>;
 

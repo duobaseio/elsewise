@@ -1,4 +1,4 @@
-import type { DaemonBridge, PluginsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
+import type { DaemonBridge, PluginsBridge, ProjectsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
 import { contextBridge, ipcRenderer } from 'electron';
 
 // The app's version from package.json, defined by bundle.mjs.
@@ -27,6 +27,11 @@ const settings: SettingsBridge = {
   onChange: (handler) => {
     ipcRenderer.on('settings:changed', (_event, changed) => handler(changed));
   },
+};
+
+const projects: ProjectsBridge = {
+  load: () => ipcRenderer.invoke('projects:load'),
+  save: (layout) => ipcRenderer.invoke('projects:save', layout),
 };
 
 let close: (() => Promise<void>) | undefined;
@@ -58,5 +63,6 @@ contextBridge.exposeInMainWorld('bridge', {
   daemon,
   plugins,
   settings,
+  projects,
   window,
 });
