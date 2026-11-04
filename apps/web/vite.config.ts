@@ -5,8 +5,8 @@ import tailwindcss from '@tailwindcss/vite';
 import { tanstackRouter } from '@tanstack/router-plugin/vite';
 import viteReact from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
-import { fakeGit } from './vite/fake-git.ts';
-import { peerModules } from './vite/peer-modules.ts';
+import { fakeGit } from './vite/fake-git';
+import { peerModules } from './vite/peer-modules';
 
 export default defineConfig({
   resolve: { tsconfigPaths: true },

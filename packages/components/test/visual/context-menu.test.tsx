@@ -20,7 +20,7 @@ import {
   ContextMenuTrigger,
 } from '../../src/components/context-menu';
 
-import { blurInitialFocus, type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { blurInitialFocus, type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type RowSpec = {
   key: string;

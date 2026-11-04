@@ -18,7 +18,7 @@ import {
   ComboboxValue,
 } from '../../src/components/combobox';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 const ITEMS = ['feat/passport'] as const;
 

@@ -7,7 +7,7 @@ import { render } from 'vitest-browser-react';
 
 import { Button } from '../../src/components/button';
 
-import { type ForcedPseudoClass, forcePseudoState, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoState, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 const BUTTON_VARIANTS = ['default', 'outline', 'secondary', 'ghost', 'destructive', 'link'] as const;
 

@@ -7,7 +7,7 @@ import { Separator } from '../../../src/components/separator';
 import { Page, Row, SplitPage } from '../../../src/components/settings';
 import { Switch } from '../../../src/components/switch';
 
-import { Sheet, THEMES } from '../../sheet.tsx';
+import { Sheet, THEMES } from '../../sheet';
 
 const ROWS = (
   <>

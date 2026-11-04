@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react';
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../src/components/tooltip';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // Sides, not states — a tooltip is never focusable and carries no hover,
 // active or disabled rules, so only its placement varies.

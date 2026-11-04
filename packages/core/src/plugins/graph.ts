@@ -1,7 +1,7 @@
 import type { Manifest } from '@elsewise/plugin';
 import { DepGraph, DepGraphCycleError } from 'dependency-graph';
 import { satisfies } from 'semver';
-import type { InstalledPlugin, InvalidPlugin } from './plugin.ts';
+import type { InstalledPlugin, InvalidPlugin } from './plugin';
 
 /**
  * A part of a plugin.

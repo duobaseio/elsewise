@@ -1,8 +1,8 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
 import type { Terminal } from '@xterm/xterm';
-import type { Key, Keys } from './keymap.ts';
-import type { Application } from './plugin.ts';
+import type { Key, Keys } from './keymap';
+import type { Application } from './plugin';
 
 /**
  * The ids of the built-in groups.

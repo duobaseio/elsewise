@@ -11,7 +11,7 @@ import {
   InsertTextFormat,
   type TextDocumentPositionParams,
 } from 'vscode-languageserver-protocol';
-import { PRETTIER } from './prettier.ts';
+import { PRETTIER } from './prettier';
 
 // Matches `scripts/serve.mjs`.
 const SERVER = 'ws://127.0.0.1:7300';

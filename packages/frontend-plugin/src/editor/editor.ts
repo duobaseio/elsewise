@@ -6,10 +6,10 @@ import type { EditorView, HoverTooltipSource } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
 import type { Tag } from '@lezer/highlight';
 import type { Diagnostic as LSPDiagnostic } from 'vscode-languageserver-protocol';
-import type { ContextMenuGroup } from '../context-menu.ts';
-import type { EditorDiffs } from './diff.ts';
-import type { EditorLanguages } from './language.ts';
-import type { EditorToolbarItem } from './toolbar.ts';
+import type { ContextMenuGroup } from '../context-menu';
+import type { EditorDiffs } from './diff';
+import type { EditorLanguages } from './language';
+import type { EditorToolbarItem } from './toolbar';
 
 /**
  * The orders of the built-in hover sections, shown lowest first.

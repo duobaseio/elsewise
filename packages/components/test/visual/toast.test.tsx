@@ -17,7 +17,7 @@ import {
   useToastManager,
 } from '../../src/components/toast';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 const KINDS = [
   {

@@ -6,7 +6,7 @@ import { render } from 'vitest-browser-react';
 
 import { Toggle } from '../../src/components/toggle';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type StateSpec = {
   key: string;

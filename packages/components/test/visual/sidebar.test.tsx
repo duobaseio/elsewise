@@ -25,7 +25,7 @@ import {
   SidebarRail,
 } from '../../src/components/sidebar';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type RowSpec = {
   key: string;

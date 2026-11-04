@@ -117,7 +117,7 @@ export interface LocalSettingsPanel extends SettingsPanel {
   /**
    * The panel, rendered inside Elsewise's React tree.
    *
-   * It may be lazy, e.g. `lazy(() => import('./panel.tsx'))`.
+   * It may be lazy, e.g. `lazy(() => import('./panel'))`.
    */
   readonly component: ComponentType;
 }
@@ -133,7 +133,7 @@ export interface RemoteSettingsPanel extends SettingsPanel {
   /**
    * The panel, rendered inside Elsewise's React tree with the given remote's id.
    *
-   * It may be lazy, e.g. `lazy(() => import('./panel.tsx'))`.
+   * It may be lazy, e.g. `lazy(() => import('./panel'))`.
    */
   readonly component: ComponentType<{ readonly id: string }>;
 }

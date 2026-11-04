@@ -6,7 +6,7 @@ import { render } from 'vitest-browser-react';
 
 import { Checkbox } from '../../src/components/checkbox';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type StateSpec = {
   key: string;

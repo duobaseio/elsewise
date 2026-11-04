@@ -6,8 +6,8 @@ import {
   type Plugin,
   type PluginInfo,
 } from '@elsewise/frontend-plugin';
-import { colorHover, colorPicker } from './color-picker.ts';
-import { keys, reactions } from './completions.ts';
+import { colorHover, colorPicker } from './color-picker';
+import { keys, reactions } from './completions';
 
 // Previewed in Dotenv's settings.
 const PREVIEW = `# The daemon

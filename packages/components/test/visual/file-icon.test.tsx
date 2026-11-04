@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react';
 
 import { FileIcon } from '../../src/components/file-icon';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 type IconGroup = { label: string; names: readonly string[] };
 

@@ -22,7 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '../../src/components/dropdown-menu';
 
-import { blurInitialFocus, type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { blurInitialFocus, type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type RowSpec = {
   key: string;

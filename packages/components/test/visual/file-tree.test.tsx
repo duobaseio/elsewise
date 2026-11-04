@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-react';
 
 import { FileTree, type FileTreeGitStatus, type FileTreeOptions, useFileTree } from '../../src/components/file-tree';
 
-import { forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { forcePseudoStates, Sheet, THEMES } from '../sheet';
 import { settleTree } from '../tree-harness';
 
 const STRUCTURE_PATHS = [

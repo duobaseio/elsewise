@@ -36,7 +36,13 @@
           "options": {
             "paths": {
               "@phosphor-icons/react": "Draw it with <Icon name=\"…\" /> from ./icon, adding a role there if none fits."
-            }
+            },
+            "patterns": [
+              {
+                "group": ["./**/*.{ts,tsx,js,jsx}", "../**/*.{ts,tsx,js,jsx}"],
+                "message": "Import without the extension."
+              }
+            ]
           }
         }
       }
@@ -45,7 +51,23 @@
   "overrides": [
     {
       "includes": ["**/src/components/icon.tsx", "**/test/**"],
-      "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["./**/*.{ts,tsx,js,jsx}", "../**/*.{ts,tsx,js,jsx}"],
+                    "message": "Import without the extension."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   ],
   "javascript": {

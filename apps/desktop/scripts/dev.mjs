@@ -5,7 +5,7 @@
 //   4. rebuild + restart Electron when main/preload or daemon sources change
 //
 // The renderer's HMR is handled entirely by Vite in apps/web — nothing to do here.
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { watch } from 'node:fs';
 import electronPath from 'electron';
 
@@ -58,10 +58,24 @@ function enqueue(step) {
 
 let electron;
 async function startElectron() {
+  // On macOS, a restart replacing an Electron that is not the frontmost app stays in the background.
+  let background = false;
+  if (electron && process.platform === 'darwin') {
+    try {
+      const front = execFileSync('lsappinfo', ['front'], { encoding: 'utf8' }).trim();
+      const pid = execFileSync('lsappinfo', ['info', '-only', 'pid', front], { encoding: 'utf8' }).match(/=(\d+)/)?.[1];
+      background = Number(pid) !== electron.pid;
+    } catch {}
+  }
+
   await stopElectron();
   electron = spawn(electronPath, ['.'], {
     stdio: 'inherit',
-    env: { ...process.env, ELECTRON_RENDERER_URL: RENDERER_URL },
+    env: {
+      ...process.env,
+      ELECTRON_RENDERER_URL: RENDERER_URL,
+      ...(background && { ELSEWISE_DEV_BACKGROUND: '1' }),
+    },
   });
   // Quit the dev runner when the app window is closed by the user.
   electron.on('exit', () => process.exit(0));

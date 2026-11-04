@@ -1,7 +1,7 @@
 import type { Disposable, Manifest, PluginInfo } from '@elsewise/plugin';
 import { satisfies } from 'semver';
-import { dependencyGraph, type Entry, type Part, resolve, type Unsatisfied } from './graph.ts';
-import type { InstalledPlugin, InvalidPlugin } from './plugin.ts';
+import { dependencyGraph, type Entry, type Part, resolve, type Unsatisfied } from './graph';
+import type { InstalledPlugin, InvalidPlugin } from './plugin';
 
 /**
  * A plugin's lifecycle hooks.

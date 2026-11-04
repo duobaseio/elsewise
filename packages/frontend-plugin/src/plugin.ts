@@ -1,10 +1,10 @@
 import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
-import type { ActiveKeymap, Commands } from './command.ts';
-import type { Editor } from './editor/editor.ts';
-import type { Settings } from './settings.ts';
-import type { Terminal } from './terminal.ts';
-import type { ThemeVariant } from './theme.ts';
+import type { ActiveKeymap, Commands } from './command';
+import type { Editor } from './editor/editor';
+import type { Settings } from './settings';
+import type { Terminal } from './terminal';
+import type { ThemeVariant } from './theme';
 
 /**
  * The paths of Elsewise's pages.

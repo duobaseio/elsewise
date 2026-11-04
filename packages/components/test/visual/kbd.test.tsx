@@ -7,7 +7,7 @@ import { render } from 'vitest-browser-react';
 import { Kbd, KbdGroup } from '../../src/components/kbd';
 import type { Platform } from '../../src/lib/platform';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // Contents and grounds, not states — a Kbd is `pointer-events-none` and
 // `select-none`, so it has no interactive states to matrix. What varies is what

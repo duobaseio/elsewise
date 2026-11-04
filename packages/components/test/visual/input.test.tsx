@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react';
 
 import { Input } from '../../src/components/input';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type StateSpec = {
   key: string;

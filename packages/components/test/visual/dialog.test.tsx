@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../../src/components/dialog';
-import { blurInitialFocus, Sheet, THEMES } from '../sheet.tsx';
+import { blurInitialFocus, Sheet, THEMES } from '../sheet';
 
 test.each(THEMES)('dialog over scrim (%s)', async (theme) => {
   await render(<ScrimSheet theme={theme} />);

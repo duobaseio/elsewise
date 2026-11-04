@@ -15,7 +15,7 @@ import {
   SelectValue,
 } from '../../src/components/select';
 
-import { blurInitialFocus, type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { blurInitialFocus, type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 const ITEMS = { 'feat/passport': 'feat/passport' } as const;
 

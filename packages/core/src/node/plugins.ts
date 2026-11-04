@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Manifest, PluginId } from '@elsewise/plugin';
 import * as z from 'zod';
-import { type InstalledPlugin, type InvalidPlugin, PluginEntry } from '../plugins/plugin.ts';
+import { type InstalledPlugin, type InvalidPlugin, PluginEntry } from '../plugins/plugin';
 
 /**
  * Returns the plugins in `folder`, enabled as `pluginsManifest` says.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { Color, Theme } from './theme.ts';
+import { Color, Theme } from './theme';
 
 const INVALID: [string, unknown][] = [
   ['is not an object', 'nope'],

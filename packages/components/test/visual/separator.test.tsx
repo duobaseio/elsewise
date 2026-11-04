@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-react';
 
 import { Separator } from '../../src/components/separator';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // Orientations, not states — a separator is decorative, takes no focus and carries no interactive rules. What there is
 // to pin is that the deckle hairline is exactly 1px on the right axis, and that it is *faint by design*: `--border`

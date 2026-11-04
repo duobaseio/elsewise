@@ -14,21 +14,21 @@ export type {
   Commands,
   EditorCommand,
   TerminalCommand,
-} from './command.ts';
-export { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS } from './command.ts';
+} from './command';
+export { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS } from './command';
 export {
   type ContextMenuGroup,
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
   DEFAULT_TERMINAL_CONTEXT_MENU,
-} from './context-menu.ts';
+} from './context-menu';
 export {
   DEFAULT_DIFF_SOURCES,
   type EditorDiffContent,
   type EditorDiffSource,
   type EditorDiffs,
-} from './editor/diff.ts';
+} from './editor/diff';
 export {
   DEFAULT_ACTION_SOURCES,
   DEFAULT_FORMATTERS,
@@ -48,22 +48,22 @@ export {
   type EditorHoverSource,
   type EditorNavigation,
   type EditorNavigationSource,
-} from './editor/editor.ts';
+} from './editor/editor';
 export {
   type EditorLanguages,
   type LanguageServer,
   type LanguageServerTransport,
   workspaceConfiguration,
-} from './editor/language.ts';
+} from './editor/language';
 export {
   DEFAULT_EDITOR_TOOLBAR,
   type EditorToolbarCommandItem,
   type EditorToolbarComponentItem,
   type EditorToolbarItem,
   type EditorToolbarProps,
-} from './editor/toolbar.ts';
-export { Key, Keymap, Keys, PlatformKey } from './keymap.ts';
-export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin.ts';
+} from './editor/toolbar';
+export { Key, Keymap, Keys, PlatformKey } from './keymap';
+export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin';
 export {
   DEFAULT_SETTINGS_GROUPS,
   type LocalSettingsPanel,
@@ -73,6 +73,6 @@ export {
   type SettingsLanguagePreview,
   type SettingsPanel,
   type SettingsSearchTerm,
-} from './settings.ts';
-export type { Terminal } from './terminal.ts';
-export { Color, TextStyle, Theme, ThemeVariant } from './theme.ts';
+} from './settings';
+export type { Terminal } from './terminal';
+export { Color, TextStyle, Theme, ThemeVariant } from './theme';
