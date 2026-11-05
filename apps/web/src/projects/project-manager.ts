@@ -1,4 +1,3 @@
-import { createDialogHandle } from '@elsewise/components/components/dialog';
 import {
   type CloneProgress,
   type ContextMenuGroup,
@@ -44,7 +43,6 @@ export function projectsQuery(daemonId: string) {
  */
 export class ProjectManager implements Projects {
   readonly workspaces: WorkspaceManager;
-  readonly deleteDialog = createDialogHandle<ProjectId>();
   private readonly listeners = new Set<() => void>();
   private readonly addedIcons = new OrderedItems<ProjectIcon>('Project icon', () => this.notify());
   private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>
@@ -96,11 +94,22 @@ export class ProjectManager implements Projects {
   }
 
   async rename(project: ProjectId, name: string): Promise<Project> {
-    const daemon = await this.client.query(daemonQuery(project.daemon));
-    const updated = await daemon.projects.updateProject({ projectId: project.project, name });
+    const { queryKey } = projectsQuery(project.daemon);
+    const previous = this.client.getQueryData(queryKey);
+    this.client.setQueryData(queryKey, (projects) =>
+      projects?.map((other) => (other.id === project.project ? { ...other, name } : other)),
+    );
 
-    await this.client.invalidateQueries({ queryKey: projectsQuery(project.daemon).queryKey, exact: true });
-    return mapProject(project.daemon, updated.project);
+    try {
+      const daemon = await this.client.query(daemonQuery(project.daemon));
+      const updated = await daemon.projects.updateProject({ projectId: project.project, name });
+      return mapProject(project.daemon, updated.project);
+    } catch (error) {
+      this.client.setQueryData(queryKey, previous);
+      throw error;
+    } finally {
+      await this.client.invalidateQueries({ queryKey, exact: true });
+    }
   }
 
   async delete(project: ProjectId, { deleteFiles = false } = {}): Promise<void> {

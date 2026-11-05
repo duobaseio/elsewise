@@ -26,7 +26,9 @@ import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_p
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { mapProject, useProjectContextMenu, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
+import { useRenaming } from '@/projects/sidebar-store';
 import { workspacesQuery } from '@/projects/workspace-manager';
+import { NameInput } from './name-input';
 import { WorkspaceItem } from './workspace-item';
 
 const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a git repository' } as const;
@@ -46,12 +48,14 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
   const row = useRef<HTMLDivElement>(null);
   const items = useProjectSidebarItems();
   const menu = useProjectContextMenu();
-  const { commands } = useApplicationManager();
+  const { commands, projects, sidebar } = useApplicationManager();
 
   const workspaces = useQuery(workspacesQuery(daemonId, project.id));
   const pluginProject = useMemo(() => mapProject(daemonId, project), [daemonId, project]);
+  const renaming = useRenaming(pluginProject.id);
   const stateId = useId();
   const { state } = pluginProject;
+
 
   // Only the row is a target. With the whole project, one dragged past a taller one swaps back and forth.
   const { ref } = useSortable({
@@ -62,6 +66,7 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
     handle: row,
     target: row,
     collisionDetector: pointerIntersection,
+    disabled: renaming,
   });
 
   const addWorkspace = useMutation({
@@ -91,15 +96,36 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       render={<SidebarMenuItem />}
     >
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
-      <CommandContextMenu menu={menu} target={{ current: pluginProject }}>
+      <CommandContextMenu menu={menu} opens={() => !renaming} target={{ current: pluginProject }}>
         <SidebarMenuRow onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)} ref={row}>
-          <SidebarMenuRowLabel
-            aria-describedby={available ? undefined : stateId}
-            render={available ? <CollapsibleTrigger /> : undefined}
-          >
-            <ProjectItemIcon project={pluginProject} stateId={stateId} />
-            <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
-          </SidebarMenuRowLabel>
+          {renaming ? (
+            <SidebarMenuRowLabel render={<div />}>
+              <ProjectItemIcon project={pluginProject} stateId={stateId} />
+              <NameInput
+                label="Project name"
+                name={project.name}
+                onCancel={() => {
+                  sidebar.renaming = null;
+                }}
+                onRename={(name) => {
+                  sidebar.renaming = null;
+                  projects
+                    .rename(pluginProject.id, name)
+                    .catch((error: Error) =>
+                      toast.add({ type: 'error', title: 'Renaming project failed', description: error.message }),
+                    );
+                }}
+              />
+            </SidebarMenuRowLabel>
+          ) : (
+            <SidebarMenuRowLabel
+              aria-describedby={available ? undefined : stateId}
+              render={available ? <CollapsibleTrigger /> : undefined}
+            >
+              <ProjectItemIcon project={pluginProject} stateId={stateId} />
+              <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
+            </SidebarMenuRowLabel>
+          )}
           {items.toReversed().map(({ id, component: Item }) => (
             <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
               <Item project={pluginProject} />

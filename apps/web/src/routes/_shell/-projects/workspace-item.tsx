@@ -7,6 +7,7 @@ import {
   SidebarMenuSubRowLabel,
 } from '@elsewise/components/components/sidebar';
 import { StatusIndicator } from '@elsewise/components/components/status-indicator';
+import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { DEFAULT_COMMANDS, type Workspace as PluginWorkspace } from '@elsewise/frontend-plugin';
 import { Link, useParams } from '@tanstack/react-router';
@@ -16,12 +17,14 @@ import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { runSidebarKeys } from '@/command/keymap/keymap';
 import type { Workspace } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
+import { useRenaming } from '@/projects/sidebar-store';
 import {
   mapWorkspace,
   useWorkspaceContextMenu,
   useWorkspaceSidebarItems,
   useWorkspaceStatus,
 } from '@/projects/workspace-manager';
+import { NameInput } from './name-input';
 
 const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a worktree' } as const;
 
@@ -45,10 +48,12 @@ export function WorkspaceItem({
 
   const items = useWorkspaceSidebarItems();
   const menu = useWorkspaceContextMenu();
-  const { commands } = useApplicationManager();
+  const { commands, projects, sidebar } = useApplicationManager();
 
   const pluginWorkspace = useMemo(() => mapWorkspace(daemonId, workspace), [daemonId, workspace]);
+  const renaming = useRenaming(pluginWorkspace.id);
   const { state } = pluginWorkspace;
+
 
   const { ref, handleRef } = useSortable({
     id: workspace.id,
@@ -57,34 +62,56 @@ export function WorkspaceItem({
     type: 'workspace',
     data: { projectId },
     accept: (source) => source.type === 'workspace' && source.data.projectId === projectId,
+    disabled: renaming,
   });
 
   return (
     <SidebarMenuSubItem ref={ref}>
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="workspace"] with data-active. */}
-      <CommandContextMenu menu={menu} target={{ current: pluginWorkspace }}>
+      <CommandContextMenu menu={menu} opens={() => !renaming} target={{ current: pluginWorkspace }}>
         <SidebarMenuSubRow
           onKeyDown={(event) => runSidebarKeys(commands, pluginWorkspace, event.nativeEvent)}
           size="sm"
         >
-          <SidebarMenuSubRowLabel
-            isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
-            render={
-              <Link
-                aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
-                aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
-                draggable={false}
-                params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
-                ref={handleRef}
-                to="/$daemon/$project/$workspace"
+          {renaming ? (
+            <SidebarMenuSubRowLabel render={<div />}>
+              <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
+              <NameInput
+                label="Workspace name"
+                name={workspace.name}
+                onCancel={() => {
+                  sidebar.renaming = null;
+                }}
+                onRename={(name) => {
+                  sidebar.renaming = null;
+                  projects.workspaces
+                    .rename(pluginWorkspace.id, name)
+                    .catch((error: Error) =>
+                      toast.add({ type: 'error', title: 'Renaming workspace failed', description: error.message }),
+                    );
+                }}
               />
-            }
-          >
-            <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
-            <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
-              {workspace.name}
-            </span>
-          </SidebarMenuSubRowLabel>
+            </SidebarMenuSubRowLabel>
+          ) : (
+            <SidebarMenuSubRowLabel
+              isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
+              render={
+                <Link
+                  aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
+                  aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
+                  draggable={false}
+                  params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
+                  ref={handleRef}
+                  to="/$daemon/$project/$workspace"
+                />
+              }
+            >
+              <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
+              <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
+                {workspace.name}
+              </span>
+            </SidebarMenuSubRowLabel>
+          )}
           {items.toReversed().map(({ id, component: Item }) => (
             <PluginBoundary key={id} name={`Workspace sidebar item ${id}`}>
               <Item workspace={pluginWorkspace} />

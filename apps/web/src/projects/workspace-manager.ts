@@ -1,4 +1,3 @@
-import { createDialogHandle } from '@elsewise/components/components/dialog';
 import {
   type ContextMenuGroup,
   DEFAULT_ROUTES,
@@ -48,7 +47,6 @@ interface StatusEntry {
  * The workspaces as plugins see them.
  */
 export class WorkspaceManager implements Workspaces {
-  readonly deleteDialog = createDialogHandle<WorkspaceId>();
   private readonly listeners = new Set<() => void>();
   private readonly activeListeners = new Set<(workspace: Workspace | null) => void>();
   private readonly statuses = new Set<StatusEntry>();
@@ -135,15 +133,26 @@ export class WorkspaceManager implements Workspaces {
   }
 
   async rename(workspace: WorkspaceId, name: string): Promise<Workspace> {
-    const daemon = await this.client.query(daemonQuery(workspace.daemon));
-    const updated = await daemon.projects.updateWorkspace({
-      projectId: workspace.project,
-      workspaceId: workspace.workspace,
-      name,
-    });
+    const query = workspacesQuery(workspace.daemon, workspace.project);
+    const previous = this.client.getQueryData(query.queryKey);
+    this.client.setQueryData(query.queryKey, (workspaces) =>
+      workspaces?.map((other) => (other.id === workspace.workspace ? { ...other, name } : other)),
+    );
 
-    await this.client.invalidateQueries(workspacesQuery(workspace.daemon, workspace.project));
-    return mapWorkspace(workspace.daemon, updated.workspace);
+    try {
+      const daemon = await this.client.query(daemonQuery(workspace.daemon));
+      const updated = await daemon.projects.updateWorkspace({
+        projectId: workspace.project,
+        workspaceId: workspace.workspace,
+        name,
+      });
+      return mapWorkspace(workspace.daemon, updated.workspace);
+    } catch (error) {
+      this.client.setQueryData(query.queryKey, previous);
+      throw error;
+    } finally {
+      await this.client.invalidateQueries(query);
+    }
   }
 
   async delete(workspace: WorkspaceId, { deleteFiles = false, deleteBranch = false } = {}): Promise<void> {

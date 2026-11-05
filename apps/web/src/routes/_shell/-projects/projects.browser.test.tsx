@@ -26,6 +26,8 @@ import {
   GetWorkspacesResponseSchema,
   type Project,
   ProjectSchema,
+  UpdateProjectResponseSchema,
+  UpdateWorkspaceResponseSchema,
   type Workspace,
   WorkspaceSchema,
 } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
@@ -84,7 +86,12 @@ function fakeDaemon(
   };
   const projectService = {
     cloneProject: unused,
-    updateProject: unused,
+    updateProject: async ({ projectId, name }) => {
+      const index = projects.findIndex((project) => project.id === projectId);
+      const project = create(ProjectSchema, { ...projects[index], name: name ?? '' });
+      projects[index] = project;
+      return create(UpdateProjectResponseSchema, { project });
+    },
     deleteProject: async ({ projectId }) => {
       projects.splice(
         projects.findIndex((project) => project.id === projectId),
@@ -92,7 +99,12 @@ function fakeDaemon(
       );
       return create(DeleteProjectResponseSchema);
     },
-    updateWorkspace: unused,
+    updateWorkspace: async ({ workspaceId, name }) => {
+      const index = workspaces.findIndex((workspace) => workspace.id === workspaceId);
+      const workspace = create(WorkspaceSchema, { ...workspaces[index], name: name ?? '' });
+      workspaces[index] = workspace;
+      return create(UpdateWorkspaceResponseSchema, { workspace });
+    },
     deleteWorkspace: async ({ workspaceId, deleteFiles, deleteBranch }) => {
       await deletion.until;
       if (deletion.error) {
@@ -799,6 +811,62 @@ describe('Projects', () => {
     await page.getByRole('menuitem', { name: /^Copy path/ }).click();
 
     await expect.poll(() => writeText.mock.lastCall).toEqual(['/elsewise/dhaka']);
+  });
+
+  test('renames workspace on Enter', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Shift>}{F6}{/Shift}');
+    await userEvent.fill(page.getByRole('textbox', { name: 'Workspace name' }), 'Hanoi');
+    await userEvent.keyboard('{Enter}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'Hanoi' })).toHaveFocus();
+  });
+
+  test('refocuses workspace after Escape', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Shift>}{F6}{/Shift}');
+    await userEvent.keyboard('{Escape}');
+
+    await expect.element(page.getByRole('textbox')).not.toBeInTheDocument();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
+  });
+
+  test('keeps name of blank rename', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Shift>}{F6}{/Shift}');
+    await userEvent.fill(page.getByRole('textbox', { name: 'Workspace name' }), ' ');
+    await userEvent.keyboard('{Enter}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeInTheDocument();
+  });
+
+  test('keeps Backspace in rename field', async () => {
+    const { deleted } = await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Shift>}{F6}{/Shift}');
+    await userEvent.keyboard('{Backspace}');
+
+    await expect.element(page.getByRole('textbox', { name: 'Workspace name' })).toHaveValue('');
+    expect(page.getByRole('dialog').query()).toBeNull();
+    expect(deleted).toEqual([]);
+  });
+
+  test('renames project from context menu', async () => {
+    await mount('/local/elsewise/singapore');
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'dotfiles', exact: true }), { button: 'right' });
+    await page.getByRole('menuitem', { name: /^Rename…/ }).click();
+    await userEvent.fill(page.getByRole('textbox', { name: 'Project name' }), 'config');
+    await userEvent.keyboard('{Enter}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'config', exact: true })).toBeInTheDocument();
   });
 
   test('deletes workspace from context menu', async () => {

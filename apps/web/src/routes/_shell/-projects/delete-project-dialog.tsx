@@ -19,21 +19,21 @@ import { projectsQuery } from '@/projects/project-manager';
 
 /**
  * The dialog that deletes a project and its workspaces, and optionally their files, opened with the project's id
- * through the projects' `deleteDialog` handle. It stays open until the deletion finishes.
+ * through the sidebar's dialog handle. It stays open until the deletion finishes.
  */
 export function DeleteProjectDialog() {
-  const projects = useApplicationManager().projects;
+  const { projects, sidebar } = useApplicationManager();
   const [deleteFiles, setDeleteFiles] = useState(false);
 
   const remove = useMutation({
     mutationFn: (project: ProjectId) => projects.delete(project, { deleteFiles }),
-    onSuccess: () => projects.deleteDialog.close(),
+    onSuccess: () => sidebar.projectDeleteDialog.close(),
     onError: (error) => toast.add({ type: 'error', title: 'Deleting project failed', description: error.message }),
   });
 
   return (
     <Dialog
-      handle={projects.deleteDialog}
+      handle={sidebar.projectDeleteDialog}
       onOpenChange={(next, details) => {
         if (remove.isPending && details.reason !== 'imperative-action') {
           details.cancel();

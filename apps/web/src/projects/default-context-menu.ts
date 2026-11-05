@@ -7,6 +7,13 @@ import {
 
 export const DEFAULT_PROJECT_MENU: readonly ContextMenuGroup[] = [
   {
+    id: DEFAULT_PROJECT_CONTEXT_MENU.workspace.id,
+    order: DEFAULT_PROJECT_CONTEXT_MENU.workspace.order,
+    items: [
+      { order: DEFAULT_PROJECT_CONTEXT_MENU.workspace.items.new, command: DEFAULT_COMMANDS.project.workspace.new },
+    ],
+  },
+  {
     id: DEFAULT_PROJECT_CONTEXT_MENU.clipboard.id,
     order: DEFAULT_PROJECT_CONTEXT_MENU.clipboard.order,
     items: [
@@ -17,15 +24,17 @@ export const DEFAULT_PROJECT_MENU: readonly ContextMenuGroup[] = [
     ],
   },
   {
-    id: DEFAULT_PROJECT_CONTEXT_MENU.delete.id,
-    order: DEFAULT_PROJECT_CONTEXT_MENU.delete.order,
-    items: [{ order: DEFAULT_PROJECT_CONTEXT_MENU.delete.items.delete, command: DEFAULT_COMMANDS.project.edit.delete }],
+    id: DEFAULT_PROJECT_CONTEXT_MENU.edit.id,
+    order: DEFAULT_PROJECT_CONTEXT_MENU.edit.order,
+    items: [
+      { order: DEFAULT_PROJECT_CONTEXT_MENU.edit.items.rename, command: DEFAULT_COMMANDS.project.edit.rename },
+      { order: DEFAULT_PROJECT_CONTEXT_MENU.edit.items.delete, command: DEFAULT_COMMANDS.project.edit.delete },
+    ],
   },
   {
     id: DEFAULT_PROJECT_CONTEXT_MENU.open.id,
     order: DEFAULT_PROJECT_CONTEXT_MENU.open.order,
     items: [
-      { order: DEFAULT_PROJECT_CONTEXT_MENU.open.items.newWorkspace, command: DEFAULT_COMMANDS.project.workspace.new },
       {
         order: DEFAULT_PROJECT_CONTEXT_MENU.open.items.openIn.order,
         label: 'Open in',
@@ -53,10 +62,11 @@ export const DEFAULT_WORKSPACE_MENU: readonly ContextMenuGroup[] = [
     ],
   },
   {
-    id: DEFAULT_WORKSPACE_CONTEXT_MENU.delete.id,
-    order: DEFAULT_WORKSPACE_CONTEXT_MENU.delete.order,
+    id: DEFAULT_WORKSPACE_CONTEXT_MENU.edit.id,
+    order: DEFAULT_WORKSPACE_CONTEXT_MENU.edit.order,
     items: [
-      { order: DEFAULT_WORKSPACE_CONTEXT_MENU.delete.items.delete, command: DEFAULT_COMMANDS.workspace.edit.delete },
+      { order: DEFAULT_WORKSPACE_CONTEXT_MENU.edit.items.rename, command: DEFAULT_COMMANDS.workspace.edit.rename },
+      { order: DEFAULT_WORKSPACE_CONTEXT_MENU.edit.items.delete, command: DEFAULT_COMMANDS.workspace.edit.delete },
     ],
   },
   {

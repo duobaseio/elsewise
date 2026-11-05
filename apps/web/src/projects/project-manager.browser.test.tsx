@@ -144,6 +144,26 @@ describe('rename', () => {
     expect(project.name).toBe('Elsewise');
     expect(daemon.updateProject).toHaveBeenCalledExactlyOnceWith({ projectId: 'elsewise', name: 'Elsewise' });
   });
+
+  test('shows name before daemon responds', async () => {
+    const { projects, client, daemon } = setup();
+    await projects.list('local');
+    daemon.updateProject.mockReturnValue(new Promise(() => {}));
+
+    void projects.rename(ELSEWISE, 'Elsewise');
+
+    expect(client.getQueryData(projectsQuery('local').queryKey)?.[0]?.name).toBe('Elsewise');
+  });
+
+  test('restores name after failure', async () => {
+    const { projects, client, daemon } = setup();
+    await projects.list('local');
+    daemon.updateProject.mockRejectedValue(new Error('Gone'));
+
+    await expect(projects.rename(ELSEWISE, 'Elsewise')).rejects.toThrow('Gone');
+
+    expect(client.getQueryData(projectsQuery('local').queryKey)?.[0]?.name).toBe('elsewise');
+  });
 });
 
 describe('delete', () => {

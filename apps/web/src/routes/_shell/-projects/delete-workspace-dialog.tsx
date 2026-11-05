@@ -21,25 +21,25 @@ type Deleting = 'workspace' | 'files' | 'branch';
 
 /**
  * The dialog that deletes a workspace, and optionally its files and branch, opened with the workspace's id through the
- * workspaces' `deleteDialog` handle. It stays open until the deletion finishes.
+ * sidebar's dialog handle. It stays open until the deletion finishes.
  */
 export function DeleteWorkspaceDialog() {
-  const workspaces = useApplicationManager().projects.workspaces;
+  const { projects, sidebar } = useApplicationManager();
   const [deleting, setDeleting] = useState<Deleting>('workspace');
 
   const remove = useMutation({
     mutationFn: (workspace: WorkspaceId) =>
-      workspaces.delete(
+      projects.workspaces.delete(
         workspace,
         deleting === 'workspace' ? {} : { deleteFiles: true, deleteBranch: deleting === 'branch' },
       ),
-    onSuccess: () => workspaces.deleteDialog.close(),
+    onSuccess: () => sidebar.workspaceDeleteDialog.close(),
     onError: (error) => toast.add({ type: 'error', title: 'Deleting workspace failed', description: error.message }),
   });
 
   return (
     <Dialog
-      handle={workspaces.deleteDialog}
+      handle={sidebar.workspaceDeleteDialog}
       onOpenChange={(next, details) => {
         if (remove.isPending && details.reason !== 'imperative-action') {
           details.cancel();

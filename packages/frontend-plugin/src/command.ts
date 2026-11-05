@@ -33,14 +33,15 @@ export const DEFAULT_COMMANDS = {
     },
   },
   project: {
+    workspace: {
+      new: 'elsewise.project.workspace.new',
+    },
     clipboard: {
       copyPath: 'elsewise.project.clipboard.copyPath',
     },
     edit: {
+      rename: 'elsewise.project.edit.rename',
       delete: 'elsewise.project.edit.delete',
-    },
-    workspace: {
-      new: 'elsewise.project.workspace.new',
     },
   },
   workspace: {
@@ -48,6 +49,7 @@ export const DEFAULT_COMMANDS = {
       copyPath: 'elsewise.workspace.clipboard.copyPath',
     },
     edit: {
+      rename: 'elsewise.workspace.edit.rename',
       delete: 'elsewise.workspace.edit.delete',
     },
     status: {
@@ -164,14 +166,15 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
   },
   project: {
+    workspace: {
+      new: [],
+    },
     clipboard: {
       copyPath: ['Mod-Shift-c'],
     },
     edit: {
+      rename: ['Shift-F6'],
       delete: ['Delete', 'Backspace'],
-    },
-    workspace: {
-      new: [],
     },
   },
   workspace: {
@@ -179,6 +182,7 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       copyPath: ['Mod-Shift-c'],
     },
     edit: {
+      rename: ['Shift-F6'],
       delete: ['Delete', 'Backspace'],
     },
     status: {
