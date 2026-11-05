@@ -4,6 +4,7 @@ import {
   DEFAULT_PROJECT_CONTEXT_MENU,
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from '@elsewise/frontend-plugin';
+import { FILE_MANAGER } from '@/projects/commands';
 
 export const DEFAULT_PROJECT_MENU: readonly ContextMenuGroup[] = [
   {
@@ -46,7 +47,13 @@ export const DEFAULT_PROJECT_MENU: readonly ContextMenuGroup[] = [
     id: DEFAULT_PROJECT_CONTEXT_MENU.open.items.openIn.groups.apps.id,
     order: DEFAULT_PROJECT_CONTEXT_MENU.open.items.openIn.groups.apps.order,
     in: DEFAULT_PROJECT_CONTEXT_MENU.open.items.openIn.id,
-    items: [],
+    items: [
+      {
+        order: DEFAULT_PROJECT_CONTEXT_MENU.open.items.openIn.groups.apps.items.fileManager,
+        label: FILE_MANAGER,
+        command: DEFAULT_COMMANDS.project.open.fileManager,
+      },
+    ],
   },
 ];
 
@@ -94,6 +101,12 @@ export const DEFAULT_WORKSPACE_MENU: readonly ContextMenuGroup[] = [
     id: DEFAULT_WORKSPACE_CONTEXT_MENU.open.items.openIn.groups.apps.id,
     order: DEFAULT_WORKSPACE_CONTEXT_MENU.open.items.openIn.groups.apps.order,
     in: DEFAULT_WORKSPACE_CONTEXT_MENU.open.items.openIn.id,
-    items: [],
+    items: [
+      {
+        order: DEFAULT_WORKSPACE_CONTEXT_MENU.open.items.openIn.groups.apps.items.fileManager,
+        label: FILE_MANAGER,
+        command: DEFAULT_COMMANDS.workspace.open.fileManager,
+      },
+    ],
   },
 ];

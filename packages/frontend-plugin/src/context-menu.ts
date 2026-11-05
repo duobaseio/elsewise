@@ -16,6 +16,7 @@ export const DEFAULT_PROJECT_CONTEXT_MENU = {
           apps: {
             id: 'io.duobase.elsewise.project.contextMenu.open.openIn.apps',
             order: 10,
+            items: { fileManager: 10 },
           },
         },
       },
@@ -41,6 +42,7 @@ export const DEFAULT_WORKSPACE_CONTEXT_MENU = {
           apps: {
             id: 'io.duobase.elsewise.workspace.contextMenu.open.openIn.apps',
             order: 10,
+            items: { fileManager: 10 },
           },
         },
       },

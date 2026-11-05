@@ -12,6 +12,7 @@ function desktop() {
       cut() {},
       copy() {},
       paste() {},
+      openFolder: async () => {},
       pickFolder: async () => null,
       pickFile: async () => null,
       setBrightness() {},

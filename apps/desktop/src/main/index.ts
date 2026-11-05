@@ -1,3 +1,4 @@
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
 import type { Brightness, FileFilter } from '@elsewise/bridge';
 import { dataLocalDir } from '@elsewise/core/node';
@@ -116,6 +117,17 @@ function createWindow(background: boolean) {
   main.webContents.ipc.on('window:cut', (event) => event.sender.cut());
   main.webContents.ipc.on('window:copy', (event) => event.sender.copy());
   main.webContents.ipc.on('window:paste', (event) => event.sender.paste());
+  main.webContents.ipc.handle('window:open-folder', async (_event, absolutePath: string) => {
+    // Opening a file would run it.
+    if (!(await stat(absolutePath)).isDirectory()) {
+      throw new Error(`${absolutePath} is not a folder.`);
+    }
+
+    const error = await shell.openPath(absolutePath);
+    if (error !== '') {
+      throw new Error(error);
+    }
+  });
   main.webContents.ipc.handle('window:pick-folder', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(main, { properties: ['openDirectory'] });
     return canceled ? null : (filePaths[0] ?? null);

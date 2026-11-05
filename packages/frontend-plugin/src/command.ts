@@ -43,6 +43,9 @@ export const DEFAULT_COMMANDS = {
       rename: 'elsewise.project.edit.rename',
       delete: 'elsewise.project.edit.delete',
     },
+    open: {
+      fileManager: 'elsewise.project.open.fileManager',
+    },
   },
   workspace: {
     clipboard: {
@@ -54,6 +57,9 @@ export const DEFAULT_COMMANDS = {
     },
     status: {
       markRead: 'elsewise.workspace.status.markRead',
+    },
+    open: {
+      fileManager: 'elsewise.workspace.open.fileManager',
     },
   },
   editor: {
@@ -176,6 +182,9 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       rename: ['Shift-F6'],
       delete: ['Delete', 'Backspace'],
     },
+    open: {
+      fileManager: [],
+    },
   },
   workspace: {
     clipboard: {
@@ -187,6 +196,9 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
     status: {
       markRead: [],
+    },
+    open: {
+      fileManager: [],
     },
   },
   editor: {

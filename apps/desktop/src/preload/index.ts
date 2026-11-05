@@ -49,6 +49,7 @@ const window: WindowBridge = {
   cut: () => ipcRenderer.send('window:cut'),
   copy: () => ipcRenderer.send('window:copy'),
   paste: () => ipcRenderer.send('window:paste'),
+  openFolder: (absolutePath) => ipcRenderer.invoke('window:open-folder', absolutePath),
   pickFolder: () => ipcRenderer.invoke('window:pick-folder'),
   pickFile: (filters) => ipcRenderer.invoke('window:pick-file', filters),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),

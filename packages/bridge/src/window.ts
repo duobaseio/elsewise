@@ -28,12 +28,20 @@ export interface WindowBridge {
   paste(): void;
 
   /**
-   * Asks the user to pick a folder, and returns its absolute path, or null if they cancel.
+   * Opens the folder at `absolutePath` in the platform's file manager.
+   *
+   * Throws if `absolutePath` is not a directory or cannot be opened, e.g. without permission.
+   */
+  openFolder(absolutePath: string): Promise<void>;
+
+  /**
+   * Prompts the user to pick a folder, and returns its absolute path, or null if they cancel.
    */
   pickFolder(): Promise<string | null>;
 
   /**
-   * Asks the user to pick a file, of a kind in `filters` if given, and returns its absolute path, or null if they cancel.
+   * Prompts the user to pick a file, of a kind in `filters` if given, and returns its absolute path, or null if they
+   * cancel.
    */
   pickFile(filters?: readonly FileFilter[]): Promise<string | null>;
 
@@ -54,4 +62,3 @@ export interface WindowBridge {
    */
   onClose(handler: () => Promise<void>): void;
 }
-

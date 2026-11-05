@@ -31,6 +31,7 @@ import {
   type Workspace,
   WorkspaceSchema,
 } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { FILE_MANAGER } from '@/projects/commands';
 import { projectLayoutQuery } from '@/projects/layout';
 import { ProjectManager } from '@/projects/project-manager';
 import { builtInApplication } from '../../../../test/commands';
@@ -869,6 +870,30 @@ describe('Projects', () => {
     await expect.element(page.getByRole('treeitem', { name: 'config', exact: true })).toBeInTheDocument();
   });
 
+  test('opens workspace in file manager', async () => {
+    await mount('/local/elsewise/singapore');
+    const openFolder = vi.fn(async () => {});
+    window.bridge = {
+      window: {
+        cut() {},
+        copy() {},
+        paste() {},
+        openFolder,
+        pickFolder: async () => null,
+        pickFile: async () => null,
+        setBrightness() {},
+        setBackground() {},
+        onClose() {},
+      },
+    };
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
+    await page.getByRole('menuitem', { name: 'Open in' }).click();
+    await page.getByRole('menuitem', { name: FILE_MANAGER }).click();
+
+    await expect.poll(() => openFolder.mock.lastCall).toEqual(['/elsewise/dhaka']);
+  });
+
   test('deletes workspace from context menu', async () => {
     const { deleted } = await mount('/local/elsewise/singapore');
 
@@ -945,6 +970,7 @@ describe('Projects', () => {
         cut() {},
         copy() {},
         paste() {},
+        openFolder: async () => {},
         pickFolder: async () => '/Users/me/notes',
         pickFile: async () => null,
         setBrightness() {},

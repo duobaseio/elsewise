@@ -2,6 +2,7 @@ import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command';
 import type { Editor } from './editor/editor';
+import type { Platform } from './platform';
 import type { Projects } from './projects/projects';
 import type { Workspace } from './projects/workspaces';
 import type { Settings } from './settings';
@@ -98,6 +99,11 @@ export interface Plugin {
  * The application.
  */
 export interface Application {
+  /**
+   * The underlying platform that hosts the frontend.
+   */
+  readonly platform: Platform;
+
   /**
    * The interface's appearance.
    */
