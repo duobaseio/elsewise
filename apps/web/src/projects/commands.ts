@@ -19,12 +19,16 @@ export const PROJECT_NEW_WORKSPACE: ProjectCommand = {
   group: DEFAULT_COMMAND_GROUPS.project.id,
   label: 'New workspace',
   defaultKeys: DEFAULT_KEYS.project.workspace.new,
-  enabled: (_, project) => project.state === 'ok',
-  run: ({ projects, router }, project) => {
-    void projects.workspaces.add(project.id, { type: 'new' }).then(
-      ({ id }) => router.navigate({ href: DEFAULT_ROUTES.workspace(id.daemon, id.project, id.workspace) }),
-      (error: Error) => toast.add({ type: 'error', title: 'Adding workspace failed', description: error.message }),
-    );
+  enabled: ({ sidebar }: ApplicationManager, project) => project.state === 'ok' && !sidebar.creating(project.id),
+  run: ({ projects, router, sidebar }: ApplicationManager, project) => {
+    sidebar.setCreating(project.id, true);
+    void projects.workspaces
+      .add(project.id, { type: 'new' })
+      .then(
+        ({ id }) => router.navigate({ href: DEFAULT_ROUTES.workspace(id.daemon, id.project, id.workspace) }),
+        (error: Error) => toast.add({ type: 'error', title: 'Adding workspace failed', description: error.message }),
+      )
+      .finally(() => sidebar.setCreating(project.id, false));
     return true;
   },
 };

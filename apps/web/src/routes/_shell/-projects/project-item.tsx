@@ -14,19 +14,17 @@ import {
 } from '@elsewise/components/components/sidebar';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import type { Project as PluginProject } from '@elsewise/frontend-plugin';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { DEFAULT_COMMANDS, type Project as PluginProject } from '@elsewise/frontend-plugin';
+import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useId, useMemo, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { runSidebarKeys } from '@/command/keymap/keymap';
-import { daemonQuery } from '@/daemon';
 import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { mapProject, useProjectContextMenu, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
-import { useRenaming } from '@/projects/sidebar-store';
+import { useCreating, useRenaming } from '@/projects/sidebar-store';
 import { workspacesQuery } from '@/projects/workspace-manager';
 import { NameInput } from './name-input';
 import { WorkspaceItem } from './workspace-item';
@@ -40,9 +38,6 @@ const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
  * broken project shows neither its workspaces nor its chevron.
  */
 export function ProjectItem({ daemonId, project, index }: { daemonId: string; project: Project; index: number }) {
-  const client = useQueryClient();
-  const navigate = useNavigate();
-
   const layout = useProjectLayout(daemonId);
   const { setExpanded } = useUpdateProjectLayout(daemonId);
   const row = useRef<HTMLDivElement>(null);
@@ -52,6 +47,7 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
 
   const workspaces = useQuery(workspacesQuery(daemonId, project.id));
   const pluginProject = useMemo(() => mapProject(daemonId, project), [daemonId, project]);
+  const creating = useCreating(pluginProject.id);
   const renaming = useRenaming(pluginProject.id);
   const stateId = useId();
   const { state } = pluginProject;
@@ -68,23 +64,6 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
     disabled: renaming,
   });
 
-  const addWorkspace = useMutation({
-    mutationFn: async () => {
-      const daemon = await client.query(daemonQuery(daemonId));
-      return daemon.projects.createWorkspace({ projectId: project.id, source: { case: 'new', value: {} } });
-    },
-    onSuccess: async ({ workspace }) => {
-      await client.invalidateQueries(workspacesQuery(daemonId, project.id));
-      if (workspace) {
-        void navigate({
-          to: '/$daemon/$project/$workspace',
-          params: { daemon: daemonId, project: project.id, workspace: workspace.id },
-        });
-      }
-    },
-    onError: (error) => toast.add({ type: 'error', title: 'Adding workspace failed', description: error.message }),
-  });
-
   const available = state !== 'missing' && state !== 'broken';
 
   return (
@@ -98,9 +77,7 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       <CommandContextMenu
         menu={menu}
         opens={() => !renaming}
-        render={
-          <SidebarMenuRow onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)} ref={row} />
-        }
+        render={<SidebarMenuRow ref={row} />}
         target={{ current: pluginProject }}
       >
         {renaming ? (
@@ -125,6 +102,7 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
         ) : (
           <SidebarMenuRowLabel
             aria-describedby={available ? undefined : stateId}
+            onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)}
             render={available ? <CollapsibleTrigger /> : undefined}
           >
             <ProjectItemIcon project={pluginProject} stateId={stateId} />
@@ -155,8 +133,8 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
               <SidebarMenuSubButton
                 aria-label={`New workspace in ${project.name}`}
                 className="w-full cursor-default text-text-2 [&>svg]:size-4 [&>svg]:p-[2.5px]"
-                onClick={() => addWorkspace.mutate()}
-                render={<button disabled={addWorkspace.isPending} type="button" />}
+                onClick={() => commands.run(DEFAULT_COMMANDS.project.workspace.new, pluginProject)}
+                render={<button disabled={creating} type="button" />}
                 size="sm"
               >
                 <Icon name="add" />

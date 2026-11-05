@@ -10,7 +10,25 @@ export class SidebarStore {
   readonly projectDeleteDialog = createDialogHandle<ProjectId>();
   readonly workspaceDeleteDialog = createDialogHandle<WorkspaceId>();
   private readonly listeners = new Set<() => void>();
+  private readonly currentCreating = new Set<string>();
   private currentRenaming: ProjectId | WorkspaceId | null = null;
+
+  /**
+   * Returns whether a workspace is being created in `project`.
+   */
+  creating(project: ProjectId): boolean {
+    return this.currentCreating.has(`${project.daemon}/${project.project}`);
+  }
+
+  setCreating(project: ProjectId, creating: boolean): void {
+    const key = `${project.daemon}/${project.project}`;
+    if (creating) {
+      this.currentCreating.add(key);
+    } else {
+      this.currentCreating.delete(key);
+    }
+    this.notify();
+  }
 
   /**
    * The project or workspace whose name is edited in its row, or null.
@@ -21,9 +39,7 @@ export class SidebarStore {
 
   set renaming(id: ProjectId | WorkspaceId | null) {
     this.currentRenaming = id;
-    for (const listener of this.listeners) {
-      listener();
-    }
+    this.notify();
   }
 
   subscribe(listener: () => void): Disposable {
@@ -32,6 +48,21 @@ export class SidebarStore {
       this.listeners.delete(listener);
     };
   }
+
+  private notify() {
+    for (const listener of this.listeners) {
+      listener();
+    }
+  }
+}
+
+/**
+ * Returns whether a workspace is being created in `project`.
+ */
+export function useCreating(project: ProjectId): boolean {
+  const { sidebar } = useApplicationManager();
+  const subscribe = useCallback((listener: () => void) => sidebar.subscribe(listener), [sidebar]);
+  return useSyncExternalStore(subscribe, () => sidebar.creating(project));
 }
 
 /**

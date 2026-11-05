@@ -70,12 +70,7 @@ export function WorkspaceItem({
       <CommandContextMenu
         menu={menu}
         opens={() => !renaming}
-        render={
-          <SidebarMenuSubRow
-            onKeyDown={(event) => runSidebarKeys(commands, pluginWorkspace, event.nativeEvent)}
-            size="sm"
-          />
-        }
+        render={<SidebarMenuSubRow size="sm" />}
         target={{ current: pluginWorkspace }}
       >
         {renaming ? (
@@ -100,6 +95,7 @@ export function WorkspaceItem({
         ) : (
           <SidebarMenuSubRowLabel
             isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
+            onKeyDown={(event) => runSidebarKeys(commands, pluginWorkspace, event.nativeEvent)}
             render={
               <Link
                 aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}

@@ -707,6 +707,30 @@ describe('Projects', () => {
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
   });
 
+  test('ignores keys from workspace item', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.workspaces.addSidebarItems([
+      { id: 'test.a', component: ({ workspace }) => <button type="button">{`A ${workspace.name}`}</button> },
+    ]);
+    (await page.getByRole('button', { name: 'A Dhaka' }).findElement()).focus();
+
+    await userEvent.keyboard('{Backspace}');
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  test('ignores keys from project item', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSidebarItems([
+      { id: 'test.a', component: ({ project }) => <button type="button">{`A ${project.name}`}</button> },
+    ]);
+    (await page.getByRole('button', { name: 'A dotfiles' }).findElement()).focus();
+
+    await userEvent.keyboard('{Delete}');
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+  });
+
   test('runs workspace command from context menu', async () => {
     const { projects, commands } = await mount('/local/elsewise/singapore');
     const run = vi.fn<WorkspaceCommand['run']>(() => true);
@@ -773,6 +797,28 @@ describe('Projects', () => {
     await userEvent.keyboard('{F6}');
 
     expect(run.mock.lastCall?.[1]).toMatchObject({ id: { project: 'elsewise' } });
+  });
+
+  test('disables new workspace while creating', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    let fail = (_: Error) => {};
+    vi.spyOn(projects.workspaces, 'add').mockReturnValue(
+      new Promise((_, reject) => {
+        fail = reject;
+      }),
+    );
+    const button = page.getByRole('treeitem', { name: 'New workspace in dotfiles' });
+
+    await button.click();
+
+    await expect.element(button).toBeDisabled();
+    await userEvent.click(page.getByRole('treeitem', { name: 'dotfiles', exact: true }), { button: 'right' });
+    await expect
+      .element(page.getByRole('menuitem', { name: /^New workspace/ }))
+      .toHaveAttribute('aria-disabled', 'true');
+    await userEvent.keyboard('{Escape}');
+    fail(new Error('Gone'));
+    await expect.element(button).toBeEnabled();
   });
 
   test('adds workspace from context menu and opens it', async () => {
