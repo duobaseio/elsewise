@@ -45,6 +45,7 @@ const ROLES = Object.keys({
   running: true,
   waiting: true,
   finished: true,
+  'main-workspace': true,
 } as const satisfies Record<IconName, true>) as readonly IconName[];
 
 const PROPS: readonly { key: string; label: string; render: ReactNode }[] = [

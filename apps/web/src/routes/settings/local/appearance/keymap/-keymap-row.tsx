@@ -242,8 +242,8 @@ export function KeymapActions({
       <Dialog onOpenChange={setConfirming} open={confirming}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete keymap?</DialogTitle>
-            <DialogDescription>Permanently deletes “{deleting?.name}”.</DialogDescription>
+            <DialogTitle>Delete “{deleting?.name}” keymap?</DialogTitle>
+            <DialogDescription>This cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>

@@ -41,6 +41,7 @@ function browserProject(
         'class-variance-authority',
         'clsx',
         'dockview-react',
+        'motion/react',
         'tailwind-merge',
       ],
     },

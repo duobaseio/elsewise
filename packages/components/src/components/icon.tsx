@@ -12,10 +12,12 @@ import {
   CheckIcon,
   CircleHalfIcon,
   CircleIcon,
+  CircleNotchIcon,
   FolderIcon,
   FolderOpenIcon,
   GearIcon,
   GitDiffIcon,
+  HouseSimpleIcon,
   InfoIcon,
   KeyboardIcon,
   MagnifyingGlassIcon,
@@ -25,7 +27,6 @@ import {
   RecordIcon,
   RowsIcon,
   SidebarIcon,
-  SpinnerIcon,
   SquareSplitHorizontalIcon,
   TreeViewIcon,
   WarningIcon,
@@ -61,7 +62,7 @@ const DEFAULT_ICONS = {
   warning: WarningIcon,
   error: XCircleIcon,
   external: ArrowSquareOutIcon,
-  loading: SpinnerIcon,
+  loading: CircleNotchIcon,
   'sidebar-toggle': SidebarIcon,
   folder: FolderIcon,
   'folder-open': FolderOpenIcon,
@@ -80,6 +81,7 @@ const DEFAULT_ICONS = {
   running: CircleHalfIcon,
   waiting: (props: ComponentProps<'svg'>) => <RecordIcon weight="fill" {...props} />,
   finished: (props: ComponentProps<'svg'>) => <CheckCircleIcon weight="fill" {...props} />,
+  'main-workspace': HouseSimpleIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

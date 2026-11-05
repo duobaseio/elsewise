@@ -1,4 +1,4 @@
-import { DotsThreeIcon, GitBranchIcon, PlusIcon } from '@phosphor-icons/react';
+import { DotsThreeIcon, GitBranchIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import type { ComponentProps } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
@@ -23,6 +23,7 @@ import {
   SidebarMenuRowLabel,
   SidebarMenuSkeleton,
   SidebarMenuSub,
+  SidebarMenuSubAction,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarProvider,
@@ -139,6 +140,14 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton size="sm">sub sm</SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      <SidebarMenuSubItem>
+                        <SidebarMenuSubButton className="pr-7" size="sm">
+                          sub with action
+                        </SidebarMenuSubButton>
+                        <SidebarMenuSubAction aria-label="Close">
+                          <XIcon />
+                        </SidebarMenuSubAction>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   </SidebarMenuItem>

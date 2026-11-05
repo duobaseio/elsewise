@@ -1,7 +1,12 @@
+'use client';
+
 import { Button as ButtonPrimitive } from '@base-ui/react/button';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { AnimatePresence, MotionConfig, motion } from 'motion/react';
 
+import { SWAP, SWAP_TRANSITION } from '../lib/motion';
 import { cn } from '../lib/utils';
+import { Icon } from './icon';
 
 export const buttonVariants = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-base whitespace-nowrap transition-[color,background-color,border-color,translate] outline-none select-none cursor-default focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-2 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive dark:aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
@@ -36,11 +41,62 @@ export const buttonVariants = cva(
   },
 );
 
+/**
+ * A button. Given `pending`, it swaps its content for a spinner while pending, and ignores clicks without dimming.
+ */
 export function Button({
   className,
   variant = 'default',
   size = 'default',
+  pending,
+  children,
+  onClick,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  return <ButtonPrimitive data-slot="button" className={cn(buttonVariants({ variant, size, className }))} {...props} />;
+}: ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & {
+    pending?: boolean;
+  }) {
+  return (
+    <ButtonPrimitive
+      aria-busy={pending || undefined}
+      aria-disabled={pending || undefined}
+      data-slot="button"
+      className={cn(buttonVariants({ variant, size, className }))}
+      onClick={(event) => {
+        if (pending) {
+          event.preventDefault();
+        } else {
+          onClick?.(event);
+        }
+      }}
+      {...props}
+    >
+      {pending === undefined ? (
+        children
+      ) : (
+        <MotionConfig reducedMotion="user" transition={SWAP_TRANSITION}>
+          {/* The transparent copy keeps the button's width and name while the spinner shows. */}
+          <span className="grid place-items-center gap-[inherit]">
+            <span className="col-start-1 row-start-1 flex items-center gap-[inherit] opacity-0">{children}</span>
+            <AnimatePresence initial={false}>
+              {pending ? (
+                <motion.span aria-hidden className="col-start-1 row-start-1 flex" key="pending" {...SWAP}>
+                  <Icon className="animate-spin" name="loading" />
+                </motion.span>
+              ) : (
+                <motion.span
+                  aria-hidden
+                  className="col-start-1 row-start-1 flex items-center gap-[inherit]"
+                  key="content"
+                  {...SWAP}
+                >
+                  {children}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </span>
+        </MotionConfig>
+      )}
+    </ButtonPrimitive>
+  );
 }

@@ -8,7 +8,7 @@ import { type ISplitviewPanelProps, Orientation, SplitviewReact, type SplitviewR
 import { useCommandManager } from '@/command/command-manager';
 import { Header } from '@/components/header';
 import { OPEN_SETTINGS } from '@/settings/settings';
-import { Workspaces } from './-workspaces';
+import { Projects } from './-projects/projects';
 
 import 'dockview-react/dist/styles/dockview.css';
 import './dockview.css';
@@ -49,7 +49,7 @@ function SidebarPanel(_props: ISplitviewPanelProps) {
     <div className="flex h-full select-none flex-col bg-surface">
       <Header trafficLights />
       <SidebarContent>
-        <Workspaces />
+        <Projects />
       </SidebarContent>
       <Tooltip>
         <TooltipTrigger

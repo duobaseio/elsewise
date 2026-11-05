@@ -28,6 +28,7 @@ test.each(THEMES)('button attribute states (%s)', async (theme) => {
       props: { 'aria-expanded': true },
     },
     { key: 'invalid', label: 'aria-invalid', props: { 'aria-invalid': true } },
+    { key: 'pending', label: 'pending', props: { pending: true } },
   ];
 
   await render(
