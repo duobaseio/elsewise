@@ -10,6 +10,11 @@ export function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 
+/**
+ * Creates a handle that opens and closes a `Dialog` given it, e.g. from a shortcut.
+ */
+export const createDialogHandle = DialogPrimitive.createHandle;
+
 export function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
   return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
 }
@@ -85,17 +90,45 @@ export function DialogHeader({ className, ...props }: ComponentProps<'div'>) {
   return <div data-slot="dialog-header" className={cn('flex flex-col gap-2', className)} {...props} />;
 }
 
+/**
+ * The bar of buttons at the bottom of a dialog, where ← and → move between the buttons.
+ */
 export function DialogFooter({
   className,
   showCloseButton = false,
+  onKeyDown,
   children,
   ...props
 }: ComponentProps<'div'> & {
   showCloseButton?: boolean;
 }) {
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the keys move the focus between the buttons inside.
     <div
       data-slot="dialog-footer"
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+        if (
+          step === undefined ||
+          event.defaultPrevented ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey
+        ) {
+          return;
+        }
+
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled)')];
+        const index = event.target instanceof HTMLElement ? buttons.indexOf(event.target) : -1;
+        if (index === -1) {
+          return;
+        }
+
+        event.preventDefault();
+        buttons[index + step]?.focus();
+      }}
       className={cn(
         // The negative margins pull the bar out to the popup's own edges, which
         // is why it needs the matching `rounded-b-xl` to stay inside the corner.

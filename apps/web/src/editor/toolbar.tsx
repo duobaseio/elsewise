@@ -11,21 +11,14 @@ import {
   type EditorToolbarItem,
   type EditorToolbarProps,
 } from '@elsewise/frontend-plugin';
-import {
-  Component,
-  type ComponentProps,
-  type ComponentType,
-  type ReactNode,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { type ComponentProps, type ComponentType, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import { CompareToolbarItem } from '@/editor/diff/compare';
 import { useEditorManager } from '@/editor/editor-manager';
 import { DiagnosticsSummary } from '@/editor/scrollbar-markers/diagnostics-summary';
+import { PluginBoundary } from '@/plugins/plugin-boundary';
 
 interface Mounted extends EditorToolbarProps {
   dom: HTMLElement;
@@ -203,9 +196,9 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
         {entries.map((entry) => {
           if (entry.type === 'component') {
             return (
-              <ItemBoundary key={`component:${entry.id}`} id={entry.id}>
+              <PluginBoundary key={`component:${entry.id}`} name={`Toolbar item ${entry.id}`}>
                 <entry.component view={view} subscribe={subscribe} />
-              </ItemBoundary>
+              </PluginBoundary>
             );
           }
 
@@ -255,20 +248,4 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
       </div>
     </TooltipProvider>
   );
-}
-
-class ItemBoundary extends Component<{ id: string; children: ReactNode }, { failed: boolean }> {
-  override state = { failed: false };
-
-  static getDerivedStateFromError(): { failed: boolean } {
-    return { failed: true };
-  }
-
-  override componentDidCatch(error: unknown): void {
-    console.error(`Toolbar item ${this.props.id} failed`, error);
-  }
-
-  override render(): ReactNode {
-    return this.state.failed ? null : this.props.children;
-  }
 }

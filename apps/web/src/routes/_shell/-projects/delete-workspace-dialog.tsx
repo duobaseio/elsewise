@@ -1,5 +1,6 @@
 import { Button } from '@elsewise/components/components/button';
 import {
+  type createDialogHandle,
   Dialog,
   DialogClose,
   DialogContent,
@@ -17,16 +18,18 @@ import { useApplicationManager } from '@/application-context';
 import type { Workspace } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 
 /**
- * The dialog that deletes `workspace`, and optionally its files and branch, opened by the trigger in `children`. It
- * stays open until the deletion finishes.
+ * The dialog that deletes `workspace`, and optionally its files and branch, opened by the trigger in `children` or
+ * through `handle`. It stays open until the deletion finishes.
  */
 export function DeleteWorkspaceDialog({
   daemonId,
   workspace,
+  handle,
   children,
 }: {
   daemonId: string;
   workspace: Workspace;
+  handle: ReturnType<typeof createDialogHandle>;
   children: ReactNode;
 }) {
   const workspaces = useApplicationManager().projects.workspaces;
@@ -45,6 +48,7 @@ export function DeleteWorkspaceDialog({
 
   return (
     <Dialog
+      handle={handle}
       onOpenChange={(next) => {
         if (remove.isPending) {
           return;

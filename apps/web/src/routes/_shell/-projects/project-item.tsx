@@ -15,10 +15,12 @@ import {
 import { toast } from '@elsewise/components/components/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { useRef } from 'react';
+import { type ReactNode, useMemo, useRef } from 'react';
 import { daemonQuery } from '@/daemon';
 import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
+import { mapProject, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
 import { workspacesQuery } from '@/projects/workspace-manager';
 import { WorkspaceItem } from './workspace-item';
 
@@ -32,6 +34,9 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
   const { setExpanded } = useUpdateProjectLayout(daemonId);
   const workspaces = useQuery(workspacesQuery(daemonId, project.id));
   const row = useRef<HTMLDivElement>(null);
+  const icons = useProjectIcons();
+  const items = useProjectSidebarItems();
+  const pluginProject = useMemo(() => mapProject(daemonId, project), [daemonId, project]);
 
   // Only the row is a target. With the whole project, one dragged past a taller one swaps back and forth.
   const { ref } = useSortable({
@@ -61,6 +66,15 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
     onError: (error) => toast.add({ type: 'error', title: 'Adding workspace failed', description: error.message }),
   });
 
+  let icon: ReactNode = <LetterIcon letters={project.name.charAt(0).toUpperCase()} tint={null} />;
+  for (const { id, component: ProjectIcon } of icons.toReversed()) {
+    icon = (
+      <PluginBoundary fallback={icon} name={`Project icon ${id}`}>
+        <ProjectIcon fallback={icon} project={pluginProject} />
+      </PluginBoundary>
+    );
+  }
+
   return (
     <Collapsible
       onOpenChange={(open) => setExpanded(project.id, open)}
@@ -68,12 +82,19 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       ref={ref}
       render={<SidebarMenuItem />}
     >
+      {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
       <SidebarMenuRow ref={row}>
+        {/* TODO: Open a delete project dialog on Delete, as workspaces do. */}
         <SidebarMenuRowLabel render={<CollapsibleTrigger />}>
-          <LetterIcon letters={project.name.charAt(0).toUpperCase()} tint={null} />
+          <span className="flex size-4 shrink-0 overflow-hidden">{icon}</span>
           <span>{project.name}</span>
         </SidebarMenuRowLabel>
-        <SidebarMenuChevron aria-hidden tabIndex={-1} />
+        {items.toReversed().map(({ id, component: Item }) => (
+          <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
+            <Item project={pluginProject} />
+          </PluginBoundary>
+        ))}
+        <SidebarMenuChevron aria-hidden />
       </SidebarMenuRow>
       <CollapsibleContent>
         <SidebarMenuSub>

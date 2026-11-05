@@ -74,6 +74,14 @@ export type {
   Projects,
 } from './projects/projects';
 export type {
+  ProjectIcon,
+  ProjectIconProps,
+  ProjectSidebarItem,
+  ProjectSidebarItemProps,
+  WorkspaceSidebarItem,
+  WorkspaceSidebarItemProps,
+} from './projects/sidebar';
+export type {
   ExistingWorkspaceSource,
   NewWorkspaceSource,
   Workspace,

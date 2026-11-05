@@ -20,12 +20,14 @@ import {
   SidebarMenuChevron,
   SidebarMenuItem,
   SidebarMenuRow,
+  SidebarMenuRowAction,
   SidebarMenuRowLabel,
   SidebarMenuSkeleton,
   SidebarMenuSub,
-  SidebarMenuSubAction,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarMenuSubRow,
+  SidebarMenuSubRowLabel,
   SidebarProvider,
   SidebarRail,
 } from '../../src/components/sidebar';
@@ -70,6 +72,12 @@ const COLLAPSIBLES = [
   { key: 'row-selected', label: 'selected', open: false, active: true },
 ] as const;
 
+const SUB_ROWS = [
+  { key: 'sub-row-rest', label: 'row rest' },
+  { key: 'sub-row-hover', label: 'row hover', forced: ['hover'] },
+  { key: 'sub-row-selected', label: 'row selected', active: true },
+] as const;
+
 // Ragged on purpose — the widths used to be rolled per mount.
 const SKELETONS = ['82%', '54%', '68%'] as const;
 
@@ -77,7 +85,7 @@ test.each(THEMES)('sidebar (%s)', async (theme) => {
   await render(<SidebarSheet theme={theme} />);
 
   await forcePseudoStates(
-    [...ROWS, ...COLLAPSIBLES]
+    [...ROWS, ...COLLAPSIBLES, ...SUB_ROWS, { key: 'row-action-hover', forced: ['hover'] as const }]
       .filter((row) => 'forced' in row && row.forced)
       .map((row) => ({
         selector: `[data-visual-state="${row.key}"]`,
@@ -141,14 +149,22 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton size="sm">sub sm</SidebarMenuSubButton>
                       </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton className="pr-7" size="sm">
-                          sub with action
-                        </SidebarMenuSubButton>
-                        <SidebarMenuSubAction aria-label="Close">
-                          <XIcon />
-                        </SidebarMenuSubAction>
-                      </SidebarMenuSubItem>
+                      {SUB_ROWS.map((row) => (
+                        <SidebarMenuSubItem key={row.key}>
+                          <SidebarMenuSubRow data-visual-state={row.key} size="sm">
+                            <SidebarMenuSubRowLabel isActive={'active' in row && row.active}>
+                              <GitBranchIcon />
+                              <span>{row.label}</span>
+                            </SidebarMenuSubRowLabel>
+                            <SidebarMenuRowAction aria-label="More">
+                              <DotsThreeIcon />
+                            </SidebarMenuRowAction>
+                            <SidebarMenuRowAction aria-label="Close" showOnHover>
+                              <XIcon />
+                            </SidebarMenuRowAction>
+                          </SidebarMenuSubRow>
+                        </SidebarMenuSubItem>
+                      ))}
                     </SidebarMenuSub>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -176,6 +192,18 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
                       </CollapsibleContent>
                     </Collapsible>
                   ))}
+                  <Collapsible render={<SidebarMenuItem />}>
+                    <SidebarMenuRow data-visual-state="row-action-hover">
+                      <SidebarMenuRowLabel>
+                        <GitBranchIcon className="size-4 shrink-0" />
+                        <span>action hover</span>
+                      </SidebarMenuRowLabel>
+                      <SidebarMenuRowAction aria-label="More" showOnHover>
+                        <DotsThreeIcon />
+                      </SidebarMenuRowAction>
+                      <SidebarMenuChevron />
+                    </SidebarMenuRow>
+                  </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

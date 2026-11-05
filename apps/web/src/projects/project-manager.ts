@@ -1,18 +1,24 @@
 import {
   type CloneProgress,
   DEFAULT_ROUTES,
+  type Disposable,
   type ExistingProjectSource,
   type NewProjectSource,
   type Project,
   type ProjectClone,
+  type ProjectIcon,
   type ProjectId,
+  type ProjectSidebarItem,
   type Projects,
 } from '@elsewise/frontend-plugin';
 import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { OrderedItems } from '@/plugins/ordered-items';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
 
@@ -34,6 +40,11 @@ export function projectsQuery(daemonId: string) {
  */
 export class ProjectManager implements Projects {
   readonly workspaces: WorkspaceManager;
+  private readonly listeners = new Set<() => void>();
+  private readonly addedIcons = new OrderedItems<ProjectIcon>('Project icon', () => this.notify());
+  private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>
+    this.notify(),
+  );
 
   constructor(
     private readonly client: QueryClient,
@@ -97,6 +108,45 @@ export class ProjectManager implements Projects {
     this.client.removeQueries({ queryKey: workspacesQuery(project.daemon, project.project).queryKey });
     await this.client.invalidateQueries({ queryKey: projectsQuery(project.daemon).queryKey, exact: true });
   }
+
+  /**
+   * The icons that plugins added, in the order they are tried.
+   */
+  get icons(): readonly ProjectIcon[] {
+    return this.addedIcons.items;
+  }
+
+  addIcons(icons: readonly ProjectIcon[]): Disposable {
+    return this.addedIcons.add(icons);
+  }
+
+  /**
+   * The sidebar items that plugins added, from right to left.
+   */
+  get sidebarItems(): readonly ProjectSidebarItem[] {
+    return this.addedSidebarItems.items;
+  }
+
+  addSidebarItems(items: readonly ProjectSidebarItem[]): Disposable {
+    return this.addedSidebarItems.add(items);
+  }
+
+  subscribe(listener: () => void): Disposable {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify() {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error('Project listener failed', error);
+      }
+    }
+  }
 }
 
 function mapProgress({ phase, percent }: Progress): CloneProgress {
@@ -120,7 +170,7 @@ function mapProgress({ phase, percent }: Progress): CloneProgress {
   }
 }
 
-function mapProject(daemon: string, message: ProjectMessage | undefined): Project {
+export function mapProject(daemon: string, message: ProjectMessage | undefined): Project {
   if (message === undefined) {
     throw new Error('The daemon sent no project.');
   }
@@ -131,4 +181,22 @@ function mapProject(daemon: string, message: ProjectMessage | undefined): Projec
     state: message.state.case ?? 'broken',
     absolutePath: message.absolutePath,
   };
+}
+
+/**
+ * Returns the icons that plugins added to the projects, in the order they are tried.
+ */
+export function useProjectIcons(): readonly ProjectIcon[] {
+  const projects = useApplicationManager().projects;
+  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  return useSyncExternalStore(subscribe, () => projects.icons);
+}
+
+/**
+ * Returns the sidebar items that plugins added to the projects, from right to left.
+ */
+export function useProjectSidebarItems(): readonly ProjectSidebarItem[] {
+  const projects = useApplicationManager().projects;
+  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  return useSyncExternalStore(subscribe, () => projects.sidebarItems);
 }

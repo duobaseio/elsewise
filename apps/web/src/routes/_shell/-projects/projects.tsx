@@ -108,7 +108,7 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
           plugins={PLUGINS}
           sensors={SENSORS}
         >
-          <SidebarMenu className="[&_[data-dnd-dragging]]:rounded-lg [&_[data-dnd-dragging]]:bg-surface! [&_[data-dnd-dragging]]:shadow-md [&_[data-dnd-dragging]>[data-sidebar=menu-row]]:overlay-hover [&_[data-dnd-dragging]>[data-sidebar=menu-sub-button]]:overlay-hover">
+          <SidebarMenu className="[&_[data-dnd-dragging]]:rounded-lg [&_[data-dnd-dragging]]:bg-surface! [&_[data-dnd-dragging]]:shadow-md [&_[data-dnd-dragging]>[data-sidebar=menu-row]]:overlay-hover [&_[data-dnd-dragging]>[data-sidebar=menu-sub-row]]:overlay-hover">
             {layout.projects(projects.data ?? []).map((project, index) => (
               <ProjectItem daemonId={daemonId} index={index} key={project.id} project={project} />
             ))}

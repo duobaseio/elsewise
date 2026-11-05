@@ -4,6 +4,7 @@ import {
   type ProjectId,
   type Workspace,
   type WorkspaceId,
+  type WorkspaceSidebarItem,
   type WorkspaceSource,
   type WorkspaceStatus,
   type WorkspaceStatusHandle,
@@ -15,6 +16,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { OrderedItems } from '@/plugins/ordered-items';
 import { updateProjectLayout } from '@/projects/layout';
 
 /**
@@ -45,6 +47,9 @@ export class WorkspaceManager implements Workspaces {
   private readonly listeners = new Set<() => void>();
   private readonly activeListeners = new Set<(workspace: Workspace | null) => void>();
   private readonly statuses = new Set<StatusEntry>();
+  private readonly addedSidebarItems = new OrderedItems<WorkspaceSidebarItem>('Workspace sidebar item', () =>
+    this.notify(),
+  );
   private shown: WorkspaceId | null = null;
   private lastActive: Workspace | null = null;
   private routing = 0;
@@ -233,6 +238,17 @@ export class WorkspaceManager implements Workspaces {
   }
 
   /**
+   * The sidebar items that plugins added, from right to left.
+   */
+  get sidebarItems(): readonly WorkspaceSidebarItem[] {
+    return this.addedSidebarItems.items;
+  }
+
+  addSidebarItems(items: readonly WorkspaceSidebarItem[]): Disposable {
+    return this.addedSidebarItems.add(items);
+  }
+
+  /**
    * Calls `listener` with the workspace shown when another is shown or it changes.
    */
   onActiveChange(listener: (workspace: Workspace | null) => void): Disposable {
@@ -243,7 +259,7 @@ export class WorkspaceManager implements Workspaces {
   }
 
   /**
-   * Calls `listener` when a workspace's status changes.
+   * Calls `listener` when a workspace's status changes, or sidebar items are added or removed.
    */
   subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
@@ -310,7 +326,10 @@ function contains(id: ProjectId | WorkspaceId, workspace: WorkspaceId) {
   );
 }
 
-function mapWorkspace(daemon: string, message: WorkspaceMessage | undefined): Workspace {
+/**
+ * Returns `message`, a workspace on the daemon with id `daemon`, as plugins see it.
+ */
+export function mapWorkspace(daemon: string, message: WorkspaceMessage | undefined): Workspace {
   if (message === undefined) {
     throw new Error('The daemon sent no workspace.');
   }
@@ -331,4 +350,13 @@ export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceStatus {
   const workspaces = useApplicationManager().projects.workspaces;
   const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.status(workspace));
+}
+
+/**
+ * Returns the sidebar items that plugins added to the workspaces, from right to left.
+ */
+export function useWorkspaceSidebarItems(): readonly WorkspaceSidebarItem[] {
+  const workspaces = useApplicationManager().projects.workspaces;
+  const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
+  return useSyncExternalStore(subscribe, () => workspaces.sidebarItems);
 }

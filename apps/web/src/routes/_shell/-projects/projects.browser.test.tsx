@@ -1,5 +1,6 @@
 import { create } from '@bufbuild/protobuf';
 import { DEFAULT_PROJECT_LAYOUT, type ProjectLayout } from '@elsewise/bridge';
+import { SidebarContent } from '@elsewise/components/components/sidebar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -9,7 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
@@ -132,7 +133,9 @@ async function mount(path: string, layout: ProjectLayout = DEFAULT_PROJECT_LAYOU
   const root = createRootRoute({
     component: () => (
       <>
-        <Projects />
+        <SidebarContent>
+          <Projects />
+        </SidebarContent>
         <Outlet />
       </>
     ),
@@ -156,11 +159,18 @@ async function mount(path: string, layout: ProjectLayout = DEFAULT_PROJECT_LAYOU
 // Returns the names of the projects and their workspaces, in the order shown.
 function names() {
   return (
-    [...document.querySelectorAll('[data-sidebar="menu-row-label"], [data-sidebar="menu-sub-button"]')]
+    [...document.querySelectorAll('[data-sidebar="menu-row-label"], [data-sidebar="menu-sub-row-label"]')]
       // A drop leaves the dragged item's placeholder copy until its animation ends.
       .filter((element) => !element.closest('[data-dnd-placeholder]'))
       .map((element) => element.lastElementChild?.textContent)
-      .filter((name) => name !== 'New workspace')
+  );
+}
+
+// Returns the names of the buttons in the row of the workspace named `workspace`, in the order shown.
+function buttons(workspace: string) {
+  const row = page.getByRole('treeitem', { name: workspace }).element().closest('[data-sidebar="menu-sub-row"]');
+  return [...(row?.querySelectorAll('button') ?? [])].map(
+    (button) => button.getAttribute('aria-label') ?? button.textContent,
   );
 }
 
@@ -168,24 +178,24 @@ describe('Projects', () => {
   test('highlights current workspace', async () => {
     await mount('/local/elsewise/dhaka');
 
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).toHaveAttribute('data-active');
-    await expect.element(page.getByRole('link', { name: 'Singapore' })).not.toHaveAttribute('data-active');
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAttribute('data-active');
+    await expect.element(page.getByRole('treeitem', { name: 'Singapore' })).not.toHaveAttribute('data-active');
   });
 
   test('collapses project', async () => {
     await mount('/local/elsewise/singapore');
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
 
-    await page.getByRole('button', { name: 'elsewise', exact: true }).click();
+    await page.getByRole('treeitem', { name: 'elsewise', exact: true }).click();
 
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).not.toBeInTheDocument();
-    await expect.element(page.getByRole('link', { name: 'Tokyo' })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).not.toBeInTheDocument();
+    await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toBeVisible();
   });
 
   test('saves collapse', async () => {
     const { saved } = await mount('/local/elsewise/singapore');
 
-    await page.getByRole('button', { name: 'elsewise', exact: true }).click();
+    await page.getByRole('treeitem', { name: 'elsewise', exact: true }).click();
 
     await expect
       .poll(() => saved.at(-1)?.daemons.local?.projects.find(({ id }) => id === 'elsewise')?.expanded)
@@ -197,8 +207,8 @@ describe('Projects', () => {
       daemons: { local: { projects: [{ id: 'elsewise', expanded: false, workspaces: [] }] } },
     });
 
-    await expect.element(page.getByRole('link', { name: 'Tokyo' })).toBeVisible();
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).not.toBeInTheDocument();
+    await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).not.toBeInTheDocument();
   });
 
   test('sorts per layout', async () => {
@@ -221,8 +231,8 @@ describe('Projects', () => {
     await expect.poll(names).toEqual(['elsewise', 'Singapore', 'Dhaka', 'dotfiles', 'Tokyo']);
 
     await userEvent.dragAndDrop(
-      page.getByRole('button', { name: 'dotfiles', exact: true }),
-      page.getByRole('button', { name: 'elsewise', exact: true }),
+      page.getByRole('treeitem', { name: 'dotfiles', exact: true }),
+      page.getByRole('treeitem', { name: 'elsewise', exact: true }),
     );
 
     await expect.poll(names).toEqual(['dotfiles', 'Tokyo', 'elsewise', 'Singapore', 'Dhaka']);
@@ -234,8 +244,8 @@ describe('Projects', () => {
     await expect.poll(names).toEqual(['elsewise', 'Singapore', 'Dhaka', 'dotfiles', 'Tokyo']);
 
     await userEvent.dragAndDrop(
-      page.getByRole('link', { name: 'Dhaka' }),
-      page.getByRole('link', { name: 'Singapore' }),
+      page.getByRole('treeitem', { name: 'Dhaka' }),
+      page.getByRole('treeitem', { name: 'Singapore' }),
     );
 
     await expect.poll(names).toEqual(['elsewise', 'Dhaka', 'Singapore', 'dotfiles', 'Tokyo']);
@@ -249,7 +259,10 @@ describe('Projects', () => {
     const { saved } = await mount('/local/elsewise/singapore');
     await expect.poll(names).toEqual(['elsewise', 'Singapore', 'Dhaka', 'dotfiles', 'Tokyo']);
 
-    await userEvent.dragAndDrop(page.getByRole('link', { name: 'Dhaka' }), page.getByRole('link', { name: 'Tokyo' }));
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'Dhaka' }),
+      page.getByRole('treeitem', { name: 'Tokyo' }),
+    );
 
     await expect.poll(names).toEqual(['elsewise', 'Singapore', 'Dhaka', 'dotfiles', 'Tokyo']);
     expect(saved).toEqual([]);
@@ -258,18 +271,18 @@ describe('Projects', () => {
   test('opens workspace', async () => {
     const { router } = await mount('/local/elsewise/singapore');
 
-    await page.getByRole('link', { name: 'Tokyo' }).click();
+    await page.getByRole('treeitem', { name: 'Tokyo' }).click();
 
-    await expect.element(page.getByRole('link', { name: 'Tokyo' })).toHaveAttribute('data-active');
+    await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toHaveAttribute('data-active');
     expect(router.state.location.pathname).toBe('/local/dotfiles/tokyo');
   });
 
   test('adds workspace and opens it', async () => {
     const { router } = await mount('/local/elsewise/singapore');
 
-    await page.getByRole('button', { name: 'New workspace in dotfiles' }).click();
+    await page.getByRole('treeitem', { name: 'New workspace in dotfiles' }).click();
 
-    await expect.element(page.getByRole('link', { name: 'Lisbon' })).toHaveAttribute('data-active');
+    await expect.element(page.getByRole('treeitem', { name: 'Lisbon' })).toHaveAttribute('data-active');
     expect(router.state.location.pathname).toBe('/local/dotfiles/lisbon');
   });
 
@@ -277,9 +290,9 @@ describe('Projects', () => {
     await mount('/local/elsewise/singapore');
 
     await expect
-      .element(page.getByRole('link', { name: 'Singapore' }))
+      .element(page.getByRole('treeitem', { name: 'Singapore' }))
       .toHaveAccessibleDescription('Idle Main workspace');
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).toHaveAccessibleDescription('Idle');
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAccessibleDescription('Idle');
   });
 
   test('deletes workspace', async () => {
@@ -288,7 +301,7 @@ describe('Projects', () => {
     await page.getByRole('button', { name: 'Delete Dhaka' }).click();
     await page.getByRole('button', { name: 'Delete', exact: true }).click();
 
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).not.toBeInTheDocument();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).not.toBeInTheDocument();
     expect(deleted).toEqual([{ workspaceId: 'dhaka', deleteFiles: false, deleteBranch: false }]);
   });
 
@@ -304,7 +317,7 @@ describe('Projects', () => {
 
   test('omits branch without one checked out', async () => {
     await mount('/local/elsewise/singapore');
-    await page.getByRole('button', { name: 'New workspace in elsewise' }).click();
+    await page.getByRole('treeitem', { name: 'New workspace in elsewise' }).click();
 
     await page.getByRole('button', { name: 'Delete Lisbon' }).click();
 
@@ -363,12 +376,241 @@ describe('Projects', () => {
     expect(deleted).toEqual([]);
   });
 
+  test('exposes projects as tree', async () => {
+    await mount('/local/elsewise/singapore');
+    const tree = page.getByRole('tree', { name: 'My workspaces' });
+    const project = tree.getByRole('treeitem', { name: 'elsewise', exact: true });
+
+    await expect.element(project).toHaveAttribute('aria-expanded', 'true');
+    const group = document.getElementById(project.element().getAttribute('aria-owns') ?? '');
+    expect(group?.getAttribute('role')).toBe('group');
+    expect(group?.contains(tree.getByRole('treeitem', { name: 'Dhaka' }).element())).toBe(true);
+  });
+
+  test('moves between rows by arrows', async () => {
+    const { router } = await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Singapore' }).element().focus();
+
+    await userEvent.keyboard('{ArrowDown}');
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
+    expect(router.state.location.pathname).toBe('/local/elsewise/singapore');
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}');
+    await expect.element(page.getByRole('treeitem', { name: 'dotfiles', exact: true })).toHaveFocus();
+    await userEvent.keyboard('{ArrowUp}');
+    await expect.element(page.getByRole('treeitem', { name: 'New workspace in elsewise' })).toHaveFocus();
+    await userEvent.keyboard('{End}');
+    await expect.element(page.getByRole('treeitem', { name: 'New workspace in dotfiles' })).toHaveFocus();
+    await userEvent.keyboard('{Home}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'elsewise', exact: true })).toHaveFocus();
+  });
+
+  test('opens workspace on Enter', async () => {
+    const { router } = await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Singapore' }).element().focus();
+
+    await userEvent.keyboard('{ArrowDown}{Enter}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAttribute('data-active');
+    expect(router.state.location.pathname).toBe('/local/elsewise/dhaka');
+  });
+
+  test('collapses and expands project by arrows', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{ArrowLeft}');
+    await expect.element(page.getByRole('treeitem', { name: 'elsewise', exact: true })).toHaveFocus();
+    await userEvent.keyboard('{ArrowLeft}');
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).not.toBeInTheDocument();
+    await userEvent.keyboard('{ArrowDown}');
+    await expect.element(page.getByRole('treeitem', { name: 'dotfiles', exact: true })).toHaveFocus();
+    await userEvent.keyboard('{ArrowUp}{ArrowRight}');
+    await expect.element(page.getByRole('treeitem', { name: 'Singapore' })).toBeVisible();
+    await userEvent.keyboard('{ArrowRight}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'Singapore' })).toHaveFocus();
+  });
+
+  test('tabs to current workspace only', async () => {
+    await mount('/local/elsewise/dhaka');
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
+
+    await userEvent.tab();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
+    await userEvent.tab();
+
+    expect(document.activeElement?.closest('[data-sidebar="content"]')).toBeNull();
+  });
+
+  test('tabs to row last focused', async () => {
+    await mount('/local/elsewise/singapore');
+    const before = document.createElement('button');
+    document.body.prepend(before);
+    onTestFinished(() => before.remove());
+    page.getByRole('treeitem', { name: 'Tokyo' }).element().focus();
+    before.focus();
+
+    await userEvent.tab();
+
+    await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toHaveFocus();
+  });
+
+  test('opens delete dialog on Delete', async () => {
+    const { deleted } = await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Delete}');
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await expect.poll(() => deleted).toEqual([{ workspaceId: 'dhaka', deleteFiles: false, deleteBranch: false }]);
+  });
+
+  test('opens delete dialog on Backspace', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Backspace}');
+
+    await expect.element(page.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  test('refocuses workspace after cancel', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{Delete}');
+    await page.getByRole('button', { name: 'Cancel' }).click();
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
+  });
+
+  test('spares main workspace on Delete', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'Singapore' }).element().focus();
+
+    await userEvent.keyboard('{Delete}');
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+  });
+
   test('describes workspace by status', async () => {
     const { projects } = await mount('/local/elsewise/singapore');
 
     projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'running');
 
-    await expect.element(page.getByRole('link', { name: 'Dhaka' })).toHaveAccessibleDescription('Running');
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAccessibleDescription('Running');
+  });
+
+  test('draws icons over their fallbacks', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+
+    projects.addIcons([
+      { id: 'test.inner', order: 2, component: ({ project }) => <span data-testid={`inner-${project.name}`} /> },
+      { id: 'test.outer', order: 1, component: ({ fallback }) => <span data-testid="outer">{fallback}</span> },
+    ]);
+
+    await expect.element(page.getByTestId('outer').first().getByTestId('inner-elsewise')).toBeInTheDocument();
+    expect(document.querySelector('[data-slot="file-icon"]')).toBeNull();
+  });
+
+  test('falls back from throwing icon', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+
+    projects.addIcons([
+      {
+        id: 'test.throwing',
+        order: 1,
+        component: () => {
+          throw new Error('broken');
+        },
+      },
+      { id: 'test.inner', order: 2, component: ({ project }) => <span data-testid={`inner-${project.name}`} /> },
+    ]);
+
+    await expect.element(page.getByTestId('inner-elsewise')).toBeInTheDocument();
+  });
+
+  test('orders items from right', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+
+    projects.workspaces.addSidebarItems([
+      { id: 'test.c', component: () => <button type="button">C</button> },
+      { id: 'test.a', order: 1, component: () => <button type="button">A</button> },
+      { id: 'test.b', order: 2, component: () => <button type="button">B</button> },
+    ]);
+
+    await expect.poll(() => buttons('Dhaka')).toEqual(['C', 'B', 'A', 'Delete Dhaka']);
+  });
+
+  test('skips duplicate item', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+
+    projects.workspaces.addSidebarItems([{ id: 'test.a', component: () => <button type="button">A</button> }]);
+    projects.workspaces.addSidebarItems([{ id: 'test.a', component: () => <button type="button">B</button> }]);
+
+    await expect.poll(() => buttons('Dhaka')).toEqual(['A', 'Delete Dhaka']);
+  });
+
+  test('hides throwing item', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+
+    projects.workspaces.addSidebarItems([
+      {
+        id: 'test.throwing',
+        component: () => {
+          throw new Error('broken');
+        },
+      },
+      { id: 'test.a', component: () => <button type="button">A</button> },
+    ]);
+
+    await expect.poll(() => buttons('Dhaka')).toEqual(['A', 'Delete Dhaka']);
+  });
+
+  test('removes disposed items', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const dispose = projects.workspaces.addSidebarItems([
+      { id: 'test.a', component: () => <button type="button">A</button> },
+    ]);
+    await expect.poll(() => buttons('Dhaka')).toEqual(['A', 'Delete Dhaka']);
+
+    dispose();
+
+    await expect.poll(() => buttons('Dhaka')).toEqual(['Delete Dhaka']);
+  });
+
+  test('passes workspace to item', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+
+    projects.workspaces.addSidebarItems([
+      { id: 'test.name', component: ({ workspace }) => <button type="button">{workspace.id.workspace}</button> },
+    ]);
+
+    await expect.poll(() => buttons('Dhaka')).toEqual(['dhaka', 'Delete Dhaka']);
+  });
+
+  test('clicks workspace item without opening workspace', async () => {
+    const { router, projects } = await mount('/local/elsewise/singapore');
+    projects.workspaces.addSidebarItems([
+      { id: 'test.a', component: ({ workspace }) => <button type="button">{`A ${workspace.name}`}</button> },
+    ]);
+
+    await page.getByRole('button', { name: 'A Dhaka' }).click();
+
+    expect(router.state.location.pathname).toBe('/local/elsewise/singapore');
+  });
+
+  test('clicks project item without collapsing project', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSidebarItems([
+      { id: 'test.a', component: ({ project }) => <button type="button">{`A ${project.name}`}</button> },
+    ]);
+
+    await page.getByRole('button', { name: 'A elsewise' }).click();
+
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
   });
 
   test('adds project from picked folder', async () => {
@@ -388,6 +630,6 @@ describe('Projects', () => {
 
     await page.getByRole('button', { name: 'Add project' }).click();
 
-    await expect.element(page.getByRole('button', { name: 'notes', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
   });
 });

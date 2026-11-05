@@ -117,7 +117,7 @@ function Settings() {
         </Header>
         <Search />
 
-        <SidebarContent>
+        <SidebarContent selectionFollowsFocus>
           {GROUPS.map((group) => {
             const members = panels.filter((panel) => panel.in === group.id);
             if (members.length === 0) {
@@ -218,6 +218,7 @@ function Item({
     <Collapsible onOpenChange={setOpen} open={open} render={<SidebarMenuItem />}>
       <SidebarMenuRow isActive={active}>
         <SidebarMenuRowLabel
+          aria-expanded={open}
           className="select-none"
           data-active={active ? '' : undefined}
           onDoubleClick={() => setOpen((open) => !open)}
@@ -225,7 +226,7 @@ function Item({
         >
           {label}
         </SidebarMenuRowLabel>
-        <SidebarMenuChevron aria-label={open ? `Collapse ${label}` : `Expand ${label}`} />
+        <SidebarMenuChevron />
       </SidebarMenuRow>
       <CollapsibleContent>
         <SidebarMenuSub>
@@ -281,6 +282,12 @@ function AddLanguage({ languages }: { languages: readonly string[] }) {
       >
         <ComboboxPrimitive.Trigger
           aria-label="Add language"
+          // The arrows move between the sidebar's rows rather than open the list.
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+              event.preventBaseUIHandler();
+            }
+          }}
           render={
             <SidebarMenuSubButton
               className="w-full cursor-default text-text-2 [&>svg]:size-2.75"

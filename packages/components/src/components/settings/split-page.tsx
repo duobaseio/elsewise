@@ -36,6 +36,9 @@ const PANELS = { form: FormPanel, preview: PreviewPanel };
  */
 export function SplitPage({ title, preview, children }: SplitPageProps) {
   const onReady = (event: SplitviewReadyEvent) => {
+    // TODO: Drop once dockview's splitview stops focusing each panel it adds, which takes the focus from the settings
+    // sidebar when moving onto a page by the arrows.
+    const focused = document.activeElement;
     event.api.addPanel({
       id: 'form',
       component: 'form' satisfies keyof typeof PANELS,
@@ -43,6 +46,10 @@ export function SplitPage({ title, preview, children }: SplitPageProps) {
       maximumSize: 672,
     });
     event.api.addPanel({ id: 'preview', component: 'preview' satisfies keyof typeof PANELS, minimumSize: 384 });
+
+    if (focused instanceof HTMLElement && focused !== document.body) {
+      focused.focus();
+    }
   };
 
   return (

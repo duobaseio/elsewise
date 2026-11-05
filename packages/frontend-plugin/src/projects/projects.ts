@@ -1,3 +1,5 @@
+import type { Disposable } from '@elsewise/plugin';
+import type { ProjectIcon, ProjectSidebarItem } from './sidebar';
 import type { Workspaces } from './workspaces';
 
 /**
@@ -40,6 +42,28 @@ export interface Projects {
    * `deleteFiles` deletes their folders.
    */
   delete(project: ProjectId, options?: { deleteFiles?: boolean }): Promise<void>;
+
+  /**
+   * Adds `icons` to each project's sidebar row, in place of its default icon.
+   *
+   * ```ts
+   * projects.addIcons([{ id: 'io.example.github', component: GitHubIcon }]);
+   * ```
+   *
+   * Returns a disposable that removes the `icons`.
+   */
+  addIcons(icons: readonly ProjectIcon[]): Disposable;
+
+  /**
+   * Adds `items` to each project's sidebar row, between its name and its chevron.
+   *
+   * ```ts
+   * projects.addSidebarItems([{ id: 'io.example.ci', component: CiStatus }]);
+   * ```
+   *
+   * Returns a disposable that removes the `items`.
+   */
+  addSidebarItems(items: readonly ProjectSidebarItem[]): Disposable;
 }
 
 /**

@@ -1,4 +1,6 @@
+import type { Disposable } from '@elsewise/plugin';
 import type { ProjectId } from './projects';
+import type { WorkspaceSidebarItem } from './sidebar';
 
 /**
  * The status of a workspace. See {@link Workspaces.status}.
@@ -61,6 +63,17 @@ export interface Workspaces {
    * ```
    */
   addStatus(workspace: WorkspaceId, status: WorkspaceStatus): WorkspaceStatusHandle;
+
+  /**
+   * Adds `items` to each workspace's sidebar row, between its name and its delete button.
+   *
+   * ```ts
+   * workspaces.addSidebarItems([{ id: 'io.example.pull-request', component: PullRequest }]);
+   * ```
+   *
+   * Returns a disposable that removes the `items`.
+   */
+  addSidebarItems(items: readonly WorkspaceSidebarItem[]): Disposable;
 }
 
 /**
