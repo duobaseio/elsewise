@@ -1,4 +1,5 @@
 import type { Disposable } from '@elsewise/plugin';
+import type { ContextMenuGroup } from '../context-menu';
 import type { ProjectId } from './projects';
 import type { WorkspaceSidebarItem } from './sidebar';
 
@@ -74,6 +75,15 @@ export interface Workspaces {
    * Returns a disposable that removes the `items`.
    */
   addSidebarItems(items: readonly WorkspaceSidebarItem[]): Disposable;
+
+  /**
+   * Adds `groups`, and their items, to each workspace's context menu.
+   *
+   * See {@link ContextMenuGroup} for adding to a built-in group or submenu.
+   *
+   * Returns a disposable that removes the `groups`.
+   */
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
 }
 
 /**

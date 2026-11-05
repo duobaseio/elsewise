@@ -143,8 +143,8 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
       const command = registered.get(item.command);
       if (command === undefined) {
         console.warn(`Unknown command ${item.command} in toolbar`);
-      } else if (command.scope === 'terminal') {
-        console.warn(`Terminal command ${item.command} in editor toolbar`);
+      } else if (command.scope !== 'application' && command.scope !== 'editor') {
+        console.warn(`Command ${item.command} in editor toolbar is a ${command.scope} command`);
       } else {
         entries.push({ type: 'command', id: command.id, order, command, icon: item.icon });
       }

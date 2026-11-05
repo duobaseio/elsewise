@@ -18,11 +18,14 @@ import type { Project as PluginProject } from '@elsewise/frontend-plugin';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { type ReactNode, useId, useMemo, useRef } from 'react';
+import { useApplicationManager } from '@/application-context';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
+import { runSidebarKeys } from '@/command/keymap/keymap';
 import { daemonQuery } from '@/daemon';
 import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
-import { mapProject, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
+import { mapProject, useProjectContextMenu, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
 import { workspacesQuery } from '@/projects/workspace-manager';
 import { WorkspaceItem } from './workspace-item';
 
@@ -42,6 +45,8 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
   const { setExpanded } = useUpdateProjectLayout(daemonId);
   const row = useRef<HTMLDivElement>(null);
   const items = useProjectSidebarItems();
+  const menu = useProjectContextMenu();
+  const { commands } = useApplicationManager();
 
   const workspaces = useQuery(workspacesQuery(daemonId, project.id));
   const pluginProject = useMemo(() => mapProject(daemonId, project), [daemonId, project]);
@@ -86,23 +91,25 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       render={<SidebarMenuItem />}
     >
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
-      <SidebarMenuRow ref={row}>
-        {/* TODO: Open a delete project dialog on Delete, as workspaces do. */}
-        <SidebarMenuRowLabel
-          aria-describedby={available ? undefined : stateId}
-          render={available ? <CollapsibleTrigger /> : undefined}
-        >
-          <ProjectItemIcon project={pluginProject} stateId={stateId} />
-          <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
-        </SidebarMenuRowLabel>
-        {items.toReversed().map(({ id, component: Item }) => (
-          <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
-            <Item project={pluginProject} />
-          </PluginBoundary>
-        ))}
-        {/* An unavailable project keeps the chevron's space, so its items line up with the others'. */}
-        {available ? <SidebarMenuChevron aria-hidden /> : <span className="size-5 shrink-0" />}
-      </SidebarMenuRow>
+      <CommandContextMenu menu={menu} target={{ current: pluginProject }}>
+        <SidebarMenuRow onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)} ref={row}>
+          {/* TODO: Open a delete project dialog on Delete, as workspaces do. */}
+          <SidebarMenuRowLabel
+            aria-describedby={available ? undefined : stateId}
+            render={available ? <CollapsibleTrigger /> : undefined}
+          >
+            <ProjectItemIcon project={pluginProject} stateId={stateId} />
+            <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
+          </SidebarMenuRowLabel>
+          {items.toReversed().map(({ id, component: Item }) => (
+            <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
+              <Item project={pluginProject} />
+            </PluginBoundary>
+          ))}
+          {/* An unavailable project keeps the chevron's space, so its items line up with the others'. */}
+          {available ? <SidebarMenuChevron aria-hidden /> : <span className="size-5 shrink-0" />}
+        </SidebarMenuRow>
+      </CommandContextMenu>
       {available && (
         <CollapsibleContent>
           <SidebarMenuSub>

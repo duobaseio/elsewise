@@ -1,5 +1,6 @@
 import {
   type CloneProgress,
+  type ContextMenuGroup,
   DEFAULT_ROUTES,
   type Disposable,
   type ExistingProjectSource,
@@ -15,6 +16,7 @@ import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
@@ -45,6 +47,7 @@ export class ProjectManager implements Projects {
   private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>
     this.notify(),
   );
+  private readonly contextMenus = new ContextMenuManager([], () => this.notify());
 
   constructor(
     private readonly client: QueryClient,
@@ -131,6 +134,17 @@ export class ProjectManager implements Projects {
     return this.addedSidebarItems.add(items);
   }
 
+  /**
+   * The context menu's deduplicated groups, in order of first addition.
+   */
+  get contextMenu(): readonly ContextMenuGroup[] {
+    return this.contextMenus.groups;
+  }
+
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    return this.contextMenus.add(groups);
+  }
+
   subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
@@ -199,4 +213,13 @@ export function useProjectSidebarItems(): readonly ProjectSidebarItem[] {
   const projects = useApplicationManager().projects;
   const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
   return useSyncExternalStore(subscribe, () => projects.sidebarItems);
+}
+
+/**
+ * Returns the groups of the projects' context menu.
+ */
+export function useProjectContextMenu(): readonly ContextMenuGroup[] {
+  const projects = useApplicationManager().projects;
+  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  return useSyncExternalStore(subscribe, () => projects.contextMenu);
 }

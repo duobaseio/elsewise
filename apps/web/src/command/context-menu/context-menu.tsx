@@ -12,11 +12,18 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { Application, ContextMenuGroup } from '@elsewise/frontend-plugin';
+import type { Application, ContextMenuGroup, Project, Workspace } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
-import { type CommandManager, isTerminal, useCommandManager } from '@/command/command-manager';
+import {
+  type CommandManager,
+  isEditor,
+  isProject,
+  isTerminal,
+  isWorkspace,
+  useCommandManager,
+} from '@/command/command-manager';
 
 export interface CommandContextMenuProps {
   /**
@@ -24,9 +31,9 @@ export interface CommandContextMenuProps {
    */
   menu: readonly ContextMenuGroup[];
   /**
-   * The editor or terminal that the menu's commands run against.
+   * The project, workspace, editor or terminal that the menu's commands run against.
    */
-  target?: RefObject<EditorView | XTerm | null>;
+  target?: RefObject<Project | Workspace | EditorView | XTerm | null>;
   /**
    * Returns whether the menu opens for `event`, e.g. a right-click or a touch's long-press. Defaults to true.
    */
@@ -125,7 +132,7 @@ function resolve(
   menu: readonly ContextMenuGroup[],
   application: Application,
   commands: CommandManager,
-  target: EditorView | XTerm | null,
+  target: Project | Workspace | EditorView | XTerm | null,
   path: readonly string[],
 ): Group[] {
   const groups: Group[] = [];
@@ -177,7 +184,15 @@ function resolve(
           shown = command.shown?.(application);
           enabled = command.enabled?.(application);
           active = command.active?.(application);
-        } else if (command.scope === 'editor' && target !== null && !isTerminal(target)) {
+        } else if (command.scope === 'project' && target !== null && isProject(target)) {
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
+        } else if (command.scope === 'workspace' && target !== null && isWorkspace(target)) {
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
+        } else if (command.scope === 'editor' && target !== null && isEditor(target)) {
           shown = command.shown?.(application, target);
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);

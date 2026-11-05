@@ -12,9 +12,17 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/co
 import type { Workspace as PluginWorkspace } from '@elsewise/frontend-plugin';
 import { Link, useParams } from '@tanstack/react-router';
 import { useId, useMemo, useState } from 'react';
+import { useApplicationManager } from '@/application-context';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
+import { runSidebarKeys } from '@/command/keymap/keymap';
 import type { Workspace } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
-import { mapWorkspace, useWorkspaceSidebarItems, useWorkspaceStatus } from '@/projects/workspace-manager';
+import {
+  mapWorkspace,
+  useWorkspaceContextMenu,
+  useWorkspaceSidebarItems,
+  useWorkspaceStatus,
+} from '@/projects/workspace-manager';
 import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
 
 const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a worktree' } as const;
@@ -39,6 +47,8 @@ export function WorkspaceItem({
 
   const [deletion] = useState(() => createDialogHandle());
   const items = useWorkspaceSidebarItems();
+  const menu = useWorkspaceContextMenu();
+  const { commands } = useApplicationManager();
 
   const pluginWorkspace = useMemo(() => mapWorkspace(daemonId, workspace), [daemonId, workspace]);
   const { state } = pluginWorkspace;
@@ -55,68 +65,73 @@ export function WorkspaceItem({
   return (
     <SidebarMenuSubItem ref={ref}>
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="workspace"] with data-active. */}
-      <SidebarMenuSubRow size="sm">
-        <SidebarMenuSubRowLabel
-          isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
-          render={
-            <Link
-              aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
-              aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
-              draggable={false}
-              // TODO: Bind through a command once commands have a sidebar scope.
-              onKeyDown={(event) => {
-                if (
-                  !workspace.main &&
-                  (event.key === 'Delete' || event.key === 'Backspace') &&
-                  !(event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
-                ) {
-                  event.preventDefault();
-                  deletion.open(null);
-                }
-              }}
-              params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
-              ref={handleRef}
-              to="/$daemon/$project/$workspace"
-            />
-          }
+      <CommandContextMenu menu={menu} target={{ current: pluginWorkspace }}>
+        <SidebarMenuSubRow
+          onKeyDown={(event) => runSidebarKeys(commands, pluginWorkspace, event.nativeEvent)}
+          size="sm"
         >
-          <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
-          <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
-            {workspace.name}
-          </span>
-        </SidebarMenuSubRowLabel>
-        {items.toReversed().map(({ id, component: Item }) => (
-          <PluginBoundary key={id} name={`Workspace sidebar item ${id}`}>
-            <Item workspace={pluginWorkspace} />
-          </PluginBoundary>
-        ))}
-        {workspace.main ? (
-          <Tooltip>
-            <TooltipTrigger render={<SidebarMenuRowAction render={<span />} />}>
-              <Icon aria-hidden aria-label="Main workspace" id={`${statusId}main`} name="main-workspace" role="img" />
-            </TooltipTrigger>
-            <TooltipContent>Main workspace</TooltipContent>
-          </Tooltip>
-        ) : (
-          <DeleteWorkspaceDialog daemonId={daemonId} handle={deletion} workspace={workspace}>
+          <SidebarMenuSubRowLabel
+            isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
+            render={
+              <Link
+                aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
+                aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
+                draggable={false}
+                // TODO: Bind through a command once commands have a sidebar scope.
+                onKeyDown={(event) => {
+                  if (
+                    !workspace.main &&
+                    (event.key === 'Delete' || event.key === 'Backspace') &&
+                    !(event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
+                  ) {
+                    event.preventDefault();
+                    deletion.open(null);
+                  }
+                }}
+                params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
+                ref={handleRef}
+                to="/$daemon/$project/$workspace"
+              />
+            }
+          >
+            <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
+            <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
+              {workspace.name}
+            </span>
+          </SidebarMenuSubRowLabel>
+          {items.toReversed().map(({ id, component: Item }) => (
+            <PluginBoundary key={id} name={`Workspace sidebar item ${id}`}>
+              <Item workspace={pluginWorkspace} />
+            </PluginBoundary>
+          ))}
+          {workspace.main ? (
             <Tooltip>
-              <TooltipTrigger
-                render={
-                  <DialogTrigger
-                    render={
-                      // Out of the tab order, as Delete on the workspace opens the dialog.
-                      <SidebarMenuRowAction aria-label={`Delete ${workspace.name}`} showOnHover tabIndex={-1} />
-                    }
-                  />
-                }
-              >
-                <Icon name="close" />
+              <TooltipTrigger render={<SidebarMenuRowAction render={<span />} />}>
+                <Icon aria-hidden aria-label="Main workspace" id={`${statusId}main`} name="main-workspace" role="img" />
               </TooltipTrigger>
-              <TooltipContent>Delete workspace</TooltipContent>
+              <TooltipContent>Main workspace</TooltipContent>
             </Tooltip>
-          </DeleteWorkspaceDialog>
-        )}
-      </SidebarMenuSubRow>
+          ) : (
+            <DeleteWorkspaceDialog daemonId={daemonId} handle={deletion} workspace={workspace}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DialogTrigger
+                      render={
+                        // Out of the tab order, as Delete on the workspace opens the dialog.
+                        <SidebarMenuRowAction aria-label={`Delete ${workspace.name}`} showOnHover tabIndex={-1} />
+                      }
+                    />
+                  }
+                >
+                  <Icon name="close" />
+                </TooltipTrigger>
+                <TooltipContent>Delete workspace</TooltipContent>
+              </Tooltip>
+            </DeleteWorkspaceDialog>
+          )}
+        </SidebarMenuSubRow>
+      </CommandContextMenu>
     </SidebarMenuSubItem>
   );
 }

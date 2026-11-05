@@ -9,11 +9,14 @@ export {
 export type {
   ActiveKeymap,
   ApplicationCommand,
+  BaseCommand,
   Command,
   CommandGroup,
   Commands,
   EditorCommand,
+  ProjectCommand,
   TerminalCommand,
+  WorkspaceCommand,
 } from './command';
 export { DEFAULT_COMMAND_GROUPS, DEFAULT_COMMANDS, DEFAULT_KEYS } from './command';
 export {

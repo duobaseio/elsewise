@@ -1,4 +1,5 @@
 import {
+  type ContextMenuGroup,
   DEFAULT_ROUTES,
   type Disposable,
   type ProjectId,
@@ -14,6 +15,7 @@ import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { OrderedItems } from '@/plugins/ordered-items';
@@ -50,6 +52,7 @@ export class WorkspaceManager implements Workspaces {
   private readonly addedSidebarItems = new OrderedItems<WorkspaceSidebarItem>('Workspace sidebar item', () =>
     this.notify(),
   );
+  private readonly contextMenus = new ContextMenuManager([], () => this.notify());
   private shown: WorkspaceId | null = null;
   private lastActive: Workspace | null = null;
   private routing = 0;
@@ -249,6 +252,17 @@ export class WorkspaceManager implements Workspaces {
   }
 
   /**
+   * The context menu's deduplicated groups, in order of first addition.
+   */
+  get contextMenu(): readonly ContextMenuGroup[] {
+    return this.contextMenus.groups;
+  }
+
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    return this.contextMenus.add(groups);
+  }
+
+  /**
    * Calls `listener` with the workspace shown when another is shown or it changes.
    */
   onActiveChange(listener: (workspace: Workspace | null) => void): Disposable {
@@ -259,7 +273,7 @@ export class WorkspaceManager implements Workspaces {
   }
 
   /**
-   * Calls `listener` when a workspace's status changes, or sidebar items are added or removed.
+   * Calls `listener` when a workspace's status changes, or sidebar items or context menu groups are added or removed.
    */
   subscribe(listener: () => void): Disposable {
     this.listeners.add(listener);
@@ -359,4 +373,13 @@ export function useWorkspaceSidebarItems(): readonly WorkspaceSidebarItem[] {
   const workspaces = useApplicationManager().projects.workspaces;
   const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.sidebarItems);
+}
+
+/**
+ * Returns the groups of the workspaces' context menu.
+ */
+export function useWorkspaceContextMenu(): readonly ContextMenuGroup[] {
+  const workspaces = useApplicationManager().projects.workspaces;
+  const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
+  return useSyncExternalStore(subscribe, () => workspaces.contextMenu);
 }

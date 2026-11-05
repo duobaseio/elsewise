@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 import { DEFAULT_PROJECT_LAYOUT, type ProjectLayout } from '@elsewise/bridge';
 import { SidebarContent } from '@elsewise/components/components/sidebar';
+import { DEFAULT_COMMAND_GROUPS, type ProjectCommand, type WorkspaceCommand } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -179,14 +180,15 @@ async function mount(
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   const projects = new ProjectManager(client, router);
+  const application = builtInApplication({ projects });
   await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={builtInApplication({ projects })}>
+      <ApplicationManagerContext value={application}>
         <RouterProvider router={router} />
       </ApplicationManagerContext>
     </QueryClientProvider>,
   );
-  return { router, projects, saved, deleted, deletion };
+  return { router, projects, commands: application.commands, saved, deleted, deletion };
 }
 
 // Returns the names of the projects and their workspaces, in the order shown.
@@ -682,6 +684,74 @@ describe('Projects', () => {
     await page.getByRole('button', { name: 'A elsewise' }).click();
 
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
+  });
+
+  test('runs workspace command from context menu', async () => {
+    const { projects, commands } = await mount('/local/elsewise/singapore');
+    const run = vi.fn<WorkspaceCommand['run']>(() => true);
+    commands.add([
+      { id: 'test.run', label: 'Run', scope: 'workspace', group: DEFAULT_COMMAND_GROUPS.application.id, run },
+    ]);
+    projects.workspaces.addContextMenu([{ id: 'test', items: [{ command: 'test.run' }] }]);
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
+    await page.getByRole('menuitem', { name: 'Run' }).click();
+
+    await expect.poll(() => run.mock.lastCall?.[1]).toMatchObject({ id: { workspace: 'dhaka' } });
+  });
+
+  test('runs project command from context menu', async () => {
+    const { projects, commands } = await mount('/local/elsewise/singapore');
+    const run = vi.fn<ProjectCommand['run']>(() => true);
+    commands.add([
+      { id: 'test.run', label: 'Run', scope: 'project', group: DEFAULT_COMMAND_GROUPS.application.id, run },
+    ]);
+    projects.addContextMenu([{ id: 'test', items: [{ command: 'test.run' }] }]);
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'elsewise', exact: true }), { button: 'right' });
+    await page.getByRole('menuitem', { name: 'Run' }).click();
+
+    await expect.poll(() => run.mock.lastCall?.[1]).toMatchObject({ id: { project: 'elsewise' } });
+  });
+
+  test('runs workspace command on its keys', async () => {
+    const { commands } = await mount('/local/elsewise/singapore');
+    const run = vi.fn<WorkspaceCommand['run']>(() => true);
+    commands.add([
+      {
+        id: 'test.run',
+        label: 'Run',
+        scope: 'workspace',
+        group: DEFAULT_COMMAND_GROUPS.application.id,
+        defaultKeys: ['F6'],
+        run,
+      },
+    ]);
+    page.getByRole('treeitem', { name: 'Dhaka' }).element().focus();
+
+    await userEvent.keyboard('{F6}');
+
+    expect(run.mock.lastCall?.[1]).toMatchObject({ id: { workspace: 'dhaka' } });
+  });
+
+  test('runs project command on its keys', async () => {
+    const { commands } = await mount('/local/elsewise/singapore');
+    const run = vi.fn<ProjectCommand['run']>(() => true);
+    commands.add([
+      {
+        id: 'test.run',
+        label: 'Run',
+        scope: 'project',
+        group: DEFAULT_COMMAND_GROUPS.application.id,
+        defaultKeys: ['F6'],
+        run,
+      },
+    ]);
+    page.getByRole('treeitem', { name: 'elsewise', exact: true }).element().focus();
+
+    await userEvent.keyboard('{F6}');
+
+    expect(run.mock.lastCall?.[1]).toMatchObject({ id: { project: 'elsewise' } });
   });
 
   test('hides workspaces of missing project', async () => {
