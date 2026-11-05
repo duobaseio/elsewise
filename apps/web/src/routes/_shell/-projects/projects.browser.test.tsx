@@ -15,7 +15,7 @@ import { afterEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
-import { type Daemon, daemonQuery, LOCAL_DAEMON } from '@/daemon';
+import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import { GitService } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import {
   CreateProjectResponseSchema,
@@ -67,6 +67,7 @@ function fakeDaemon(
       projectId: 'elsewise',
       id: 'dhaka',
       name: 'Dhaka',
+      absolutePath: '/elsewise/dhaka',
       state: stateOf('dhaka', { case: 'ok', value: { branch: 'dhaka' } }),
     }),
     create(WorkspaceSchema, {
@@ -162,7 +163,7 @@ async function mount(
     projects: { load: async () => layout, save: async (next) => void saved.push(next) },
   };
   const client = new QueryClient();
-  client.setQueryData(daemonQuery(LOCAL_DAEMON).queryKey, fakeDaemon(deleted, deletion, unavailable));
+  client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, fakeDaemon(deleted, deletion, unavailable));
   client.setQueryData(projectLayoutQuery.queryKey, layout);
   const root = createRootRoute({
     component: () => (
@@ -752,6 +753,35 @@ describe('Projects', () => {
     await userEvent.keyboard('{F6}');
 
     expect(run.mock.lastCall?.[1]).toMatchObject({ id: { project: 'elsewise' } });
+  });
+
+  test('resets finished status from context menu', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'finished');
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
+    await page.getByRole('menuitem', { name: /^Mark as read/ }).click();
+
+    expect(projects.workspaces.status({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' })).toBe('idle');
+  });
+
+  test('hides Mark as read unless finished', async () => {
+    await mount('/local/elsewise/singapore');
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
+
+    await expect.element(page.getByRole('menuitem', { name: /^Copy path/ })).toBeVisible();
+    expect(page.getByRole('menuitem', { name: /^Mark as read/ }).query()).toBeNull();
+  });
+
+  test('copies workspace path', async () => {
+    await mount('/local/elsewise/singapore');
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
+    await page.getByRole('menuitem', { name: /^Copy path/ }).click();
+
+    await expect.poll(() => writeText.mock.lastCall).toEqual(['/elsewise/dhaka']);
   });
 
   test('hides workspaces of missing project', async () => {

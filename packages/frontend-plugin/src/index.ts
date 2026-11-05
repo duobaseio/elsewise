@@ -24,7 +24,9 @@ export {
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
+  DEFAULT_PROJECT_CONTEXT_MENU,
   DEFAULT_TERMINAL_CONTEXT_MENU,
+  DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
 export {
   DEFAULT_DIFF_SOURCES,

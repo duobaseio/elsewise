@@ -1,4 +1,52 @@
 /**
+ * The project context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_PROJECT_CONTEXT_MENU = {
+  clipboard: { id: 'io.duobase.elsewise.project.contextMenu.clipboard', order: 10, items: { copyPath: 10 } },
+  open: {
+    id: 'io.duobase.elsewise.project.contextMenu.open',
+    order: 20,
+    items: {
+      newWorkspace: 10,
+      openIn: {
+        id: 'io.duobase.elsewise.project.contextMenu.open.openIn',
+        order: 20,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.project.contextMenu.open.openIn.apps',
+            order: 10,
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * The workspace context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_WORKSPACE_CONTEXT_MENU = {
+  clipboard: { id: 'io.duobase.elsewise.workspace.contextMenu.clipboard', order: 10, items: { copyPath: 10 } },
+  open: {
+    id: 'io.duobase.elsewise.workspace.contextMenu.open',
+    order: 20,
+    items: {
+      openIn: {
+        id: 'io.duobase.elsewise.workspace.contextMenu.open.openIn',
+        order: 10,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.workspace.contextMenu.open.openIn.apps',
+            order: 10,
+          },
+        },
+      },
+    },
+  },
+  status: { id: 'io.duobase.elsewise.workspace.contextMenu.status', order: 30, items: { markRead: 10 } },
+} as const;
+
+/**
  * The editor context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_EDITOR_CONTEXT_MENU = {

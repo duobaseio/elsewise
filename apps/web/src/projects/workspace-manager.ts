@@ -19,6 +19,7 @@ import { ContextMenuManager } from '@/command/context-menu/context-menu-manager'
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { OrderedItems } from '@/plugins/ordered-items';
+import { DEFAULT_WORKSPACE_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
 
 /**
@@ -52,7 +53,7 @@ export class WorkspaceManager implements Workspaces {
   private readonly addedSidebarItems = new OrderedItems<WorkspaceSidebarItem>('Workspace sidebar item', () =>
     this.notify(),
   );
-  private readonly contextMenus = new ContextMenuManager([], () => this.notify());
+  private readonly contextMenus = new ContextMenuManager(DEFAULT_WORKSPACE_MENU, () => this.notify());
   private shown: WorkspaceId | null = null;
   private lastActive: Workspace | null = null;
   private routing = 0;
@@ -216,6 +217,20 @@ export class WorkspaceManager implements Workspaces {
         }
       },
     };
+  }
+
+  resetStatus(workspace: WorkspaceId): void {
+    let changed = false;
+    for (const entry of this.statuses) {
+      if (contains(workspace, entry.workspace) && entry.status === 'finished') {
+        entry.status = 'idle';
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.notify();
+    }
   }
 
   /**

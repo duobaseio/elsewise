@@ -21,7 +21,9 @@ import {
   EDITOR_DIFF,
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
+  PROJECT,
   TERMINAL,
+  WORKSPACE,
 } from '@/command/groups';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
@@ -81,6 +83,12 @@ import { EDITOR_GO_TO_DEFINITION } from '@/editor/lsp/definition';
 import { EDITOR_FIND_USAGES } from '@/editor/lsp/references';
 import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
+import {
+  PROJECT_COPY_PATH,
+  PROJECT_NEW_WORKSPACE,
+  WORKSPACE_COPY_PATH,
+  WORKSPACE_MARK_READ,
+} from '@/projects/commands';
 import { OPEN_SETTINGS } from '@/settings/settings';
 import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
 import { TERMINAL_FIND } from '@/terminal/search/commands';
@@ -93,11 +101,19 @@ export const DEFAULT_GROUPS: readonly CommandGroup[] = [
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
   TERMINAL,
+  PROJECT,
+  WORKSPACE,
 ];
 
 export const DEFAULT_COMMANDS: readonly Command[] = [
   // Application
   OPEN_SETTINGS,
+  // Project
+  PROJECT_COPY_PATH,
+  PROJECT_NEW_WORKSPACE,
+  // Workspace
+  WORKSPACE_COPY_PATH,
+  WORKSPACE_MARK_READ,
   // Editor
   EDITOR_CUT,
   EDITOR_COPY,

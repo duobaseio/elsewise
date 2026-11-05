@@ -13,7 +13,7 @@ import {
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { daemonQuery, LOCAL_DAEMON } from '@/daemon';
+import { daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { projectsQuery } from '@/projects/project-manager';
 import { ProjectItem } from './project-item';
@@ -45,7 +45,7 @@ const SENSORS = [
  */
 export function Projects() {
   // TODO: List the remote daemons.
-  const daemons = [LOCAL_DAEMON];
+  const daemons = [LOCAL_DAEMON_ID];
   return daemons.map((daemonId) => <DaemonGroup daemonId={daemonId} key={daemonId} />);
 }
 

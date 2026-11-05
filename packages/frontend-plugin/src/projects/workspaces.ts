@@ -66,6 +66,11 @@ export interface Workspaces {
   addStatus(workspace: WorkspaceId, status: WorkspaceStatus): WorkspaceStatusHandle;
 
   /**
+   * Resets the finished statuses of `workspace` to idle. Does nothing otherwise.
+   */
+  resetStatus(workspace: WorkspaceId): void;
+
+  /**
    * Adds `items` to each workspace's sidebar row, between its name and its delete button.
    *
    * ```ts

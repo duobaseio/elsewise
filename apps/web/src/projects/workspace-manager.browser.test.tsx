@@ -113,6 +113,36 @@ describe('status', () => {
   });
 });
 
+describe('resetStatus', () => {
+  test('idles finished statuses', () => {
+    const { workspaces } = setup();
+    workspaces.addStatus(DHAKA, 'finished');
+
+    workspaces.resetStatus(DHAKA);
+
+    expect(workspaces.status(DHAKA)).toBe('idle');
+  });
+
+  test('keeps running and waiting statuses', () => {
+    const { workspaces } = setup();
+    workspaces.addStatus(DHAKA, 'finished');
+    workspaces.addStatus(DHAKA, 'running');
+
+    workspaces.resetStatus(DHAKA);
+
+    expect(workspaces.status(DHAKA)).toBe('running');
+  });
+
+  test('ignores other workspaces', () => {
+    const { workspaces } = setup();
+    workspaces.addStatus(MAIN, 'finished');
+
+    workspaces.resetStatus(DHAKA);
+
+    expect(workspaces.status(MAIN)).toBe('finished');
+  });
+});
+
 describe('active', () => {
   test('ignores stale navigation', async () => {
     const { workspaces, client, router, show } = setup();

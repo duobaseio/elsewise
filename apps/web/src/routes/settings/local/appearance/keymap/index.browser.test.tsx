@@ -154,6 +154,8 @@ describe('Keymap', () => {
       ['Editor', 'Navigate'],
       ['Editor', 'Extras'],
       ['Terminal'],
+      ['Project'],
+      ['Workspace'],
       ['Example'],
       ['Example', 'Tone'],
     ]);
@@ -210,7 +212,7 @@ describe('Keymap', () => {
     await userEvent.click(row(FIND));
 
     await userEvent.keyboard('{End}');
-    const last = rows('Terminal').at(-1) ?? '';
+    const last = rows('Workspace').at(-1) ?? '';
     await expect.element(row(last)).toHaveAttribute('aria-selected', 'true');
     await expect.element(row(last)).toHaveFocus();
     await userEvent.keyboard('{Home}');

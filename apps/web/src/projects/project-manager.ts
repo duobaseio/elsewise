@@ -21,6 +21,7 @@ import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { OrderedItems } from '@/plugins/ordered-items';
+import { DEFAULT_PROJECT_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
 
@@ -47,7 +48,7 @@ export class ProjectManager implements Projects {
   private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>
     this.notify(),
   );
-  private readonly contextMenus = new ContextMenuManager([], () => this.notify());
+  private readonly contextMenus = new ContextMenuManager(DEFAULT_PROJECT_MENU, () => this.notify());
 
   constructor(
     private readonly client: QueryClient,

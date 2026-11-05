@@ -16,7 +16,7 @@ export interface Daemon {
 /**
  * The id of the daemon the desktop app runs on its own machine.
  */
-export const LOCAL_DAEMON = 'local';
+export const LOCAL_DAEMON_ID = 'local';
 
 /**
  * Returns the query for the connection to the daemon with `id`.
@@ -27,9 +27,9 @@ export function daemonQuery(id: string) {
     queryKey: ['daemons', id],
     queryFn: async (): Promise<Daemon> => {
       // TODO: Connect to remote daemons once remotes exist.
-      const bridge = id === LOCAL_DAEMON ? window.bridge?.daemon : undefined;
+      const bridge = id === LOCAL_DAEMON_ID ? window.bridge?.daemon : undefined;
       if (bridge === undefined) {
-        throw new Error(id === LOCAL_DAEMON ? 'No daemon outside the desktop app.' : `No daemon ${id}.`);
+        throw new Error(id === LOCAL_DAEMON_ID ? 'No daemon outside the desktop app.' : `No daemon ${id}.`);
       }
 
       const { port, token } = await bridge.connection();

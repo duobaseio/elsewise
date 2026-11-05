@@ -178,7 +178,7 @@ describe('addGroups', () => {
     const manager = commands();
     manager.addGroups([{ id: 'io.example', label: 'Example' }]);
 
-    expect([...manager.groups.keys()].slice(-2)).toEqual([TERMINAL, 'io.example']);
+    expect([...manager.groups.keys()].slice(-2)).toEqual([DEFAULT_COMMAND_GROUPS.workspace.id, 'io.example']);
     expect(manager.groups.get('io.example')?.label).toBe('Example');
   });
 

@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { renderHook } from 'vitest-browser-react';
-import { LOCAL_DAEMON } from '@/daemon';
+import { LOCAL_DAEMON_ID } from '@/daemon';
 import { ProjectSchema, WorkspaceSchema } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { projectLayoutQuery, useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { projectsQuery } from '@/projects/project-manager';
@@ -23,10 +23,10 @@ async function mount(layout: ProjectLayout) {
   window.bridge = { projects: { load: async () => layout, save: async (next) => void saved.push(next) } };
   const client = new QueryClient();
   client.setQueryData(projectLayoutQuery.queryKey, layout);
-  client.setQueryData(projectsQuery(LOCAL_DAEMON).queryKey, PROJECTS);
-  client.setQueryData(workspacesQuery(LOCAL_DAEMON, 'a').queryKey, WORKSPACES);
+  client.setQueryData(projectsQuery(LOCAL_DAEMON_ID).queryKey, PROJECTS);
+  client.setQueryData(workspacesQuery(LOCAL_DAEMON_ID, 'a').queryKey, WORKSPACES);
   const { result } = await renderHook(
-    () => ({ layout: useProjectLayout(LOCAL_DAEMON), update: useUpdateProjectLayout(LOCAL_DAEMON) }),
+    () => ({ layout: useProjectLayout(LOCAL_DAEMON_ID), update: useUpdateProjectLayout(LOCAL_DAEMON_ID) }),
     {
       wrapper: ({ children }: { children: ReactNode }) => (
         <QueryClientProvider client={client}>{children}</QueryClientProvider>

@@ -19,6 +19,8 @@ export const DEFAULT_COMMAND_GROUPS = {
     diff: 'elsewise.editor.diff',
   },
   terminal: { id: 'elsewise.terminal' },
+  project: { id: 'elsewise.project' },
+  workspace: { id: 'elsewise.workspace' },
 } as const;
 
 /**
@@ -28,6 +30,22 @@ export const DEFAULT_COMMANDS = {
   application: {
     settings: {
       open: 'elsewise.application.settings.open',
+    },
+  },
+  project: {
+    clipboard: {
+      copyPath: 'elsewise.project.clipboard.copyPath',
+    },
+    workspace: {
+      new: 'elsewise.project.workspace.new',
+    },
+  },
+  workspace: {
+    clipboard: {
+      copyPath: 'elsewise.workspace.clipboard.copyPath',
+    },
+    status: {
+      markRead: 'elsewise.workspace.status.markRead',
     },
   },
   editor: {
@@ -137,6 +155,22 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
   application: {
     settings: {
       open: [{ key: 'Ctrl-Alt-s', mac: 'Mod-,' }],
+    },
+  },
+  project: {
+    clipboard: {
+      copyPath: ['Mod-Shift-c'],
+    },
+    workspace: {
+      new: [],
+    },
+  },
+  workspace: {
+    clipboard: {
+      copyPath: ['Mod-Shift-c'],
+    },
+    status: {
+      markRead: [],
     },
   },
   editor: {
