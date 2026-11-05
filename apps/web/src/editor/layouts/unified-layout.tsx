@@ -121,19 +121,23 @@ export function UnifiedLayout({ source, relativePath, code, base, extensions, se
     <div className="flex h-full flex-col">
       {header?.(view)}
       <div className="min-h-0 flex-1">
-        <EditorContextMenu view={view}>
-          <div
-            className="h-full"
-            ref={host}
-            // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside React.
-            style={
-              {
-                '--fold-marker': `url("${iconUrl(icons.expand)}")`,
-                '--external-link': `url("${iconUrl(icons.external)}")`,
-              } as CSSProperties
-            }
-          />
-        </EditorContextMenu>
+        <EditorContextMenu
+          render={
+            <div
+              className="h-full"
+              ref={host}
+              // The icons are passed as CSS variables since CodeMirror creates the fold markers and tooltips outside
+              // React.
+              style={
+                {
+                  '--fold-marker': `url("${iconUrl(icons.expand)}")`,
+                  '--external-link': `url("${iconUrl(icons.external)}")`,
+                } as CSSProperties
+              }
+            />
+          }
+          view={view}
+        />
       </div>
       {portal}
       {revert.portal}

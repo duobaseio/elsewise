@@ -14,7 +14,7 @@ import {
 import { formatKey } from '@elsewise/components/lib/platform';
 import type { Application, ContextMenuGroup, Project, Workspace } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
+import { type ComponentProps, Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import {
   type CommandManager,
@@ -42,8 +42,12 @@ export interface CommandContextMenuProps {
    * Called once the menu has closed, before the clicked item runs, e.g. to give the focus back.
    */
   onClosed?: () => void;
+  /**
+   * The element that opens the menu, rendered in place of a wrapping `<div>`.
+   */
+  render?: ComponentProps<typeof ContextMenuTrigger>['render'];
   className?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface Group {
@@ -70,7 +74,15 @@ type Entry =
       readonly groups: readonly Group[];
     };
 
-export function CommandContextMenu({ menu, target, opens, onClosed, className, children }: CommandContextMenuProps) {
+export function CommandContextMenu({
+  menu,
+  target,
+  opens,
+  onClosed,
+  render,
+  className,
+  children,
+}: CommandContextMenuProps) {
   const [groups, setGroups] = useState<readonly Group[]>([]);
   const application = useApplicationManager();
   const commands = useCommandManager();
@@ -117,7 +129,9 @@ export function CommandContextMenu({ menu, target, opens, onClosed, className, c
 
   return (
     <ContextMenu onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
-      <ContextMenuTrigger className={className}>{children}</ContextMenuTrigger>
+      <ContextMenuTrigger className={className} render={render}>
+        {children}
+      </ContextMenuTrigger>
       {/* Base UI refocuses on the trigger after running a command, stealing focus from whatever the command focused. */}
       <ContextMenuContent finalFocus={() => !refocused.current}>
         <Groups groups={groups} onClick={(run) => (clicked.current = run)} />

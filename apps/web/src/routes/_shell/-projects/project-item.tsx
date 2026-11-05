@@ -56,7 +56,6 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
   const stateId = useId();
   const { state } = pluginProject;
 
-
   // Only the row is a target. With the whole project, one dragged past a taller one swaps back and forth.
   const { ref } = useSortable({
     id: project.id,
@@ -96,44 +95,49 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       render={<SidebarMenuItem />}
     >
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
-      <CommandContextMenu menu={menu} opens={() => !renaming} target={{ current: pluginProject }}>
-        <SidebarMenuRow onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)} ref={row}>
-          {renaming ? (
-            <SidebarMenuRowLabel render={<div />}>
-              <ProjectItemIcon project={pluginProject} stateId={stateId} />
-              <NameInput
-                label="Project name"
-                name={project.name}
-                onCancel={() => {
-                  sidebar.renaming = null;
-                }}
-                onRename={(name) => {
-                  sidebar.renaming = null;
-                  projects
-                    .rename(pluginProject.id, name)
-                    .catch((error: Error) =>
-                      toast.add({ type: 'error', title: 'Renaming project failed', description: error.message }),
-                    );
-                }}
-              />
-            </SidebarMenuRowLabel>
-          ) : (
-            <SidebarMenuRowLabel
-              aria-describedby={available ? undefined : stateId}
-              render={available ? <CollapsibleTrigger /> : undefined}
-            >
-              <ProjectItemIcon project={pluginProject} stateId={stateId} />
-              <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
-            </SidebarMenuRowLabel>
-          )}
-          {items.toReversed().map(({ id, component: Item }) => (
-            <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
-              <Item project={pluginProject} />
-            </PluginBoundary>
-          ))}
-          {/* An unavailable project keeps the chevron's space, so its items line up with the others'. */}
-          {available ? <SidebarMenuChevron aria-hidden /> : <span className="size-5 shrink-0" />}
-        </SidebarMenuRow>
+      <CommandContextMenu
+        menu={menu}
+        opens={() => !renaming}
+        render={
+          <SidebarMenuRow onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)} ref={row} />
+        }
+        target={{ current: pluginProject }}
+      >
+        {renaming ? (
+          <SidebarMenuRowLabel render={<div />}>
+            <ProjectItemIcon project={pluginProject} stateId={stateId} />
+            <NameInput
+              label="Project name"
+              name={project.name}
+              onCancel={() => {
+                sidebar.renaming = null;
+              }}
+              onRename={(name) => {
+                sidebar.renaming = null;
+                projects
+                  .rename(pluginProject.id, name)
+                  .catch((error: Error) =>
+                    toast.add({ type: 'error', title: 'Renaming project failed', description: error.message }),
+                  );
+              }}
+            />
+          </SidebarMenuRowLabel>
+        ) : (
+          <SidebarMenuRowLabel
+            aria-describedby={available ? undefined : stateId}
+            render={available ? <CollapsibleTrigger /> : undefined}
+          >
+            <ProjectItemIcon project={pluginProject} stateId={stateId} />
+            <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
+          </SidebarMenuRowLabel>
+        )}
+        {items.toReversed().map(({ id, component: Item }) => (
+          <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
+            <Item project={pluginProject} />
+          </PluginBoundary>
+        ))}
+        {/* An unavailable project keeps the chevron's space, so its items line up with the others'. */}
+        {available ? <SidebarMenuChevron aria-hidden /> : <span className="size-5 shrink-0" />}
       </CommandContextMenu>
       {available && (
         <CollapsibleContent>

@@ -107,7 +107,7 @@ export function CommandRow({
       <ContextMenuTrigger
         aria-selected={selected}
         className={cn(
-          '-mx-2 flex min-h-8 items-start justify-between gap-4 rounded-md px-2 scroll-mt-28 outline-none hover:overlay-hover aria-selected:bg-layer-selected',
+          '-mx-2 flex min-h-8 items-start justify-between gap-4 rounded-md px-2 scroll-mt-28 outline-none hover:overlay-hover data-popup-open:overlay-hover aria-selected:bg-layer-selected',
           className,
         )}
         data-slot="command-row"

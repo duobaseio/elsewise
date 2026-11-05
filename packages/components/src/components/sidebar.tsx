@@ -706,7 +706,7 @@ export function SidebarMenuRow({
       data-sidebar="menu-row"
       data-active={isActive ? '' : undefined}
       className={cn(
-        'group/menu-row flex h-8 items-center gap-1 rounded-md pr-1 hover:overlay-hover has-focus-visible:overlay-hover data-active:bg-layer-selected',
+        'group/menu-row flex h-8 items-center gap-1 rounded-md pr-1 hover:overlay-hover data-popup-open:overlay-hover has-focus-visible:overlay-hover data-active:bg-layer-selected',
         className,
       )}
       {...props}
@@ -905,7 +905,7 @@ export function SidebarMenuSubRow({
       data-sidebar="menu-sub-row"
       data-size={size}
       className={cn(
-        'group/menu-row flex h-7 min-w-0 -translate-x-px items-center gap-1 rounded-md pr-1 text-foreground group-data-[collapsible=icon]:hidden hover:overlay-hover has-focus-visible:overlay-hover has-[>[data-active]]:bg-layer-selected data-[size=md]:text-base data-[size=sm]:text-sm',
+        'group/menu-row flex h-7 min-w-0 -translate-x-px items-center gap-1 rounded-md pr-1 text-foreground group-data-[collapsible=icon]:hidden hover:overlay-hover data-popup-open:overlay-hover has-focus-visible:overlay-hover has-[>[data-active]]:bg-layer-selected data-[size=md]:text-base data-[size=sm]:text-sm',
         className,
       )}
       {...props}

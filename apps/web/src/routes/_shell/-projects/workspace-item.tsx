@@ -54,7 +54,6 @@ export function WorkspaceItem({
   const renaming = useRenaming(pluginWorkspace.id);
   const { state } = pluginWorkspace;
 
-
   const { ref, handleRef } = useSortable({
     id: workspace.id,
     index,
@@ -68,81 +67,86 @@ export function WorkspaceItem({
   return (
     <SidebarMenuSubItem ref={ref}>
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="workspace"] with data-active. */}
-      <CommandContextMenu menu={menu} opens={() => !renaming} target={{ current: pluginWorkspace }}>
-        <SidebarMenuSubRow
-          onKeyDown={(event) => runSidebarKeys(commands, pluginWorkspace, event.nativeEvent)}
-          size="sm"
-        >
-          {renaming ? (
-            <SidebarMenuSubRowLabel render={<div />}>
-              <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
-              <NameInput
-                label="Workspace name"
-                name={workspace.name}
-                onCancel={() => {
-                  sidebar.renaming = null;
-                }}
-                onRename={(name) => {
-                  sidebar.renaming = null;
-                  projects.workspaces
-                    .rename(pluginWorkspace.id, name)
-                    .catch((error: Error) =>
-                      toast.add({ type: 'error', title: 'Renaming workspace failed', description: error.message }),
-                    );
-                }}
+      <CommandContextMenu
+        menu={menu}
+        opens={() => !renaming}
+        render={
+          <SidebarMenuSubRow
+            onKeyDown={(event) => runSidebarKeys(commands, pluginWorkspace, event.nativeEvent)}
+            size="sm"
+          />
+        }
+        target={{ current: pluginWorkspace }}
+      >
+        {renaming ? (
+          <SidebarMenuSubRowLabel render={<div />}>
+            <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
+            <NameInput
+              label="Workspace name"
+              name={workspace.name}
+              onCancel={() => {
+                sidebar.renaming = null;
+              }}
+              onRename={(name) => {
+                sidebar.renaming = null;
+                projects.workspaces
+                  .rename(pluginWorkspace.id, name)
+                  .catch((error: Error) =>
+                    toast.add({ type: 'error', title: 'Renaming workspace failed', description: error.message }),
+                  );
+              }}
+            />
+          </SidebarMenuSubRowLabel>
+        ) : (
+          <SidebarMenuSubRowLabel
+            isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
+            render={
+              <Link
+                aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
+                aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
+                draggable={false}
+                params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
+                ref={handleRef}
+                to="/$daemon/$project/$workspace"
               />
-            </SidebarMenuSubRowLabel>
-          ) : (
-            <SidebarMenuSubRowLabel
-              isActive={params.daemon === daemonId && params.project === projectId && params.workspace === workspace.id}
+            }
+          >
+            <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
+            <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
+              {workspace.name}
+            </span>
+          </SidebarMenuSubRowLabel>
+        )}
+        {items.toReversed().map(({ id, component: Item }) => (
+          <PluginBoundary key={id} name={`Workspace sidebar item ${id}`}>
+            <Item workspace={pluginWorkspace} />
+          </PluginBoundary>
+        ))}
+        {workspace.main ? (
+          <Tooltip>
+            <TooltipTrigger render={<SidebarMenuRowAction render={<span />} />}>
+              <Icon aria-hidden aria-label="Main workspace" id={`${statusId}main`} name="main-workspace" role="img" />
+            </TooltipTrigger>
+            <TooltipContent>Main workspace</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger
               render={
-                <Link
-                  aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
-                  aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
-                  draggable={false}
-                  params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
-                  ref={handleRef}
-                  to="/$daemon/$project/$workspace"
+                // Out of the tab order, as Delete on the workspace opens the dialog.
+                <SidebarMenuRowAction
+                  aria-label={`Delete ${workspace.name}`}
+                  onClick={() => commands.run(DEFAULT_COMMANDS.workspace.edit.delete, pluginWorkspace)}
+                  showOnHover
+                  tabIndex={-1}
                 />
               }
             >
-              <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
-              <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
-                {workspace.name}
-              </span>
-            </SidebarMenuSubRowLabel>
-          )}
-          {items.toReversed().map(({ id, component: Item }) => (
-            <PluginBoundary key={id} name={`Workspace sidebar item ${id}`}>
-              <Item workspace={pluginWorkspace} />
-            </PluginBoundary>
-          ))}
-          {workspace.main ? (
-            <Tooltip>
-              <TooltipTrigger render={<SidebarMenuRowAction render={<span />} />}>
-                <Icon aria-hidden aria-label="Main workspace" id={`${statusId}main`} name="main-workspace" role="img" />
-              </TooltipTrigger>
-              <TooltipContent>Main workspace</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  // Out of the tab order, as Delete on the workspace opens the dialog.
-                  <SidebarMenuRowAction
-                    aria-label={`Delete ${workspace.name}`}
-                    onClick={() => commands.run(DEFAULT_COMMANDS.workspace.edit.delete, pluginWorkspace)}
-                    showOnHover
-                    tabIndex={-1}
-                  />
-                }
-              >
-                <Icon name="close" />
-              </TooltipTrigger>
-              <TooltipContent>Delete workspace</TooltipContent>
-            </Tooltip>
-          )}
-        </SidebarMenuSubRow>
+              <Icon name="close" />
+            </TooltipTrigger>
+            <TooltipContent>Delete workspace</TooltipContent>
+          </Tooltip>
+        )}
       </CommandContextMenu>
     </SidebarMenuSubItem>
   );
