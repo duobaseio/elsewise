@@ -73,7 +73,7 @@ export function CommandSearch({
         {('key' in filter ? filter.key !== undefined : filter.text !== '') && (
           <button
             aria-label="Clear search"
-            className="absolute top-0 right-2 flex h-7 w-4 cursor-default items-center justify-center rounded-sm text-text-3 outline-none hover:text-foreground focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring"
+            className="absolute top-0 right-2 flex h-7 w-4 cursor-default items-center justify-center rounded-sm text-text-3 outline-none hover:text-foreground focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring"
             onClick={() => {
               onChange(byKey ? { key: undefined } : { text: '' });
               field.current?.focus();

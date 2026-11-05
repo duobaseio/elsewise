@@ -43,7 +43,7 @@ terminal background to Elsewise's terminal background.
 
 - **Border — deckle / seam:** `#F1ECDF` / `#2C333E` — hairlines, dividers
 - **Input — strong:** `#C9C2B0` / `#3A4350` — input borders, emphasis
-- **Ring — the pen box:** `#334A6B` / `#9FB2C8` — 2px solid `outline`, offset 2px, `:focus-visible` only, never
+- **Ring — the pen box:** `#334A6B` / `#9FB2C8` — 1px solid `outline`, offset 2px, `:focus-visible` only, never
   animated, never a halo.
     - `outline` because it paints outside the border box and is not a transitioned property: the sliver of paper and the
       instant snap come free. A border or box-shadow gives neither.

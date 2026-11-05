@@ -15,11 +15,13 @@ import {
   CircleNotchIcon,
   FolderIcon,
   FolderOpenIcon,
+  FolderSimpleDashedIcon,
   GearIcon,
   GitDiffIcon,
   HouseSimpleIcon,
   InfoIcon,
   KeyboardIcon,
+  LinkBreakIcon,
   MagnifyingGlassIcon,
   MinusIcon,
   PlusIcon,
@@ -82,6 +84,8 @@ const DEFAULT_ICONS = {
   waiting: (props: ComponentProps<'svg'>) => <RecordIcon weight="fill" {...props} />,
   finished: (props: ComponentProps<'svg'>) => <CheckCircleIcon weight="fill" {...props} />,
   'main-workspace': HouseSimpleIcon,
+  missing: FolderSimpleDashedIcon,
+  broken: LinkBreakIcon,
 } as const satisfies Record<string, ComponentType<ComponentProps<'svg'>>>;
 
 export type IconName = keyof typeof DEFAULT_ICONS;

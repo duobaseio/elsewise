@@ -10,7 +10,7 @@ import {
   Outlet,
   RouterProvider,
 } from '@tanstack/react-router';
-import { afterEach, describe, expect, onTestFinished, test } from 'vitest';
+import { afterEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
@@ -34,24 +34,47 @@ import { Projects } from './projects';
 
 afterEach(() => {
   window.bridge = undefined;
+  vi.restoreAllMocks();
 });
 
-// A daemon with two projects, which adds a workspace named Lisbon and a project named after its folder. It deletes a
-// workspace once `deletion.until` settles, or fails with `deletion.error`, and records each it deletes in `deleted`.
-function fakeDaemon(deleted: DeletedWorkspace[], deletion: Deletion): Daemon {
+// A daemon with two projects, which adds a detached workspace named Lisbon and a project named after its folder. It
+// deletes a workspace once `deletion.until` settles, or fails with `deletion.error`, and records each it deletes in
+// `deleted`. The projects and workspaces with an id in `unavailable` have its state.
+function fakeDaemon(
+  deleted: DeletedWorkspace[],
+  deletion: Deletion,
+  unavailable: Record<string, 'missing' | 'broken'>,
+): Daemon {
+  // Returns the state in `unavailable` of the project or workspace with `id`, else `ok`.
+  const stateOf = <const T,>(id: string, ok: T) => {
+    const state = unavailable[id];
+    return state ? ({ case: state, value: {} } as const) : ok;
+  };
   const projects: Project[] = [
-    create(ProjectSchema, { id: 'elsewise', name: 'elsewise' }),
-    create(ProjectSchema, { id: 'dotfiles', name: 'dotfiles' }),
+    create(ProjectSchema, { id: 'elsewise', name: 'elsewise', state: stateOf('elsewise', { case: 'ok', value: {} }) }),
+    create(ProjectSchema, { id: 'dotfiles', name: 'dotfiles', state: stateOf('dotfiles', { case: 'ok', value: {} }) }),
   ];
   const workspaces: Workspace[] = [
-    create(WorkspaceSchema, { projectId: 'elsewise', id: 'singapore', name: 'Singapore', main: true }),
+    create(WorkspaceSchema, {
+      projectId: 'elsewise',
+      id: 'singapore',
+      name: 'Singapore',
+      main: true,
+      state: stateOf('singapore', { case: 'ok', value: { branch: 'main' } }),
+    }),
     create(WorkspaceSchema, {
       projectId: 'elsewise',
       id: 'dhaka',
       name: 'Dhaka',
-      state: { case: 'ok', value: { branch: 'dhaka' } },
+      state: stateOf('dhaka', { case: 'ok', value: { branch: 'dhaka' } }),
     }),
-    create(WorkspaceSchema, { projectId: 'dotfiles', id: 'tokyo', name: 'Tokyo', main: true }),
+    create(WorkspaceSchema, {
+      projectId: 'dotfiles',
+      id: 'tokyo',
+      name: 'Tokyo',
+      main: true,
+      state: stateOf('tokyo', { case: 'ok', value: { branch: 'main' } }),
+    }),
   ];
   const unused = () => {
     throw new Error('not faked');
@@ -78,13 +101,18 @@ function fakeDaemon(deleted: DeletedWorkspace[], deletion: Deletion): Daemon {
     getWorkspaces: async ({ projectId }) =>
       create(GetWorkspacesResponseSchema, { workspaces: workspaces.filter((w) => w.projectId === projectId) }),
     createWorkspace: async ({ projectId }) => {
-      const workspace = create(WorkspaceSchema, { projectId, id: 'lisbon', name: 'Lisbon' });
+      const workspace = create(WorkspaceSchema, {
+        projectId,
+        id: 'lisbon',
+        name: 'Lisbon',
+        state: { case: 'detached', value: {} },
+      });
       workspaces.push(workspace);
       return create(CreateWorkspaceResponseSchema, { workspace });
     },
     createProject: async ({ source }) => {
       const name = source?.case === 'existing' ? (source.value.absolutePath?.split('/').at(-1) ?? '') : '';
-      const project = create(ProjectSchema, { id: name, name });
+      const project = create(ProjectSchema, { id: name, name, state: { case: 'ok', value: {} } });
       projects.push(project);
       return create(CreateProjectResponseSchema, { project });
     },
@@ -117,9 +145,14 @@ interface Deletion {
   error?: Error;
 }
 
-// Renders the sidebar beside an empty workspace route, at `path`, with `layout` loaded, and returns what is saved and
-// deleted, and the daemon's `deletion` to hold or fail deletes.
-async function mount(path: string, layout: ProjectLayout = DEFAULT_PROJECT_LAYOUT) {
+// Renders the sidebar beside an empty workspace route, at `path`, with `layout` loaded and the projects and workspaces in
+// `unavailable` in its state, and returns what is saved and deleted, and the daemon's `deletion` to hold or fail
+// deletes.
+async function mount(
+  path: string,
+  layout: ProjectLayout = DEFAULT_PROJECT_LAYOUT,
+  unavailable: Record<string, 'missing' | 'broken'> = {},
+) {
   const saved: ProjectLayout[] = [];
   const deleted: DeletedWorkspace[] = [];
   const deletion: Deletion = { until: Promise.resolve() };
@@ -128,7 +161,7 @@ async function mount(path: string, layout: ProjectLayout = DEFAULT_PROJECT_LAYOU
     projects: { load: async () => layout, save: async (next) => void saved.push(next) },
   };
   const client = new QueryClient();
-  client.setQueryData(daemonQuery(LOCAL_DAEMON).queryKey, fakeDaemon(deleted, deletion));
+  client.setQueryData(daemonQuery(LOCAL_DAEMON).queryKey, fakeDaemon(deleted, deletion, unavailable));
   client.setQueryData(projectLayoutQuery.queryKey, layout);
   const root = createRootRoute({
     component: () => (
@@ -434,7 +467,7 @@ describe('Projects', () => {
 
   test('tabs to current workspace only', async () => {
     await mount('/local/elsewise/dhaka');
-    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAttribute('tabindex', '0');
 
     await userEvent.tab();
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
@@ -532,6 +565,44 @@ describe('Projects', () => {
     await expect.element(page.getByTestId('inner-elsewise')).toBeInTheDocument();
   });
 
+  test('draws icon in place of removed throwing one', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { projects } = await mount('/local/elsewise/singapore');
+    const dispose = projects.addIcons([
+      {
+        id: 'test.throwing',
+        component: () => {
+          throw new Error('broken');
+        },
+      },
+    ]);
+    await expect.poll(() => error).toHaveBeenCalledWith('Project icon test.throwing failed', expect.any(Error));
+
+    dispose();
+    projects.addIcons([{ id: 'test.next', component: ({ project }) => <span data-testid={`next-${project.name}`} /> }]);
+
+    await expect.element(page.getByTestId('next-elsewise')).toBeInTheDocument();
+  });
+
+  test('shows item added again under same id', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { projects } = await mount('/local/elsewise/singapore');
+    const dispose = projects.workspaces.addSidebarItems([
+      {
+        id: 'test.a',
+        component: () => {
+          throw new Error('broken');
+        },
+      },
+    ]);
+    await expect.poll(() => error).toHaveBeenCalledWith('Workspace sidebar item test.a failed', expect.any(Error));
+
+    dispose();
+    projects.workspaces.addSidebarItems([{ id: 'test.a', component: () => <button type="button">A</button> }]);
+
+    await expect.poll(() => buttons('Dhaka')).toEqual(['A', 'Delete Dhaka']);
+  });
+
   test('orders items from right', async () => {
     const { projects } = await mount('/local/elsewise/singapore');
 
@@ -611,6 +682,47 @@ describe('Projects', () => {
     await page.getByRole('button', { name: 'A elsewise' }).click();
 
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toBeVisible();
+  });
+
+  test('hides workspaces of missing project', async () => {
+    await mount('/local/elsewise/singapore', DEFAULT_PROJECT_LAYOUT, { dotfiles: 'missing' });
+    const project = page.getByRole('treeitem', { name: 'dotfiles', exact: true });
+
+    await expect.element(project).toHaveAccessibleDescription('Folder missing');
+    await expect.element(project).not.toHaveAttribute('aria-expanded');
+    await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).not.toBeInTheDocument();
+    await expect.element(page.getByRole('treeitem', { name: 'New workspace in dotfiles' })).not.toBeInTheDocument();
+  });
+
+  test('describes broken project', async () => {
+    await mount('/local/elsewise/singapore', DEFAULT_PROJECT_LAYOUT, { dotfiles: 'broken' });
+
+    await expect
+      .element(page.getByRole('treeitem', { name: 'dotfiles', exact: true }))
+      .toHaveAccessibleDescription('Not a git repository');
+  });
+
+  test('draws state over plugin icons', async () => {
+    const { projects } = await mount('/local/elsewise/singapore', DEFAULT_PROJECT_LAYOUT, { dotfiles: 'missing' });
+
+    projects.addIcons([{ id: 'test.icon', component: ({ project }) => <span data-testid={`icon-${project.name}`} /> }]);
+
+    await expect.element(page.getByTestId('icon-elsewise')).toBeInTheDocument();
+    await expect.element(page.getByTestId('icon-dotfiles')).not.toBeInTheDocument();
+  });
+
+  test('describes missing workspace', async () => {
+    await mount('/local/elsewise/singapore', DEFAULT_PROJECT_LAYOUT, { dhaka: 'missing' });
+
+    await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAccessibleDescription('Folder missing');
+  });
+
+  test('describes broken workspace', async () => {
+    await mount('/local/elsewise/singapore', DEFAULT_PROJECT_LAYOUT, { singapore: 'broken' });
+
+    await expect
+      .element(page.getByRole('treeitem', { name: 'Singapore' }))
+      .toHaveAccessibleDescription('Not a worktree Main workspace');
   });
 
   test('adds project from picked folder', async () => {

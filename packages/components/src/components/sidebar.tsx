@@ -364,7 +364,13 @@ export function SidebarContent({
     };
 
     update();
-    const observer = new MutationObserver(update);
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      frame ||= requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
+    });
     observer.observe(element, {
       subtree: true,
       childList: true,
@@ -373,6 +379,7 @@ export function SidebarContent({
     element.addEventListener('focusin', onFocusIn);
     return () => {
       observer.disconnect();
+      cancelAnimationFrame(frame);
       element.removeEventListener('focusin', onFocusIn);
     };
   }, []);
@@ -456,11 +463,15 @@ export function SidebarContent({
   );
 }
 
-const SidebarGroupContext = createContext<string | undefined>(undefined);
+const SidebarGroupContext = createContext<
+  { id: string; label: HTMLElement | null; setLabel: (label: HTMLElement | null) => void } | undefined
+>(undefined);
 
 export function SidebarGroup({ className, ...props }: ComponentProps<'div'>) {
+  const id = useId();
+  const [label, setLabel] = useState<HTMLElement | null>(null);
   return (
-    <SidebarGroupContext value={useId()}>
+    <SidebarGroupContext value={useMemo(() => ({ id, label, setLabel }), [id, label])}>
       <div
         data-slot="sidebar-group"
         data-sidebar="group"
@@ -476,14 +487,15 @@ export function SidebarGroupLabel({
   render,
   ...props
 }: useRender.ComponentProps<'div'> & ComponentProps<'div'>) {
-  const id = useContext(SidebarGroupContext);
+  const group = useContext(SidebarGroupContext);
   return useRender({
     defaultTagName: 'div',
+    ref: group?.setLabel,
     props: mergeProps<'div'>(
       {
-        id,
+        id: group?.id,
         className: cn(
-          'flex h-8 shrink-0 items-center rounded-md px-2 text-heading-sm text-text-2 outline-none transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
+          'flex h-8 shrink-0 items-center rounded-md px-2 text-heading-sm text-text-2 outline-none transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },
@@ -507,7 +519,7 @@ export function SidebarGroupAction({
     props: mergeProps<'button'>(
       {
         className: cn(
-          'absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
+          'absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },
@@ -533,24 +545,29 @@ export function SidebarGroupContent({ className, ...props }: ComponentProps<'div
 }
 
 export function SidebarMenu({ className, ...props }: ComponentProps<'ul'>) {
+  const group = useContext(SidebarGroupContext);
   return (
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
       // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA's navigation tree example does this.
       role="tree"
-      aria-labelledby={useContext(SidebarGroupContext)}
+      aria-labelledby={group?.label ? group.id : undefined}
       className={cn('flex w-full min-w-0 flex-col gap-0', className)}
       {...props}
     />
   );
 }
 
-const SidebarMenuItemContext = createContext<string | undefined>(undefined);
+const SidebarMenuItemContext = createContext<
+  { id: string; sub: HTMLElement | null; setSub: (sub: HTMLElement | null) => void } | undefined
+>(undefined);
 
 export function SidebarMenuItem({ className, ...props }: ComponentProps<'li'>) {
+  const id = useId();
+  const [sub, setSub] = useState<HTMLElement | null>(null);
   return (
-    <SidebarMenuItemContext value={useId()}>
+    <SidebarMenuItemContext value={useMemo(() => ({ id, sub, setSub }), [id, sub])}>
       <li
         data-slot="sidebar-menu-item"
         data-sidebar="menu-item"
@@ -657,7 +674,7 @@ export function SidebarMenuAction({
     props: mergeProps<'button'>(
       {
         className: cn(
-          'absolute top-1 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1 peer-data-[size=lg]/menu-button:top-3.5 peer-data-[size=sm]/menu-button:top-1 hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
+          'absolute top-1 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1 peer-data-[size=lg]/menu-button:top-3.5 peer-data-[size=sm]/menu-button:top-1 hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
           showOnHover &&
             'opacity-0 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 aria-expanded:opacity-100',
           className,
@@ -705,13 +722,13 @@ export function SidebarMenuRowLabel({
   render,
   ...props
 }: useRender.ComponentProps<'button'> & ComponentProps<'button'>) {
-  const sub = useContext(SidebarMenuItemContext);
+  const item = useContext(SidebarMenuItemContext);
   return useRender({
     defaultTagName: 'button',
     props: mergeProps<'button'>(
       {
         role: 'treeitem',
-        'aria-owns': sub,
+        'aria-owns': item?.sub ? item.id : undefined,
         className: cn(
           'flex h-full min-w-0 flex-1 cursor-default items-center gap-2 rounded-md pl-2 text-left outline-none [&>span:last-child]:truncate',
           className,
@@ -740,7 +757,7 @@ export function SidebarMenuChevron({
       aria-hidden
       tabIndex={-1}
       className={cn(
-        'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md text-text-3 outline-none focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring data-panel-open:[&>svg]:rotate-0',
+        'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md text-text-3 outline-none focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring data-panel-open:[&>svg]:rotate-0',
         className,
       )}
       {...props}
@@ -803,21 +820,28 @@ export function SidebarMenuSkeleton({
   );
 }
 
-export function SidebarMenuSub({ className, ...props }: ComponentProps<'ul'>) {
-  return (
-    // biome-ignore lint/a11y/useSemanticElements: a tree's group, not a fieldset.
-    <ul
-      data-slot="sidebar-menu-sub"
-      data-sidebar="menu-sub"
-      id={useContext(SidebarMenuItemContext)}
-      role="group"
-      className={cn(
-        'ml-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-[1.5px] border-border py-0.5 pl-2.5 group-data-[collapsible=icon]:hidden',
-        className,
-      )}
-      {...props}
-    />
-  );
+export function SidebarMenuSub({ className, render, ...props }: useRender.ComponentProps<'ul'> & ComponentProps<'ul'>) {
+  const item = useContext(SidebarMenuItemContext);
+  return useRender({
+    defaultTagName: 'ul',
+    ref: item?.setSub,
+    props: mergeProps<'ul'>(
+      {
+        id: item?.id,
+        role: 'group',
+        className: cn(
+          'ml-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-[1.5px] border-border py-0.5 pl-2.5 group-data-[collapsible=icon]:hidden',
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: 'sidebar-menu-sub',
+      sidebar: 'menu-sub',
+    },
+  });
 }
 
 export function SidebarMenuSubItem({ className, ...props }: ComponentProps<'li'>) {
@@ -940,7 +964,7 @@ export function SidebarMenuRowAction({
     props: mergeProps<'button'>(
       {
         className: cn(
-          'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md p-0 text-text-3 outline-none group-data-[collapsible=icon]:hidden focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-3 [&>svg]:shrink-0',
+          'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md p-0 text-text-3 outline-none group-data-[collapsible=icon]:hidden focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-3 [&>svg]:shrink-0',
           showOnHover &&
             'opacity-0 group-hover/menu-row:opacity-100 group-data-active/menu-row:opacity-100 group-has-[>[data-active]]/menu-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100',
           className,

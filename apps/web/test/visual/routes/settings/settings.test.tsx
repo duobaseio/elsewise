@@ -69,7 +69,7 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appea
     </div>,
   );
 
-  await expect.element(page.getByRole('link', { name: 'Words' })).toBeVisible();
+  await expect.element(page.getByRole('treeitem', { name: 'Words' })).toBeVisible();
   await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.words' } });
   await expect.element(page.getByRole('heading', { name: 'General' })).not.toBeInTheDocument();
   await userEvent.hover(page.getByRole('main'));
@@ -77,8 +77,10 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appea
 
 test.each(THEMES)('settings panel in panel (%s)', async (theme) => {
   await mount(theme);
-  await userEvent.click(page.getByRole('button', { name: 'Expand Words' }));
-  await expect.element(page.getByRole('link', { name: 'Spelling' })).toBeVisible();
+  await userEvent.click(
+    page.elementLocator(page.getByRole('treeitem', { name: 'Words' }).element().nextElementSibling as HTMLElement),
+  );
+  await expect.element(page.getByRole('treeitem', { name: 'Spelling' })).toBeVisible();
   await userEvent.hover(page.getByRole('main'));
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-nested-${theme}`);
@@ -86,8 +88,10 @@ test.each(THEMES)('settings panel in panel (%s)', async (theme) => {
 
 test.each(THEMES)('settings languages under editor (%s)', async (theme) => {
   await mount(theme, LANGUAGES);
-  await userEvent.click(page.getByRole('button', { name: 'Expand Editor' }));
-  await expect.element(page.getByRole('link', { name: 'Rust' })).toBeVisible();
+  await userEvent.click(
+    page.elementLocator(page.getByRole('treeitem', { name: 'Editor' }).element().nextElementSibling as HTMLElement),
+  );
+  await expect.element(page.getByRole('treeitem', { name: 'Rust' })).toBeVisible();
   await expect.element(page.getByRole('combobox', { name: 'Add language' })).toBeVisible();
   await userEvent.hover(page.getByRole('main'));
 

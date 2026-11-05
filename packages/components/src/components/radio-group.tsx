@@ -13,7 +13,7 @@ export function RadioGroupItem({ className, ...props }: RadioPrimitive.Root.Prop
     <RadioPrimitive.Root
       data-slot="radio-group-item"
       className={cn(
-        'peer relative flex size-4 shrink-0 items-center justify-center rounded-full border border-input transition-colors duration-100 ease-[ease] outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-disabled:cursor-not-allowed data-disabled:opacity-50 aria-invalid:border-destructive dark:bg-input/30 data-checked:border-primary dark:data-checked:bg-transparent',
+        'peer relative flex size-4 shrink-0 items-center justify-center rounded-full border border-input transition-colors duration-100 ease-[ease] outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:outline-solid focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ring data-disabled:cursor-not-allowed data-disabled:opacity-50 aria-invalid:border-destructive dark:bg-input/30 data-checked:border-primary dark:data-checked:bg-transparent',
         className,
       )}
       {...props}

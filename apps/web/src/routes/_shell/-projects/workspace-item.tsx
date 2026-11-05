@@ -9,12 +9,15 @@ import {
 } from '@elsewise/components/components/sidebar';
 import { StatusIndicator } from '@elsewise/components/components/status-indicator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
+import type { Workspace as PluginWorkspace } from '@elsewise/frontend-plugin';
 import { Link, useParams } from '@tanstack/react-router';
 import { useId, useMemo, useState } from 'react';
 import type { Workspace } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { mapWorkspace, useWorkspaceSidebarItems, useWorkspaceStatus } from '@/projects/workspace-manager';
 import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
+
+const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a worktree' } as const;
 
 /**
  * A workspace of the project with `projectId`, moved among the project's workspaces by dragging it, and deleted with
@@ -32,11 +35,14 @@ export function WorkspaceItem({
   index: number;
 }) {
   const params = useParams({ strict: false });
-  const status = useWorkspaceStatus({ daemon: daemonId, project: projectId, workspace: workspace.id });
   const statusId = useId();
+
   const [deletion] = useState(() => createDialogHandle());
   const items = useWorkspaceSidebarItems();
+
   const pluginWorkspace = useMemo(() => mapWorkspace(daemonId, workspace), [daemonId, workspace]);
+  const { state } = pluginWorkspace;
+
   const { ref, handleRef } = useSortable({
     id: workspace.id,
     index,
@@ -74,9 +80,10 @@ export function WorkspaceItem({
             />
           }
         >
-          {/* The indicators are hidden from assistive technology, as the link refers to them for its description. */}
-          <StatusIndicator aria-hidden id={statusId} status={status} />
-          <span>{workspace.name}</span>
+          <WorkspaceItemIcon statusId={statusId} workspace={pluginWorkspace} />
+          <span className={state === 'missing' || state === 'broken' ? 'text-text-3' : undefined}>
+            {workspace.name}
+          </span>
         </SidebarMenuSubRowLabel>
         {items.toReversed().map(({ id, component: Item }) => (
           <PluginBoundary key={id} name={`Workspace sidebar item ${id}`}>
@@ -111,5 +118,29 @@ export function WorkspaceItem({
         )}
       </SidebarMenuSubRow>
     </SidebarMenuSubItem>
+  );
+}
+
+function WorkspaceItemIcon({ workspace, statusId }: { workspace: PluginWorkspace; statusId: string }) {
+  const status = useWorkspaceStatus(workspace.id);
+  const { state } = workspace;
+
+  // The icons are hidden from assistive technology, as the link refers to them for its description.
+  return state === 'missing' || state === 'broken' ? (
+    <Tooltip>
+      <TooltipTrigger render={<span className="flex shrink-0" />}>
+        <Icon
+          aria-hidden
+          aria-label={UNAVAILABLE[state]}
+          className="size-4 text-text-3"
+          id={statusId}
+          name={state}
+          role="img"
+        />
+      </TooltipTrigger>
+      <TooltipContent>{UNAVAILABLE[state]}</TooltipContent>
+    </Tooltip>
+  ) : (
+    <StatusIndicator aria-hidden id={statusId} status={status} />
   );
 }

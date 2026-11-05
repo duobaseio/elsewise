@@ -13,7 +13,7 @@
   --trees-indent-guide-bg-override: var(--border);
 
   --trees-focus-ring-color-override: var(--ring);
-  --trees-focus-ring-width-override: 2px;
+  --trees-focus-ring-width-override: 1px;
   --trees-focus-ring-offset-override: -2px;
   --trees-selected-focused-border-color-override: var(--ring);
 

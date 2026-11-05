@@ -218,7 +218,7 @@ export function KeymapActions({
           <TooltipContent side="bottom">Keymap actions</TooltipContent>
         </Tooltip>
 
-        <DropdownMenuContent align="end" finalFocus={() => field.current ?? true}>
+        <DropdownMenuContent align="end" finalFocus={() => !confirming && (field.current ?? true)}>
           <DropdownMenuItem disabled={user === undefined} onClick={onRename}>
             Rename…
           </DropdownMenuItem>

@@ -1,15 +1,23 @@
-import { Component, type ReactNode } from 'react';
+import { Component, isValidElement, type ReactNode } from 'react';
+
+interface State {
+  failed: boolean;
+  type: unknown;
+}
 
 /**
- * Renders `children`, a plugin's component, or `fallback` once it throws, logging the error as `name`'s.
+ * Renders `children`, a plugin's component, or `fallback` once it throws, logging the error as `name`'s. It renders
+ * `children` again once given another component, e.g. a fixed one the plugin added under the same id.
  */
-export class PluginBoundary extends Component<
-  { name: string; fallback?: ReactNode; children: ReactNode },
-  { failed: boolean }
-> {
-  override state = { failed: false };
+export class PluginBoundary extends Component<{ name: string; fallback?: ReactNode; children: ReactNode }, State> {
+  override state: State = { failed: false, type: undefined };
 
-  static getDerivedStateFromError(): { failed: boolean } {
+  static getDerivedStateFromProps(props: { children: ReactNode }, state: State): Partial<State> | null {
+    const type = isValidElement(props.children) ? props.children.type : undefined;
+    return type === state.type ? null : { failed: false, type };
+  }
+
+  static getDerivedStateFromError(): Partial<State> {
     return { failed: true };
   }
 
