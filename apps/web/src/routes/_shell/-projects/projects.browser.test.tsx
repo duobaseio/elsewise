@@ -20,6 +20,7 @@ import { GitService } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import {
   CreateProjectResponseSchema,
   CreateWorkspaceResponseSchema,
+  DeleteProjectResponseSchema,
   DeleteWorkspaceResponseSchema,
   GetProjectsResponseSchema,
   GetWorkspacesResponseSchema,
@@ -84,7 +85,13 @@ function fakeDaemon(
   const projectService = {
     cloneProject: unused,
     updateProject: unused,
-    deleteProject: unused,
+    deleteProject: async ({ projectId }) => {
+      projects.splice(
+        projects.findIndex((project) => project.id === projectId),
+        1,
+      );
+      return create(DeleteProjectResponseSchema);
+    },
     updateWorkspace: unused,
     deleteWorkspace: async ({ workspaceId, deleteFiles, deleteBranch }) => {
       await deletion.until;
@@ -181,7 +188,7 @@ async function mount(
     history: createMemoryHistory({ initialEntries: [path] }),
   });
   const projects = new ProjectManager(client, router);
-  const application = builtInApplication({ projects });
+  const application = builtInApplication({ projects, router });
   await render(
     <QueryClientProvider client={client}>
       <ApplicationManagerContext value={application}>
@@ -755,6 +762,16 @@ describe('Projects', () => {
     expect(run.mock.lastCall?.[1]).toMatchObject({ id: { project: 'elsewise' } });
   });
 
+  test('adds workspace from context menu and opens it', async () => {
+    const { router } = await mount('/local/elsewise/singapore');
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'dotfiles', exact: true }), { button: 'right' });
+    await page.getByRole('menuitem', { name: /^New workspace/ }).click();
+
+    await expect.element(page.getByRole('treeitem', { name: 'Lisbon' })).toHaveAttribute('data-active');
+    expect(router.state.location.pathname).toBe('/local/dotfiles/lisbon');
+  });
+
   test('resets finished status from context menu', async () => {
     const { projects } = await mount('/local/elsewise/singapore');
     projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'finished');
@@ -782,6 +799,35 @@ describe('Projects', () => {
     await page.getByRole('menuitem', { name: /^Copy path/ }).click();
 
     await expect.poll(() => writeText.mock.lastCall).toEqual(['/elsewise/dhaka']);
+  });
+
+  test('deletes workspace from context menu', async () => {
+    const { deleted } = await mount('/local/elsewise/singapore');
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
+    await page.getByRole('menuitem', { name: /^Delete…/ }).click();
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await expect.poll(() => deleted).toEqual([{ workspaceId: 'dhaka', deleteFiles: false, deleteBranch: false }]);
+  });
+
+  test('hides Delete for main workspace', async () => {
+    await mount('/local/elsewise/singapore');
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'Singapore' }), { button: 'right' });
+
+    await expect.element(page.getByRole('menuitem', { name: /^Copy path/ })).toBeVisible();
+    expect(page.getByRole('menuitem', { name: /^Delete…/ }).query()).toBeNull();
+  });
+
+  test('deletes project on Delete', async () => {
+    await mount('/local/elsewise/singapore');
+    page.getByRole('treeitem', { name: 'dotfiles', exact: true }).element().focus();
+
+    await userEvent.keyboard('{Delete}');
+    await page.getByRole('button', { name: 'Delete', exact: true }).click();
+
+    await expect.element(page.getByRole('treeitem', { name: 'dotfiles', exact: true })).not.toBeInTheDocument();
   });
 
   test('hides workspaces of missing project', async () => {

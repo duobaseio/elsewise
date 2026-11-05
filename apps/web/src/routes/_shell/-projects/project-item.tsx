@@ -93,7 +93,6 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
       <CommandContextMenu menu={menu} target={{ current: pluginProject }}>
         <SidebarMenuRow onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)} ref={row}>
-          {/* TODO: Open a delete project dialog on Delete, as workspaces do. */}
           <SidebarMenuRowLabel
             aria-describedby={available ? undefined : stateId}
             render={available ? <CollapsibleTrigger /> : undefined}

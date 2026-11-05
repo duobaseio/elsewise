@@ -7,6 +7,7 @@ import {
   type ProjectCommand,
   type WorkspaceCommand,
 } from '@elsewise/frontend-plugin';
+import type { ApplicationManager } from '@/application-manager';
 
 export const PROJECT_COPY_PATH: ProjectCommand = {
   scope: 'project',
@@ -20,6 +21,18 @@ export const PROJECT_COPY_PATH: ProjectCommand = {
   },
 };
 
+export const PROJECT_DELETE: ProjectCommand = {
+  scope: 'project',
+  id: DEFAULT_COMMANDS.project.edit.delete,
+  group: DEFAULT_COMMAND_GROUPS.project.id,
+  label: 'Delete…',
+  defaultKeys: DEFAULT_KEYS.project.edit.delete,
+  run: ({ projects }: ApplicationManager, project) => {
+    projects.deleteDialog.openWithPayload(project.id);
+    return true;
+  },
+};
+
 export const PROJECT_NEW_WORKSPACE: ProjectCommand = {
   scope: 'project',
   id: DEFAULT_COMMANDS.project.workspace.new,
@@ -29,7 +42,7 @@ export const PROJECT_NEW_WORKSPACE: ProjectCommand = {
   enabled: (_, project) => project.state === 'ok',
   run: ({ projects, router }, project) => {
     void projects.workspaces.add(project.id, { type: 'new' }).then(
-      ({ id }) => router.navigate({ to: DEFAULT_ROUTES.workspace(id.daemon, id.project, id.workspace) }),
+      ({ id }) => router.navigate({ href: DEFAULT_ROUTES.workspace(id.daemon, id.project, id.workspace) }),
       (error: Error) => toast.add({ type: 'error', title: 'Adding workspace failed', description: error.message }),
     );
     return true;
@@ -44,6 +57,20 @@ export const WORKSPACE_COPY_PATH: WorkspaceCommand = {
   defaultKeys: DEFAULT_KEYS.workspace.clipboard.copyPath,
   run: (_, workspace) => {
     void navigator.clipboard.writeText(workspace.absolutePath);
+    return true;
+  },
+};
+
+export const WORKSPACE_DELETE: WorkspaceCommand = {
+  scope: 'workspace',
+  id: DEFAULT_COMMANDS.workspace.edit.delete,
+  group: DEFAULT_COMMAND_GROUPS.workspace.id,
+  label: 'Delete…',
+  defaultKeys: DEFAULT_KEYS.workspace.edit.delete,
+  shown: (_, workspace) => !workspace.main,
+  enabled: (_, workspace) => !workspace.main,
+  run: ({ projects }: ApplicationManager, workspace) => {
+    projects.workspaces.deleteDialog.openWithPayload(workspace.id);
     return true;
   },
 };

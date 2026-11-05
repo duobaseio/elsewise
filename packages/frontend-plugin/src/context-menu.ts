@@ -3,9 +3,10 @@
  */
 export const DEFAULT_PROJECT_CONTEXT_MENU = {
   clipboard: { id: 'io.duobase.elsewise.project.contextMenu.clipboard', order: 10, items: { copyPath: 10 } },
+  delete: { id: 'io.duobase.elsewise.project.contextMenu.delete', order: 20, items: { delete: 10 } },
   open: {
     id: 'io.duobase.elsewise.project.contextMenu.open',
-    order: 20,
+    order: 30,
     items: {
       newWorkspace: 10,
       openIn: {
@@ -27,9 +28,11 @@ export const DEFAULT_PROJECT_CONTEXT_MENU = {
  */
 export const DEFAULT_WORKSPACE_CONTEXT_MENU = {
   clipboard: { id: 'io.duobase.elsewise.workspace.contextMenu.clipboard', order: 10, items: { copyPath: 10 } },
+  delete: { id: 'io.duobase.elsewise.workspace.contextMenu.delete', order: 20, items: { delete: 10 } },
+  status: { id: 'io.duobase.elsewise.workspace.contextMenu.status', order: 30, items: { markRead: 10 } },
   open: {
     id: 'io.duobase.elsewise.workspace.contextMenu.open',
-    order: 20,
+    order: 40,
     items: {
       openIn: {
         id: 'io.duobase.elsewise.workspace.contextMenu.open.openIn',
@@ -43,7 +46,6 @@ export const DEFAULT_WORKSPACE_CONTEXT_MENU = {
       },
     },
   },
-  status: { id: 'io.duobase.elsewise.workspace.contextMenu.status', order: 30, items: { markRead: 10 } },
 } as const;
 
 /**

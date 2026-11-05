@@ -16,6 +16,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { projectsQuery } from '@/projects/project-manager';
+import { DeleteProjectDialog } from './delete-project-dialog';
+import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
 import { ProjectItem } from './project-item';
 
 // Moves the dragged item by whole device pixels. The pointer reports fractions of a pixel, which blurs the item.
@@ -46,7 +48,15 @@ const SENSORS = [
 export function Projects() {
   // TODO: List the remote daemons.
   const daemons = [LOCAL_DAEMON_ID];
-  return daemons.map((daemonId) => <DaemonGroup daemonId={daemonId} key={daemonId} />);
+  return (
+    <>
+      {daemons.map((daemonId) => (
+        <DaemonGroup daemonId={daemonId} key={daemonId} />
+      ))}
+      <DeleteProjectDialog />
+      <DeleteWorkspaceDialog />
+    </>
+  );
 }
 
 function DaemonGroup({ daemonId }: { daemonId: string }) {

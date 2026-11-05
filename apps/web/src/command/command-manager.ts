@@ -2,7 +2,6 @@ import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
 import type {
   ActiveKeymap,
-  Application,
   Command,
   CommandGroup,
   Commands,
@@ -14,6 +13,7 @@ import type {
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import {
   APPLICATION,
   EDITOR,
@@ -85,8 +85,10 @@ import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
 import {
   PROJECT_COPY_PATH,
+  PROJECT_DELETE,
   PROJECT_NEW_WORKSPACE,
   WORKSPACE_COPY_PATH,
+  WORKSPACE_DELETE,
   WORKSPACE_MARK_READ,
 } from '@/projects/commands';
 import { OPEN_SETTINGS } from '@/settings/settings';
@@ -110,9 +112,11 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   OPEN_SETTINGS,
   // Project
   PROJECT_COPY_PATH,
+  PROJECT_DELETE,
   PROJECT_NEW_WORKSPACE,
   // Workspace
   WORKSPACE_COPY_PATH,
+  WORKSPACE_DELETE,
   WORKSPACE_MARK_READ,
   // Editor
   EDITOR_CUT,
@@ -195,7 +199,7 @@ export class CommandManager implements Commands {
   private currentSelected: Keymap;
 
   constructor(
-    private readonly application: Application,
+    private readonly application: ApplicationManager,
     selected: Keymap,
     platform?: Platform,
   ) {

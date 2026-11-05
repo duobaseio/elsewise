@@ -17,6 +17,11 @@ export const DEFAULT_PROJECT_MENU: readonly ContextMenuGroup[] = [
     ],
   },
   {
+    id: DEFAULT_PROJECT_CONTEXT_MENU.delete.id,
+    order: DEFAULT_PROJECT_CONTEXT_MENU.delete.order,
+    items: [{ order: DEFAULT_PROJECT_CONTEXT_MENU.delete.items.delete, command: DEFAULT_COMMANDS.project.edit.delete }],
+  },
+  {
     id: DEFAULT_PROJECT_CONTEXT_MENU.open.id,
     order: DEFAULT_PROJECT_CONTEXT_MENU.open.order,
     items: [
@@ -48,6 +53,23 @@ export const DEFAULT_WORKSPACE_MENU: readonly ContextMenuGroup[] = [
     ],
   },
   {
+    id: DEFAULT_WORKSPACE_CONTEXT_MENU.delete.id,
+    order: DEFAULT_WORKSPACE_CONTEXT_MENU.delete.order,
+    items: [
+      { order: DEFAULT_WORKSPACE_CONTEXT_MENU.delete.items.delete, command: DEFAULT_COMMANDS.workspace.edit.delete },
+    ],
+  },
+  {
+    id: DEFAULT_WORKSPACE_CONTEXT_MENU.status.id,
+    order: DEFAULT_WORKSPACE_CONTEXT_MENU.status.order,
+    items: [
+      {
+        order: DEFAULT_WORKSPACE_CONTEXT_MENU.status.items.markRead,
+        command: DEFAULT_COMMANDS.workspace.status.markRead,
+      },
+    ],
+  },
+  {
     id: DEFAULT_WORKSPACE_CONTEXT_MENU.open.id,
     order: DEFAULT_WORKSPACE_CONTEXT_MENU.open.order,
     items: [
@@ -63,15 +85,5 @@ export const DEFAULT_WORKSPACE_MENU: readonly ContextMenuGroup[] = [
     order: DEFAULT_WORKSPACE_CONTEXT_MENU.open.items.openIn.groups.apps.order,
     in: DEFAULT_WORKSPACE_CONTEXT_MENU.open.items.openIn.id,
     items: [],
-  },
-  {
-    id: DEFAULT_WORKSPACE_CONTEXT_MENU.status.id,
-    order: DEFAULT_WORKSPACE_CONTEXT_MENU.status.order,
-    items: [
-      {
-        order: DEFAULT_WORKSPACE_CONTEXT_MENU.status.items.markRead,
-        command: DEFAULT_COMMANDS.workspace.status.markRead,
-      },
-    ],
   },
 ];

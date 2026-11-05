@@ -36,6 +36,9 @@ export const DEFAULT_COMMANDS = {
     clipboard: {
       copyPath: 'elsewise.project.clipboard.copyPath',
     },
+    edit: {
+      delete: 'elsewise.project.edit.delete',
+    },
     workspace: {
       new: 'elsewise.project.workspace.new',
     },
@@ -43,6 +46,9 @@ export const DEFAULT_COMMANDS = {
   workspace: {
     clipboard: {
       copyPath: 'elsewise.workspace.clipboard.copyPath',
+    },
+    edit: {
+      delete: 'elsewise.workspace.edit.delete',
     },
     status: {
       markRead: 'elsewise.workspace.status.markRead',
@@ -161,6 +167,9 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     clipboard: {
       copyPath: ['Mod-Shift-c'],
     },
+    edit: {
+      delete: ['Delete', 'Backspace'],
+    },
     workspace: {
       new: [],
     },
@@ -168,6 +177,9 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
   workspace: {
     clipboard: {
       copyPath: ['Mod-Shift-c'],
+    },
+    edit: {
+      delete: ['Delete', 'Backspace'],
     },
     status: {
       markRead: [],

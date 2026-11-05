@@ -6,7 +6,7 @@ import { cn } from '../lib/utils';
 import { Button } from './button';
 import { Icon } from './icon';
 
-export function Dialog({ ...props }: DialogPrimitive.Root.Props) {
+export function Dialog<T>({ ...props }: DialogPrimitive.Root.Props<T>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
 }
 

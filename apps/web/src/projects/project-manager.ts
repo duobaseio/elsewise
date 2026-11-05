@@ -1,3 +1,4 @@
+import { createDialogHandle } from '@elsewise/components/components/dialog';
 import {
   type CloneProgress,
   type ContextMenuGroup,
@@ -43,6 +44,7 @@ export function projectsQuery(daemonId: string) {
  */
 export class ProjectManager implements Projects {
   readonly workspaces: WorkspaceManager;
+  readonly deleteDialog = createDialogHandle<ProjectId>();
   private readonly listeners = new Set<() => void>();
   private readonly addedIcons = new OrderedItems<ProjectIcon>('Project icon', () => this.notify());
   private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>

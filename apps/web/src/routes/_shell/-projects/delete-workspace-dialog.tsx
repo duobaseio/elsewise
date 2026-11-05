@@ -1,6 +1,5 @@
 import { Button } from '@elsewise/components/components/button';
 import {
-  type createDialogHandle,
   Dialog,
   DialogClose,
   DialogContent,
@@ -12,67 +11,82 @@ import {
 import { Label } from '@elsewise/components/components/label';
 import { RadioGroup, RadioGroupItem } from '@elsewise/components/components/radio-group';
 import { toast } from '@elsewise/components/components/toast';
-import { useMutation } from '@tanstack/react-query';
-import { type ReactNode, useState } from 'react';
+import type { WorkspaceId } from '@elsewise/frontend-plugin';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useApplicationManager } from '@/application-context';
-import type { Workspace } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { workspacesQuery } from '@/projects/workspace-manager';
+
+type Deleting = 'workspace' | 'files' | 'branch';
 
 /**
- * The dialog that deletes `workspace`, and optionally its files and branch, opened by the trigger in `children` or
- * through `handle`. It stays open until the deletion finishes.
+ * The dialog that deletes a workspace, and optionally its files and branch, opened with the workspace's id through the
+ * workspaces' `deleteDialog` handle. It stays open until the deletion finishes.
  */
-export function DeleteWorkspaceDialog({
-  daemonId,
-  workspace,
-  handle,
-  children,
-}: {
-  daemonId: string;
-  workspace: Workspace;
-  handle: ReturnType<typeof createDialogHandle>;
-  children: ReactNode;
-}) {
+export function DeleteWorkspaceDialog() {
   const workspaces = useApplicationManager().projects.workspaces;
-  const [open, setOpen] = useState(false);
-  const [deleting, setDeleting] = useState<'workspace' | 'files' | 'branch'>('workspace');
+  const [deleting, setDeleting] = useState<Deleting>('workspace');
 
   const remove = useMutation({
-    mutationFn: () =>
+    mutationFn: (workspace: WorkspaceId) =>
       workspaces.delete(
-        { daemon: daemonId, project: workspace.projectId, workspace: workspace.id },
+        workspace,
         deleting === 'workspace' ? {} : { deleteFiles: true, deleteBranch: deleting === 'branch' },
       ),
-    onSuccess: () => setOpen(false),
+    onSuccess: () => workspaces.deleteDialog.close(),
     onError: (error) => toast.add({ type: 'error', title: 'Deleting workspace failed', description: error.message }),
   });
 
   return (
     <Dialog
-      handle={handle}
-      onOpenChange={(next) => {
-        if (remove.isPending) {
-          return;
-        }
-
-        setOpen(next);
-        if (next) {
+      handle={workspaces.deleteDialog}
+      onOpenChange={(next, details) => {
+        if (remove.isPending && details.reason !== 'imperative-action') {
+          details.cancel();
+        } else if (next) {
           setDeleting('workspace');
         }
       }}
-      open={open}
     >
-      {children}
+      {({ payload }) =>
+        payload && (
+          <DeleteWorkspaceDialogContent
+            deleting={deleting}
+            id={payload}
+            onDelete={() => remove.mutate(payload)}
+            onDeletingChange={setDeleting}
+            pending={remove.isPending}
+          />
+        )
+      }
+    </Dialog>
+  );
+}
+
+function DeleteWorkspaceDialogContent({
+  id,
+  deleting,
+  onDeletingChange,
+  pending,
+  onDelete,
+}: {
+  id: WorkspaceId;
+  deleting: Deleting;
+  onDeletingChange: (deleting: Deleting) => void;
+  pending: boolean;
+  onDelete: () => void;
+}) {
+  const workspaces = useQuery(workspacesQuery(id.daemon, id.project));
+  const workspace = workspaces.data?.find((other) => other.id === id.workspace);
+
+  return (
+    workspace && (
       <DialogContent className="max-w-md" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle>Delete “{workspace.name}” workspace?</DialogTitle>
           <DialogDescription>This workspace will no longer be tracked.</DialogDescription>
         </DialogHeader>
-        <RadioGroup
-          aria-label="What to delete"
-          disabled={remove.isPending}
-          onValueChange={setDeleting}
-          value={deleting}
-        >
+        <RadioGroup aria-label="What to delete" disabled={pending} onValueChange={onDeletingChange} value={deleting}>
           <Label>
             <RadioGroupItem value="workspace" />
             {workspace.state.case === 'ok' ? 'Keep files and branch' : 'Keep files'}
@@ -89,14 +103,14 @@ export function DeleteWorkspaceDialog({
           )}
         </RadioGroup>
         <DialogFooter>
-          <DialogClose disabled={remove.isPending} render={<Button variant="outline" />}>
+          <DialogClose disabled={pending} render={<Button variant="outline" />}>
             Cancel
           </DialogClose>
-          <Button onClick={() => remove.mutate()} pending={remove.isPending} variant="destructive">
+          <Button onClick={onDelete} pending={pending} variant="destructive">
             Delete
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    )
   );
 }

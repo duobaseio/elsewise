@@ -19,10 +19,12 @@ export const EMPTY_KEYMAP: Keymap = { name: 'Empty', keys: {} };
 
 // An application with the built-in commands and an empty keymap, from `parts` and fresh managers for the rest.
 export function builtInApplication(
-  parts: Partial<Pick<ApplicationManager, 'appearance' | 'editor' | 'projects' | 'settings' | 'terminal'>> = {},
+  parts: Partial<
+    Pick<ApplicationManager, 'appearance' | 'editor' | 'projects' | 'router' | 'settings' | 'terminal'>
+  > = {},
   platform?: Platform,
 ): ApplicationManager {
-  const router = memoryRouter();
+  const router = parts.router ?? memoryRouter();
   return new ApplicationManager(
     parts.appearance ?? new AppearanceManager('light', resolveActiveTheme(undefined, 'light')),
     router,

@@ -1,3 +1,4 @@
+import { createDialogHandle } from '@elsewise/components/components/dialog';
 import {
   type ContextMenuGroup,
   DEFAULT_ROUTES,
@@ -47,6 +48,7 @@ interface StatusEntry {
  * The workspaces as plugins see them.
  */
 export class WorkspaceManager implements Workspaces {
+  readonly deleteDialog = createDialogHandle<WorkspaceId>();
   private readonly listeners = new Set<() => void>();
   private readonly activeListeners = new Set<(workspace: Workspace | null) => void>();
   private readonly statuses = new Set<StatusEntry>();
@@ -176,6 +178,25 @@ export class WorkspaceManager implements Workspaces {
     await this.client.invalidateQueries(workspacesQuery(workspace.daemon, workspace.project));
   }
 
+  async close(id: ProjectId | WorkspaceId, to: string): Promise<void> {
+    // Checks the URL, since `shown` only updates once the workspaces load.
+    const workspace = routed(this.router);
+    if (workspace && contains(id, workspace)) {
+      await this.router.navigate({ to });
+    }
+
+    let removed = false;
+    for (const entry of this.statuses) {
+      if (contains(id, entry.workspace)) {
+        this.statuses.delete(entry);
+        removed = true;
+      }
+    }
+    if (removed) {
+      this.notify();
+    }
+  }
+
   status(workspace: WorkspaceId): WorkspaceStatus {
     let running = false;
     let finished = false;
@@ -229,28 +250,6 @@ export class WorkspaceManager implements Workspaces {
     }
 
     if (changed) {
-      this.notify();
-    }
-  }
-
-  /**
-   * Leaves for `to` if the workspace shown is `id`'s, and removes the statuses of `id`'s workspaces.
-   */
-  async close(id: ProjectId | WorkspaceId, to: string): Promise<void> {
-    // Checks the URL, since `shown` only updates once the workspaces load.
-    const workspace = routed(this.router);
-    if (workspace && contains(id, workspace)) {
-      await this.router.navigate({ to });
-    }
-
-    let removed = false;
-    for (const entry of this.statuses) {
-      if (contains(id, entry.workspace)) {
-        this.statuses.delete(entry);
-        removed = true;
-      }
-    }
-    if (removed) {
       this.notify();
     }
   }
