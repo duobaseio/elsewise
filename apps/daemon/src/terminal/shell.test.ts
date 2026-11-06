@@ -112,7 +112,11 @@ describe('write', () => {
 describe('resize', () => {
   test('resizes the shell', async () => {
     const { shell, events } = await start(
-      "process.stdout.on('resize', () => console.log('cols=' + process.stdout.columns)); console.log('ready'); setInterval(() => {}, 1000)",
+      [
+        // Windows reports a resize only to a process reading its input in raw mode.
+        'process.stdin.setRawMode(true); process.stdin.resume();',
+        "process.stdout.on('resize', () => console.log('cols=' + process.stdout.columns)); console.log('ready')",
+      ].join(' '),
     );
     await expect.poll(() => text(events)).toContain('ready');
     shell.resize({ columns: 100, rows: 30 });

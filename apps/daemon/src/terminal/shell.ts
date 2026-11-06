@@ -123,6 +123,7 @@ export class Shell {
       cols: restore?.size.columns ?? size.columns,
       rows: restore?.size.rows ?? size.rows,
       scrollback: options.scrollback,
+      scrollOnEraseInDisplay: true,
     });
     const serializer = new serialize.SerializeAddon();
     terminal.loadAddon(serializer);
