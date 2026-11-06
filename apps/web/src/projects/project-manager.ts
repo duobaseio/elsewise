@@ -11,6 +11,8 @@ import {
   type ProjectId,
   type ProjectSidebarItem,
   type Projects,
+  type RepositoryGroup,
+  type RepositorySource,
 } from '@elsewise/frontend-plugin';
 import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
@@ -49,6 +51,7 @@ export class ProjectManager implements Projects {
     this.notify(),
   );
   private readonly contextMenus = new ContextMenuManager(DEFAULT_PROJECT_MENU, () => this.notify());
+  private repositorySources: readonly (readonly RepositorySource[])[] = [];
 
   constructor(
     private readonly client: QueryClient,
@@ -155,6 +158,46 @@ export class ProjectManager implements Projects {
 
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
     return this.contextMenus.add(groups);
+  }
+
+  addRepositorySources(sources: readonly RepositorySource[]): Disposable {
+    const added = [...sources];
+    this.repositorySources = [...this.repositorySources, added];
+    return () => {
+      this.repositorySources = this.repositorySources.filter((other) => other !== added);
+    };
+  }
+
+  /**
+   * Returns the repositories that every source finds for `query`, merged by group id and in order.
+   */
+  async searchRepositories(query: string, options: { signal: AbortSignal }): Promise<readonly RepositoryGroup[]> {
+    const found = await Promise.all(
+      this.repositorySources.flat().map((source) =>
+        source(query, options).catch((error: unknown) => {
+          console.warn('Repository source failed', error);
+          return [];
+        }),
+      ),
+    );
+    const merged = new Map<string, RepositoryGroup>();
+    for (const group of found.flat()) {
+      const first = merged.get(group.id);
+      merged.set(group.id, {
+        id: group.id,
+        order: first?.order ?? group.order,
+        icon: first?.icon ?? group.icon,
+        label: first?.label ?? group.label,
+        items: [...(first?.items ?? []), ...group.items],
+      });
+    }
+
+    return [...merged.values()]
+      .filter((group) => group.items.length > 0)
+      .sort(
+        (a, b) =>
+          (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) || a.id.localeCompare(b.id),
+      );
   }
 
   subscribe(listener: () => void): Disposable {

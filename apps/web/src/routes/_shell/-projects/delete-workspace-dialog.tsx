@@ -33,13 +33,13 @@ export function DeleteWorkspaceDialog() {
         workspace,
         deleting === 'workspace' ? {} : { deleteFiles: true, deleteBranch: deleting === 'branch' },
       ),
-    onSuccess: () => sidebar.workspaceDeleteDialog.close(),
+    onSuccess: () => sidebar.deleteWorkspaceDialog.close(),
     onError: (error) => toast.add({ type: 'error', title: 'Deleting workspace failed', description: error.message }),
   });
 
   return (
     <Dialog
-      handle={sidebar.workspaceDeleteDialog}
+      handle={sidebar.deleteWorkspaceDialog}
       onOpenChange={(next, details) => {
         if (remove.isPending && details.reason !== 'imperative-action') {
           details.cancel();

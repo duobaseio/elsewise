@@ -1,4 +1,5 @@
 import { DEFAULT_PROJECT_LAYOUT } from '@elsewise/bridge';
+import { toast } from '@elsewise/components/components/toast';
 import { DEFAULT_COMMAND_GROUPS, type ProjectCommand, type WorkspaceCommand } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -9,6 +10,22 @@ afterEach(() => {
   window.bridge = undefined;
   vi.restoreAllMocks();
 });
+
+function pickFolder(absolutePath: string | null) {
+  window.bridge = {
+    window: {
+      cut() {},
+      copy() {},
+      paste() {},
+      openFolder: async () => {},
+      pickFolder: async () => absolutePath,
+      pickFile: async () => null,
+      setBrightness() {},
+      setBackground() {},
+      onClose() {},
+    },
+  };
+}
 
 // Returns the names of the projects and their workspaces, in the order shown.
 function names() {
@@ -863,24 +880,44 @@ describe('Projects', () => {
       .toHaveAccessibleDescription('Not a worktree Main workspace');
   });
 
-  test('adds project from picked folder', async () => {
-    window.bridge = {
-      window: {
-        cut() {},
-        copy() {},
-        paste() {},
-        openFolder: async () => {},
-        pickFolder: async () => '/Users/me/notes',
-        pickFile: async () => null,
-        setBrightness() {},
-        setBackground() {},
-        onClose() {},
-      },
-    };
-    await mount('/local/elsewise/singapore');
+  test('imports picked folder and opens it', async () => {
+    pickFolder('/Users/me/notes');
+    const { router } = await mount('/local/elsewise/singapore');
 
     await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
 
     await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
+    await expect.poll(() => router.state.location.pathname).toBe('/local/notes/main');
+  });
+
+  test('ignores cancelled folder picker', async () => {
+    pickFolder(null);
+    const { projects } = await mount('/local/elsewise/singapore');
+    const add = vi.spyOn(projects, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.element(page.getByRole('menu')).not.toBeInTheDocument();
+    expect(add).not.toHaveBeenCalled();
+  });
+
+  test('shows import failure', async () => {
+    pickFolder('/Users/me/downloads');
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect
+      .poll(() => added.mock.lastCall?.[0])
+      .toMatchObject({
+        type: 'error',
+        title: 'Could not import “downloads”',
+        description: "the folder is not a repository's main working tree",
+      });
   });
 });

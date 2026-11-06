@@ -211,12 +211,28 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
 
     const created = !(await exists(mainWorkspaceNativePath));
     await fs.mkdir(mainWorkspaceNativePath, { recursive: true });
+    const git = new Git(mainWorkspaceNativePath, this.#options.readLimitBytes);
     try {
-      await new Git(mainWorkspaceNativePath, this.#options.readLimitBytes).run(['init', '--quiet']);
+      await git.run(['init', '--quiet']);
+      await git.run([
+        '-c',
+        'user.useConfigOnly=true',
+        'commit',
+        '--allow-empty',
+        '--no-verify',
+        '--quiet',
+        '--message',
+        'Initial commit',
+      ]);
     } catch (error) {
       if (created) {
         await fs.rm(mainWorkspaceNativePath, { recursive: true, force: true });
         await deleteProjectFolder(path.join(this.#code.workspaces, folder));
+      } else {
+        await fs.rm(path.join(mainWorkspaceNativePath, '.git'), { recursive: true, force: true });
+      }
+      if (error instanceof GitError && error.message.includes('Please tell me who you are')) {
+        throw new TransportError(Code.FAILED_PRECONDITION, 'git needs a user name and email on this machine');
       }
       throw error;
     }

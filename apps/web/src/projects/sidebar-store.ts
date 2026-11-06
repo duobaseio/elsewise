@@ -3,6 +3,10 @@ import type { Disposable, ProjectId, WorkspaceId } from '@elsewise/frontend-plug
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 
+export interface NewProjectDraft {
+  readonly daemon: string;
+}
+
 export interface NewWorkspaceDraft {
   readonly project: ProjectId;
   readonly name?: string;
@@ -18,10 +22,11 @@ export interface ImportWorkspaceDraft {
  * The state of the sidebar's projects and workspaces that commands change, e.g. which one is renamed in its row.
  */
 export class SidebarStore {
+  readonly newProjectDialog = createDialogHandle<NewProjectDraft>();
+  readonly deleteProjectDialog = createDialogHandle<ProjectId>();
   readonly newWorkspaceDialog = createDialogHandle<NewWorkspaceDraft>();
   readonly importWorkspaceDialog = createDialogHandle<ImportWorkspaceDraft>();
-  readonly projectDeleteDialog = createDialogHandle<ProjectId>();
-  readonly workspaceDeleteDialog = createDialogHandle<WorkspaceId>();
+  readonly deleteWorkspaceDialog = createDialogHandle<WorkspaceId>();
   private readonly listeners = new Set<() => void>();
   private currentRenaming: ProjectId | WorkspaceId | null = null;
 

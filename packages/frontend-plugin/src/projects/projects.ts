@@ -1,5 +1,6 @@
 import type { Disposable } from '@elsewise/plugin';
 import type { ContextMenuGroup } from '../context-menu';
+import type { RepositorySource } from './repositories';
 import type { ProjectIcon, ProjectSidebarItem } from './sidebar';
 import type { Workspaces } from './workspaces';
 
@@ -74,6 +75,23 @@ export interface Projects {
    * Returns a disposable that removes the `groups`.
    */
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
+
+  /**
+   * Adds `sources` from which the 'New project' dialog finds cloneable git repositories.
+   *
+   * ```ts
+   * projects.addRepositorySources([
+   *   async (query, { signal }) => [
+   *     { id: 'io.example.github.pante', order: 10, label: 'GitHub · Pante', items: await search(query, signal) },
+   *   ],
+   * ]);
+   * ```
+   *
+   * See {@link RepositoryGroup} for merging groups.
+   *
+   * Returns a disposable that removes the `sources`.
+   */
+  addRepositorySources(sources: readonly RepositorySource[]): Disposable;
 }
 
 /**

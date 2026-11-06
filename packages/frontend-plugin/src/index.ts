@@ -79,6 +79,7 @@ export type {
   ProjectId,
   Projects,
 } from './projects/projects';
+export type { RepositoryGroup, RepositoryItem, RepositorySource } from './projects/repositories';
 export type {
   ProjectIcon,
   ProjectIconProps,

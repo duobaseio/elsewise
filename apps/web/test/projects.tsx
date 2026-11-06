@@ -14,7 +14,13 @@ import { expect } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
-import { BranchSchema, TagSchema, WorktreeSchema } from '@/gen/elsewise/daemon/git/v1/git_pb';
+import {
+  BranchSchema,
+  Progress_Phase,
+  ProgressSchema,
+  TagSchema,
+  WorktreeSchema,
+} from '@/gen/elsewise/daemon/git/v1/git_pb';
 import {
   GetBranchesResponseSchema,
   GetTagsResponseSchema,
@@ -22,6 +28,7 @@ import {
   GitService,
 } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import {
+  CloneProjectResponseSchema,
   CreateProjectResponseSchema,
   CreateWorkspaceResponseSchema,
   DeleteProjectResponseSchema,
@@ -106,8 +113,29 @@ function fakeDaemon(
   const unused = () => {
     throw new Error('not faked');
   };
+  // Adds a project with a main workspace at `absolutePath`, its id the folder's name and `name` defaulting to it.
+  const addProject = (name: string, absolutePath: string) => {
+    const folder = absolutePath.split('/').at(-1) ?? '';
+    const project = create(ProjectSchema, {
+      id: folder,
+      name: name || folder,
+      absolutePath,
+      state: { case: 'ok', value: {} },
+    });
+    projects.push(project);
+    workspaces.push(
+      create(WorkspaceSchema, {
+        projectId: folder,
+        id: 'main',
+        name: 'Main',
+        absolutePath,
+        main: true,
+        state: { case: 'ok', value: { branch: 'main' } },
+      }),
+    );
+    return project;
+  };
   const projectService = {
-    cloneProject: unused,
     updateProject: async ({ projectId, name }) => {
       const index = projects.findIndex((project) => project.id === projectId);
       const project = create(ProjectSchema, { ...projects[index], name: name ?? '' });
@@ -157,10 +185,22 @@ function fakeDaemon(
       return create(CreateWorkspaceResponseSchema, { workspace });
     },
     createProject: async ({ source }) => {
-      const name = source?.case === 'existing' ? (source.value.absolutePath?.split('/').at(-1) ?? '') : '';
-      const project = create(ProjectSchema, { id: name, name, state: { case: 'ok', value: {} } });
-      projects.push(project);
-      return create(CreateProjectResponseSchema, { project });
+      const absolutePath =
+        source?.value?.absolutePath || `/projects/${(source?.value?.name ?? '').toLowerCase().replace(/\W+/g, '-')}`;
+      return create(CreateProjectResponseSchema, { project: addProject(source?.value?.name ?? '', absolutePath) });
+    },
+    cloneProject: async function* ({ url, name, absolutePath }) {
+      yield create(CloneProjectResponseSchema, {
+        event: { case: 'progress', value: create(ProgressSchema, { phase: Progress_Phase.RECEIVING, percent: 100 }) },
+      });
+      const folder =
+        url
+          ?.split('/')
+          .at(-1)
+          ?.replace(/\.git$/, '') ?? '';
+      yield create(CloneProjectResponseSchema, {
+        event: { case: 'project', value: addProject(name ?? '', absolutePath || `/projects/${folder}`) },
+      });
     },
   } satisfies Daemon['projects'];
   const fileSystem = {

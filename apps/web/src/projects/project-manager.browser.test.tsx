@@ -223,3 +223,95 @@ describe('delete', () => {
     expect(projects.workspaces.status(DHAKA)).toBe('waiting');
   });
 });
+
+describe('searchRepositories', () => {
+  const SIGNAL = { signal: new AbortController().signal };
+  const DOTFILES = { name: 'matthias/dotfiles', url: 'https://github.com/matthias/dotfiles.git' };
+  const NOTES = { name: 'matthias/notes', url: 'https://github.com/matthias/notes.git' };
+  const TOOLS = { name: 'elsewise/tools', url: 'https://github.com/elsewise/tools.git' };
+
+  test('merges groups by id with first defined values', async () => {
+    const { projects } = setup();
+    projects.addRepositorySources([
+      async () => [{ id: 'github.matthias', label: 'GitHub · matthias', items: [DOTFILES] }],
+      async () => [{ id: 'github.matthias', order: 10, label: 'GitHub', items: [NOTES] }],
+    ]);
+
+    expect(await projects.searchRepositories('', SIGNAL)).toEqual([
+      { id: 'github.matthias', order: 10, label: 'GitHub · matthias', items: [DOTFILES, NOTES] },
+    ]);
+  });
+
+  test('keeps first defined icon', async () => {
+    const { projects } = setup();
+    const First = () => null;
+    const Second = () => null;
+    projects.addRepositorySources([
+      async () => [{ id: 'github.matthias', items: [DOTFILES] }],
+      async () => [{ id: 'github.matthias', icon: First, items: [NOTES] }],
+      async () => [{ id: 'github.matthias', icon: Second, items: [] }],
+    ]);
+
+    expect((await projects.searchRepositories('', SIGNAL))[0]?.icon).toBe(First);
+  });
+
+  test('orders by order then id, unordered last', async () => {
+    const { projects } = setup();
+    projects.addRepositorySources([
+      async () => [
+        { id: 'c', items: [DOTFILES] },
+        { id: 'b', order: 20, items: [DOTFILES] },
+        { id: 'a', order: 20, items: [DOTFILES] },
+        { id: 'd', order: 10, items: [DOTFILES] },
+      ],
+    ]);
+
+    expect((await projects.searchRepositories('', SIGNAL)).map((group) => group.id)).toEqual(['d', 'a', 'b', 'c']);
+  });
+
+  test('hides empty groups', async () => {
+    const { projects } = setup();
+    projects.addRepositorySources([
+      async () => [
+        { id: 'github.matthias', items: [] },
+        { id: 'github.elsewise', items: [TOOLS] },
+      ],
+    ]);
+
+    expect((await projects.searchRepositories('', SIGNAL)).map((group) => group.id)).toEqual(['github.elsewise']);
+  });
+
+  test('skips rejecting source', async () => {
+    const { projects } = setup();
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    projects.addRepositorySources([
+      async () => {
+        throw new Error('Signed out');
+      },
+      async () => [{ id: 'github.elsewise', items: [TOOLS] }],
+    ]);
+
+    expect(await projects.searchRepositories('', SIGNAL)).toEqual([
+      { id: 'github.elsewise', order: undefined, icon: undefined, label: undefined, items: [TOOLS] },
+    ]);
+  });
+
+  test('passes query and signal', async () => {
+    const { projects } = setup();
+    const source = vi.fn(async () => []);
+    projects.addRepositorySources([source]);
+
+    await projects.searchRepositories('dot', SIGNAL);
+
+    expect(source).toHaveBeenCalledExactlyOnceWith('dot', SIGNAL);
+  });
+
+  test('removes sources on dispose', async () => {
+    const { projects } = setup();
+    const dispose = projects.addRepositorySources([async () => [{ id: 'github.elsewise', items: [TOOLS] }]]);
+
+    dispose();
+
+    expect(await projects.searchRepositories('', SIGNAL)).toEqual([]);
+  });
+});

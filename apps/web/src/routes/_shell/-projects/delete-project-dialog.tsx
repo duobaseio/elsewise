@@ -27,13 +27,13 @@ export function DeleteProjectDialog() {
 
   const remove = useMutation({
     mutationFn: (project: ProjectId) => projects.delete(project, { deleteFiles }),
-    onSuccess: () => sidebar.projectDeleteDialog.close(),
+    onSuccess: () => sidebar.deleteProjectDialog.close(),
     onError: (error) => toast.add({ type: 'error', title: 'Deleting project failed', description: error.message }),
   });
 
   return (
     <Dialog
-      handle={sidebar.projectDeleteDialog}
+      handle={sidebar.deleteProjectDialog}
       onOpenChange={(next, details) => {
         if (remove.isPending && details.reason !== 'imperative-action') {
           details.cancel();

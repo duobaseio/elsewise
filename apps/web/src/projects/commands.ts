@@ -69,7 +69,7 @@ export const PROJECT_DELETE: ProjectCommand = {
   label: 'Delete…',
   defaultKeys: DEFAULT_KEYS.project.edit.delete,
   run: ({ sidebar }: ApplicationManager, project) => {
-    sidebar.projectDeleteDialog.openWithPayload(project.id);
+    sidebar.deleteProjectDialog.openWithPayload(project.id);
     return true;
   },
 };
@@ -128,7 +128,7 @@ export const WORKSPACE_DELETE: WorkspaceCommand = {
   shown: (_, workspace) => !workspace.main,
   enabled: (_, workspace) => !workspace.main,
   run: ({ sidebar }: ApplicationManager, workspace) => {
-    sidebar.workspaceDeleteDialog.openWithPayload(workspace.id);
+    sidebar.deleteWorkspaceDialog.openWithPayload(workspace.id);
     return true;
   },
 };

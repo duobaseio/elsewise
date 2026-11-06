@@ -54,7 +54,8 @@ message CreateProjectRequest {
 
   // A repository the daemon creates.
   //
-  // The folder is initialised as an empty git repository.
+  // The folder is initialised as a git repository with an empty initial commit, which needs a git identity on the
+  // daemon's machine. Without one, it fails with FAILED_PRECONDITION.
   message New {
     // The display name.
     string name = 1;
