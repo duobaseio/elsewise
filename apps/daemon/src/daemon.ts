@@ -10,12 +10,15 @@ import { FileSystemService } from './gen/elsewise/daemon/file_system/v1/file_sys
 import { GitService } from './gen/elsewise/daemon/git/v1/git_service_pb';
 import { InfoService } from './gen/elsewise/daemon/info/v1/info_service_pb';
 import { ProjectService } from './gen/elsewise/daemon/project/v1/project_service_pb';
+import { TerminalService } from './gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { MIGRATIONS } from './gen/migrations';
 import { type GitOptions, GitServiceImpl } from './git/service';
 import { InfoServiceImpl } from './info/service';
 import { PluginStore } from './plugins/plugin-store';
 import { type ProjectOptions, ProjectServiceImpl } from './project/service';
 import { ProjectStore } from './project/store';
+import { type TerminalOptions, TerminalServiceImpl } from './terminal/service';
+import { TerminalStore } from './terminal/store';
 
 export interface Daemon {
   /** Serves daemon services on the given channel. */
@@ -40,6 +43,9 @@ export interface DaemonOptions {
 
   /** Overrides for the project service's defaults. */
   project?: Partial<ProjectOptions>;
+
+  /** Overrides for the terminal service's defaults. */
+  terminal?: Partial<TerminalOptions>;
 }
 
 /** Bootstraps the daemon and starts enabling the plugins' daemon parts. */
@@ -67,7 +73,12 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     debounceMs: 100,
     ...options.git,
   });
-  const project = new ProjectServiceImpl(new ProjectStore(database), codeDirectory(options.codeDirectory), {
+  const terminal = new TerminalServiceImpl(new TerminalStore(database), {
+    scrollback: 5_000,
+    saveDelayMs: 2_000,
+    ...options.terminal,
+  });
+  const project = new ProjectServiceImpl(new ProjectStore(database), terminal, codeDirectory(options.codeDirectory), {
     readLimitBytes: 10 * 1024 * 1024,
     ...options.project,
   });
@@ -89,10 +100,15 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
       serve(channel, FileSystemService, fileSystem);
       serve(channel, GitService, git);
       serve(channel, ProjectService, project);
+      serve(channel, TerminalService, terminal);
     },
     async close() {
-      await plugins.disableAll();
-      await close();
+      try {
+        await plugins.disableAll();
+        await terminal.close();
+      } finally {
+        await close();
+      }
     },
   };
 }

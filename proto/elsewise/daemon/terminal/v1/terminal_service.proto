@@ -23,10 +23,11 @@ service TerminalService {
   // A shell still running is killed.
   rpc DeleteTerminal(DeleteTerminalRequest) returns (DeleteTerminalResponse);
 
-  // Attaches to a shell and starts a shell if its not running.
+  // Attaches to a shell and starts a shell if it's not running.
   //
-  // The first response sends the buffer and followed by any new stdout. A terminal may stream inputs and outputs to
-  // multiple clients concurrently. However, only the latest set size will be respected.
+  // The first responses send the size, the number of clients and the buffer, followed by any new stdout. A terminal
+  // may stream inputs and outputs to multiple clients concurrently. However, only the latest set size will be
+  // respected.
   rpc AttachTerminal(stream AttachTerminalRequest) returns (stream AttachTerminalResponse);
 }
 
@@ -65,11 +66,6 @@ message CreateTerminalRequest {
   //
   // Empty uses the project and workspace name with a suffixed number (e.g. project-workspace-1).
   string name = 2;
-
-  // The size the shell.
-  //
-  // Unset defaults to 80 columns by 24 rows.
-  Size size = 3;
 }
 
 message CreateTerminalResponse {
@@ -123,19 +119,33 @@ message AttachTerminalRequest {
     // The terminal to attach to.
     string terminal_id = 1;
 
-    // The size of the client.
+    // The size to resize the shell to.
+    //
+    // Unset leaves the shell at its current size, the saved size or 80 columns by 24 rows.
     Size size = 2;
   }
 }
 
 message AttachTerminalResponse {
+  // During the initial connection, the following will be sent:
+  // - size
+  // - clients
+  // - buffer
   oneof event {
+    // The size of the shell.
+    Size size = 1;
+
+    // The number of clients attached to this shell including this client.
+    uint32 clients = 2;
+
     // The escape sequences that reproduce the buffer,
     //
-    // Sent by the first response only.
-    bytes buffer = 1;
-    bytes output = 2;
-    Exit exit = 3;
+    // Sent once on connection.
+    bytes buffer = 3;
+
+    bytes output = 4;
+
+    Exit exit = 5;
   }
 }
 
@@ -155,6 +165,9 @@ message Terminal {
     Exited exited = 5;
     Stopped stopped = 6;
   }
+
+  // The number of clients attached to the shell.
+  uint32 clients = 7;
 
   // The shell is running.
   message Running {}
