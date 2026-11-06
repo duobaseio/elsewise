@@ -873,7 +873,7 @@ export function SidebarMenuSubButton({
       {
         role: 'treeitem',
         className: cn(
-          'flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-foreground outline-none group-data-[collapsible=icon]:hidden group-hover/menu-sub-item:not-disabled:not-aria-disabled:overlay-hover focus-visible:overlay-hover disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[size=md]:text-base data-[size=sm]:text-sm data-active:bg-layer-selected [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+          'flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-foreground outline-none group-data-[collapsible=icon]:hidden group-hover/menu-sub-item:not-disabled:not-aria-disabled:overlay-hover group-data-popup-open/menu-sub-item:overlay-hover focus-visible:overlay-hover disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[size=md]:text-base data-[size=sm]:text-sm data-active:bg-layer-selected [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },

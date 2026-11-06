@@ -149,6 +149,9 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton size="sm">sub sm</SidebarMenuSubButton>
                       </SidebarMenuSubItem>
+                      <SidebarMenuSubItem data-popup-open="">
+                        <SidebarMenuSubButton>sub popup open</SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
                       {SUB_ROWS.map((row) => (
                         <SidebarMenuSubItem key={row.key}>
                           <SidebarMenuSubRow data-visual-state={row.key} size="sm">

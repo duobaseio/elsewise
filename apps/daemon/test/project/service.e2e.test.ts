@@ -273,6 +273,42 @@ describe('DeleteProject', () => {
   });
 });
 
+describe('GetNewWorkspaceName', () => {
+  test('returns name no workspace, branch or folder has', async () => {
+    const { project, root } = await addRepo();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fixed = ANIMALS[0] ?? '';
+    expect(await harness.client.getNewWorkspaceName({ projectId: project.id })).toMatchObject({ name: fixed });
+
+    await harness.client.createWorkspace({
+      projectId: project.id,
+      source: { case: 'new', value: { name: fixed, branch: 'other', base: '' } },
+    });
+    await harness.open(root).run('branch', `${fixed}-2`);
+    await fs.mkdir(path.join(harness.code.workspaces, 'repo', `${fixed}-3`), { recursive: true });
+    expect(await harness.client.getNewWorkspaceName({ projectId: project.id })).toMatchObject({ name: `${fixed}-4` });
+  });
+
+  test('reserves nothing', async () => {
+    const { project } = await addRepo();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const first = await harness.client.getNewWorkspaceName({ projectId: project.id });
+    const second = await harness.client.getNewWorkspaceName({ projectId: project.id });
+    expect(second.name).toBe(first.name);
+  });
+
+  test('refuses unknown or unhealthy project', async () => {
+    const { project, root } = await addRepo();
+    await expect(harness.client.getNewWorkspaceName({ projectId: 'unknown' })).rejects.toMatchObject({
+      code: Code.NOT_FOUND,
+    });
+    await fs.rm(root, { recursive: true });
+    await expect(harness.client.getNewWorkspaceName({ projectId: project.id })).rejects.toMatchObject({
+      code: Code.FAILED_PRECONDITION,
+    });
+  });
+});
+
 describe('CreateWorkspace', () => {
   test('creates a linked worktree on a new branch', async () => {
     const { project, root } = await addRepo();

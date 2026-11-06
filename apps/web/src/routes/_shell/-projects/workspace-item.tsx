@@ -11,7 +11,7 @@ import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { DEFAULT_COMMANDS, type Workspace as PluginWorkspace } from '@elsewise/frontend-plugin';
 import { Link, useParams } from '@tanstack/react-router';
-import { useId, useMemo } from 'react';
+import { useId, useMemo, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { runSidebarKeys } from '@/command/keymap/keymap';
@@ -45,6 +45,7 @@ export function WorkspaceItem({
 }) {
   const params = useParams({ strict: false });
   const statusId = useId();
+  const row = useRef<HTMLDivElement>(null);
 
   const items = useWorkspaceSidebarItems();
   const menu = useWorkspaceContextMenu();
@@ -69,8 +70,9 @@ export function WorkspaceItem({
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="workspace"] with data-active. */}
       <CommandContextMenu
         menu={menu}
+        onClosed={() => row.current?.querySelector<HTMLElement>('[data-sidebar="menu-sub-row-label"]')?.focus()}
         opens={() => !renaming}
-        render={<SidebarMenuSubRow size="sm" />}
+        render={<SidebarMenuSubRow ref={row} size="sm" />}
         target={{ current: pluginWorkspace }}
       >
         {renaming ? (

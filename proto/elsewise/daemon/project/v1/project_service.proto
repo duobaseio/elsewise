@@ -27,6 +27,9 @@ service ProjectService {
   // Deletes a project.
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
 
+  // Returns an unused name for a new workspace.
+  rpc GetNewWorkspaceName(GetNewWorkspaceNameRequest) returns (GetNewWorkspaceNameResponse);
+
   // Creates a workspace.
   rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse);
 
@@ -164,6 +167,16 @@ message Project {
 
   // The folder is on disk but is no longer a git repository.
   message Broken {}
+}
+
+message GetNewWorkspaceNameRequest {
+  // The project the workspace would belong to.
+  string project_id = 1;
+}
+
+message GetNewWorkspaceNameResponse {
+  // The generated name.
+  string name = 1;
 }
 
 message CreateWorkspaceRequest {

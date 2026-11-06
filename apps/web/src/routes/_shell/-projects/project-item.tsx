@@ -14,7 +14,11 @@ import {
 } from '@elsewise/components/components/sidebar';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import { DEFAULT_COMMANDS, type Project as PluginProject } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_COMMANDS,
+  DEFAULT_PROJECT_CONTEXT_MENU,
+  type Project as PluginProject,
+} from '@elsewise/frontend-plugin';
 import { useQuery } from '@tanstack/react-query';
 import { type ReactNode, useId, useMemo, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
@@ -24,7 +28,7 @@ import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_p
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { mapProject, useProjectContextMenu, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
-import { useCreating, useRenaming } from '@/projects/sidebar-store';
+import { useRenaming } from '@/projects/sidebar-store';
 import { workspacesQuery } from '@/projects/workspace-manager';
 import { NameInput } from './name-input';
 import { WorkspaceItem } from './workspace-item';
@@ -41,13 +45,13 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
   const layout = useProjectLayout(daemonId);
   const { setExpanded } = useUpdateProjectLayout(daemonId);
   const row = useRef<HTMLDivElement>(null);
+  const newRow = useRef<HTMLLIElement>(null);
   const items = useProjectSidebarItems();
   const menu = useProjectContextMenu();
   const { commands, projects, sidebar } = useApplicationManager();
 
   const workspaces = useQuery(workspacesQuery(daemonId, project.id));
   const pluginProject = useMemo(() => mapProject(daemonId, project), [daemonId, project]);
-  const creating = useCreating(pluginProject.id);
   const renaming = useRenaming(pluginProject.id);
   const stateId = useId();
   const { state } = pluginProject;
@@ -76,6 +80,7 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
       {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
       <CommandContextMenu
         menu={menu}
+        onClosed={() => row.current?.querySelector<HTMLElement>('[data-sidebar="menu-row-label"]')?.focus()}
         opens={() => !renaming}
         render={<SidebarMenuRow ref={row} />}
         target={{ current: pluginProject }}
@@ -129,18 +134,23 @@ export function ProjectItem({ daemonId, project, index }: { daemonId: string; pr
                 workspace={workspace}
               />
             ))}
-            <SidebarMenuSubItem>
+            <CommandContextMenu
+              menu={menu.filter((group) => group.id === DEFAULT_PROJECT_CONTEXT_MENU.workspace.id)}
+              onClosed={() => newRow.current?.querySelector<HTMLElement>('button')?.focus()}
+              render={<SidebarMenuSubItem ref={newRow} />}
+              target={{ current: pluginProject }}
+            >
               <SidebarMenuSubButton
                 aria-label={`New workspace in ${project.name}`}
                 className="w-full cursor-default text-text-2 [&>svg]:size-4 [&>svg]:p-[2.5px]"
                 onClick={() => commands.run(DEFAULT_COMMANDS.project.workspace.new, pluginProject)}
-                render={<button disabled={creating} type="button" />}
+                render={<button type="button" />}
                 size="sm"
               >
                 <Icon name="add" />
                 <span>New workspace</span>
               </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
+            </CommandContextMenu>
           </SidebarMenuSub>
         </CollapsibleContent>
       )}

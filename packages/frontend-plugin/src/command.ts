@@ -35,6 +35,7 @@ export const DEFAULT_COMMANDS = {
   project: {
     workspace: {
       new: 'elsewise.project.workspace.new',
+      import: 'elsewise.project.workspace.import',
     },
     clipboard: {
       copyPath: 'elsewise.project.clipboard.copyPath',
@@ -174,6 +175,7 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
   project: {
     workspace: {
       new: [],
+      import: [],
     },
     clipboard: {
       copyPath: ['Mod-Shift-c'],

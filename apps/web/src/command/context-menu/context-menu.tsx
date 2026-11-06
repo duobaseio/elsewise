@@ -39,7 +39,8 @@ export interface CommandContextMenuProps {
    */
   opens?: (event: Event) => boolean;
   /**
-   * Called once the menu has closed, before the clicked item runs, e.g. to give the focus back.
+   * Called whenever the menu closes, before the clicked item runs, e.g. to give the focus back. The menu then leaves
+   * the focus to it.
    */
   onClosed?: () => void;
   /**
@@ -87,7 +88,6 @@ export function CommandContextMenu({
   const application = useApplicationManager();
   const commands = useCommandManager();
   const clicked = useRef<(() => void) | null>(null);
-  const refocused = useRef(false);
 
   // Opens only when `opens` allows it and there is something to show.
   function onOpenChange(open: boolean, details: { event: Event; cancel(): void }): void {
@@ -100,7 +100,6 @@ export function CommandContextMenu({
       return;
     }
 
-    refocused.current = false;
     const resolved = resolve(menu, application, commands, target?.current ?? null, []);
     if (resolved.length === 0) {
       details.cancel();
@@ -116,15 +115,12 @@ export function CommandContextMenu({
   function onOpenChangeComplete(open: boolean): void {
     const run = clicked.current;
     clicked.current = null;
-    if (open || run === null) {
+    if (open) {
       return;
     }
 
-    if (onClosed !== undefined) {
-      onClosed();
-      refocused.current = true;
-    }
-    run();
+    onClosed?.();
+    run?.();
   }
 
   return (
@@ -133,7 +129,7 @@ export function CommandContextMenu({
         {children}
       </ContextMenuTrigger>
       {/* Base UI refocuses on the trigger after running a command, stealing focus from whatever the command focused. */}
-      <ContextMenuContent finalFocus={() => !refocused.current}>
+      <ContextMenuContent finalFocus={onClosed === undefined}>
         <Groups groups={groups} onClick={(run) => (clicked.current = run)} />
       </ContextMenuContent>
     </ContextMenu>

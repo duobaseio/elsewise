@@ -18,6 +18,8 @@ import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { projectsQuery } from '@/projects/project-manager';
 import { DeleteProjectDialog } from './delete-project-dialog';
 import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
+import { ImportWorkspaceDialog } from './import-workspace-dialog';
+import { NewWorkspaceDialog } from './new-workspace-dialog';
 import { ProjectItem } from './project-item';
 
 // Moves the dragged item by whole device pixels. The pointer reports fractions of a pixel, which blurs the item.
@@ -53,6 +55,8 @@ export function Projects() {
       {daemons.map((daemonId) => (
         <DaemonGroup daemonId={daemonId} key={daemonId} />
       ))}
+      <NewWorkspaceDialog />
+      <ImportWorkspaceDialog />
       <DeleteProjectDialog />
       <DeleteWorkspaceDialog />
     </>

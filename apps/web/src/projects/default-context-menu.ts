@@ -12,6 +12,10 @@ export const DEFAULT_PROJECT_MENU: readonly ContextMenuGroup[] = [
     order: DEFAULT_PROJECT_CONTEXT_MENU.workspace.order,
     items: [
       { order: DEFAULT_PROJECT_CONTEXT_MENU.workspace.items.new, command: DEFAULT_COMMANDS.project.workspace.new },
+      {
+        order: DEFAULT_PROJECT_CONTEXT_MENU.workspace.items.import,
+        command: DEFAULT_COMMANDS.project.workspace.import,
+      },
     ],
   },
   {

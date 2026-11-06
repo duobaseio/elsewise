@@ -17,6 +17,7 @@ import type {
   CreateWorkspaceRequest_New,
   DeleteProjectRequest,
   DeleteWorkspaceRequest,
+  GetNewWorkspaceNameRequest,
   GetWorkspacesRequest,
   ProjectSchema,
   ProjectService,
@@ -138,6 +139,14 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
       }
       await this.#store.deleteProject(project.id);
       return {};
+    });
+  }
+
+  getNewWorkspaceName(request: GetNewWorkspaceNameRequest) {
+    return attempt(async () => {
+      const project = await this.#refuseMissingProject(request.projectId);
+      const repository = await this.#refuseUnhealthyProject(project);
+      return { name: await this.#generateWorkspaceName(project, repository) };
     });
   }
 

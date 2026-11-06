@@ -4,7 +4,6 @@ import {
   DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
-  DEFAULT_ROUTES,
   type ProjectCommand,
   type WorkspaceCommand,
 } from '@elsewise/frontend-plugin';
@@ -17,18 +16,24 @@ export const PROJECT_NEW_WORKSPACE: ProjectCommand = {
   scope: 'project',
   id: DEFAULT_COMMANDS.project.workspace.new,
   group: DEFAULT_COMMAND_GROUPS.project.id,
-  label: 'New workspace',
+  label: 'New workspace…',
   defaultKeys: DEFAULT_KEYS.project.workspace.new,
-  enabled: ({ sidebar }: ApplicationManager, project) => project.state === 'ok' && !sidebar.creating(project.id),
-  run: ({ projects, router, sidebar }: ApplicationManager, project) => {
-    sidebar.setCreating(project.id, true);
-    void projects.workspaces
-      .add(project.id, { type: 'new' })
-      .then(
-        ({ id }) => router.navigate({ href: DEFAULT_ROUTES.workspace(id.daemon, id.project, id.workspace) }),
-        (error: Error) => toast.add({ type: 'error', title: 'Adding workspace failed', description: error.message }),
-      )
-      .finally(() => sidebar.setCreating(project.id, false));
+  enabled: (_, project) => project.state === 'ok',
+  run: ({ sidebar }: ApplicationManager, project) => {
+    sidebar.newWorkspaceDialog.openWithPayload({ project: project.id });
+    return true;
+  },
+};
+
+export const PROJECT_IMPORT_WORKSPACE: ProjectCommand = {
+  scope: 'project',
+  id: DEFAULT_COMMANDS.project.workspace.import,
+  group: DEFAULT_COMMAND_GROUPS.project.id,
+  label: 'Import workspace…',
+  defaultKeys: DEFAULT_KEYS.project.workspace.import,
+  enabled: (_, project) => project.state === 'ok',
+  run: ({ sidebar }: ApplicationManager, project) => {
+    sidebar.importWorkspaceDialog.openWithPayload({ project: project.id });
     return true;
   },
 };

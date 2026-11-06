@@ -2,7 +2,7 @@
  * The project context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_PROJECT_CONTEXT_MENU = {
-  workspace: { id: 'io.duobase.elsewise.project.contextMenu.workspace', order: 10, items: { new: 10 } },
+  workspace: { id: 'io.duobase.elsewise.project.contextMenu.workspace', order: 10, items: { new: 10, import: 20 } },
   clipboard: { id: 'io.duobase.elsewise.project.contextMenu.clipboard', order: 20, items: { copyPath: 10 } },
   edit: { id: 'io.duobase.elsewise.project.contextMenu.edit', order: 30, items: { rename: 10, delete: 20 } },
   open: {

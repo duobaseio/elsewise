@@ -3,32 +3,27 @@ import type { Disposable, ProjectId, WorkspaceId } from '@elsewise/frontend-plug
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 
+export interface NewWorkspaceDraft {
+  readonly project: ProjectId;
+  readonly name?: string;
+}
+
+export interface ImportWorkspaceDraft {
+  readonly project: ProjectId;
+  readonly name?: string;
+  readonly absolutePath?: string;
+}
+
 /**
  * The state of the sidebar's projects and workspaces that commands change, e.g. which one is renamed in its row.
  */
 export class SidebarStore {
+  readonly newWorkspaceDialog = createDialogHandle<NewWorkspaceDraft>();
+  readonly importWorkspaceDialog = createDialogHandle<ImportWorkspaceDraft>();
   readonly projectDeleteDialog = createDialogHandle<ProjectId>();
   readonly workspaceDeleteDialog = createDialogHandle<WorkspaceId>();
   private readonly listeners = new Set<() => void>();
-  private readonly currentCreating = new Set<string>();
   private currentRenaming: ProjectId | WorkspaceId | null = null;
-
-  /**
-   * Returns whether a workspace is being created in `project`.
-   */
-  creating(project: ProjectId): boolean {
-    return this.currentCreating.has(`${project.daemon}/${project.project}`);
-  }
-
-  setCreating(project: ProjectId, creating: boolean): void {
-    const key = `${project.daemon}/${project.project}`;
-    if (creating) {
-      this.currentCreating.add(key);
-    } else {
-      this.currentCreating.delete(key);
-    }
-    this.notify();
-  }
 
   /**
    * The project or workspace whose name is edited in its row, or null.
@@ -54,15 +49,6 @@ export class SidebarStore {
       listener();
     }
   }
-}
-
-/**
- * Returns whether a workspace is being created in `project`.
- */
-export function useCreating(project: ProjectId): boolean {
-  const { sidebar } = useApplicationManager();
-  const subscribe = useCallback((listener: () => void) => sidebar.subscribe(listener), [sidebar]);
-  return useSyncExternalStore(subscribe, () => sidebar.creating(project));
 }
 
 /**
