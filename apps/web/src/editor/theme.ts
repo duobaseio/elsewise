@@ -384,7 +384,14 @@ export const METRICS = EditorView.theme({
     cursor: 'default',
   },
   '.cm-completion-hint': { order: '1', borderTop: '1px solid var(--border)' },
-  '.cm-completion-hint, .cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-lsp-references-hint, .cm-tooltip.cm-lsp-references-message, .cm-tooltip.cm-actions-message, .cm-link-hint, .cm-actions-hint':
+  '.cm-completion-hint, .cm-lsp-references-hint, .cm-actions-hint': {
+    padding: '3.5px 10px',
+    fontFamily: 'var(--font-sans)',
+    fontSize: 'var(--text-xs)',
+    lineHeight: 'var(--text-xs--line-height)',
+    letterSpacing: '0.01em',
+  },
+  '.cm-tooltip.cm-lsp-rename-hint, .cm-tooltip.cm-lsp-rename-message, .cm-tooltip.cm-lsp-references-message, .cm-tooltip.cm-actions-message, .cm-link-hint':
     {
       padding: '3px 10px',
       fontFamily: 'var(--font-sans)',
