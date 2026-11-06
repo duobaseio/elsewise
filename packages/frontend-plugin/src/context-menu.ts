@@ -1,4 +1,56 @@
 /**
+ * The project context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_PROJECT_CONTEXT_MENU = {
+  workspace: { id: 'io.duobase.elsewise.project.contextMenu.workspace', order: 10, items: { new: 10, import: 20 } },
+  clipboard: { id: 'io.duobase.elsewise.project.contextMenu.clipboard', order: 20, items: { copyPath: 10 } },
+  edit: { id: 'io.duobase.elsewise.project.contextMenu.edit', order: 30, items: { rename: 10, delete: 20 } },
+  open: {
+    id: 'io.duobase.elsewise.project.contextMenu.open',
+    order: 40,
+    items: {
+      openIn: {
+        id: 'io.duobase.elsewise.project.contextMenu.open.openIn',
+        order: 10,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.project.contextMenu.open.openIn.apps',
+            order: 10,
+            items: { fileManager: 10 },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
+ * The workspace context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_WORKSPACE_CONTEXT_MENU = {
+  clipboard: { id: 'io.duobase.elsewise.workspace.contextMenu.clipboard', order: 10, items: { copyPath: 10 } },
+  edit: { id: 'io.duobase.elsewise.workspace.contextMenu.edit', order: 20, items: { rename: 10, delete: 20 } },
+  status: { id: 'io.duobase.elsewise.workspace.contextMenu.status', order: 30, items: { markRead: 10 } },
+  open: {
+    id: 'io.duobase.elsewise.workspace.contextMenu.open',
+    order: 40,
+    items: {
+      openIn: {
+        id: 'io.duobase.elsewise.workspace.contextMenu.open.openIn',
+        order: 10,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.workspace.contextMenu.open.openIn.apps',
+            order: 10,
+            items: { fileManager: 10 },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
  * The editor context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_EDITOR_CONTEXT_MENU = {

@@ -2,18 +2,18 @@ import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
 import type {
   ActiveKeymap,
-  Application,
-  ApplicationCommand,
+  Command,
   CommandGroup,
   Commands,
   Disposable,
-  EditorCommand,
   Keymap,
-  TerminalCommand,
+  Project,
+  Workspace,
 } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import {
   APPLICATION,
   EDITOR,
@@ -21,7 +21,9 @@ import {
   EDITOR_DIFF,
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
+  PROJECT,
   TERMINAL,
+  WORKSPACE,
 } from '@/command/groups';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
@@ -81,6 +83,19 @@ import { EDITOR_GO_TO_DEFINITION } from '@/editor/lsp/definition';
 import { EDITOR_FIND_USAGES } from '@/editor/lsp/references';
 import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
+import {
+  PROJECT_COPY_PATH,
+  PROJECT_DELETE,
+  PROJECT_IMPORT_WORKSPACE,
+  PROJECT_NEW_WORKSPACE,
+  PROJECT_OPEN_FILE_MANAGER,
+  PROJECT_RENAME,
+  WORKSPACE_COPY_PATH,
+  WORKSPACE_DELETE,
+  WORKSPACE_MARK_READ,
+  WORKSPACE_OPEN_FILE_MANAGER,
+  WORKSPACE_RENAME,
+} from '@/projects/commands';
 import { OPEN_SETTINGS } from '@/settings/settings';
 import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
 import { TERMINAL_FIND } from '@/terminal/search/commands';
@@ -93,11 +108,26 @@ export const DEFAULT_GROUPS: readonly CommandGroup[] = [
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
   TERMINAL,
+  PROJECT,
+  WORKSPACE,
 ];
 
-export const DEFAULT_COMMANDS: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[] = [
+export const DEFAULT_COMMANDS: readonly Command[] = [
   // Application
   OPEN_SETTINGS,
+  // Project
+  PROJECT_NEW_WORKSPACE,
+  PROJECT_IMPORT_WORKSPACE,
+  PROJECT_COPY_PATH,
+  PROJECT_RENAME,
+  PROJECT_DELETE,
+  PROJECT_OPEN_FILE_MANAGER,
+  // Workspace
+  WORKSPACE_COPY_PATH,
+  WORKSPACE_RENAME,
+  WORKSPACE_DELETE,
+  WORKSPACE_MARK_READ,
+  WORKSPACE_OPEN_FILE_MANAGER,
   // Editor
   EDITOR_CUT,
   EDITOR_COPY,
@@ -174,12 +204,12 @@ export class CommandManager implements Commands {
   private readonly listeners = new Set<() => void>();
   private addedGroups: ReadonlyArray<ReadonlyArray<CommandGroup>> = [];
   private currentGroups: ReadonlyMap<string, CommandGroup> = new Map();
-  private addedCommands: ReadonlyArray<ReadonlyArray<ApplicationCommand | EditorCommand | TerminalCommand>> = [];
-  private currentCommands: ReadonlyMap<string, ApplicationCommand | EditorCommand | TerminalCommand> = new Map();
+  private addedCommands: ReadonlyArray<ReadonlyArray<Command>> = [];
+  private currentCommands: ReadonlyMap<string, Command> = new Map();
   private currentSelected: Keymap;
 
   constructor(
-    private readonly application: Application,
+    private readonly application: ApplicationManager,
     selected: Keymap,
     platform?: Platform,
   ) {
@@ -199,7 +229,7 @@ export class CommandManager implements Commands {
   /**
    * The commands by id.
    */
-  get commands(): ReadonlyMap<string, ApplicationCommand | EditorCommand | TerminalCommand> {
+  get commands(): ReadonlyMap<string, Command> {
     return this.currentCommands;
   }
 
@@ -271,7 +301,7 @@ export class CommandManager implements Commands {
   /**
    * {@inheritDoc}
    */
-  add(commands: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): Disposable {
+  add(commands: readonly Command[]): Disposable {
     const ids = new Set(this.currentCommands.keys());
     const added = commands.filter((command) => {
       if (ids.has(command.id)) {
@@ -303,7 +333,7 @@ export class CommandManager implements Commands {
     }
     this.currentGroups = groups;
 
-    const commands = new Map<string, ApplicationCommand | EditorCommand | TerminalCommand>();
+    const commands = new Map<string, Command>();
     for (const command of this.addedCommands.flat()) {
       commands.set(command.id, command);
     }
@@ -313,7 +343,7 @@ export class CommandManager implements Commands {
     this.notify();
   }
 
-  run(id: string, target?: EditorView | XTerm): boolean {
+  run(id: string, target?: Project | Workspace | EditorView | XTerm): boolean {
     const command = this.currentCommands.get(id);
     if (command === undefined) {
       console.warn(`Unknown command ${id}`);
@@ -321,9 +351,44 @@ export class CommandManager implements Commands {
     }
 
     try {
+      if (command.scope === 'project') {
+        if (target === undefined) {
+          return false;
+        }
+
+        if (!isProject(target)) {
+          console.warn(`Command ${id} runs on a project`);
+          return false;
+        }
+
+        if (command.enabled?.(this.application, target) === false) {
+          return false;
+        }
+
+        return command.run(this.application, target);
+      }
+
+      if (command.scope === 'workspace') {
+        if (target !== undefined && !isWorkspace(target)) {
+          console.warn(`Command ${id} runs on a workspace`);
+          return false;
+        }
+
+        const workspace = target ?? this.application.projects.workspaces.active;
+        if (workspace === null) {
+          return false;
+        }
+
+        if (command.enabled?.(this.application, workspace) === false) {
+          return false;
+        }
+
+        return command.run(this.application, workspace);
+      }
+
       if (command.scope === 'editor') {
-        if (target !== undefined && isTerminal(target)) {
-          console.warn(`Command ${id} runs in an editor, not a terminal`);
+        if (target !== undefined && !isEditor(target)) {
+          console.warn(`Command ${id} runs in an editor`);
           return false;
         }
 
@@ -341,7 +406,7 @@ export class CommandManager implements Commands {
 
       if (command.scope === 'terminal') {
         if (target !== undefined && !isTerminal(target)) {
-          console.warn(`Command ${id} runs in a terminal, not an editor`);
+          console.warn(`Command ${id} runs in a terminal`);
           return false;
         }
 
@@ -386,7 +451,19 @@ export class CommandManager implements Commands {
   }
 }
 
-export function isTerminal(target: EditorView | XTerm): target is XTerm {
+export function isProject(target: Project | Workspace | EditorView | XTerm): target is Project {
+  return 'absolutePath' in target && !('main' in target);
+}
+
+export function isWorkspace(target: Project | Workspace | EditorView | XTerm): target is Workspace {
+  return 'absolutePath' in target && 'main' in target;
+}
+
+export function isEditor(target: Project | Workspace | EditorView | XTerm): target is EditorView {
+  return !('absolutePath' in target) && !('buffer' in target);
+}
+
+export function isTerminal(target: Project | Workspace | EditorView | XTerm): target is XTerm {
   return 'buffer' in target;
 }
 

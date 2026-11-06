@@ -43,9 +43,7 @@ export async function mount(
     }, []);
     return (
       <ApplicationManagerContext value={application}>
-        <EditorContextMenu view={view}>
-          <div ref={host} />
-        </EditorContextMenu>
+        <EditorContextMenu render={<div ref={host} />} view={view} />
       </ApplicationManagerContext>
     );
   }

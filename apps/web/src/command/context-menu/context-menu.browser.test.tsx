@@ -2,10 +2,9 @@ import type { EditorView } from '@codemirror/view';
 import { formatKey } from '@elsewise/components/lib/platform';
 import {
   type ApplicationCommand,
+  type Command,
   type ContextMenuGroup,
   DEFAULT_COMMAND_GROUPS,
-  type EditorCommand,
-  type TerminalCommand,
 } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
@@ -42,7 +41,7 @@ function command(
 }
 
 // Returns an application whose commands include `added`.
-function setUp(added: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): ApplicationManager {
+function setUp(added: readonly Command[]): ApplicationManager {
   const application = builtInApplication();
   application.commands.add(added);
   return application;

@@ -10,11 +10,14 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
+import { CollapsibleTrigger } from './collapsible';
 import { Icon } from './icon';
 import { Input } from './input';
 import { Separator } from './separator';
@@ -308,11 +311,149 @@ export function SidebarSeparator({ className, ...props }: ComponentProps<typeof 
   );
 }
 
-export function SidebarContent({ className, ...props }: ComponentProps<'div'>) {
+// The rows the arrow keys move between.
+const SIDEBAR_ROWS =
+  '[data-sidebar="menu-button"], [data-sidebar="menu-row-label"], [data-sidebar="menu-sub-row-label"], [data-sidebar="menu-sub-button"]';
+
+/**
+ * The scrolling body of a sidebar, whose rows are one tab stop and navigated as a tree:
+ * * ↑ and ↓ move to the previous and next row, and Home and End to the first and last.
+ * * → expands a row, or moves into one that is expanded.
+ * * ← collapses a row, or moves out to the row it is under.
+ */
+export function SidebarContent({
+  selectionFollowsFocus = false,
+  className,
+  onKeyDown,
+  ...props
+}: ComponentProps<'div'> & {
+  /**
+   * Whether moving onto a row opens its page.
+   */
+  selectionFollowsFocus?: boolean;
+}) {
+  const content = useRef<HTMLDivElement>(null);
+
+  // Only the row last focused, else the active or first one, is in the tab order. Rows come and go as menus load and
+  // collapse, so the order is redone whenever they change.
+  useEffect(() => {
+    const element = content.current;
+    if (element === null) {
+      return;
+    }
+
+    let current: Element | null = null;
+    const update = () => {
+      const rows = [...element.querySelectorAll<HTMLElement>(SIDEBAR_ROWS)];
+      const reachable = rows.filter(
+        (row) => row.checkVisibility() && !row.matches(':disabled, [aria-disabled="true"]'),
+      );
+      const stop =
+        reachable.find((row) => row === current) ??
+        reachable.find((row) => row.hasAttribute('data-active')) ??
+        reachable[0];
+      for (const row of rows) {
+        row.tabIndex = row === stop ? 0 : -1;
+      }
+    };
+    const onFocusIn = (event: FocusEvent) => {
+      if (event.target instanceof Element && event.target.matches(SIDEBAR_ROWS)) {
+        current = event.target;
+        update();
+      }
+    };
+
+    update();
+    let frame = 0;
+    const observer = new MutationObserver(() => {
+      frame ||= requestAnimationFrame(() => {
+        frame = 0;
+        update();
+      });
+    });
+    observer.observe(element, {
+      subtree: true,
+      childList: true,
+      attributeFilter: ['data-active', 'disabled', 'aria-disabled', 'hidden'],
+    });
+    element.addEventListener('focusin', onFocusIn);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      element.removeEventListener('focusin', onFocusIn);
+    };
+  }, []);
+
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the keys move the focus between the links and buttons inside.
     <div
       data-slot="sidebar-content"
       data-sidebar="content"
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        const row = event.target;
+        if (
+          event.defaultPrevented ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey ||
+          !(row instanceof HTMLElement) ||
+          !row.matches(SIDEBAR_ROWS)
+        ) {
+          return;
+        }
+
+        const rows = [...event.currentTarget.querySelectorAll<HTMLElement>(SIDEBAR_ROWS)].filter(
+          (other) => other.checkVisibility() && !other.matches(':disabled, [aria-disabled="true"]'),
+        );
+        const index = rows.indexOf(row);
+        const toggle = row
+          .closest('[data-sidebar="menu-row"]')
+          ?.querySelector<HTMLElement>('[data-sidebar="menu-chevron"]');
+        let next: HTMLElement | null | undefined;
+        switch (event.key) {
+          case 'ArrowDown':
+            next = rows[index + 1];
+            break;
+          case 'ArrowUp':
+            next = rows[index - 1];
+            break;
+          case 'Home':
+            next = rows[0];
+            break;
+          case 'End':
+            next = rows.at(-1);
+            break;
+          case 'ArrowRight':
+            if (toggle?.getAttribute('aria-expanded') === 'false') {
+              toggle.click();
+            } else if (toggle) {
+              next = rows[index + 1];
+              next = next && row.closest('[data-sidebar="menu-item"]')?.contains(next) ? next : undefined;
+            }
+            break;
+          case 'ArrowLeft':
+            if (toggle?.getAttribute('aria-expanded') === 'true') {
+              toggle.click();
+            } else {
+              next = row
+                .closest('[data-sidebar="menu-sub"]')
+                ?.closest('[data-sidebar="menu-item"]')
+                ?.querySelector<HTMLElement>('[data-sidebar="menu-row-label"]');
+            }
+            break;
+          default:
+            return;
+        }
+
+        event.preventDefault();
+        next?.focus();
+        if (selectionFollowsFocus && next instanceof HTMLAnchorElement) {
+          next.click();
+        }
+      }}
+      ref={content}
       className={cn(
         'no-scrollbar flex min-h-0 flex-1 flex-col gap-0 overflow-auto group-data-[collapsible=icon]:overflow-hidden',
         className,
@@ -322,14 +463,22 @@ export function SidebarContent({ className, ...props }: ComponentProps<'div'>) {
   );
 }
 
+const SidebarGroupContext = createContext<
+  { id: string; label: HTMLElement | null; setLabel: (label: HTMLElement | null) => void } | undefined
+>(undefined);
+
 export function SidebarGroup({ className, ...props }: ComponentProps<'div'>) {
+  const id = useId();
+  const [label, setLabel] = useState<HTMLElement | null>(null);
   return (
-    <div
-      data-slot="sidebar-group"
-      data-sidebar="group"
-      className={cn('relative flex w-full min-w-0 flex-col p-2', className)}
-      {...props}
-    />
+    <SidebarGroupContext value={useMemo(() => ({ id, label, setLabel }), [id, label])}>
+      <div
+        data-slot="sidebar-group"
+        data-sidebar="group"
+        className={cn('relative flex w-full min-w-0 flex-col p-2', className)}
+        {...props}
+      />
+    </SidebarGroupContext>
   );
 }
 
@@ -338,12 +487,15 @@ export function SidebarGroupLabel({
   render,
   ...props
 }: useRender.ComponentProps<'div'> & ComponentProps<'div'>) {
+  const group = useContext(SidebarGroupContext);
   return useRender({
     defaultTagName: 'div',
+    ref: group?.setLabel,
     props: mergeProps<'div'>(
       {
+        id: group?.id,
         className: cn(
-          'flex h-8 shrink-0 items-center rounded-md px-2 text-heading-sm text-text-2 outline-none transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
+          'flex h-8 shrink-0 items-center rounded-md px-2 text-heading-sm text-text-2 outline-none transition-[margin,opacity] duration-200 ease-linear group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },
@@ -367,7 +519,7 @@ export function SidebarGroupAction({
     props: mergeProps<'button'>(
       {
         className: cn(
-          'absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
+          'absolute top-3.5 right-3 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },
@@ -393,24 +545,37 @@ export function SidebarGroupContent({ className, ...props }: ComponentProps<'div
 }
 
 export function SidebarMenu({ className, ...props }: ComponentProps<'ul'>) {
+  const group = useContext(SidebarGroupContext);
   return (
     <ul
       data-slot="sidebar-menu"
       data-sidebar="menu"
+      // biome-ignore lint/a11y/noNoninteractiveElementToInteractiveRole: WAI-ARIA's navigation tree example does this.
+      role="tree"
+      aria-labelledby={group?.label ? group.id : undefined}
       className={cn('flex w-full min-w-0 flex-col gap-0', className)}
       {...props}
     />
   );
 }
 
+const SidebarMenuItemContext = createContext<
+  { id: string; sub: HTMLElement | null; setSub: (sub: HTMLElement | null) => void } | undefined
+>(undefined);
+
 export function SidebarMenuItem({ className, ...props }: ComponentProps<'li'>) {
+  const id = useId();
+  const [sub, setSub] = useState<HTMLElement | null>(null);
   return (
-    <li
-      data-slot="sidebar-menu-item"
-      data-sidebar="menu-item"
-      className={cn('group/menu-item relative', className)}
-      {...props}
-    />
+    <SidebarMenuItemContext value={useMemo(() => ({ id, sub, setSub }), [id, sub])}>
+      <li
+        data-slot="sidebar-menu-item"
+        data-sidebar="menu-item"
+        role="none"
+        className={cn('group/menu-item relative', className)}
+        {...props}
+      />
+    </SidebarMenuItemContext>
   );
 }
 
@@ -420,10 +585,10 @@ export function SidebarMenuItem({ className, ...props }: ComponentProps<'li'>) {
 // No press layer. A row press is superseded by selection within a frame or two, and the file tree never had one —
 // buttons are where press reads, and they answer it with a 1px translate rather than a tint.
 //
-// The pen box draws inset for the same reason it does in the file tree — rows abut, and an outside offset would paint
-// over the neighbour.
+// Keyboard focus paints the hover layer rather than a pen box, so a row that is focused and selected, as with
+// `selectionFollowsFocus`, reads as selected rather than boxed.
 const sidebarMenuButtonVariants = cva(
-  'peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-base outline-none transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-layer-selected [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate',
+  'peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-md p-2 text-left text-base outline-none transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:overlay-hover focus-visible:overlay-hover disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-active:bg-layer-selected [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate',
   {
     variants: {
       variant: {
@@ -463,6 +628,7 @@ export function SidebarMenuButton({
     defaultTagName: 'button',
     props: mergeProps<'button'>(
       {
+        role: 'treeitem',
         className: cn(sidebarMenuButtonVariants({ variant, size }), className),
       },
       props,
@@ -508,7 +674,7 @@ export function SidebarMenuAction({
     props: mergeProps<'button'>(
       {
         className: cn(
-          'absolute top-1 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1 peer-data-[size=lg]/menu-button:top-3.5 peer-data-[size=sm]/menu-button:top-1 hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
+          'absolute top-1 right-1 flex aspect-square w-5 items-center justify-center rounded-md p-0 text-foreground outline-none transition-transform group-data-[collapsible=icon]:hidden peer-data-[size=default]/menu-button:top-1 peer-data-[size=lg]/menu-button:top-3.5 peer-data-[size=sm]/menu-button:top-1 hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-4 [&>svg]:shrink-0',
           showOnHover &&
             'opacity-0 group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 aria-expanded:opacity-100',
           className,
@@ -522,6 +688,86 @@ export function SidebarMenuAction({
       sidebar: 'menu-action',
     },
   });
+}
+
+/**
+ * The row of a menu item that collapses: a `SidebarMenuRowLabel`, then a `SidebarMenuChevron`.
+ */
+export function SidebarMenuRow({
+  isActive = false,
+  className,
+  ...props
+}: ComponentProps<'div'> & {
+  isActive?: boolean;
+}) {
+  return (
+    <div
+      data-slot="sidebar-menu-row"
+      data-sidebar="menu-row"
+      data-active={isActive ? '' : undefined}
+      className={cn(
+        'group/menu-row flex h-8 items-center gap-1 rounded-md pr-1 hover:overlay-hover data-popup-open:overlay-hover has-focus-visible:overlay-hover data-active:bg-layer-selected',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The label of a `SidebarMenuRow`, filling the space before its chevron.
+ */
+export function SidebarMenuRowLabel({
+  className,
+  render,
+  ...props
+}: useRender.ComponentProps<'button'> & ComponentProps<'button'>) {
+  const item = useContext(SidebarMenuItemContext);
+  return useRender({
+    defaultTagName: 'button',
+    props: mergeProps<'button'>(
+      {
+        role: 'treeitem',
+        'aria-owns': item?.sub ? item.id : undefined,
+        className: cn(
+          'flex h-full min-w-0 flex-1 cursor-default items-center gap-2 rounded-md pl-2 text-left outline-none [&>span:last-child]:truncate',
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: 'sidebar-menu-row-label',
+      sidebar: 'menu-row-label',
+    },
+  });
+}
+
+/**
+ * The toggle at the end of a `SidebarMenuRow`, pointing right while collapsed and down while open.
+ */
+export function SidebarMenuChevron({
+  className,
+  ...props
+}: Omit<ComponentProps<typeof CollapsibleTrigger>, 'children'>) {
+  return (
+    <CollapsibleTrigger
+      data-sidebar="menu-chevron"
+      aria-hidden
+      tabIndex={-1}
+      className={cn(
+        'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md text-text-3 outline-none focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring data-panel-open:[&>svg]:rotate-0',
+        className,
+      )}
+      {...props}
+    >
+      <Icon
+        className="size-3.5 -rotate-90 transition-transform duration-125 ease-out-expo motion-reduce:transition-none"
+        name="expand"
+      />
+    </CollapsibleTrigger>
+  );
 }
 
 export function SidebarMenuBadge({ className, ...props }: ComponentProps<'div'>) {
@@ -574,18 +820,28 @@ export function SidebarMenuSkeleton({
   );
 }
 
-export function SidebarMenuSub({ className, ...props }: ComponentProps<'ul'>) {
-  return (
-    <ul
-      data-slot="sidebar-menu-sub"
-      data-sidebar="menu-sub"
-      className={cn(
-        'mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-[1.5px] border-border px-2.5 py-0.5 group-data-[collapsible=icon]:hidden',
-        className,
-      )}
-      {...props}
-    />
-  );
+export function SidebarMenuSub({ className, render, ...props }: useRender.ComponentProps<'ul'> & ComponentProps<'ul'>) {
+  const item = useContext(SidebarMenuItemContext);
+  return useRender({
+    defaultTagName: 'ul',
+    ref: item?.setSub,
+    props: mergeProps<'ul'>(
+      {
+        id: item?.id,
+        role: 'group',
+        className: cn(
+          'ml-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l-[1.5px] border-border py-0.5 pl-2.5 group-data-[collapsible=icon]:hidden',
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: 'sidebar-menu-sub',
+      sidebar: 'menu-sub',
+    },
+  });
 }
 
 export function SidebarMenuSubItem({ className, ...props }: ComponentProps<'li'>) {
@@ -593,6 +849,7 @@ export function SidebarMenuSubItem({ className, ...props }: ComponentProps<'li'>
     <li
       data-slot="sidebar-menu-sub-item"
       data-sidebar="menu-sub-item"
+      role="none"
       className={cn('group/menu-sub-item relative', className)}
       {...props}
     />
@@ -614,8 +871,9 @@ export function SidebarMenuSubButton({
     defaultTagName: 'a',
     props: mergeProps<'a'>(
       {
+        role: 'treeitem',
         className: cn(
-          'flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-foreground outline-none group-data-[collapsible=icon]:hidden hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[size=md]:text-base data-[size=sm]:text-sm data-active:bg-layer-selected [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+          'flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 text-foreground outline-none group-data-[collapsible=icon]:hidden group-hover/menu-sub-item:not-disabled:not-aria-disabled:overlay-hover group-data-popup-open/menu-sub-item:overlay-hover focus-visible:overlay-hover disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-[size=md]:text-base data-[size=sm]:text-sm data-active:bg-layer-selected [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
           className,
         ),
       },
@@ -627,6 +885,97 @@ export function SidebarMenuSubButton({
       sidebar: 'menu-sub-button',
       size,
       active: isActive,
+    },
+  });
+}
+
+/**
+ * A row of a `SidebarMenuSubItem`, holding a `SidebarMenuSubRowLabel` and then its actions.
+ */
+export function SidebarMenuSubRow({
+  size = 'md',
+  className,
+  ...props
+}: ComponentProps<'div'> & {
+  size?: 'sm' | 'md';
+}) {
+  return (
+    <div
+      data-slot="sidebar-menu-sub-row"
+      data-sidebar="menu-sub-row"
+      data-size={size}
+      className={cn(
+        'group/menu-row flex h-7 min-w-0 -translate-x-px items-center gap-1 rounded-md pr-1 text-foreground group-data-[collapsible=icon]:hidden hover:overlay-hover data-popup-open:overlay-hover has-focus-visible:overlay-hover has-[>[data-active]]:bg-layer-selected data-[size=md]:text-base data-[size=sm]:text-sm',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+/**
+ * The label of a `SidebarMenuSubRow`, filling the space before its actions.
+ */
+export function SidebarMenuSubRowLabel({
+  isActive = false,
+  className,
+  render,
+  ...props
+}: useRender.ComponentProps<'a'> &
+  ComponentProps<'a'> & {
+    isActive?: boolean;
+  }) {
+  return useRender({
+    defaultTagName: 'a',
+    props: mergeProps<'a'>(
+      {
+        role: 'treeitem',
+        className: cn(
+          'flex h-full min-w-0 flex-1 cursor-default items-center gap-2 rounded-md pl-2 outline-none [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0',
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: 'sidebar-menu-sub-row-label',
+      sidebar: 'menu-sub-row-label',
+      active: isActive,
+    },
+  });
+}
+
+/**
+ * A button after the label of a `SidebarMenuRow` or `SidebarMenuSubRow`. With `showOnHover`, it shows only while the
+ * row is hovered or selected, or while it is focused or its popup is open.
+ */
+export function SidebarMenuRowAction({
+  className,
+  render,
+  showOnHover = false,
+  ...props
+}: useRender.ComponentProps<'button'> &
+  ComponentProps<'button'> & {
+    showOnHover?: boolean;
+  }) {
+  return useRender({
+    defaultTagName: 'button',
+    props: mergeProps<'button'>(
+      {
+        className: cn(
+          'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md p-0 text-text-3 outline-none group-data-[collapsible=icon]:hidden focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-3 [&>svg]:shrink-0',
+          showOnHover &&
+            'opacity-0 group-hover/menu-row:opacity-100 group-data-active/menu-row:opacity-100 group-has-[>[data-active]]/menu-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100',
+          className,
+        ),
+      },
+      props,
+    ),
+    render,
+    state: {
+      slot: 'sidebar-menu-row-action',
+      sidebar: 'menu-row-action',
     },
   });
 }

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import type { InstalledPlugin, InvalidPlugin } from './plugin.ts';
-import { type EnabledSnapshot, type Lifecycle, PluginResolver } from './plugin-resolver.ts';
+import type { InstalledPlugin, InvalidPlugin } from './plugin';
+import { type EnabledSnapshot, type Lifecycle, PluginResolver } from './plugin-resolver';
 
 // A resolver over the plugins `source` returns, for a host that provides nothing.
 class TestResolver extends PluginResolver<InstalledPlugin, object, Lifecycle<object>, EnabledSnapshot> {

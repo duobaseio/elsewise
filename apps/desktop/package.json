@@ -16,7 +16,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "build": "pnpm --filter @elsewise/web build && tsc -p tsconfig.json --noEmit && node scripts/bundle.mjs && node scripts/copy-renderer.mjs",
+    "build": "pnpm --filter @elsewise/web build && pnpm --filter @elsewise/daemon build && tsc -p tsconfig.json --noEmit && node scripts/bundle.mjs && node scripts/copy-daemon.mjs && node scripts/copy-renderer.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run --project node",
     "test:electron": "vitest run --project electron",

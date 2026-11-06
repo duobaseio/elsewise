@@ -9,6 +9,9 @@ npmRebuild: false
 files:
   - out/**/*
   - package.json
+# Native modules cannot load from inside the asar.
+asarUnpack:
+  - out/daemon/*.node
 # Re-apply Electron fuses at package time (see build/afterPack.cjs).
 afterPack: build/afterPack.cjs
 mac:

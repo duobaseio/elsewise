@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { peer } from './build.ts';
+import { peer } from './build';
 
 describe('peer', () => {
   test('matches module', () => {

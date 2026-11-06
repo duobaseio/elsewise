@@ -31,7 +31,7 @@ export function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        'group/toast pointer-events-auto absolute right-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full origin-bottom rounded-xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 will-change-transform outline-none select-none focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+        'group/toast pointer-events-auto absolute right-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full origin-bottom rounded-xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 will-change-transform outline-none select-none focus-visible:outline-solid focus-visible:outline-1 focus-visible:outline-offset-2 focus-visible:outline-ring',
         '[--toast-ink:var(--popover-foreground)] [--toast-ink-2:var(--muted-foreground)] [--toast-wash:transparent]',
         'data-[type=success]:[--toast-ink:var(--success)] data-[type=success]:[--toast-ink-2:var(--success)] data-[type=success]:[--toast-wash:var(--success-wash)] data-[type=success]:ring-success-line',
         'data-[type=warning]:[--toast-ink:var(--warning)] data-[type=warning]:[--toast-ink-2:var(--warning)] data-[type=warning]:[--toast-wash:var(--warning-wash)] data-[type=warning]:ring-warning-line',

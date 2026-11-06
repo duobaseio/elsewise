@@ -218,7 +218,7 @@ export function KeymapActions({
           <TooltipContent side="bottom">Keymap actions</TooltipContent>
         </Tooltip>
 
-        <DropdownMenuContent align="end" finalFocus={() => field.current ?? true}>
+        <DropdownMenuContent align="end" finalFocus={() => !confirming && (field.current ?? true)}>
           <DropdownMenuItem disabled={user === undefined} onClick={onRename}>
             Rename…
           </DropdownMenuItem>
@@ -242,8 +242,8 @@ export function KeymapActions({
       <Dialog onOpenChange={setConfirming} open={confirming}>
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Delete keymap?</DialogTitle>
-            <DialogDescription>Permanently deletes “{deleting?.name}”.</DialogDescription>
+            <DialogTitle>Delete “{deleting?.name}” keymap?</DialogTitle>
+            <DialogDescription>This cannot be undone.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>

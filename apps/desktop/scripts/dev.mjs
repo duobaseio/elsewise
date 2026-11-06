@@ -1,11 +1,11 @@
 // Dev runner for the Electron shell (no electron-vite — plain glue):
-//   1. bundle main/preload with esbuild
+//   1. bundle main/preload with esbuild, and the daemon that main starts into out/daemon
 //   2. wait for the web app's Vite dev server to be reachable
 //   3. launch Electron pointed at it
-//   4. rebuild + restart Electron when main/preload sources change
+//   4. rebuild + restart Electron when main/preload or daemon sources change
 //
 // The renderer's HMR is handled entirely by Vite in apps/web — nothing to do here.
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { watch } from 'node:fs';
 import electronPath from 'electron';
 
@@ -17,6 +17,17 @@ function bundle() {
   return new Promise((resolve, reject) => {
     const p = spawn(process.execPath, ['scripts/bundle.mjs'], { stdio: 'inherit' });
     p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('bundle failed'))));
+  });
+}
+
+async function bundleDaemon() {
+  await new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, ['scripts/build.mjs'], { cwd: '../daemon', stdio: 'inherit' });
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('daemon bundle failed'))));
+  });
+  await new Promise((resolve, reject) => {
+    const p = spawn(process.execPath, ['scripts/copy-daemon.mjs'], { stdio: 'inherit' });
+    p.on('exit', (code) => (code === 0 ? resolve() : reject(new Error('daemon copy failed'))));
   });
 }
 
@@ -47,10 +58,24 @@ function enqueue(step) {
 
 let electron;
 async function startElectron() {
+  // On macOS, a restart replacing an Electron that is not the frontmost app stays in the background.
+  let background = false;
+  if (electron && process.platform === 'darwin') {
+    try {
+      const front = execFileSync('lsappinfo', ['front'], { encoding: 'utf8' }).trim();
+      const pid = execFileSync('lsappinfo', ['info', '-only', 'pid', front], { encoding: 'utf8' }).match(/=(\d+)/)?.[1];
+      background = Number(pid) !== electron.pid;
+    } catch {}
+  }
+
   await stopElectron();
   electron = spawn(electronPath, ['.'], {
     stdio: 'inherit',
-    env: { ...process.env, ELECTRON_RENDERER_URL: RENDERER_URL },
+    env: {
+      ...process.env,
+      ELECTRON_RENDERER_URL: RENDERER_URL,
+      ...(background && { ELSEWISE_DEV_BACKGROUND: '1' }),
+    },
   });
   // Quit the dev runner when the app window is closed by the user.
   electron.on('exit', () => process.exit(0));
@@ -98,21 +123,27 @@ setInterval(() => {
   }
 }, 1000).unref();
 
-await bundle();
+await Promise.all([bundle(), bundleDaemon()]);
 console.log(`[dev] waiting for renderer at ${RENDERER_URL} ...`);
 await waitForUrl(RENDERER_URL);
 await enqueue(startElectron);
 
-// Rebuild + restart Electron on main/preload changes, and on changes to the bridge and core bundled into them
-// (debounced).
+// Rebuild + restart Electron on main/preload changes, on changes to the bridge and core bundled into them, and on
+// changes to the daemon and the transport bundled into it (debounced).
 let timer;
-for (const folder of ['src', '../../packages/bridge/src', '../../packages/core/src']) {
+for (const folder of [
+  'src',
+  '../../packages/bridge/src',
+  '../../packages/core/src',
+  '../daemon/src',
+  '../../packages/transport/ts/src',
+]) {
   watch(folder, { recursive: true }, () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
       void enqueue(async () => {
         try {
-          await bundle();
+          await Promise.all([bundle(), bundleDaemon()]);
           await startElectron();
         } catch (err) {
           console.error('[dev]', err.message);

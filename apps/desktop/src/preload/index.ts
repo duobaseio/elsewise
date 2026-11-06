@@ -1,8 +1,12 @@
-import type { PluginsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
+import type { DaemonBridge, PluginsBridge, ProjectsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
 import { contextBridge, ipcRenderer } from 'electron';
 
 // The app's version from package.json, defined by bundle.mjs.
 declare const ELSEWISE_VERSION: string;
+
+const daemon: DaemonBridge = {
+  connection: () => ipcRenderer.invoke('daemon:connection'),
+};
 
 const plugins: PluginsBridge = {
   load: (id?: string) => ipcRenderer.invoke('plugins:load', id),
@@ -25,6 +29,11 @@ const settings: SettingsBridge = {
   },
 };
 
+const projects: ProjectsBridge = {
+  load: () => ipcRenderer.invoke('projects:load'),
+  save: (layout) => ipcRenderer.invoke('projects:save', layout),
+};
+
 let close: (() => Promise<void>) | undefined;
 ipcRenderer.on('window:close', async () => {
   try {
@@ -40,6 +49,9 @@ const window: WindowBridge = {
   cut: () => ipcRenderer.send('window:cut'),
   copy: () => ipcRenderer.send('window:copy'),
   paste: () => ipcRenderer.send('window:paste'),
+  openFolder: (absolutePath) => ipcRenderer.invoke('window:open-folder', absolutePath),
+  pickFolder: () => ipcRenderer.invoke('window:pick-folder'),
+  pickFile: (filters) => ipcRenderer.invoke('window:pick-file', filters),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
   onClose: (handler) => {
@@ -49,7 +61,9 @@ const window: WindowBridge = {
 
 contextBridge.exposeInMainWorld('bridge', {
   version: ELSEWISE_VERSION,
+  daemon,
   plugins,
   settings,
+  projects,
   window,
 });

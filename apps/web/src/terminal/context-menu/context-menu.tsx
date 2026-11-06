@@ -1,7 +1,6 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import type { ReactNode } from 'react';
-import { CommandContextMenu } from '@/command/context-menu/context-menu';
+import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu/context-menu';
 import { useTerminalManager } from '@/terminal/terminal-manager';
 
 /**
@@ -12,7 +11,13 @@ import { useTerminalManager } from '@/terminal/terminal-manager';
  * * on macOS, Option, with `macOptionClickForcesSelection` set.
  * * elsewhere, Shift.
  */
-export function TerminalContextMenu({ terminal, children }: { terminal: XTerm | null; children: ReactNode }) {
+export function TerminalContextMenu({
+  terminal,
+  render,
+}: {
+  terminal: XTerm | null;
+  render: CommandContextMenuProps['render'];
+}) {
   const menu = useTerminalManager((terminals) => terminals.contextMenu);
   return (
     <CommandContextMenu
@@ -28,9 +33,7 @@ export function TerminalContextMenu({ terminal, children }: { terminal: XTerm | 
           : 'shiftKey' in event && event.shiftKey === true;
       }}
       onClosed={() => terminal?.focus()}
-      className="h-full"
-    >
-      {children}
-    </CommandContextMenu>
+      render={render}
+    />
   );
 }

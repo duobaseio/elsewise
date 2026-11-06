@@ -1,8 +1,10 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
 import type { Terminal } from '@xterm/xterm';
-import type { Key, Keys } from './keymap.ts';
-import type { Application } from './plugin.ts';
+import type { Key, Keys } from './keymap';
+import type { Application } from './plugin';
+import type { Project } from './projects/projects';
+import type { Workspace } from './projects/workspaces';
 
 /**
  * The ids of the built-in groups.
@@ -17,6 +19,8 @@ export const DEFAULT_COMMAND_GROUPS = {
     diff: 'elsewise.editor.diff',
   },
   terminal: { id: 'elsewise.terminal' },
+  project: { id: 'elsewise.project' },
+  workspace: { id: 'elsewise.workspace' },
 } as const;
 
 /**
@@ -26,6 +30,37 @@ export const DEFAULT_COMMANDS = {
   application: {
     settings: {
       open: 'elsewise.application.settings.open',
+    },
+  },
+  project: {
+    workspace: {
+      new: 'elsewise.project.workspace.new',
+      import: 'elsewise.project.workspace.import',
+    },
+    clipboard: {
+      copyPath: 'elsewise.project.clipboard.copyPath',
+    },
+    edit: {
+      rename: 'elsewise.project.edit.rename',
+      delete: 'elsewise.project.edit.delete',
+    },
+    open: {
+      fileManager: 'elsewise.project.open.fileManager',
+    },
+  },
+  workspace: {
+    clipboard: {
+      copyPath: 'elsewise.workspace.clipboard.copyPath',
+    },
+    edit: {
+      rename: 'elsewise.workspace.edit.rename',
+      delete: 'elsewise.workspace.edit.delete',
+    },
+    status: {
+      markRead: 'elsewise.workspace.status.markRead',
+    },
+    open: {
+      fileManager: 'elsewise.workspace.open.fileManager',
     },
   },
   editor: {
@@ -137,6 +172,37 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       open: [{ key: 'Ctrl-Alt-s', mac: 'Mod-,' }],
     },
   },
+  project: {
+    workspace: {
+      new: [],
+      import: [],
+    },
+    clipboard: {
+      copyPath: ['Mod-Shift-c'],
+    },
+    edit: {
+      rename: ['Shift-F6'],
+      delete: ['Delete', 'Backspace'],
+    },
+    open: {
+      fileManager: [],
+    },
+  },
+  workspace: {
+    clipboard: {
+      copyPath: ['Mod-Shift-c'],
+    },
+    edit: {
+      rename: ['Shift-F6'],
+      delete: ['Delete', 'Backspace'],
+    },
+    status: {
+      markRead: [],
+    },
+    open: {
+      fileManager: [],
+    },
+  },
   editor: {
     clipboard: {
       cut: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
@@ -239,6 +305,11 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
 type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<T[K]> };
 
 /**
+ * An action that a user can invoke.
+ */
+export type Command = ApplicationCommand | ProjectCommand | WorkspaceCommand | EditorCommand | TerminalCommand;
+
+/**
  * The commands.
  */
 export interface Commands {
@@ -265,17 +336,18 @@ export interface Commands {
    *
    * Returns a disposable that removes the added `commands`.
    */
-  add(commands: readonly (ApplicationCommand | EditorCommand | TerminalCommand)[]): Disposable;
+  add(commands: readonly Command[]): Disposable;
 
   /**
-   * Runs the command with `id` against an optional `target`, an editor for an editor command or a terminal for a
-   * terminal command. Without `target`, it runs against the active editor or terminal.
+   * Runs the command with `id` against an optional `target` of the command's scope, e.g. an editor for an editor
+   * command. Without `target`, it runs against the active workspace, editor or terminal, and a project command does
+   * nothing.
    *
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
    *
    * Returns whether the command ran and applied.
    */
-  run(id: string, target?: EditorView | Terminal): boolean;
+  run(id: string, target?: Project | Workspace | EditorView | Terminal): boolean;
 }
 
 /**
@@ -319,13 +391,13 @@ export interface CommandGroup {
 }
 
 /**
- * An action that a user can invoke.
+ * The fields that every command has.
  */
-export interface Command {
+export interface BaseCommand {
   /**
    * The surface the command runs in.
    */
-  readonly scope: 'application' | 'editor' | 'terminal';
+  readonly scope: 'application' | 'project' | 'workspace' | 'editor' | 'terminal';
 
   /**
    * The command's id, namespaced by the plugin's, e.g. `io.example.rename`.
@@ -353,7 +425,7 @@ export interface Command {
 /**
  * A command that runs regardless of what is focused, e.g. opening the settings.
  */
-export interface ApplicationCommand extends Command {
+export interface ApplicationCommand extends BaseCommand {
   readonly scope: 'application';
 
   /**
@@ -383,11 +455,79 @@ export interface ApplicationCommand extends Command {
 }
 
 /**
+ * A command that runs on a project, e.g. from its context menu.
+ *
+ * Its keys fire while the project's sidebar row has focus.
+ */
+export interface ProjectCommand extends BaseCommand {
+  readonly scope: 'project';
+
+  /**
+   * Returns whether the command can run. Defaults to true.
+   *
+   * A disabled command is greyed out in menus, and pressing its keys does not run it.
+   */
+  enabled?(application: Application, project: Project): boolean;
+
+  /**
+   * Returns whether the command is shown in menus. Defaults to true.
+   */
+  shown?(application: Application, project: Project): boolean;
+
+  /**
+   * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
+   * a command that is neither.
+   */
+  active?(application: Application, project: Project): boolean;
+
+  /**
+   * Runs the command on `project`.
+   *
+   * Returns whether the command applied. If it did not, its keys fall through to the next command.
+   */
+  run(application: Application, project: Project): boolean;
+}
+
+/**
+ * A command that runs on a workspace, e.g. from its context menu.
+ *
+ * Its keys fire while the workspace's sidebar row has focus.
+ */
+export interface WorkspaceCommand extends BaseCommand {
+  readonly scope: 'workspace';
+
+  /**
+   * Returns whether the command can run. Defaults to true.
+   *
+   * A disabled command is greyed out in menus, and pressing its keys does not run it.
+   */
+  enabled?(application: Application, workspace: Workspace): boolean;
+
+  /**
+   * Returns whether the command is shown in menus. Defaults to true.
+   */
+  shown?(application: Application, workspace: Workspace): boolean;
+
+  /**
+   * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
+   * a command that is neither.
+   */
+  active?(application: Application, workspace: Workspace): boolean;
+
+  /**
+   * Runs the command on `workspace`.
+   *
+   * Returns whether the command applied. If it did not, its keys fall through to the next command.
+   */
+  run(application: Application, workspace: Workspace): boolean;
+}
+
+/**
  * A command that runs in an active editor.
  *
  * Its keys fire while an editor has focus.
  */
-export interface EditorCommand extends Command {
+export interface EditorCommand extends BaseCommand {
   readonly scope: 'editor';
 
   /**
@@ -421,7 +561,7 @@ export interface EditorCommand extends Command {
  *
  * Its keys fire while a terminal has focus, instead of being sent to the shell.
  */
-export interface TerminalCommand extends Command {
+export interface TerminalCommand extends BaseCommand {
   readonly scope: 'terminal';
 
   /**

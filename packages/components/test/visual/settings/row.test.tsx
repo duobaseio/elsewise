@@ -6,7 +6,7 @@ import { Input } from '../../../src/components/input';
 import { HighlightProvider, Row, useHighlight } from '../../../src/components/settings';
 import { Switch } from '../../../src/components/switch';
 
-import { Sheet, THEMES } from '../../sheet.tsx';
+import { Sheet, THEMES } from '../../sheet';
 
 test.each(THEMES)('rows (%s)', async (theme) => {
   await render(

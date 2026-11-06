@@ -15,6 +15,7 @@
       "**/vitest.config.ts",
       "**/vite/**/*",
       "!**/src/routeTree.gen.ts",
+      "!**/src/gen",
       "!**/src/settings/previews",
       "!**/src/styles.css"
     ]
@@ -32,7 +33,18 @@
       "preset": "recommended",
       "style": {
         "useBlockStatements": "error",
-        "useConsistentMemberAccessibility": { "level": "error", "options": { "accessibility": "noPublic" } }
+        "useConsistentMemberAccessibility": { "level": "error", "options": { "accessibility": "noPublic" } },
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["./**/*.{ts,tsx,js,jsx}", "../**/*.{ts,tsx,js,jsx}"],
+                "message": "Import without the extension."
+              }
+            ]
+          }
+        }
       }
     }
   },

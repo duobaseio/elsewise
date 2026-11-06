@@ -1,6 +1,15 @@
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type Keys, type TerminalCommand } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  type EditorCommand,
+  type Keys,
+  type Project,
+  type ProjectCommand,
+  type TerminalCommand,
+  type Workspace,
+  type WorkspaceCommand,
+} from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { CommandManager } from '@/command/command-manager';
@@ -11,6 +20,16 @@ import { builtInApplication, EMPTY_KEYMAP } from '../../test/commands';
 const APPLICATION = DEFAULT_COMMAND_GROUPS.application.id;
 const EDITOR = DEFAULT_COMMAND_GROUPS.editor.id;
 const TERMINAL = DEFAULT_COMMAND_GROUPS.terminal.id;
+
+const PROJECT: Project = { id: { daemon: 'local', project: 'p' }, name: 'p', state: 'ok', absolutePath: '/p' };
+
+const WORKSPACE: Workspace = {
+  id: { daemon: 'local', project: 'p', workspace: 'w' },
+  name: 'w',
+  state: 'ok',
+  main: false,
+  absolutePath: '/p/w',
+};
 
 // Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
 function commands(
@@ -159,7 +178,7 @@ describe('addGroups', () => {
     const manager = commands();
     manager.addGroups([{ id: 'io.example', label: 'Example' }]);
 
-    expect([...manager.groups.keys()].slice(-2)).toEqual([TERMINAL, 'io.example']);
+    expect([...manager.groups.keys()].slice(-2)).toEqual([DEFAULT_COMMAND_GROUPS.workspace.id, 'io.example']);
     expect(manager.groups.get('io.example')?.label).toBe('Example');
   });
 
@@ -276,6 +295,30 @@ describe('run', () => {
     expect(manager.run('editor', view('a'))).toBe(false);
   });
 
+  test('runs project command against project only', () => {
+    const manager = commands();
+    const run = vi.fn<ProjectCommand['run']>(() => true);
+    manager.add([{ id: 'c', label: 'C', scope: 'project', group: APPLICATION, run }]);
+
+    expect(manager.run('c')).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+
+    expect(manager.run('c', PROJECT)).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(PROJECT);
+  });
+
+  test('runs workspace command against workspace', () => {
+    const manager = commands();
+    const run = vi.fn<WorkspaceCommand['run']>(() => true);
+    manager.add([{ id: 'c', label: 'C', scope: 'workspace', group: APPLICATION, run }]);
+
+    expect(manager.run('c')).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+
+    expect(manager.run('c', WORKSPACE)).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(WORKSPACE);
+  });
+
   test('runs editor command against view, else active editor', () => {
     const editor = new EditorManager();
     const manager = commands(editor);
@@ -318,14 +361,19 @@ describe('run', () => {
     const manager = commands();
     const run = vi.fn(() => true);
     manager.add([
+      { id: 'project', label: 'Project', scope: 'project', group: APPLICATION, run },
+      { id: 'workspace', label: 'Workspace', scope: 'workspace', group: APPLICATION, run },
       { id: 'editor', label: 'Editor', scope: 'editor', group: EDITOR, run },
       { id: 'terminal', label: 'Terminal', scope: 'terminal', group: TERMINAL, run },
     ]);
 
+    expect(manager.run('project', WORKSPACE)).toBe(false);
+    expect(manager.run('workspace', PROJECT)).toBe(false);
+    expect(manager.run('editor', PROJECT)).toBe(false);
     expect(manager.run('editor', terminal('a'))).toBe(false);
     expect(manager.run('terminal', view('a'))).toBe(false);
     expect(run).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledTimes(2);
+    expect(warn).toHaveBeenCalledTimes(5);
   });
 
   test('runs application command regardless of view', () => {

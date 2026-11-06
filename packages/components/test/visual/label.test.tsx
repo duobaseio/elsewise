@@ -7,7 +7,7 @@ import { Checkbox } from '../../src/components/checkbox';
 import { Input } from '../../src/components/input';
 import { Label } from '../../src/components/label';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // Three selectors, none covering the others. `peer-disabled:` is real CSS
 // `:disabled`, so it reaches the native input but not the Base UI checkbox.

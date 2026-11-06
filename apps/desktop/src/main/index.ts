@@ -1,15 +1,26 @@
+import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import type { Brightness } from '@elsewise/bridge';
+import type { Brightness, FileFilter } from '@elsewise/bridge';
 import { dataLocalDir } from '@elsewise/core/node';
-import { app, BrowserWindow, nativeTheme, protocol, shell } from 'electron';
+import { app, BrowserWindow, dialog, nativeTheme, protocol, shell } from 'electron';
+import { handleDaemon } from './daemon';
 import { installMenu } from './menu';
 import { handlePlugins } from './plugins';
+import { handleProjects } from './projects';
 import { handleAppScheme } from './protocol';
 import { handleSettings, watchUserThemesAndKeymaps } from './settings';
 import { closeAfterRenderer, loadWindow, saveWindow } from './window';
 
 app.setName('Elsewise');
 app.setPath('userData', path.join(dataLocalDir(), 'chromium'));
+
+// A dev restart of an app that was not frontmost stays in the background. macOS activates an app as it launches, and a
+// window cannot be shown behind another app's, so it launches as an accessory app, which is not activated, and shows
+// its window once activated.
+const devBackground = process.platform === 'darwin' && !!process.env.ELSEWISE_DEV_BACKGROUND;
+if (devBackground) {
+  app.setActivationPolicy('accessory');
+}
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -26,17 +37,19 @@ protocol.registerSchemesAsPrivileged([
 
 app.whenReady().then(() => {
   handleAppScheme();
+  handleDaemon();
   handlePlugins();
   handleSettings();
+  handleProjects();
 
   installMenu();
   watchUserThemesAndKeymaps();
 
-  createWindow();
+  createWindow(devBackground);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow(false);
     }
   });
 });
@@ -53,7 +66,7 @@ app.on('window-all-closed', () => {
   }
 });
 
-function createWindow() {
+function createWindow(background: boolean) {
   const { maximized, ...rectangle } = loadWindow();
   const main = new BrowserWindow({
     ...rectangle,
@@ -104,20 +117,43 @@ function createWindow() {
   main.webContents.ipc.on('window:cut', (event) => event.sender.cut());
   main.webContents.ipc.on('window:copy', (event) => event.sender.copy());
   main.webContents.ipc.on('window:paste', (event) => event.sender.paste());
+  main.webContents.ipc.handle('window:open-folder', async (_event, absolutePath: string) => {
+    // Opening a file would run it.
+    if (!(await stat(absolutePath)).isDirectory()) {
+      throw new Error(`${absolutePath} is not a folder.`);
+    }
+
+    const error = await shell.openPath(absolutePath);
+    if (error !== '') {
+      throw new Error(error);
+    }
+  });
+  main.webContents.ipc.handle('window:pick-folder', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(main, { properties: ['openDirectory'] });
+    return canceled ? null : (filePaths[0] ?? null);
+  });
+  main.webContents.ipc.handle('window:pick-file', async (_event, filters?: FileFilter[]) => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(main, { properties: ['openFile'], filters });
+    return canceled ? null : (filePaths[0] ?? null);
+  });
   main.webContents.ipc.on(
     'window:brightness',
     (_event, brightness: Brightness) => (nativeTheme.themeSource = brightness),
   );
   main.webContents.ipc.on('window:background', (_event, color: string) => main.setBackgroundColor(color));
   main.webContents.ipc.once('window:background', () => {
-    if (dev) {
-      main.showInactive();
-    } else {
+    const show = () => {
       main.show();
-    }
+      if (maximized) {
+        main.maximize();
+      }
+    };
 
-    if (maximized) {
-      main.maximize();
+    if (background) {
+      app.setActivationPolicy('regular');
+      app.once('did-become-active', show);
+    } else {
+      show();
     }
   });
 }

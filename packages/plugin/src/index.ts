@@ -1,2 +1,2 @@
-export { DaemonManifestPart, FrontendManifestPart, Manifest, PluginId } from './manifest.ts';
-export type { Disposable, PluginInfo } from './plugin.ts';
+export { DaemonManifestPart, FrontendManifestPart, Manifest, PluginId } from './manifest';
+export type { Disposable, PluginInfo } from './plugin';

@@ -1,3 +1,4 @@
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { ProjectService } from '../../src/gen/elsewise/daemon/project/v1/project_service_pb';
 import type { ProjectOptions } from '../../src/project/service';
@@ -10,6 +11,10 @@ export class ProjectHarness extends Harness<typeof ProjectService> {
   static async start(options?: Partial<ProjectOptions>): Promise<ProjectHarness> {
     const harness = await ProjectHarness.connect(ProjectService, { project: options });
     await isolateGit(harness.nativeRoot);
+    await fs.appendFile(
+      path.join(harness.nativeRoot, 'gitconfig'),
+      '[user]\n\tname = Test\n\temail = test@example.com\n',
+    );
     return harness;
   }
 

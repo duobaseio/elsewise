@@ -1,6 +1,6 @@
 import { validRange } from 'semver';
 import { describe, expect, test } from 'vitest';
-import { Manifest } from './manifest.ts';
+import { Manifest } from './manifest';
 
 const MINIMAL = { id: 'io.example', name: 'Example', version: '1.0.0', elsewise: '^1.0.0' };
 

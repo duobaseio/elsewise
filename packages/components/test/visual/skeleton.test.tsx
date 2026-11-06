@@ -5,7 +5,7 @@ import { render } from 'vitest-browser-react';
 
 import { Skeleton } from '../../src/components/skeleton';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // Grounds, not states — a skeleton has no states. What decides whether it works is what it sits on, because
 // `bg-muted` resolves to `--surface-2`: the same token as one of the surfaces it is meant to be placed on.

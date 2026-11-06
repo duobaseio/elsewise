@@ -5,6 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { userThemesQuery } from '@/appearance/themes';
 import { userKeymapsQuery } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { projectLayoutQuery } from '@/projects/layout';
 import { type FileRouteTypes, routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
@@ -34,13 +35,14 @@ window.bridge?.settings?.onChange((changed) => {
   }
 });
 
-// Plugins, settings and the user's themes and keymaps are awaited here so the first render has them and never shows a
-// fallback.
+// Plugins, settings, the user's themes and keymaps, and the project layout are awaited here so the first render has
+// them and never shows a fallback.
 await Promise.all([
   plugins.loadAll(),
   queryClient.query(settingsQuery),
   queryClient.query(userThemesQuery),
   queryClient.query(userKeymapsQuery),
+  queryClient.query(projectLayoutQuery),
 ]);
 
 const router = createRouter({ routeTree });

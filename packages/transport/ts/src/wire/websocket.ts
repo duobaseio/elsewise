@@ -46,7 +46,9 @@ export class WebSocketWire extends SocketWire {
       this.#heard = false;
       this.send(PING);
     }, interval);
-    timer.unref?.(); // Never holds a Node process open.
+    // Cast is necessary because this is used in node & web runtimes which return different types.
+    // Never holds a Node process open.
+    (timer as { unref?: () => void }).unref?.();
     this.#heartbeat = timer;
   }
 
@@ -62,7 +64,9 @@ export class WebSocketWire extends SocketWire {
       this.#drainPoll = undefined;
       this.drained();
     }, DRAIN_POLL_MS);
-    timer.unref?.(); // Never holds a Node process open.
+    // Cast is necessary because this is used in node & web runtimes which return different types.
+    // Never holds a Node process open.
+    (timer as { unref?: () => void }).unref?.();
     this.#drainPoll = timer;
   }
 

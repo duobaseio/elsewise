@@ -1,17 +1,27 @@
 import { EditorView } from '@codemirror/view';
-import type { ReactNode, RefObject } from 'react';
-import { CommandContextMenu } from '@/command/context-menu/context-menu';
+import type { RefObject } from 'react';
+import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu/context-menu';
 import { useEditorManager } from '@/editor/editor-manager';
 
 /**
  * The editor's context menu.
  */
-export function EditorContextMenu({ view, children }: { view: RefObject<EditorView | null>; children: ReactNode }) {
+export function EditorContextMenu({
+  view,
+  render,
+}: {
+  view: RefObject<EditorView | null>;
+  render: CommandContextMenuProps['render'];
+}) {
   const menu = useEditorManager((editor) => editor.contextMenu);
   return (
-    <CommandContextMenu menu={menu} target={view} onClosed={() => view.current?.focus()} className="h-full select-auto">
-      {children}
-    </CommandContextMenu>
+    <CommandContextMenu
+      menu={menu}
+      target={view}
+      onClosed={() => view.current?.focus()}
+      render={render}
+      className="select-auto"
+    />
   );
 }
 

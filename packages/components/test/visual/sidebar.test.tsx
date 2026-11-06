@@ -1,9 +1,10 @@
-import { DotsThreeIcon, GitBranchIcon, PlusIcon } from '@phosphor-icons/react';
+import { DotsThreeIcon, GitBranchIcon, PlusIcon, XIcon } from '@phosphor-icons/react';
 import type { ComponentProps } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
+import { Collapsible, CollapsibleContent } from '../../src/components/collapsible';
 import {
   Sidebar,
   SidebarContent,
@@ -16,16 +17,22 @@ import {
   SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
+  SidebarMenuChevron,
   SidebarMenuItem,
+  SidebarMenuRow,
+  SidebarMenuRowAction,
+  SidebarMenuRowLabel,
   SidebarMenuSkeleton,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarMenuSubRow,
+  SidebarMenuSubRowLabel,
   SidebarProvider,
   SidebarRail,
 } from '../../src/components/sidebar';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type RowSpec = {
   key: string;
@@ -58,6 +65,19 @@ const ROWS: readonly RowSpec[] = [
   { key: 'disabled', label: 'disabled', disabled: true },
 ];
 
+const COLLAPSIBLES = [
+  { key: 'open', label: 'open', open: true },
+  { key: 'closed', label: 'closed', open: false },
+  { key: 'row-hover', label: 'hover', open: false, forced: ['hover'] },
+  { key: 'row-selected', label: 'selected', open: false, active: true },
+] as const;
+
+const SUB_ROWS = [
+  { key: 'sub-row-rest', label: 'row rest' },
+  { key: 'sub-row-hover', label: 'row hover', forced: ['hover'] },
+  { key: 'sub-row-selected', label: 'row selected', active: true },
+] as const;
+
 // Ragged on purpose — the widths used to be rolled per mount.
 const SKELETONS = ['82%', '54%', '68%'] as const;
 
@@ -65,10 +85,12 @@ test.each(THEMES)('sidebar (%s)', async (theme) => {
   await render(<SidebarSheet theme={theme} />);
 
   await forcePseudoStates(
-    ROWS.filter((row) => row.forced).map((row) => ({
-      selector: `[data-visual-state="${row.key}"]`,
-      pseudoClasses: row.forced ?? [],
-    })),
+    [...ROWS, ...COLLAPSIBLES, ...SUB_ROWS, { key: 'row-action-hover', forced: ['hover'] as const }]
+      .filter((row) => 'forced' in row && row.forced)
+      .map((row) => ({
+        selector: `[data-visual-state="${row.key}"]`,
+        pseudoClasses: ('forced' in row && row.forced) || [],
+      })),
   );
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-${theme}`);
@@ -127,8 +149,64 @@ function SidebarSheet({ theme }: { theme: 'light' | 'dark' }) {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton size="sm">sub sm</SidebarMenuSubButton>
                       </SidebarMenuSubItem>
+                      <SidebarMenuSubItem data-popup-open="">
+                        <SidebarMenuSubButton>sub popup open</SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                      {SUB_ROWS.map((row) => (
+                        <SidebarMenuSubItem key={row.key}>
+                          <SidebarMenuSubRow data-visual-state={row.key} size="sm">
+                            <SidebarMenuSubRowLabel isActive={'active' in row && row.active}>
+                              <GitBranchIcon />
+                              <span>{row.label}</span>
+                            </SidebarMenuSubRowLabel>
+                            <SidebarMenuRowAction aria-label="More">
+                              <DotsThreeIcon />
+                            </SidebarMenuRowAction>
+                            <SidebarMenuRowAction aria-label="Close" showOnHover>
+                              <XIcon />
+                            </SidebarMenuRowAction>
+                          </SidebarMenuSubRow>
+                        </SidebarMenuSubItem>
+                      ))}
                     </SidebarMenuSub>
                   </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Collapsible</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {COLLAPSIBLES.map((row) => (
+                    <Collapsible defaultOpen={row.open} key={row.key} render={<SidebarMenuItem />}>
+                      <SidebarMenuRow data-visual-state={row.key} isActive={'active' in row && row.active}>
+                        <SidebarMenuRowLabel>
+                          <GitBranchIcon className="size-4 shrink-0" />
+                          <span>{row.label}</span>
+                        </SidebarMenuRowLabel>
+                        <SidebarMenuChevron />
+                      </SidebarMenuRow>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton>sub rest</SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                  <Collapsible render={<SidebarMenuItem />}>
+                    <SidebarMenuRow data-visual-state="row-action-hover">
+                      <SidebarMenuRowLabel>
+                        <GitBranchIcon className="size-4 shrink-0" />
+                        <span>action hover</span>
+                      </SidebarMenuRowLabel>
+                      <SidebarMenuRowAction aria-label="More" showOnHover>
+                        <DotsThreeIcon />
+                      </SidebarMenuRowAction>
+                      <SidebarMenuChevron />
+                    </SidebarMenuRow>
+                  </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

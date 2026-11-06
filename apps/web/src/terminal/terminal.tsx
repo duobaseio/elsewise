@@ -226,9 +226,10 @@ export function Terminal({
     <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
   ) : (
     <div className="relative h-full">
-      <TerminalContextMenu terminal={terminal?.xterm ?? null}>
-        <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
-      </TerminalContextMenu>
+      <TerminalContextMenu
+        render={<div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />}
+        terminal={terminal?.xterm ?? null}
+      />
       <TerminalSearch terminal={terminal?.xterm ?? null} />
     </div>
   );

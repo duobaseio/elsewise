@@ -27,6 +27,9 @@ service ProjectService {
   // Deletes a project.
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
 
+  // Returns an unused name for a new workspace.
+  rpc GetNewWorkspaceName(GetNewWorkspaceNameRequest) returns (GetNewWorkspaceNameResponse);
+
   // Creates a workspace.
   rpc CreateWorkspace(CreateWorkspaceRequest) returns (CreateWorkspaceResponse);
 
@@ -51,7 +54,8 @@ message CreateProjectRequest {
 
   // A repository the daemon creates.
   //
-  // The folder is initialised as an empty git repository.
+  // The folder is initialised as a git repository with an empty initial commit, which needs a git identity on the
+  // daemon's machine. Without one, it fails with FAILED_PRECONDITION.
   message New {
     // The display name.
     string name = 1;
@@ -164,6 +168,16 @@ message Project {
 
   // The folder is on disk but is no longer a git repository.
   message Broken {}
+}
+
+message GetNewWorkspaceNameRequest {
+  // The project the workspace would belong to.
+  string project_id = 1;
+}
+
+message GetNewWorkspaceNameResponse {
+  // The generated name.
+  string name = 1;
 }
 
 message CreateWorkspaceRequest {

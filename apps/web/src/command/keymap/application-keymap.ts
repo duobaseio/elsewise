@@ -1,12 +1,5 @@
 import { PLATFORM, type Platform } from '@elsewise/components/lib/platform';
-import type {
-  ActiveKeymap,
-  ApplicationCommand,
-  EditorCommand,
-  Key,
-  Keymap,
-  TerminalCommand,
-} from '@elsewise/frontend-plugin';
+import type { ActiveKeymap, Command, Key, Keymap } from '@elsewise/frontend-plugin';
 import { normalizeKey } from '@/command/keymap/keys';
 
 /**
@@ -15,12 +8,13 @@ import { normalizeKey } from '@/command/keymap/keys';
 export class ApplicationKeymap implements ActiveKeymap {
   private currentName = '';
   private currentCommands: ReadonlyMap<string, readonly Key[]> = new Map();
-  private currentKeys: Readonly<Record<'application' | 'editor' | 'terminal', ReadonlyMap<string, readonly string[]>>> =
-    {
-      application: new Map(),
-      editor: new Map(),
-      terminal: new Map(),
-    };
+  private currentKeys: Readonly<Record<Command['scope'], ReadonlyMap<string, readonly string[]>>> = {
+    application: new Map(),
+    project: new Map(),
+    workspace: new Map(),
+    editor: new Map(),
+    terminal: new Map(),
+  };
 
   constructor(private readonly platform: Platform = PLATFORM) {}
 
@@ -39,17 +33,19 @@ export class ApplicationKeymap implements ActiveKeymap {
    * The keys as CodeMirror normalizes them for this platform, and their associated commands from the last added to the
    * first.
    */
-  get keys(): Readonly<Record<'application' | 'editor' | 'terminal', ReadonlyMap<string, readonly string[]>>> {
+  get keys(): Readonly<Record<Command['scope'], ReadonlyMap<string, readonly string[]>>> {
     return this.currentKeys;
   }
 
   /**
    * Updates the keys of `commands` under `keymap`.
    */
-  update(keymap: Keymap, commands: Iterable<ApplicationCommand | EditorCommand | TerminalCommand>) {
+  update(keymap: Keymap, commands: Iterable<Command>) {
     const written = new Map<string, readonly string[]>();
     const keys = {
       application: new Map<string, string[]>(),
+      project: new Map<string, string[]>(),
+      workspace: new Map<string, string[]>(),
       editor: new Map<string, string[]>(),
       terminal: new Map<string, string[]>(),
     };

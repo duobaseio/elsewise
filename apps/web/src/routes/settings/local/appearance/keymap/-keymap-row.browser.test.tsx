@@ -218,8 +218,8 @@ describe('KeymapActions', () => {
 
     await userEvent.click(page.getByRole('button', { name: 'Keymap actions' }));
     await userEvent.click(page.getByRole('menuitem', { name: 'Delete' }));
-    const dialog = page.getByRole('dialog', { name: 'Delete keymap?' });
-    await expect.element(dialog).toHaveAccessibleDescription('Permanently deletes “Mine”.');
+    const dialog = page.getByRole('dialog', { name: 'Delete “Mine” keymap?' });
+    await expect.element(dialog).toHaveAccessibleDescription('This cannot be undone.');
     await expect.element(dialog).toBeVisible();
     expect(deleteUserKeymap).not.toHaveBeenCalled();
     await userEvent.click(dialog.getByRole('button', { name: 'Delete' }));

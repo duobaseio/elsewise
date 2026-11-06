@@ -1,6 +1,6 @@
 import { LSPClient } from '@codemirror/lsp-client';
 import { describe, expect, test } from 'vitest';
-import { workspaceConfiguration } from './language.ts';
+import { workspaceConfiguration } from './language';
 
 const SETTINGS = { python: { analysis: { typeCheckingMode: 'strict' } } };
 const CLIENT = new LSPClient();

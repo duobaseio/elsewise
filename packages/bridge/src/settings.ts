@@ -1,6 +1,6 @@
 import type { Keymap, Theme } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
-import { PluginId } from './plugins.js';
+import { PluginId } from './plugins';
 
 export type Settings = z.infer<typeof Settings>;
 export type Brightness = z.infer<typeof Brightness>;

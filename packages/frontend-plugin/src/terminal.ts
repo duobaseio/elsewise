@@ -1,6 +1,6 @@
 import type { Disposable } from '@elsewise/plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import type { ContextMenuGroup } from './context-menu.ts';
+import type { ContextMenuGroup } from './context-menu';
 
 /**
  * The terminal.

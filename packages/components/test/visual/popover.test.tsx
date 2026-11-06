@@ -12,7 +12,7 @@ import {
   PopoverTrigger,
 } from '../../src/components/popover';
 import { cn } from '../../src/lib/utils';
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // Contents and alignments, not states. A popover carries no hover, active or disabled rules of its own.
 const PARTS = [

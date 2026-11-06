@@ -1,14 +1,18 @@
-import type { PluginsBridge } from './plugins.js';
-import type { SettingsBridge } from './settings.js';
-import type { WindowBridge } from './window.js';
+import type { DaemonBridge } from './daemon';
+import type { PluginsBridge } from './plugins';
+import type { ProjectsBridge } from './projects';
+import type { SettingsBridge } from './settings';
+import type { WindowBridge } from './window';
 
+export { type DaemonBridge, DaemonConnection } from './daemon';
 export {
   InstalledFrontendPlugin,
   InvalidPlugin,
   PluginEntry,
   PluginId,
   type PluginsBridge,
-} from './plugins.js';
+} from './plugins';
+export { DEFAULT_PROJECT_LAYOUT, ProjectLayout, type ProjectsBridge } from './projects';
 export {
   Brightness,
   BundledKeymap,
@@ -28,8 +32,8 @@ export {
   Settings,
   type SettingsBridge,
   ThemeId,
-} from './settings.js';
-export type { WindowBridge } from './window.js';
+} from './settings';
+export { FileFilter, type WindowBridge } from './window';
 
 declare global {
   interface Window {
@@ -42,6 +46,10 @@ declare global {
        */
       version?: string;
       /**
+       * See {@link DaemonBridge}.
+       */
+      daemon?: DaemonBridge;
+      /**
        * See {@link PluginsBridge}.
        */
       plugins?: PluginsBridge;
@@ -49,6 +57,10 @@ declare global {
        * See {@link SettingsBridge}.
        */
       settings?: SettingsBridge;
+      /**
+       * See {@link ProjectsBridge}.
+       */
+      projects?: ProjectsBridge;
       /**
        * See {@link WindowBridge}.
        */

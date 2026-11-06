@@ -11,6 +11,6 @@ describe('settingsQuery', () => {
   test('returns defaults without bridge', async () => {
     vi.stubGlobal('window', {});
 
-    await expect(new QueryClient().fetchQuery(settingsQuery)).resolves.toBe(DEFAULT_SETTINGS);
+    await expect(new QueryClient().query(settingsQuery)).resolves.toBe(DEFAULT_SETTINGS);
   });
 });

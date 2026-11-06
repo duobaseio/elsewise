@@ -1,4 +1,12 @@
-import type { Brightness } from './settings.js';
+import * as z from 'zod';
+import type { Brightness } from './settings';
+
+export type FileFilter = z.infer<typeof FileFilter>;
+
+/**
+ * A kind of file a picker offers, e.g. `{ name: 'Themes', extensions: ['json'] }`. Extensions go without the dot.
+ */
+export const FileFilter = z.object({ name: z.string(), extensions: z.array(z.string()) });
 
 /**
  * The embedder's native window.
@@ -18,6 +26,24 @@ export interface WindowBridge {
    * Pastes into the focused page.
    */
   paste(): void;
+
+  /**
+   * Opens the folder at `absolutePath` in the platform's file manager.
+   *
+   * Throws if `absolutePath` is not a directory or cannot be opened, e.g. without permission.
+   */
+  openFolder(absolutePath: string): Promise<void>;
+
+  /**
+   * Prompts the user to pick a folder, and returns its absolute path, or null if they cancel.
+   */
+  pickFolder(): Promise<string | null>;
+
+  /**
+   * Prompts the user to pick a file, of a kind in `filters` if given, and returns its absolute path, or null if they
+   * cancel.
+   */
+  pickFile(filters?: readonly FileFilter[]): Promise<string | null>;
 
   /**
    * Sets the brightness of the window's native parts, e.g. its buttons, menus and dialogs.

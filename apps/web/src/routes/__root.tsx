@@ -1,4 +1,5 @@
 import { Toaster } from '@elsewise/components/components/toast';
+import { useQueryClient } from '@tanstack/react-query';
 import { createRootRoute, Outlet, useRouter } from '@tanstack/react-router';
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { AppearanceManager } from '@/appearance/appearance-manager';
@@ -10,6 +11,7 @@ import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { usePluginStore } from '@/plugins/plugin-store';
+import { ProjectManager } from '@/projects/project-manager';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
@@ -43,13 +45,15 @@ function RootComponent() {
   const theme = useActiveTheme();
   const { keymap } = useSelectedKeymap();
   const router = useRouter();
+  const client = useQueryClient();
 
   const [{ application, languageServers }] = useState(() => {
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
-      new EditorManager(),
       router,
       new SettingsPanelManager(Object.values(DEFAULT_PANELS)),
+      new ProjectManager(client, router),
+      new EditorManager(),
       new TerminalManager(),
       keymap,
     );

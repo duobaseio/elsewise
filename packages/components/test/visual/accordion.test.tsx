@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-react';
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../../src/components/accordion';
 
-import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 type ItemSpec = {
   key: string;

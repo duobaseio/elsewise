@@ -1,13 +1,80 @@
 'use client';
 
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
-import type { ComponentProps } from 'react';
+import { type ComponentProps, createContext, useContext, useRef, useState } from 'react';
 import { cn } from '../lib/utils';
 import { Button } from './button';
 import { Icon } from './icon';
 
-export function Dialog({ ...props }: DialogPrimitive.Root.Props) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+const InstantContext = createContext(false);
+
+/**
+ * Opens, closes and replaces a `Dialog` given it.
+ */
+export class DialogHandle<Payload> extends DialogPrimitive.Handle<Payload> {
+  #replacing = false;
+
+  /**
+   * Whether the dialog is closing or opening in place of another.
+   */
+  get replacing(): boolean {
+    return this.#replacing;
+  }
+
+  /**
+   * Closes this dialog and opens `to` in its place, neither animating.
+   */
+  replaceWith<T>(to: DialogHandle<T>, payload: T) {
+    this.#replacing = true;
+    to.#replacing = true;
+    try {
+      this.close();
+      to.openWithPayload(payload);
+    } finally {
+      this.#replacing = false;
+      to.#replacing = false;
+    }
+  }
+}
+
+/**
+ * Creates a handle that opens and closes a `Dialog` given it, e.g. from a shortcut.
+ */
+export function createDialogHandle<Payload>(): DialogHandle<Payload> {
+  return new DialogHandle<Payload>();
+}
+
+export function Dialog<T>({
+  handle,
+  actionsRef,
+  onOpenChange,
+  ...props
+}: Omit<DialogPrimitive.Root.Props<T>, 'handle'> & { handle?: DialogHandle<T> }) {
+  const [instant, setInstant] = useState(false);
+  const ownActions = useRef<DialogPrimitive.Root.Actions>(null);
+  const actions = actionsRef ?? ownActions;
+
+  return (
+    <InstantContext value={instant}>
+      <DialogPrimitive.Root
+        data-slot="dialog"
+        handle={handle}
+        actionsRef={actions}
+        onOpenChange={(open, details) => {
+          onOpenChange?.(open, details);
+          if (details.isCanceled) {
+            return;
+          }
+
+          setInstant(handle?.replacing ?? false);
+          if (!open && handle?.replacing) {
+            actions.current?.unmount();
+          }
+        }}
+        {...props}
+      />
+    </InstantContext>
+  );
 }
 
 export function DialogTrigger({ ...props }: DialogPrimitive.Trigger.Props) {
@@ -23,14 +90,16 @@ export function DialogClose({ ...props }: DialogPrimitive.Close.Props) {
 }
 
 export function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) {
+  const instant = useContext(InstantContext);
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
+      data-instant={instant ? '' : undefined}
       className={cn(
         // `--scrim` is a named color per theme, not ink at an alpha: it is
         // opaque enough that a backdrop blur behind it reads as nothing, so
         // the stock `backdrop-blur-xs` came off with the stock `black/10`.
-        'fixed inset-0 isolate z-50 bg-scrim duration-100 ease-linear data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75',
+        'fixed inset-0 isolate z-50 bg-scrim duration-100 ease-linear data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75 data-instant:animate-none',
         className,
       )}
       {...props}
@@ -51,13 +120,26 @@ export function DialogContent({
   Pick<DialogPrimitive.Portal.Props, 'container'> & {
     showCloseButton?: boolean;
   }) {
+  const popup = useRef<HTMLDivElement>(null);
+  const instant = useContext(InstantContext);
   return (
     <DialogPortal container={container}>
       <DialogOverlay />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        data-instant={instant ? '' : undefined}
+        initialFocus={() => {
+          const target = [
+            ...(popup.current?.querySelectorAll<HTMLElement>(
+              'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"]):not(:disabled)',
+            ) ?? []),
+          ].find((element) => element.checkVisibility());
+          target?.focus({ focusVisible: true });
+          return target ?? true;
+        }}
+        ref={popup}
         className={cn(
-          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-5 text-base text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 ease-out-expo outline-none motion-reduce:[--tw-enter-scale:1]! data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75',
+          'fixed top-1/2 left-1/2 z-50 grid w-full max-w-sm -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-5 text-base text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 ease-out-expo outline-none motion-reduce:[--tw-enter-scale:1]! data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-75 data-instant:animate-none',
           // The close button is out of flow, so nothing stops a long title from
           // running under it. The reservation belongs here rather than on the
           // header, which has no way to know whether the button is showing.
@@ -85,17 +167,45 @@ export function DialogHeader({ className, ...props }: ComponentProps<'div'>) {
   return <div data-slot="dialog-header" className={cn('flex flex-col gap-2', className)} {...props} />;
 }
 
+/**
+ * The bar of buttons at the bottom of a dialog, where ← and → move between the buttons.
+ */
 export function DialogFooter({
   className,
   showCloseButton = false,
+  onKeyDown,
   children,
   ...props
 }: ComponentProps<'div'> & {
   showCloseButton?: boolean;
 }) {
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: the keys move the focus between the buttons inside.
     <div
       data-slot="dialog-footer"
+      onKeyDown={(event) => {
+        onKeyDown?.(event);
+        const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+        if (
+          step === undefined ||
+          event.defaultPrevented ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey ||
+          event.shiftKey
+        ) {
+          return;
+        }
+
+        const buttons = [...event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled)')];
+        const index = event.target instanceof HTMLElement ? buttons.indexOf(event.target) : -1;
+        if (index === -1) {
+          return;
+        }
+
+        event.preventDefault();
+        buttons[index + step]?.focus();
+      }}
       className={cn(
         // The negative margins pull the bar out to the popup's own edges, which
         // is why it needs the matching `rounded-b-xl` to stay inside the corner.

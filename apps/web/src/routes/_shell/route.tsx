@@ -1,12 +1,14 @@
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Kbd } from '@elsewise/components/components/kbd';
+import { SidebarContent } from '@elsewise/components/components/sidebar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { createFileRoute, Outlet } from '@tanstack/react-router';
 import { type ISplitviewPanelProps, Orientation, SplitviewReact, type SplitviewReadyEvent } from 'dockview-react';
 import { useCommandManager } from '@/command/command-manager';
 import { Header } from '@/components/header';
 import { OPEN_SETTINGS } from '@/settings/settings';
+import { Projects } from './-projects/projects';
 
 import 'dockview-react/dist/styles/dockview.css';
 import './dockview.css';
@@ -43,10 +45,12 @@ function SidebarPanel(_props: ISplitviewPanelProps) {
   const commands = useCommandManager();
   const key = useCommandManager((commands) => commands.keymap.commands.get(OPEN_SETTINGS.id)?.[0]);
 
-  // TODO: Add actual sidebar content.
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full select-none flex-col bg-surface">
       <Header trafficLights />
+      <SidebarContent>
+        <Projects />
+      </SidebarContent>
       <Tooltip>
         <TooltipTrigger
           render={

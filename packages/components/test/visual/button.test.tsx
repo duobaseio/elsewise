@@ -7,7 +7,7 @@ import { render } from 'vitest-browser-react';
 
 import { Button } from '../../src/components/button';
 
-import { type ForcedPseudoClass, forcePseudoState, forcePseudoStates, Sheet, THEMES } from '../sheet.tsx';
+import { type ForcedPseudoClass, forcePseudoState, forcePseudoStates, Sheet, THEMES } from '../sheet';
 
 const BUTTON_VARIANTS = ['default', 'outline', 'secondary', 'ghost', 'destructive', 'link'] as const;
 
@@ -28,6 +28,7 @@ test.each(THEMES)('button attribute states (%s)', async (theme) => {
       props: { 'aria-expanded': true },
     },
     { key: 'invalid', label: 'aria-invalid', props: { 'aria-invalid': true } },
+    { key: 'pending', label: 'pending', props: { pending: true } },
   ];
 
   await render(

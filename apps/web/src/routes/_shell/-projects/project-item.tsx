@@ -1,0 +1,207 @@
+import { pointerIntersection } from '@dnd-kit/collision';
+import { useSortable } from '@dnd-kit/react/sortable';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@elsewise/components/components/collapsible';
+import { Icon } from '@elsewise/components/components/icon';
+import { LetterIcon } from '@elsewise/components/components/letter-icon';
+import {
+  SidebarMenuChevron,
+  SidebarMenuItem,
+  SidebarMenuRow,
+  SidebarMenuRowLabel,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from '@elsewise/components/components/sidebar';
+import { toast } from '@elsewise/components/components/toast';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
+import {
+  DEFAULT_COMMANDS,
+  DEFAULT_PROJECT_CONTEXT_MENU,
+  type Project as PluginProject,
+} from '@elsewise/frontend-plugin';
+import { useQuery } from '@tanstack/react-query';
+import { type ReactNode, useId, useMemo, useRef } from 'react';
+import { useApplicationManager } from '@/application-context';
+import { CommandContextMenu } from '@/command/context-menu/context-menu';
+import { runSidebarKeys } from '@/command/keymap/keymap';
+import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { PluginBoundary } from '@/plugins/plugin-boundary';
+import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
+import { mapProject, useProjectContextMenu, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
+import { useRenaming } from '@/projects/sidebar-store';
+import { workspacesQuery } from '@/projects/workspace-manager';
+import { NameInput } from './name-input';
+import { WorkspaceItem } from './workspace-item';
+
+const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a git repository' } as const;
+
+const GRAPHEMES = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+/**
+ * A project, and its workspaces under it while expanded, moved among the projects by dragging its row. A missing or
+ * broken project shows neither its workspaces nor its chevron.
+ */
+export function ProjectItem({ daemonId, project, index }: { daemonId: string; project: Project; index: number }) {
+  const layout = useProjectLayout(daemonId);
+  const { setExpanded } = useUpdateProjectLayout(daemonId);
+  const row = useRef<HTMLDivElement>(null);
+  const newRow = useRef<HTMLLIElement>(null);
+  const items = useProjectSidebarItems();
+  const menu = useProjectContextMenu();
+  const { commands, projects, sidebar } = useApplicationManager();
+
+  const workspaces = useQuery(workspacesQuery(daemonId, project.id));
+  const pluginProject = useMemo(() => mapProject(daemonId, project), [daemonId, project]);
+  const renaming = useRenaming(pluginProject.id);
+  const stateId = useId();
+  const { state } = pluginProject;
+
+  // Only the row is a target. With the whole project, one dragged past a taller one swaps back and forth.
+  const { ref } = useSortable({
+    id: project.id,
+    index,
+    type: 'project',
+    accept: 'project',
+    handle: row,
+    target: row,
+    collisionDetector: pointerIntersection,
+    disabled: renaming,
+  });
+
+  const available = state !== 'missing' && state !== 'broken';
+
+  return (
+    <Collapsible
+      onOpenChange={(open) => setExpanded(project.id, open)}
+      open={available && layout.expanded(project.id)}
+      ref={ref}
+      render={<SidebarMenuItem />}
+    >
+      {/* TODO: Expose the row to plugin CSS, e.g. as [data-elsewise-part="project"] with data-expanded. */}
+      <CommandContextMenu
+        menu={menu}
+        onClosed={() => row.current?.querySelector<HTMLElement>('[data-sidebar="menu-row-label"]')?.focus()}
+        opens={() => !renaming}
+        render={<SidebarMenuRow ref={row} />}
+        target={{ current: pluginProject }}
+      >
+        {renaming ? (
+          <SidebarMenuRowLabel render={<div />}>
+            <ProjectItemIcon project={pluginProject} stateId={stateId} />
+            <NameInput
+              label="Project name"
+              name={project.name}
+              onCancel={() => {
+                sidebar.renaming = null;
+              }}
+              onRename={(name) => {
+                sidebar.renaming = null;
+                projects
+                  .rename(pluginProject.id, name)
+                  .catch((error: Error) =>
+                    toast.add({ type: 'error', title: 'Renaming project failed', description: error.message }),
+                  );
+              }}
+            />
+          </SidebarMenuRowLabel>
+        ) : (
+          <SidebarMenuRowLabel
+            aria-describedby={available ? undefined : stateId}
+            onKeyDown={(event) => runSidebarKeys(commands, pluginProject, event.nativeEvent)}
+            render={available ? <CollapsibleTrigger /> : undefined}
+          >
+            <ProjectItemIcon project={pluginProject} stateId={stateId} />
+            <span className={available ? undefined : 'text-text-3'}>{project.name}</span>
+          </SidebarMenuRowLabel>
+        )}
+        {items.toReversed().map(({ id, component: Item }) => (
+          <PluginBoundary key={id} name={`Project sidebar item ${id}`}>
+            <Item project={pluginProject} />
+          </PluginBoundary>
+        ))}
+        {/* An unavailable project keeps the chevron's space, so its items line up with the others'. */}
+        {available ? <SidebarMenuChevron aria-hidden /> : <span className="size-5 shrink-0" />}
+      </CommandContextMenu>
+      {available && (
+        <CollapsibleContent>
+          <SidebarMenuSub>
+            {layout.workspaces(project.id, workspaces.data ?? []).map((workspace, index) => (
+              <WorkspaceItem
+                daemonId={daemonId}
+                index={index}
+                key={workspace.id}
+                projectId={project.id}
+                workspace={workspace}
+              />
+            ))}
+            <CommandContextMenu
+              menu={menu.filter((group) => group.id === DEFAULT_PROJECT_CONTEXT_MENU.workspace.id)}
+              onClosed={() => newRow.current?.querySelector<HTMLElement>('button')?.focus()}
+              render={<SidebarMenuSubItem ref={newRow} />}
+              target={{ current: pluginProject }}
+            >
+              <SidebarMenuSubButton
+                aria-label={`New workspace in ${project.name}`}
+                className="w-full cursor-default text-text-2 [&>svg]:size-4 [&>svg]:p-[2.5px]"
+                onClick={() => commands.run(DEFAULT_COMMANDS.project.workspace.new, pluginProject)}
+                render={<button type="button" />}
+                size="sm"
+              >
+                <Icon name="add" />
+                <span>New workspace</span>
+              </SidebarMenuSubButton>
+            </CommandContextMenu>
+          </SidebarMenuSub>
+        </CollapsibleContent>
+      )}
+    </Collapsible>
+  );
+}
+
+function ProjectItemIcon({ project, stateId }: { project: PluginProject; stateId: string }) {
+  const icons = useProjectIcons();
+  const { state } = project;
+
+  let icon: ReactNode = <LetterIcon letters={letterform(project.name)} tint={null} />;
+  for (const { id, component: PluginIcon } of icons.toReversed()) {
+    icon = (
+      <PluginBoundary fallback={icon} key={id} name={`Project icon ${id}`}>
+        <PluginIcon fallback={icon} project={project} />
+      </PluginBoundary>
+    );
+  }
+
+  if (state === 'missing' || state === 'broken') {
+    icon = (
+      <Tooltip>
+        <TooltipTrigger render={<span className="flex" />}>
+          {/* Hidden from assistive technology, as the label refers to it for its description. */}
+          <Icon
+            aria-hidden
+            aria-label={UNAVAILABLE[state]}
+            className="size-4 text-text-3"
+            id={stateId}
+            name={state}
+            role="img"
+          />
+        </TooltipTrigger>
+        <TooltipContent>{UNAVAILABLE[state]}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return <span className="flex size-4 shrink-0 overflow-hidden">{icon}</span>;
+}
+
+function letterform(name: string): string {
+  return name
+    .split(/[\s\-_.]+|(?<=\p{Ll})(?=\p{Lu})/u)
+    .flatMap(
+      (word) =>
+        [...GRAPHEMES.segment(word)]
+          .find(({ segment }) => /[\p{L}\p{N}\p{So}]/u.test(segment))
+          ?.segment.toUpperCase() ?? [],
+    )
+    .slice(0, 2)
+    .join('');
+}

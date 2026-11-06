@@ -314,7 +314,7 @@ test('the focus ring is keyboard-only', async () => {
   await forcePseudoStates([{ selector: '[data-item-path="README.md"]', pseudoClasses: ['focus', 'focus-visible'] }]);
   const focused = getComputedStyle(target, '::before');
   expect(focused.outlineStyle).not.toBe('none');
-  expect(focused.outlineWidth).toBe('2px');
+  expect(focused.outlineWidth).toBe('1px');
 });
 
 test('F2 opens an inline rename input', async () => {

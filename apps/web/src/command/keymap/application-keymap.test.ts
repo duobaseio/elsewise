@@ -1,11 +1,5 @@
 import type { Platform } from '@elsewise/components/lib/platform';
-import {
-  type ApplicationCommand,
-  DEFAULT_COMMAND_GROUPS,
-  type EditorCommand,
-  Keymap,
-  type Keys,
-} from '@elsewise/frontend-plugin';
+import { type Command, DEFAULT_COMMAND_GROUPS, type EditorCommand, Keymap, type Keys } from '@elsewise/frontend-plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
 import { EMPTY_KEYMAP } from '../../../test/commands';
@@ -24,7 +18,7 @@ function editor(keys: Record<string, Keys>): EditorCommand[] {
 
 // Returns a keymap on `platform` updated with `commands` under `keymap`.
 function updated(
-  commands: readonly (ApplicationCommand | EditorCommand)[],
+  commands: readonly Command[],
   keymap: Keymap = EMPTY_KEYMAP,
   platform: Platform = 'linux',
 ): ApplicationKeymap {
@@ -178,9 +172,27 @@ describe('keys', () => {
         defaultKeys: ['Mod-,'],
         run: () => true,
       },
+      {
+        id: 'project',
+        label: 'Project',
+        scope: 'project',
+        group: DEFAULT_COMMAND_GROUPS.application.id,
+        defaultKeys: ['Mod-r'],
+        run: () => true,
+      },
+      {
+        id: 'workspace',
+        label: 'Workspace',
+        scope: 'workspace',
+        group: DEFAULT_COMMAND_GROUPS.application.id,
+        defaultKeys: ['Mod-r'],
+        run: () => true,
+      },
     ]);
 
     expect([...keymap.keys.editor]).toEqual([['Ctrl-r', ['rename']]]);
     expect([...keymap.keys.application]).toEqual([['Ctrl-,', ['settings']]]);
+    expect([...keymap.keys.project]).toEqual([['Ctrl-r', ['project']]]);
+    expect([...keymap.keys.workspace]).toEqual([['Ctrl-r', ['workspace']]]);
   });
 });

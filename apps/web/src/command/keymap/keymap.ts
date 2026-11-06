@@ -2,11 +2,11 @@ import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { BundledKeymap, DEFAULT_SETTINGS, type KeymapId } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { Keymap } from '@elsewise/frontend-plugin';
+import { Keymap, type Project, type Workspace } from '@elsewise/frontend-plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import type { ITerminalAddon } from '@xterm/xterm';
 import { useMemo, useReducer, useRef } from 'react';
-import type { CommandManager } from '@/command/command-manager';
+import { type CommandManager, isWorkspace } from '@/command/command-manager';
 import elsewise from '@/command/keymap/bundled/elsewise.json';
 import { eventKeys } from '@/command/keymap/keys';
 import { usePluginStore } from '@/plugins/plugin-store';
@@ -314,6 +314,23 @@ export function installApplicationKeys(window: Window, commands: CommandManager)
 
   window.addEventListener('keydown', listener);
   return () => window.removeEventListener('keydown', listener);
+}
+
+/**
+ * Runs the commands of `target`'s scope bound to the key of `event`, pressed in `target`'s sidebar row.
+ */
+export function runSidebarKeys(commands: CommandManager, target: Project | Workspace, event: KeyboardEvent): void {
+  if (event.defaultPrevented || event.isComposing) {
+    return;
+  }
+
+  const keys = isWorkspace(target) ? commands.keymap.keys.workspace : commands.keymap.keys.project;
+  for (const key of eventKeys(event, PLATFORM)) {
+    if (keys.get(key)?.some((id) => commands.run(id, target))) {
+      event.preventDefault();
+      return;
+    }
+  }
 }
 
 /**

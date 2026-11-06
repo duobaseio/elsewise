@@ -12,11 +12,18 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { Application, ContextMenuGroup } from '@elsewise/frontend-plugin';
+import type { Application, ContextMenuGroup, Project, Workspace } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
-import { Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
+import { type ComponentProps, Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
-import { type CommandManager, isTerminal, useCommandManager } from '@/command/command-manager';
+import {
+  type CommandManager,
+  isEditor,
+  isProject,
+  isTerminal,
+  isWorkspace,
+  useCommandManager,
+} from '@/command/command-manager';
 
 export interface CommandContextMenuProps {
   /**
@@ -24,19 +31,24 @@ export interface CommandContextMenuProps {
    */
   menu: readonly ContextMenuGroup[];
   /**
-   * The editor or terminal that the menu's commands run against.
+   * The project, workspace, editor or terminal that the menu's commands run against.
    */
-  target?: RefObject<EditorView | XTerm | null>;
+  target?: RefObject<Project | Workspace | EditorView | XTerm | null>;
   /**
    * Returns whether the menu opens for `event`, e.g. a right-click or a touch's long-press. Defaults to true.
    */
   opens?: (event: Event) => boolean;
   /**
-   * Called once the menu has closed, before the clicked item runs, e.g. to give the focus back.
+   * Called whenever the menu closes, before the clicked item runs, e.g. to give the focus back. The menu then leaves
+   * the focus to it.
    */
   onClosed?: () => void;
+  /**
+   * The element that opens the menu, rendered in place of a wrapping `<div>`.
+   */
+  render?: ComponentProps<typeof ContextMenuTrigger>['render'];
   className?: string;
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 interface Group {
@@ -63,12 +75,19 @@ type Entry =
       readonly groups: readonly Group[];
     };
 
-export function CommandContextMenu({ menu, target, opens, onClosed, className, children }: CommandContextMenuProps) {
+export function CommandContextMenu({
+  menu,
+  target,
+  opens,
+  onClosed,
+  render,
+  className,
+  children,
+}: CommandContextMenuProps) {
   const [groups, setGroups] = useState<readonly Group[]>([]);
   const application = useApplicationManager();
   const commands = useCommandManager();
   const clicked = useRef<(() => void) | null>(null);
-  const refocused = useRef(false);
 
   // Opens only when `opens` allows it and there is something to show.
   function onOpenChange(open: boolean, details: { event: Event; cancel(): void }): void {
@@ -81,7 +100,6 @@ export function CommandContextMenu({ menu, target, opens, onClosed, className, c
       return;
     }
 
-    refocused.current = false;
     const resolved = resolve(menu, application, commands, target?.current ?? null, []);
     if (resolved.length === 0) {
       details.cancel();
@@ -97,22 +115,21 @@ export function CommandContextMenu({ menu, target, opens, onClosed, className, c
   function onOpenChangeComplete(open: boolean): void {
     const run = clicked.current;
     clicked.current = null;
-    if (open || run === null) {
+    if (open) {
       return;
     }
 
-    if (onClosed !== undefined) {
-      onClosed();
-      refocused.current = true;
-    }
-    run();
+    onClosed?.();
+    run?.();
   }
 
   return (
     <ContextMenu onOpenChange={onOpenChange} onOpenChangeComplete={onOpenChangeComplete}>
-      <ContextMenuTrigger className={className}>{children}</ContextMenuTrigger>
+      <ContextMenuTrigger className={className} render={render}>
+        {children}
+      </ContextMenuTrigger>
       {/* Base UI refocuses on the trigger after running a command, stealing focus from whatever the command focused. */}
-      <ContextMenuContent finalFocus={() => !refocused.current}>
+      <ContextMenuContent finalFocus={onClosed === undefined}>
         <Groups groups={groups} onClick={(run) => (clicked.current = run)} />
       </ContextMenuContent>
     </ContextMenu>
@@ -125,7 +142,7 @@ function resolve(
   menu: readonly ContextMenuGroup[],
   application: Application,
   commands: CommandManager,
-  target: EditorView | XTerm | null,
+  target: Project | Workspace | EditorView | XTerm | null,
   path: readonly string[],
 ): Group[] {
   const groups: Group[] = [];
@@ -177,7 +194,15 @@ function resolve(
           shown = command.shown?.(application);
           enabled = command.enabled?.(application);
           active = command.active?.(application);
-        } else if (command.scope === 'editor' && target !== null && !isTerminal(target)) {
+        } else if (command.scope === 'project' && target !== null && isProject(target)) {
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
+        } else if (command.scope === 'workspace' && target !== null && isWorkspace(target)) {
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
+        } else if (command.scope === 'editor' && target !== null && isEditor(target)) {
           shown = command.shown?.(application, target);
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);

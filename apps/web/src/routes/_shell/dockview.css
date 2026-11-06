@@ -117,7 +117,7 @@
  * focus box fires on plain :focus, so a mere click outlines the tab. Ours is :focus-visible; theirs is suppressed.
  */
 .dockview-theme-elsewise .dv-tab:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 1px solid var(--ring);
   outline-offset: -1px;
 }
 

@@ -61,6 +61,6 @@ Generated code is never committed — regenerate after any change here.
 
 One generator reads this folder:
 
-| Output                    | Generator       | Lands in                                                             | Run by         |
-|---------------------------|-----------------|----------------------------------------------------------------------|----------------|
-| TS messages + descriptors | `protoc-gen-es` | daemon → `apps/daemon/src/gen/`, transport → `transport/ts/src/gen/` | `buf generate` |
+| Output                    | Generator       | Lands in                                                                                         | Run by         |
+|---------------------------|-----------------|--------------------------------------------------------------------------------------------------|----------------|
+| TS messages + descriptors | `protoc-gen-es` | daemon → `apps/daemon/src/gen/`, web → `apps/web/src/gen/`, transport → `transport/ts/src/gen/`  | `buf generate` |

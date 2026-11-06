@@ -1,8 +1,8 @@
 import type { ComponentProps } from 'react';
 
-import type { WorkTreeDock } from '@/routes/_shell/$project/$worktree';
+import type { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace';
 
-type DockPanels = NonNullable<ComponentProps<typeof WorkTreeDock>['panels']>;
+type DockPanels = NonNullable<ComponentProps<typeof WorkspaceDock>['panels']>;
 
 // Minimal stand-ins for the dock's panels. Tests exercise the dock's chrome and policies, not panel content — stubs
 // keep them (and the screenshot baselines) stable while the real panels evolve.

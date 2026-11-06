@@ -32,14 +32,6 @@ async function getWorkspaces(projectId: string): Promise<Workspace[]> {
   return (await harness.client.getWorkspaces({ projectId })).workspaces;
 }
 
-/** Gives the daemon an identity and a commit for the repository so a worktree can be added to it. */
-async function commitInto(native: string): Promise<void> {
-  const repo = harness.open(native);
-  await repo.run('config', 'user.name', 'Test');
-  await repo.run('config', 'user.email', 'test@example.com');
-  await repo.commit('README.md', '');
-}
-
 async function exists(native: string): Promise<boolean> {
   return fs.stat(native).then(
     () => true,
@@ -64,6 +56,49 @@ describe('CreateProject', () => {
     ]);
   });
 
+  test('commits an empty initial commit', async () => {
+    const { project } = await harness.client.createProject({
+      source: { case: 'new', value: { name: 'Fresh', absolutePath: '' } },
+    });
+    const repo = harness.open(path.join(harness.code.workspaces, 'fresh', 'main'));
+    expect(await repo.run('log', '--format=%s')).toBe('Initial commit');
+    expect(await repo.run('ls-tree', '-r', 'HEAD')).toBe('');
+    expect(project?.state.case).toBe('ok');
+  });
+
+  test('creates a workspace in a new project', async () => {
+    const { project } = await harness.client.createProject({
+      source: { case: 'new', value: { name: 'Fresh', absolutePath: '' } },
+    });
+    const { workspace } = await harness.client.createWorkspace({
+      projectId: project?.id ?? '',
+      source: { case: 'new', value: { name: 'Feature' } },
+    });
+    expect(workspace?.absolutePath).toBe(toProtocolPath(path.join(harness.code.workspaces, 'fresh', 'feature')));
+  });
+
+  test('refuses without git identity and removes the folder', async () => {
+    await fs.writeFile(path.join(harness.nativeRoot, 'gitconfig'), '[init]\n\tdefaultBranch = main\n');
+    await expect(
+      harness.client.createProject({ source: { case: 'new', value: { name: 'Fresh', absolutePath: '' } } }),
+    ).rejects.toMatchObject({
+      code: Code.FAILED_PRECONDITION,
+      message: 'git needs a user name and email on this machine',
+    });
+    expect(await exists(path.join(harness.code.workspaces, 'fresh'))).toBe(false);
+  });
+
+  test('keeps a chosen folder empty after failure', async () => {
+    await fs.writeFile(path.join(harness.nativeRoot, 'gitconfig'), '[init]\n\tdefaultBranch = main\n');
+    await fs.mkdir(harness.nativeAt('empty'));
+    await expect(
+      harness.client.createProject({
+        source: { case: 'new', value: { name: 'Empty', absolutePath: `${harness.protocolRoot}/empty` } },
+      }),
+    ).rejects.toMatchObject({ code: Code.FAILED_PRECONDITION });
+    expect(await fs.readdir(harness.nativeAt('empty'))).toEqual([]);
+  });
+
   test('suffixes the folder of a project whose name is taken', async () => {
     const create = (name: string) =>
       harness.client.createProject({ source: { case: 'new', value: { name, absolutePath: '' } } });
@@ -71,7 +106,6 @@ describe('CreateProject', () => {
     const { project } = await create('api');
     const native = path.join(harness.code.workspaces, 'api-2', 'main');
     expect(project?.absolutePath).toBe(toProtocolPath(native));
-    await commitInto(native);
     const { workspace } = await harness.client.createWorkspace({
       projectId: project?.id ?? '',
       source: { case: 'new', value: { name: 'Feature' } },
@@ -269,6 +303,42 @@ describe('DeleteProject', () => {
   test('refuses an unknown project', async () => {
     await expect(harness.client.deleteProject({ projectId: 'unknown', deleteFiles: false })).rejects.toMatchObject({
       code: Code.NOT_FOUND,
+    });
+  });
+});
+
+describe('GetNewWorkspaceName', () => {
+  test('returns name no workspace, branch or folder has', async () => {
+    const { project, root } = await addRepo();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const fixed = ANIMALS[0] ?? '';
+    expect(await harness.client.getNewWorkspaceName({ projectId: project.id })).toMatchObject({ name: fixed });
+
+    await harness.client.createWorkspace({
+      projectId: project.id,
+      source: { case: 'new', value: { name: fixed, branch: 'other', base: '' } },
+    });
+    await harness.open(root).run('branch', `${fixed}-2`);
+    await fs.mkdir(path.join(harness.code.workspaces, 'repo', `${fixed}-3`), { recursive: true });
+    expect(await harness.client.getNewWorkspaceName({ projectId: project.id })).toMatchObject({ name: `${fixed}-4` });
+  });
+
+  test('reserves nothing', async () => {
+    const { project } = await addRepo();
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const first = await harness.client.getNewWorkspaceName({ projectId: project.id });
+    const second = await harness.client.getNewWorkspaceName({ projectId: project.id });
+    expect(second.name).toBe(first.name);
+  });
+
+  test('refuses unknown or unhealthy project', async () => {
+    const { project, root } = await addRepo();
+    await expect(harness.client.getNewWorkspaceName({ projectId: 'unknown' })).rejects.toMatchObject({
+      code: Code.NOT_FOUND,
+    });
+    await fs.rm(root, { recursive: true });
+    await expect(harness.client.getNewWorkspaceName({ projectId: project.id })).rejects.toMatchObject({
+      code: Code.FAILED_PRECONDITION,
     });
   });
 });

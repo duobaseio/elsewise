@@ -228,7 +228,7 @@ describe('userKeymapsQuery', () => {
   test('returns none without bridge', async () => {
     vi.stubGlobal('window', {});
 
-    await expect(new QueryClient().fetchQuery(userKeymapsQuery)).resolves.toEqual([]);
+    await expect(new QueryClient().query(userKeymapsQuery)).resolves.toEqual([]);
   });
 
   test('logs unreadable keymap', async () => {
@@ -239,7 +239,7 @@ describe('userKeymapsQuery', () => {
     ];
     vi.stubGlobal('window', { bridge: { settings: { loadUserKeymaps: async () => keymaps } } });
 
-    await expect(new QueryClient().fetchQuery(userKeymapsQuery)).resolves.toEqual(keymaps);
+    await expect(new QueryClient().query(userKeymapsQuery)).resolves.toEqual(keymaps);
     expect(error).toHaveBeenCalledExactlyOnceWith('Keymap theirs failed to load: theirs.json is not JSON');
   });
 });

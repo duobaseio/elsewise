@@ -6,7 +6,7 @@ import { render } from 'vitest-browser-react';
 
 import { Icon, type IconName, IconProvider } from '../../src/components/icon';
 
-import { Sheet, THEMES } from '../sheet.tsx';
+import { Sheet, THEMES } from '../sheet';
 
 // A record rather than a list, so a role added to `icon.tsx` fails to compile until it is on the sheet.
 const ROLES = Object.keys({
@@ -41,6 +41,13 @@ const ROLES = Object.keys({
   'revert-chunk': true,
   back: true,
   help: true,
+  idle: true,
+  running: true,
+  waiting: true,
+  finished: true,
+  'main-workspace': true,
+  missing: true,
+  broken: true,
 } as const satisfies Record<IconName, true>) as readonly IconName[];
 
 const PROPS: readonly { key: string; label: string; render: ReactNode }[] = [

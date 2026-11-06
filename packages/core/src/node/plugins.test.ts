@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { parsePluginEntries, readPluginsSync } from './plugins.ts';
+import { parsePluginEntries, readPluginsSync } from './plugins';
 
 const ENTRY = { id: 'hello', enabled: true };
 const MANIFEST = { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', frontend: { main: 'main.js' } };
