@@ -52,11 +52,10 @@ stream ids, so a client's channel keeps the default odd parity.
 
 ## Bundling
 
-`pnpm build` bundles everything, dependencies included, into `dist/daemon.mjs`. The two native addons are copied
-beside it for the platform the build runs on, so the daemon ships as one bundle per operating system and
-architecture: the `@parcel/watcher` binary as `dist/watcher.node`, and the `@lydell/node-pty` binary as `dist/pty.node`
-(`dist/conpty.node` on Windows) with the files node-pty loads by path, `spawn-helper` on macOS and the conout worker
-on Windows. Keep every other dependency pure JavaScript: the build script has to name each native binary itself.
+`pnpm build` writes `dist/`: `daemon.mjs`, the daemon and the workspace packages bundled by esbuild, beside
+`node_modules/`, the production dependencies installed by `pnpm deploy` for the platform the build runs on. The bundle
+imports those as they are published, so a native addon, or a package that starts a file by path the way
+`@lydell/node-pty` does, needs nothing from the build script. The tree is hoisted, so it holds no links into a store.
 
 ## Terminals
 

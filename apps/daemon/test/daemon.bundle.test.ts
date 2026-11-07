@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline';
 import { Channel, createClient, WebSocketWire } from '@elsewise/transport';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { toProtocolPath } from '../src/fs/path';
 import {
   FileSystemService,
@@ -26,6 +26,7 @@ const TOKEN = 'bundle-test';
 let root: string;
 let daemon: ChildProcess;
 let exited: Promise<unknown[]>;
+let stderr = '';
 let channel: Channel;
 
 beforeAll(async () => {
@@ -38,19 +39,29 @@ beforeAll(async () => {
 
   const child = spawn(process.execPath, [BUNDLE], {
     env: { ...process.env, ELSEWISE_DAEMON_TOKEN: TOKEN, ELSEWISE_DAEMON_DATA: data, ELSEWISE_DAEMON_CODE: code },
-    stdio: ['ignore', 'pipe', 'inherit'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
   daemon = child;
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
   exited = once(child, 'exit');
   const [line] = await Promise.race([
     once(readline.createInterface({ input: child.stdout }), 'line'),
     exited.then(([exitCode, signal]) => {
-      throw new Error(`the daemon exited with ${exitCode ?? signal} before listening`);
+      throw new Error(`the daemon exited with ${exitCode ?? signal} before listening\n${stderr}`);
     }),
   ]);
   const { port } = JSON.parse(line);
   const socket = new WebSocket(`ws://127.0.0.1:${port}`, [PROTOCOL, TOKEN_PREFIX + TOKEN]);
   channel = new Channel(await WebSocketWire.open(socket));
+});
+
+afterEach(() => {
+  const exit = daemon.exitCode ?? daemon.signalCode;
+  if (exit !== null) {
+    throw new Error(`the daemon exited with ${exit}\n${stderr}`);
+  }
 });
 
 afterAll(async () => {
