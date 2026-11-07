@@ -1,3 +1,7 @@
+import { existsSync } from 'node:fs';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { Code, TransportError } from '@elsewise/transport';
 import { expect, test } from 'vitest';
 import { type ExecEvent, type ExecOptions, exec } from './exec';
@@ -9,6 +13,7 @@ function node(script: string, options: Partial<ExecOptions> = {}): ExecOptions {
     cwd: process.cwd(),
     env: {},
     stdin: new Uint8Array(),
+    maxQueuedBytes: 1024 * 1024,
     ...options,
   };
 }
@@ -48,6 +53,27 @@ test('ends stdin when nothing is passed', async () => {
     node("process.stdin.on('end', () => process.stdout.write('ended')); process.stdin.resume()"),
   );
   expect(text(events, 'stdout')).toBe('ended');
+});
+
+test('pauses the program when its output is not read', async () => {
+  const size = 1024 * 1024;
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-exec-'));
+  const marker = path.join(directory, 'written');
+  const script = `process.stdout.write(Buffer.alloc(${size}, 97), () => require('fs').writeFileSync(${JSON.stringify(marker)}, ''))`;
+  try {
+    const events = exec(node(script, { maxQueuedBytes: 64 * 1024 }), new AbortController().signal);
+    const first = await events.next();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(existsSync(marker)).toBe(false);
+    let bytes = first.value?.case === 'stdout' ? first.value.value.byteLength : 0;
+    for await (const event of events) {
+      bytes += event.case === 'stdout' ? event.value.byteLength : 0;
+    }
+    expect(bytes).toBe(size);
+    expect(existsSync(marker)).toBe(true);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
 });
 
 test.skipIf(process.platform === 'win32')('reports the signal that killed the program', async () => {

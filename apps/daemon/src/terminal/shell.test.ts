@@ -98,6 +98,27 @@ describe('attach', () => {
   });
 });
 
+describe('resync', () => {
+  test('sends a snapshot ordered after the output applied before the call', async () => {
+    const { shell } = await start(
+      "console.log('first'); process.stdin.once('data', () => { console.log('second'); process.exit(0) })",
+    );
+    const events: ShellEvent[] = [];
+    const listener = (event: ShellEvent) => events.push(event);
+    await shell.attach(listener);
+    await expect.poll(() => text(events) + Buffer.from(events[2]?.value as Uint8Array).toString()).toContain('first');
+    shell.resync(listener);
+    shell.write(Buffer.from('\r'));
+    await shell.exited;
+    const buffers = events.flatMap((event, index) => (event.case === 'buffer' ? [index] : []));
+    expect(buffers).toHaveLength(2);
+    const snapshot = Buffer.from(events[buffers[1] ?? -1]?.value as Uint8Array).toString();
+    expect(snapshot).toContain('first');
+    expect(snapshot).not.toContain('second');
+    expect(text(events.slice(buffers[1]))).toContain('second');
+  });
+});
+
 describe('write', () => {
   test('writes to the shell', async () => {
     const { shell, events } = await start(

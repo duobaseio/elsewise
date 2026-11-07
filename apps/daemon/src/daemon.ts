@@ -76,6 +76,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const terminal = new TerminalServiceImpl(new TerminalStore(database), {
     scrollback: 5_000,
     saveDelayMs: 2_000,
+    maxQueuedBytes: 1024 * 1024,
     ...options.terminal,
   });
   const project = new ProjectServiceImpl(new ProjectStore(database), terminal, codeDirectory(options.codeDirectory), {

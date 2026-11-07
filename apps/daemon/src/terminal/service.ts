@@ -28,6 +28,9 @@ export interface TerminalOptions {
 
   /** How long after an output a running shell's buffer is saved in milliseconds. */
   saveDelayMs: number;
+
+  /** The most bytes of output held for a client that is not reading before the entire buffer is sent instead. */
+  maxQueuedBytes: number;
 }
 
 type TerminalInit = MessageInitShape<typeof TerminalSchema>;
@@ -41,14 +44,16 @@ const MAX_CELLS = 65_535; // The most columns or rows a pseudoterminal's window 
 export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> {
   readonly #store: TerminalStore;
   readonly #shells: Shells;
+  readonly #options: TerminalOptions;
 
   constructor(store: TerminalStore, options: TerminalOptions) {
     this.#store = store;
     this.#shells = new Shells(store, options);
+    this.#options = options;
   }
 
   /** Kills the shells of the workspace's terminals. */
-  killWorkspace(workspaceId: string, outcome: Exclude<Outcome, 'exited'>): Promise<void> {
+  killWorkspace(workspaceId: string, outcome: Exclude<Outcome, 'exited'>): Promise<() => void> {
     return this.#shells.killWorkspace(workspaceId, outcome);
   }
 
@@ -64,7 +69,14 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     const cwd = toNativeRoot(request.absolutePath);
     await attempt(() => refuseMissingDirectory(cwd));
     const events = exec(
-      { program: request.program, args: request.args, cwd, env: request.env, stdin: request.stdin },
+      {
+        program: request.program,
+        args: request.args,
+        cwd,
+        env: request.env,
+        stdin: request.stdin,
+        maxQueuedBytes: this.#options.maxQueuedBytes,
+      },
       signal,
     );
     for await (const event of events) {
@@ -127,8 +139,12 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
   deleteTerminal(request: DeleteTerminalRequest) {
     return attempt(async () => {
       const terminal = await this.#refuseMissingTerminal(request.terminalId);
-      await this.#shells.kill(terminal.id, 'deleted');
-      await this.#store.deleteTerminal(terminal.id);
+      const release = await this.#shells.kill(terminal.id, 'deleted');
+      try {
+        await this.#store.deleteTerminal(terminal.id);
+      } finally {
+        release();
+      }
       return {};
     });
   }
@@ -146,14 +162,36 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     const requestedSize = open.size ? guardSize(open.size) : undefined;
     const shell = await attempt(() => this.#openShell(open.terminalId, requestedSize));
 
-    const queue: ShellEvent[] = [];
+    let queue: ShellEvent[] = [];
+    let queued = 0; // The bytes of output in the queue.
+    let resyncing = false;
     let wake: (() => void) | undefined;
     let failure: unknown;
     const notify = () => wake?.();
-    const detach = await shell.attach((event) => {
+    const listener = (event: ShellEvent) => {
+      switch (event.case) {
+        case 'output':
+          if (resyncing) {
+            return; // Applied before the buffer is sent, these bytes will be covered by the sending buffer.
+          }
+          queued += event.value.byteLength;
+          if (queued > this.#options.maxQueuedBytes) {
+            // The client is not keeping up, so a buffer taken after this output replaces the output it has not read.
+            queue = queue.filter((held) => held.case !== 'output' && held.case !== 'buffer');
+            queued = 0;
+            resyncing = true;
+            shell.resync(listener);
+            return;
+          }
+          break;
+        case 'buffer':
+          resyncing = false;
+          break;
+      }
       queue.push(event);
       notify();
-    });
+    };
+    const detach = await shell.attach(listener);
     signal.addEventListener('abort', notify, { once: true });
 
     // Handles incoming messages.
@@ -189,6 +227,9 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
           if (next.case === 'exit') {
             yield { event: { case: 'exit', value: { cause: next.value } } };
             return;
+          }
+          if (next.case === 'output') {
+            queued -= next.value.byteLength;
           }
           yield { event: next };
           continue;

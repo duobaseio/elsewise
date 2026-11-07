@@ -194,6 +194,11 @@ export class Shell {
     });
   }
 
+  /** Sends the listener a snapshot of the buffer. */
+  resync(listener: (event: ShellEvent) => void): void {
+    this.#terminal.write('', () => listener({ case: 'buffer', value: this.#serialize() }));
+  }
+
   /** Returns the escape sequences that reproduce the buffer. */
   snapshot(): Promise<Buffer> {
     return new Promise((resolve) => {

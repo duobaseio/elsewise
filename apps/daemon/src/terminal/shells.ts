@@ -36,6 +36,7 @@ export class Shells {
   readonly #options: TerminalOptions;
   readonly #entries = new Map<string, Entry>();
   readonly #starting = new Map<string, Promise<Shell>>();
+  readonly #deleting = new Set<string>(); // The terminals and workspaces whose shells may not start.
 
   constructor(store: TerminalStore, options: TerminalOptions) {
     this.#store = store;
@@ -80,19 +81,33 @@ export class Shells {
   }
 
   /** Kills the terminal's shell. */
-  async kill(terminalId: string, outcome: Exclude<Outcome, 'exited'>): Promise<void> {
-    await Promise.allSettled([this.#starting.get(terminalId)]);
-    const entry = this.#entries.get(terminalId);
-    if (entry) {
-      await this.#close(entry, outcome);
+  async kill(terminalId: string, outcome: Exclude<Outcome, 'exited'>): Promise<() => void> {
+    this.#deleting.add(terminalId);
+    try {
+      await Promise.allSettled([this.#starting.get(terminalId)]);
+      const entry = this.#entries.get(terminalId);
+      if (entry) {
+        await this.#close(entry, outcome);
+      }
+    } catch (error) {
+      this.#deleting.delete(terminalId);
+      throw error;
     }
+    return () => this.#deleting.delete(terminalId);
   }
 
   /** Kills the shells of the workspace's terminals. */
-  async killWorkspace(workspaceId: string, outcome: Exclude<Outcome, 'exited'>): Promise<void> {
-    await Promise.allSettled(this.#starting.values());
-    const entries = [...this.#entries.values()].filter((entry) => entry.terminal.workspace_id === workspaceId);
-    await Promise.all(entries.map((entry) => this.#close(entry, outcome)));
+  async killWorkspace(workspaceId: string, outcome: Exclude<Outcome, 'exited'>): Promise<() => void> {
+    this.#deleting.add(workspaceId);
+    try {
+      await Promise.allSettled(this.#starting.values());
+      const entries = [...this.#entries.values()].filter((entry) => entry.terminal.workspace_id === workspaceId);
+      await Promise.all(entries.map((entry) => this.#close(entry, outcome)));
+    } catch (error) {
+      this.#deleting.delete(workspaceId);
+      throw error;
+    }
+    return () => this.#deleting.delete(workspaceId);
   }
 
   /** Kills every shell and saves it's buffer. Used to clean up this shells. */
@@ -112,6 +127,9 @@ export class Shells {
     const terminal = await this.#store.getTerminal(terminalId);
     if (!terminal) {
       throw new TransportError(Code.NOT_FOUND, 'the terminal does not exist');
+    }
+    if (this.#deleting.has(terminal.id) || this.#deleting.has(terminal.workspace_id)) {
+      throw new TransportError(Code.FAILED_PRECONDITION, 'the terminal is being deleted');
     }
     const size = requestedSize ?? { columns: terminal.columns, rows: terminal.rows };
     const shell = await Shell.start({

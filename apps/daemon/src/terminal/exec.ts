@@ -19,6 +19,9 @@ export interface ExecOptions {
 
   /** What the program reads from stdin. */
   stdin: Uint8Array;
+
+  /** The most bytes of output held for a consumer that is not reading before the program's output is paused. */
+  maxQueuedBytes: number;
 }
 
 /** What a program emits. */
@@ -35,6 +38,8 @@ export type ExecEvent =
  */
 export async function* exec(options: ExecOptions, signal: AbortSignal): AsyncGenerator<ExecEvent> {
   const queue: ExecEvent[] = [];
+  let queued = 0; // The bytes of output in the queue.
+  let paused = false;
   let wake: (() => void) | undefined;
   let done = false;
 
@@ -49,12 +54,28 @@ export async function* exec(options: ExecOptions, signal: AbortSignal): AsyncGen
     windowsHide: true,
     reject: false,
   });
-  const push = (event: ExecEvent) => {
-    queue.push(event);
+
+  const pause = () => {
+    paused = true;
+    subprocess.stdout?.pause();
+    subprocess.stderr?.pause();
+  };
+  const resume = () => {
+    paused = false;
+    subprocess.stdout?.resume();
+    subprocess.stderr?.resume();
+  };
+
+  const push = (stream: 'stdout' | 'stderr', chunk: Uint8Array) => {
+    queue.push({ case: stream, value: chunk });
+    queued += chunk.byteLength;
+    if (queued > options.maxQueuedBytes && !paused) {
+      pause();
+    }
     wake?.();
   };
-  subprocess.stdout?.on('data', (chunk: Uint8Array) => push({ case: 'stdout', value: chunk }));
-  subprocess.stderr?.on('data', (chunk: Uint8Array) => push({ case: 'stderr', value: chunk }));
+  subprocess.stdout?.on('data', (chunk: Uint8Array) => push('stdout', chunk));
+  subprocess.stderr?.on('data', (chunk: Uint8Array) => push('stderr', chunk));
   const settled = () => {
     done = true;
     wake?.();
@@ -65,19 +86,30 @@ export async function* exec(options: ExecOptions, signal: AbortSignal): AsyncGen
   );
   void running.then(settled);
 
-  while (true) {
-    const next = queue.shift();
-    if (next) {
-      yield next;
-      continue;
+  try {
+    while (true) {
+      const next = queue.shift();
+      if (next) {
+        if (next.case !== 'exit') {
+          queued -= next.value.byteLength;
+          if (paused && queued < options.maxQueuedBytes / 4) {
+            resume();
+          }
+        }
+        yield next;
+        continue;
+      }
+      if (done) {
+        break;
+      }
+      await new Promise<void>((resolve) => {
+        wake = resolve;
+      });
+      wake = undefined;
     }
-    if (done) {
-      break;
-    }
-    await new Promise<void>((resolve) => {
-      wake = resolve;
-    });
-    wake = undefined;
+  } finally {
+    // A consumer that stops reading early has to resume.
+    resume();
   }
 
   const result = await running;

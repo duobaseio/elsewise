@@ -233,6 +233,18 @@ describe('AttachTerminal', () => {
     again.cancel();
   });
 
+  test('replaces the output a client that exceeds the max queued bytes', async () => {
+    await harness.close();
+    harness = await TerminalHarness.start({ saveDelayMs: 50, maxQueuedBytes: 0 });
+    workspaceId = (await harness.workspace()).id;
+    const terminal = await create();
+    const attached = attach(terminal.id);
+    attached.type('echo hel""lo\r');
+    await expect.poll(() => attached.buffer()).toContain('hello');
+    expect(attached.events()).not.toContain('output');
+    attached.cancel();
+  });
+
   test('fails with INVALID_ARGUMENT for an empty size', async () => {
     const terminal = await create();
     const { ended } = attach(terminal.id, { columns: 0, rows: 24 });
