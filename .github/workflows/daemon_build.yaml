@@ -49,6 +49,7 @@ jobs:
       - run: pnpm --filter @elsewise/daemon typecheck
       - run: pnpm --filter @elsewise/daemon test
       - run: pnpm --filter @elsewise/daemon build
+      - run: pnpm --filter @elsewise/daemon test:bundle
 
   migrations:
     name: Check Daemon Migrations

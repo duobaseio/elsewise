@@ -42,7 +42,7 @@ the daemon reads it to learn where to connect. Logs go to stderr.
 | `ELSEWISE_DAEMON_PORT`  | The loopback port. Unset or `0` picks a free one.                            |
 | `ELSEWISE_DAEMON_TOKEN` | The token a client must offer. Unset generates a random one per start.       |
 | `ELSEWISE_DAEMON_DATA`  | The data directory. Unset uses `daemonDataDir()` from `@elsewise/core/node`. |
-| `ELSEWISE_DAEMON_CODE`  | Where new projects and workspaces go. Unset uses `codeDir()` from core.      |
+| `ELSEWISE_DAEMON_CODE`  | Where new projects and workspaces go. Unset uses `projectDir()` from core.   |
 
 A client offers two WebSocket subprotocols, the one header a browser's `WebSocket` can set: `elsewise.daemon.v1`,
 and `elsewise.daemon.token.<token>` with the token as printed. The daemon refuses the upgrade without both and
@@ -52,10 +52,22 @@ stream ids, so a client's channel keeps the default odd parity.
 
 ## Bundling
 
-`pnpm build` bundles everything, dependencies included, into `dist/daemon.mjs`. The one native addon, the
-`@parcel/watcher` binary, is copied beside it as `dist/watcher.node` for the platform the build runs on, so the
-daemon ships as one bundle per operating system and architecture. Keep every other dependency pure JavaScript: the
-build script has to name each native binary itself.
+`pnpm build` writes `dist/`: `daemon.mjs`, the daemon and the workspace packages bundled by esbuild, beside
+`node_modules/`, the production dependencies installed by `pnpm deploy` for the platform the build runs on. The bundle
+imports those as they are published, so a native addon, or a package that starts a file by path the way
+`@lydell/node-pty` does, needs nothing from the build script. The tree is hoisted, so it holds no links into a store.
+
+## Terminals
+
+A terminal is a row of the `terminal` table; its shell is a process the daemon runs for it, started by the first
+`AttachTerminal` and never by `CreateTerminal`. `src/terminal/shell.ts` pairs the pseudoterminal (`@lydell/node-pty`)
+with a headless xterm (`@xterm/headless`) that keeps the buffer, so an attaching client gets the shell's size, the
+number of clients, one serialized snapshot (`@xterm/addon-serialize`) and then the live output. Every client is told of
+a resize and of a client attaching or detaching. `src/terminal/shells.ts` is the registry the service builds over them:
+it saves a running shell's buffer to the row shortly after each output and on exit. The service's `killWorkspace` is
+what the project service calls before deleting a workspace, and its `close` is what the daemon's close awaits before the
+database. A shell that the daemon's own close kills leaves no exit on the row, so after a restart the terminal is
+`stopped` and the next attach writes a `daemon restarted` marker between the old buffer and the new shell.
 
 ## Imports
 

@@ -1081,6 +1081,8 @@ describe('identity', () => {
   test('returns and sets the identity for the repository and globally', async () => {
     await repo.run('config', '--unset', 'user.name');
     await repo.run('config', '--unset', 'user.email');
+    await repo.run('config', '--global', '--unset', 'user.name');
+    await repo.run('config', '--global', '--unset', 'user.email');
     await expect(harness.client.getIdentity({ absolutePath: root })).resolves.toMatchObject({ name: '', email: '' });
 
     await harness.client.setIdentity({

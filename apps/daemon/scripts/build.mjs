@@ -1,30 +1,14 @@
-import fs from 'node:fs';
-import { createRequire } from 'node:module';
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { build } from 'esbuild';
 
-const require = createRequire(import.meta.url);
-const { version } = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const manifest = JSON.parse(await fs.readFile('package.json', 'utf8'));
 
-/** Bundles `@parcel/watcher` with its native binary for the platform the build runs on. */
-const nativeWatcher = {
-  name: 'native-watcher',
-  setup({ onLoad }) {
-    const entry = require.resolve('@parcel/watcher');
-    const watcher = createRequire(entry);
-    let name = `@parcel/watcher-${process.platform}-${process.arch}`;
-    if (process.platform === 'linux') {
-      name += watcher('detect-libc').familySync() === 'musl' ? '-musl' : '-glibc';
-    }
-    const binary = watcher.resolve(name);
+const external = Object.keys(manifest.dependencies).filter((name) => !name.startsWith('@elsewise/'));
 
-    onLoad({ filter: /[\\/]@parcel[\\/]watcher[\\/]index\.js$/ }, () => ({
-      contents: `module.exports = require('./wrapper').createWrapper(require(${JSON.stringify(binary)}));`,
-      resolveDir: path.dirname(entry),
-    }));
-  },
-};
-
+await fs.rm('dist', { recursive: true, force: true });
+await installDependencies();
 await build({
   entryPoints: ['src/main.ts'],
   outfile: 'dist/daemon.mjs',
@@ -32,9 +16,22 @@ await build({
   platform: 'node',
   format: 'esm',
   sourcemap: true,
-  define: { DAEMON_VERSION: JSON.stringify(version) },
+  external,
+  define: { DAEMON_VERSION: JSON.stringify(manifest.version) },
   banner: { js: "import { createRequire } from 'node:module';\nconst require = createRequire(import.meta.url);" },
-  plugins: [nativeWatcher],
-  loader: { '.node': 'copy' },
-  assetNames: '[name]',
 });
+
+/** Installs the production dependencies into `dist/node_modules`. */
+async function installDependencies() {
+  const staging = path.join('dist', 'deploy');
+  const args = ['--filter', manifest.name, 'deploy', '--prod', '--legacy', '--config.node-linker=hoisted', staging];
+  const result = spawnSync('pnpm', args, {
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  });
+  if (result.status !== 0) {
+    throw new Error(`pnpm deploy exited with ${result.status ?? result.signal}`);
+  }
+  await fs.rename(path.join(staging, 'node_modules'), path.join('dist', 'node_modules'));
+  await fs.rm(staging, { recursive: true });
+}

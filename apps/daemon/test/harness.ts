@@ -10,10 +10,12 @@ import { PROTOCOL, startWebSocketServer, TOKEN_PREFIX, type WebSocketServerHandl
 
 const TOKEN = 'test-token';
 
+type HarnessOptions = Omit<DaemonOptions, 'dataDirectory' | 'codeDirectory'>;
+
 /** A harness that starts the service with a client. */
 export class Harness<S extends DescService> {
-  /** A client of the service that is connected to the daemon. */
-  readonly client: Client<S>;
+  /** A client of the service that is connected to the daemon. Replaced by a restart. */
+  client: Client<S>;
 
   /** A fresh temporary directory as a protocol path. */
   readonly protocolRoot: string;
@@ -27,9 +29,11 @@ export class Harness<S extends DescService> {
   /** A fresh temporary daemon's code directory. */
   readonly code: CodeDirectory;
 
-  private readonly daemon: Daemon;
-  private readonly server: WebSocketServerHandle;
-  private readonly channel: Channel;
+  private daemon: Daemon;
+  private server: WebSocketServerHandle;
+  protected channel: Channel;
+  private readonly service: S;
+  private readonly options: HarnessOptions;
 
   constructor(
     nativeRoot: string,
@@ -39,6 +43,8 @@ export class Harness<S extends DescService> {
     server: WebSocketServerHandle,
     channel: Channel,
     client: Client<S>,
+    service: S,
+    options: HarnessOptions,
   ) {
     this.client = client;
     this.protocolRoot = toProtocolPath(nativeRoot);
@@ -48,6 +54,8 @@ export class Harness<S extends DescService> {
     this.daemon = daemon;
     this.server = server;
     this.channel = channel;
+    this.service = service;
+    this.options = options;
   }
 
   /** Starts a daemon with the options and returns the harness. */
@@ -60,18 +68,29 @@ export class Harness<S extends DescService> {
       server: WebSocketServerHandle,
       channel: Channel,
       client: Client<S>,
+      service: S,
+      options: HarnessOptions,
     ) => T,
     service: S,
-    options: Omit<DaemonOptions, 'dataDirectory' | 'codeDirectory'>,
+    options: HarnessOptions,
   ): Promise<T> {
     const nativeRoot = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-')));
     const data = dataDirectory(await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-data-'))));
     const code = codeDirectory(await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-daemon-code-'))));
-    const daemon = await createDaemon({ dataDirectory: data.root, codeDirectory: code.root, ...options });
-    const server = await startWebSocketServer(daemon, { port: 0, token: TOKEN });
-    const socket = new WebSocket(`ws://127.0.0.1:${server.port}`, [PROTOCOL, TOKEN_PREFIX + TOKEN]);
-    const channel = new Channel(await WebSocketWire.open(socket));
-    return new this(nativeRoot, data, code, daemon, server, channel, createClient(channel, service));
+    const { daemon, server, channel, client } = await start(service, data, code, options);
+    return new this(nativeRoot, data, code, daemon, server, channel, client, service, options);
+  }
+
+  /** Restarts the daemon and reconnects the client. */
+  async restart(): Promise<void> {
+    this.channel.close();
+    await this.server.close();
+    await this.daemon.close();
+    const started = await start(this.service, this.data, this.code, this.options);
+    this.daemon = started.daemon;
+    this.server = started.server;
+    this.channel = started.channel;
+    this.client = started.client;
   }
 
   /** Returns the native path of an entry in the root. */
@@ -89,6 +108,19 @@ export class Harness<S extends DescService> {
     await fs.rm(this.data.root, { recursive: true, force: true, maxRetries: 10 });
     await fs.rm(this.code.root, { recursive: true, force: true, maxRetries: 10 });
   }
+}
+
+async function start<S extends DescService>(
+  service: S,
+  data: DataDirectory,
+  code: CodeDirectory,
+  options: HarnessOptions,
+): Promise<{ daemon: Daemon; server: WebSocketServerHandle; channel: Channel; client: Client<S> }> {
+  const daemon = await createDaemon({ dataDirectory: data.root, codeDirectory: code.root, ...options });
+  const server = await startWebSocketServer(daemon, { port: 0, token: TOKEN });
+  const socket = new WebSocket(`ws://127.0.0.1:${server.port}`, [PROTOCOL, TOKEN_PREFIX + TOKEN]);
+  const channel = new Channel(await WebSocketWire.open(socket));
+  return { daemon, server, channel, client: createClient(channel, service) };
 }
 
 /** Gathers a stream's responses as they arrive. */

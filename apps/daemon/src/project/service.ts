@@ -31,6 +31,7 @@ import { findWorktree, readWorktree, readWorktrees, type WorktreeInit } from '..
 import { attempt, GitError } from '../git/error';
 import { Git } from '../git/git';
 import { transfer } from '../git/transfer';
+import type { TerminalServiceImpl } from '../terminal/service';
 import { kebabCase, randomAnimal, repositoryName } from './name';
 import type { ProjectRow, ProjectStore, WorkspaceRow } from './store';
 
@@ -57,11 +58,13 @@ interface Repository {
 /** The `ProjectService`. */
 export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
   readonly #store: ProjectStore;
+  readonly #terminals: TerminalServiceImpl;
   readonly #code: CodeDirectory;
   readonly #options: ProjectOptions;
 
-  constructor(store: ProjectStore, code: CodeDirectory, options: ProjectOptions) {
+  constructor(store: ProjectStore, terminals: TerminalServiceImpl, code: CodeDirectory, options: ProjectOptions) {
     this.#store = store;
+    this.#terminals = terminals;
     this.#code = code;
     this.#options = options;
   }
@@ -134,10 +137,22 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
   deleteProject(request: DeleteProjectRequest) {
     return attempt(async () => {
       const project = await this.#refuseMissingProject(request.projectId);
-      if (request.deleteFiles) {
-        await this.#deleteProjectFiles(project);
+      // Terminal instances needs to be killed because Windows prevents files from being deleted if there are terminals
+      // referencing it.
+      const releases: (() => void)[] = [];
+      try {
+        for (const workspace of await this.#store.getWorkspaces(project.id)) {
+          releases.push(await this.#terminals.killWorkspace(workspace.id, 'deleted'));
+        }
+        if (request.deleteFiles) {
+          await this.#deleteProjectFiles(project);
+        }
+        await this.#store.deleteProject(project.id);
+      } finally {
+        for (const release of releases) {
+          release();
+        }
       }
-      await this.#store.deleteProject(project.id);
       return {};
     });
   }
@@ -195,10 +210,17 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
       if (request.deleteBranch && !request.deleteFiles) {
         throw new TransportError(Code.INVALID_ARGUMENT, 'the branch can only be deleted with the files');
       }
-      if (request.deleteFiles) {
-        await this.#deleteWorkspaceFiles(project, workspace, request.deleteBranch);
+      // Terminal instances needs to be killed because Windows prevents files from being deleted if there are terminals
+      // referencing it.
+      const release = await this.#terminals.killWorkspace(workspace.id, 'deleted');
+      try {
+        if (request.deleteFiles) {
+          await this.#deleteWorkspaceFiles(project, workspace, request.deleteBranch);
+        }
+        await this.#store.deleteWorkspace(project.id, workspace.id);
+      } finally {
+        release();
       }
-      await this.#store.deleteWorkspace(project.id, workspace.id);
       return {};
     });
   }
