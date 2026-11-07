@@ -9,7 +9,10 @@ export async function isolateGit(nativeDirectory: string): Promise<void> {
   process.env.GIT_CONFIG_GLOBAL = path.join(nativeDirectory, 'gitconfig');
   process.env.GIT_CONFIG_SYSTEM = path.join(nativeDirectory, 'gitconfig-system');
   process.env.GIT_CONFIG_NOSYSTEM = '1';
-  await fs.writeFile(process.env.GIT_CONFIG_GLOBAL, '[init]\n\tdefaultBranch = main\n');
+  await fs.writeFile(
+    process.env.GIT_CONFIG_GLOBAL,
+    '[init]\n\tdefaultBranch = main\n[user]\n\tname = Test\n\temail = test@example.com\n',
+  );
 }
 
 /** A repository a test drives directly. */
