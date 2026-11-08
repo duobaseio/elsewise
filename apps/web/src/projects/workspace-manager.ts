@@ -4,6 +4,7 @@ import {
   type Disposable,
   type ProjectId,
   type Workspace,
+  type WorkspaceAggregateStatus,
   type WorkspaceId,
   type WorkspaceSidebarItem,
   type WorkspaceSource,
@@ -39,7 +40,7 @@ export function workspacesQuery(daemonId: string, projectId: string) {
 // A status added to a workspace.
 interface StatusEntry {
   readonly workspace: WorkspaceId;
-  // A finish is idle once the workspace is shown.
+  // A completion is idle once the workspace is shown.
   status: WorkspaceStatus;
 }
 
@@ -93,7 +94,7 @@ export class WorkspaceManager implements Workspaces {
 
     this.shown = id;
     for (const entry of this.statuses) {
-      if (id && contains(id, entry.workspace) && entry.status === 'finished') {
+      if (id && contains(id, entry.workspace) && entry.status === 'complete') {
         entry.status = 'idle';
       }
     }
@@ -206,36 +207,36 @@ export class WorkspaceManager implements Workspaces {
     }
   }
 
-  status(workspace: WorkspaceId): WorkspaceStatus {
+  status(workspace: WorkspaceId): WorkspaceAggregateStatus {
     let running = false;
-    let finished = false;
+    let complete = false;
     for (const entry of this.statuses) {
       if (!contains(workspace, entry.workspace)) {
         continue;
       }
 
-      if (entry.status === 'waiting') {
-        return 'waiting';
-      }
-
       running ||= entry.status === 'running';
-      finished ||= entry.status === 'finished';
+      complete ||= entry.status === 'complete';
     }
 
-    return running ? 'running' : finished ? 'finished' : 'idle';
+    if (complete) {
+      return running ? 'partial' : 'complete';
+    }
+
+    return running ? 'running' : 'idle';
   }
 
   addStatus(workspace: WorkspaceId, status: WorkspaceStatus): WorkspaceStatusHandle {
     const entry: StatusEntry = {
       workspace,
-      status: status === 'finished' && shown(this.shown, workspace) ? 'idle' : status,
+      status: status === 'complete' && shown(this.shown, workspace) ? 'idle' : status,
     };
     this.statuses.add(entry);
     this.notify();
 
     return {
       set: (status) => {
-        const next = status === 'finished' && shown(this.shown, workspace) ? 'idle' : status;
+        const next = status === 'complete' && shown(this.shown, workspace) ? 'idle' : status;
         if (this.statuses.has(entry) && entry.status !== next) {
           entry.status = next;
           this.notify();
@@ -252,7 +253,7 @@ export class WorkspaceManager implements Workspaces {
   resetStatus(workspace: WorkspaceId): void {
     let changed = false;
     for (const entry of this.statuses) {
-      if (contains(workspace, entry.workspace) && entry.status === 'finished') {
+      if (contains(workspace, entry.workspace) && entry.status === 'complete') {
         entry.status = 'idle';
         changed = true;
       }
@@ -383,7 +384,7 @@ export function mapWorkspace(daemon: string, message: WorkspaceMessage | undefin
 /**
  * Returns the status of `workspace`.
  */
-export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceStatus {
+export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceAggregateStatus {
   const workspaces = useApplicationManager().projects.workspaces;
   const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.status(workspace));

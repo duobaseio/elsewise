@@ -6,7 +6,7 @@ import { type Status, StatusIndicator } from '../../src/components/status-indica
 
 import { Sheet, THEMES } from '../sheet';
 
-const STATUSES = ['idle', 'running', 'waiting', 'finished'] as const satisfies readonly Status[];
+const STATUSES = ['idle', 'running', 'partial', 'complete'] as const satisfies readonly Status[];
 
 test.each(THEMES)('status indicator (%s)', async (theme) => {
   await render(
@@ -25,6 +25,11 @@ test.each(THEMES)('status indicator (%s)', async (theme) => {
       </div>
     </Sheet>,
   );
+
+  for (const animation of document.getAnimations()) {
+    animation.pause();
+    animation.currentTime = 0;
+  }
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`status-indicator-${theme}`);
 });
