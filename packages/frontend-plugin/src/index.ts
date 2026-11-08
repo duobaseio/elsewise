@@ -92,6 +92,7 @@ export type {
   ExistingWorkspaceSource,
   NewWorkspaceSource,
   Workspace,
+  WorkspaceAggregateStatus,
   WorkspaceId,
   WorkspaceSource,
   WorkspaceStatus,

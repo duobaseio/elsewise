@@ -4,9 +4,14 @@ import type { ProjectId } from './projects';
 import type { WorkspaceSidebarItem } from './sidebar';
 
 /**
- * The status of a workspace. See {@link Workspaces.status}.
+ * A status added to a workspace. See {@link Workspaces.addStatus}.
  */
-export type WorkspaceStatus = 'idle' | 'running' | 'waiting' | 'finished';
+export type WorkspaceStatus = 'idle' | 'running' | 'complete';
+
+/**
+ * The status of a workspace, from the statuses added to it. See {@link Workspaces.status}.
+ */
+export type WorkspaceAggregateStatus = 'idle' | 'running' | 'partial' | 'complete';
 
 /**
  * The workspaces of every project.
@@ -45,12 +50,14 @@ export interface Workspaces {
 
   /**
    * Returns the aggregate status of `workspace`, from the statuses added to it:
-   * * `idle`: none is running, waiting or finished.
-   * * `running`: one is running, and none needs the user.
-   * * `waiting`: one needs the user.
-   * * `finished`: none is running or waiting, and one finished since the workspace was last shown.
+   * * `idle`: none are running or complete.
+   * * `running`: some are running, and none are complete.
+   * * `partial`: some are running, and some are complete.
+   * * `complete`: none are running, and some are complete.
+   *
+   * A status that completes is reset to idle when the workspace is shown.
    */
-  status(workspace: WorkspaceId): WorkspaceStatus;
+  status(workspace: WorkspaceId): WorkspaceAggregateStatus;
 
   /**
    * Adds a status to `workspace`, initially `status`, e.g. an agent session's.
@@ -59,14 +66,13 @@ export interface Workspaces {
    *
    * ```ts
    * const status = app.projects.workspaces.addStatus(workspace.id, 'running');
-   * status.set('waiting');
-   * status.set('finished');
+   * status.set('complete');
    * ```
    */
   addStatus(workspace: WorkspaceId, status: WorkspaceStatus): WorkspaceStatusHandle;
 
   /**
-   * Resets the finished statuses of `workspace` to idle. Does nothing otherwise.
+   * Resets the complete statuses of `workspace` to idle. Does nothing otherwise.
    */
   resetStatus(workspace: WorkspaceId): void;
 

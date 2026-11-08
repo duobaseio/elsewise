@@ -617,9 +617,9 @@ describe('Projects', () => {
     expect(router.state.location.pathname).toBe('/local/dotfiles/lisbon');
   });
 
-  test('resets finished status from context menu', async () => {
+  test('resets complete status from context menu', async () => {
     const { projects } = await mount('/local/elsewise/singapore');
-    projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'finished');
+    projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'complete');
 
     await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
     await page.getByRole('menuitem', { name: /^Mark as read/ }).click();
@@ -627,7 +627,7 @@ describe('Projects', () => {
     expect(projects.workspaces.status({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' })).toBe('idle');
   });
 
-  test('hides Mark as read unless finished', async () => {
+  test('hides Mark as read unless complete', async () => {
     await mount('/local/elsewise/singapore');
 
     await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });

@@ -5,12 +5,15 @@ import {
   DEFAULT_COMMANDS,
   DEFAULT_KEYS,
   type ProjectCommand,
+  type WorkspaceAggregateStatus,
   type WorkspaceCommand,
 } from '@elsewise/frontend-plugin';
 import type { ApplicationManager } from '@/application-manager';
 import { LOCAL_DAEMON_ID } from '@/daemon';
 
 export const FILE_MANAGER = PLATFORM === 'mac' ? 'Finder' : PLATFORM === 'windows' ? 'File Explorer' : 'File Manager';
+
+const UNREAD: ReadonlySet<WorkspaceAggregateStatus> = new Set(['partial', 'complete']);
 
 export const PROJECT_NEW_WORKSPACE: ProjectCommand = {
   scope: 'project',
@@ -139,8 +142,8 @@ export const WORKSPACE_MARK_READ: WorkspaceCommand = {
   group: DEFAULT_COMMAND_GROUPS.workspace.id,
   label: 'Mark as read',
   defaultKeys: DEFAULT_KEYS.workspace.status.markRead,
-  shown: ({ projects }, workspace) => projects.workspaces.status(workspace.id) === 'finished',
-  enabled: ({ projects }, workspace) => projects.workspaces.status(workspace.id) === 'finished',
+  shown: ({ projects }, workspace) => UNREAD.has(projects.workspaces.status(workspace.id)),
+  enabled: ({ projects }, workspace) => UNREAD.has(projects.workspaces.status(workspace.id)),
   run: ({ projects }, workspace) => {
     projects.workspaces.resetStatus(workspace.id);
     return true;

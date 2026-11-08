@@ -33,32 +33,25 @@ function setup() {
 }
 
 describe('status', () => {
-  test('prefers waiting over running', () => {
-    const { workspaces } = setup();
-    workspaces.addStatus(DHAKA, 'running');
-    workspaces.addStatus(DHAKA, 'waiting');
-
-    expect(workspaces.status(DHAKA)).toBe('waiting');
-  });
-
-  test('stays running until every status finishes', () => {
+  test('stays partial until every status completes', () => {
     const { workspaces } = setup();
     const a = workspaces.addStatus(DHAKA, 'running');
     const b = workspaces.addStatus(DHAKA, 'running');
-
-    a.set('finished');
     expect(workspaces.status(DHAKA)).toBe('running');
 
-    b.set('finished');
-    expect(workspaces.status(DHAKA)).toBe('finished');
+    a.set('complete');
+    expect(workspaces.status(DHAKA)).toBe('partial');
+
+    b.set('complete');
+    expect(workspaces.status(DHAKA)).toBe('complete');
   });
 
-  test('finishes when rest dispose', () => {
+  test('completes when rest dispose', () => {
     const { workspaces } = setup();
-    workspaces.addStatus(DHAKA, 'finished');
+    workspaces.addStatus(DHAKA, 'complete');
     workspaces.addStatus(DHAKA, 'running').dispose();
 
-    expect(workspaces.status(DHAKA)).toBe('finished');
+    expect(workspaces.status(DHAKA)).toBe('complete');
   });
 
   test('idles when only status disposes', () => {
@@ -70,34 +63,34 @@ describe('status', () => {
 
   test('ignores idle statuses', () => {
     const { workspaces } = setup();
-    workspaces.addStatus(DHAKA, 'finished');
+    workspaces.addStatus(DHAKA, 'complete');
     workspaces.addStatus(DHAKA, 'idle');
 
-    expect(workspaces.status(DHAKA)).toBe('finished');
+    expect(workspaces.status(DHAKA)).toBe('complete');
   });
 
   test('ignores other workspaces', () => {
     const { workspaces } = setup();
-    workspaces.addStatus(MAIN, 'waiting');
+    workspaces.addStatus(MAIN, 'running');
 
     expect(workspaces.status(DHAKA)).toBe('idle');
   });
 
-  test('clears finished once shown', async () => {
+  test('clears complete once shown', async () => {
     const { workspaces, show } = setup();
-    workspaces.addStatus(DHAKA, 'finished');
+    workspaces.addStatus(DHAKA, 'complete');
 
     await show(DHAKA);
 
     expect(workspaces.status(DHAKA)).toBe('idle');
   });
 
-  test('skips finished while shown', async () => {
+  test('skips complete while shown', async () => {
     const { workspaces, show } = setup();
     await show(DHAKA);
     const status = workspaces.addStatus(DHAKA, 'running');
 
-    status.set('finished');
+    status.set('complete');
 
     expect(workspaces.status(DHAKA)).toBe('idle');
   });
@@ -107,25 +100,25 @@ describe('status', () => {
     const status = workspaces.addStatus(DHAKA, 'running');
     status.dispose();
 
-    status.set('waiting');
+    status.set('running');
 
     expect(workspaces.status(DHAKA)).toBe('idle');
   });
 });
 
 describe('resetStatus', () => {
-  test('idles finished statuses', () => {
+  test('idles complete statuses', () => {
     const { workspaces } = setup();
-    workspaces.addStatus(DHAKA, 'finished');
+    workspaces.addStatus(DHAKA, 'complete');
 
     workspaces.resetStatus(DHAKA);
 
     expect(workspaces.status(DHAKA)).toBe('idle');
   });
 
-  test('keeps running and waiting statuses', () => {
+  test('keeps running statuses', () => {
     const { workspaces } = setup();
-    workspaces.addStatus(DHAKA, 'finished');
+    workspaces.addStatus(DHAKA, 'complete');
     workspaces.addStatus(DHAKA, 'running');
 
     workspaces.resetStatus(DHAKA);
@@ -135,11 +128,11 @@ describe('resetStatus', () => {
 
   test('ignores other workspaces', () => {
     const { workspaces } = setup();
-    workspaces.addStatus(MAIN, 'finished');
+    workspaces.addStatus(MAIN, 'complete');
 
     workspaces.resetStatus(DHAKA);
 
-    expect(workspaces.status(MAIN)).toBe('finished');
+    expect(workspaces.status(MAIN)).toBe('complete');
   });
 });
 
@@ -171,7 +164,7 @@ describe('subscribe', () => {
     const listener = vi.fn();
     workspaces.subscribe(listener);
 
-    workspaces.addStatus(DHAKA, 'running').set('waiting');
+    workspaces.addStatus(DHAKA, 'running').set('complete');
 
     expect(listener).toHaveBeenCalledTimes(2);
   });
@@ -231,7 +224,7 @@ describe('delete', () => {
   test('navigates to main workspace and removes statuses', async () => {
     const { workspaces, router, show, deleteWorkspace } = setup();
     await show(DHAKA);
-    workspaces.addStatus(DHAKA, 'waiting');
+    workspaces.addStatus(DHAKA, 'running');
 
     await workspaces.delete(DHAKA, { deleteFiles: true });
 
@@ -258,11 +251,11 @@ describe('delete', () => {
     const { workspaces, router, show, deleteWorkspace } = setup();
     deleteWorkspace.mockRejectedValue(new Error('Busy'));
     await show(DHAKA);
-    workspaces.addStatus(DHAKA, 'waiting');
+    workspaces.addStatus(DHAKA, 'running');
 
     await expect(workspaces.delete(DHAKA)).rejects.toThrow('Busy');
 
     expect(router.state.location.pathname).toBe('/local/elsewise/dhaka');
-    expect(workspaces.status(DHAKA)).toBe('waiting');
+    expect(workspaces.status(DHAKA)).toBe('running');
   });
 });

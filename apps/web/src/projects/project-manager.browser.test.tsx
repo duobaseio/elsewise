@@ -170,7 +170,7 @@ describe('delete', () => {
   test('navigates away from shown project and removes its statuses', async () => {
     const { projects, router, daemon, show } = setup();
     await show(DHAKA);
-    projects.workspaces.addStatus(DHAKA, 'waiting');
+    projects.workspaces.addStatus(DHAKA, 'running');
 
     await projects.delete(ELSEWISE, { deleteFiles: true });
 
@@ -195,12 +195,12 @@ describe('delete', () => {
   test('keeps other project shown', async () => {
     const { projects, router, show } = setup();
     await show(TOKYO);
-    projects.workspaces.addStatus(TOKYO, 'waiting');
+    projects.workspaces.addStatus(TOKYO, 'running');
 
     await projects.delete(ELSEWISE);
 
     expect(router.state.location.pathname).toBe('/local/dotfiles/tokyo');
-    expect(projects.workspaces.status(TOKYO)).toBe('waiting');
+    expect(projects.workspaces.status(TOKYO)).toBe('running');
   });
 
   test('drops workspaces', async () => {
@@ -215,12 +215,12 @@ describe('delete', () => {
     const { projects, router, daemon, show } = setup();
     daemon.deleteProject.mockRejectedValue(new Error('Busy'));
     await show(DHAKA);
-    projects.workspaces.addStatus(DHAKA, 'waiting');
+    projects.workspaces.addStatus(DHAKA, 'running');
 
     await expect(projects.delete(ELSEWISE)).rejects.toThrow('Busy');
 
     expect(router.state.location.pathname).toBe('/local/elsewise/dhaka');
-    expect(projects.workspaces.status(DHAKA)).toBe('waiting');
+    expect(projects.workspaces.status(DHAKA)).toBe('running');
   });
 });
 
