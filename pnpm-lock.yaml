@@ -643,6 +643,21 @@ importers:
         specifier: ^8.22.0
         version: 8.22.0
 
+  plugins/examples/status:
+    devDependencies:
+      '@biomejs/biome':
+        specifier: ^2.5.14
+        version: 2.5.15
+      '@elsewise/frontend-plugin':
+        specifier: workspace:*
+        version: link:../../../packages/frontend-plugin
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vite:
+        specifier: ^8.3.0
+        version: 8.3.4(@types/node@26.6.5)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)
+
 packages:
 
   '@babel/code-frame@7.29.7':
