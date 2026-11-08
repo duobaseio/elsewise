@@ -13,5 +13,5 @@ This is a **source package**: `exports` points straight at `src/` and there is n
 - **Types only, and runtime values only if a second copy is harmless.** Node has no import map, so a plugin that
   imports this package at runtime inlines its own copy. Anything with identity reaches a plugin through the daemon's
   API, never through an import.
-- **Relative imports only**, with `.ts` extensions. No aliases.
+- **Relative imports only**, without extensions. No aliases.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.
