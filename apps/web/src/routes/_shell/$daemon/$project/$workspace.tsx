@@ -1,9 +1,9 @@
-import type { DiffLayout } from '@elsewise/bridge';
 import { Button } from '@elsewise/components/components/button';
 import { FileTree, useFileTree } from '@elsewise/components/components/file-tree';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
+import type { DiffLayout } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import type { IDisposable, ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import {

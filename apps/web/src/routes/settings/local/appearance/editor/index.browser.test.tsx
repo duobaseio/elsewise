@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -8,12 +8,12 @@ import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
   appearance: {
-    ...DEFAULT_SETTINGS.appearance,
+    ...DEFAULT_FRONTEND_SETTINGS.appearance,
     editor: {
-      ...DEFAULT_SETTINGS.appearance.editor,
+      ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
       tabSize: 4,
       indentUnit: '  ',
       lineSeparator: null,
@@ -62,7 +62,7 @@ async function mount(settings = SETTINGS) {
   return { save, router };
 }
 
-function withEditor(changes: Partial<Settings['appearance']['editor']>): Settings {
+function withEditor(changes: Partial<FrontendSettings['appearance']['editor']>): FrontendSettings {
   return { ...SETTINGS, appearance: { ...SETTINGS.appearance, editor: { ...SETTINGS.appearance.editor, ...changes } } };
 }
 

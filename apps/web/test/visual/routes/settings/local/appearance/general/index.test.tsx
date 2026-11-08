@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { HighlightProvider } from '@elsewise/components/components/settings';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, onTestFinished, test } from 'vitest';
@@ -14,7 +14,7 @@ import { THEMES } from '../../../../../../sheet';
 // Renders the general page on a sheet in `theme`.
 async function mount(theme: (typeof THEMES)[number]) {
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const router = createRouter({
     routeTree: createRootRoute({
       component: () => (

@@ -1,7 +1,8 @@
 import { stat } from 'node:fs/promises';
 import path from 'node:path';
-import type { Brightness, FileFilter } from '@elsewise/bridge';
+import type { FileFilter } from '@elsewise/bridge';
 import { dataLocalDir } from '@elsewise/core/node';
+import type { Brightness } from '@elsewise/frontend-plugin';
 import { app, BrowserWindow, dialog, nativeTheme, protocol, shell } from 'electron';
 import { handleDaemon } from './daemon';
 import { installMenu } from './menu';

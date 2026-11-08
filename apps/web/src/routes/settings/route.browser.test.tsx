@@ -1,5 +1,6 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -57,11 +58,11 @@ const PANELS: InstalledFrontendPlugin = {
 };
 
 // Settings with overrides for a language listed under another, and one that is unknown.
-const LANGUAGES: Settings = {
-  ...DEFAULT_SETTINGS,
+const LANGUAGES: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
   appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    editor: { ...DEFAULT_SETTINGS.appearance.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
+    ...DEFAULT_FRONTEND_SETTINGS.appearance,
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
   },
 };
 
@@ -80,7 +81,7 @@ function chevron(name: string) {
 }
 
 // Renders the app at the last of `entries`, with the others behind it in the history, and `plugins` installed.
-async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [], settings = DEFAULT_SETTINGS) {
+async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [], settings = DEFAULT_FRONTEND_SETTINGS) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: entries }) });

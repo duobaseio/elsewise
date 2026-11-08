@@ -2,6 +2,7 @@ import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command';
 import type { Editor } from './editor/editor';
+import type { FrontendSettings } from './frontend-settings';
 import type { Platform } from './platform';
 import type { Projects } from './projects/projects';
 import type { Workspace } from './projects/workspaces';
@@ -88,6 +89,11 @@ export interface Plugin {
    * Called with the new keymap when it changes, while the plugin is enabled.
    */
   onKeymapChange?(keymap: ActiveKeymap): void;
+
+  /**
+   * Called with the frontend's new settings when they change, while the plugin is enabled.
+   */
+  onFrontendSettingsChange?(settings: FrontendSettings): void;
 
   /**
    * Called with the workspace shown when another is shown or it changes, while the plugin is enabled.

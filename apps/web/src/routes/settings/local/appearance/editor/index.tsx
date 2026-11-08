@@ -1,9 +1,8 @@
-import type { DiffLayout, Settings } from '@elsewise/bridge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
-import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import type { DiffLayout, FrontendSettings, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';
@@ -33,7 +32,10 @@ export const EDITOR_TERMS = {
   scrollbarMarkers: { label: 'Scrollbar markers', keywords: ['overview', 'marks', 'diagnostics', 'matches'] },
   diffLayout: { label: 'Diff layout', keywords: ['compare', 'split', 'unified', 'side by side', 'inline'] },
   languages: { label: 'Languages', keywords: ['overrides', 'per language'] },
-} as const satisfies Record<keyof Settings['appearance']['editor'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
+} as const satisfies Record<
+  keyof FrontendSettings['appearance']['editor'] | 'lineHeight' | 'ligatures',
+  SettingsSearchTerm
+>;
 
 const DIFF_LAYOUTS: Record<DiffLayout, string> = { split: 'Split', unified: 'Unified' };
 

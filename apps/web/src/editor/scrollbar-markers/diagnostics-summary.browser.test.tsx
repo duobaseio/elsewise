@@ -1,8 +1,7 @@
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import type { EditorDiagnostic } from '@elsewise/frontend-plugin';
+import { DEFAULT_FRONTEND_SETTINGS, type EditorDiagnostic, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';
@@ -21,7 +20,7 @@ const DOC = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
 
 // Mounts `DOC` in an editor 200px high with the toolbar, under `settings` held by `client`.
 function mount(
-  settings: Settings = DEFAULT_SETTINGS,
+  settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS,
   extensions: Extension = [],
   client = new QueryClient(),
 ): Promise<EditorView> {
@@ -184,10 +183,10 @@ describe('DiagnosticsSummary', () => {
 
   test('hides with scrollbar markers off', async () => {
     await mount({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, scrollbarMarkers: false },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, scrollbarMarkers: false },
       },
     });
 
@@ -196,7 +195,7 @@ describe('DiagnosticsSummary', () => {
   });
 
   test('hides in read-only document', async () => {
-    await mount(DEFAULT_SETTINGS, EditorState.readOnly.of(true));
+    await mount(DEFAULT_FRONTEND_SETTINGS, EditorState.readOnly.of(true));
 
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
     expect(document.querySelector('[data-slot=diagnostics-summary]')).toBeNull();
@@ -204,10 +203,10 @@ describe('DiagnosticsSummary', () => {
 
   test('recounts when shown again', async () => {
     const hidden = {
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, scrollbarMarkers: false },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, scrollbarMarkers: false },
       },
     };
     const client = new QueryClient();
@@ -215,7 +214,7 @@ describe('DiagnosticsSummary', () => {
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
 
     view.dispatch(setDiagnostics(view.state, [at(1), at(2, 'warning')]));
-    client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+    client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
 
     await expect.element(status()).toHaveAccessibleName('1 error, 1 warning');
   });

@@ -2,7 +2,7 @@ import { autocompletion, startCompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, showTooltip } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { describe, expect, onTestFinished, test, vi } from 'vitest';
@@ -59,11 +59,11 @@ vi.mock('@/appearance/themes', async (original) => {
   };
 });
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
   appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
+    ...DEFAULT_FRONTEND_SETTINGS.appearance,
+    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
   },
 };
 

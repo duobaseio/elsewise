@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, test } from 'vitest';
@@ -12,10 +12,14 @@ describe('useEditorSettings', () => {
   async function mount(language: string, key: 'tabSize') {
     const client = new QueryClient();
     client.setQueryData(settingsQuery.queryKey, {
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, tabSize: 4, languages: { JavaScript: { tabSize: 2 } } },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        editor: {
+          ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
+          tabSize: 4,
+          languages: { JavaScript: { tabSize: 2 } },
+        },
       },
     });
     function Setting() {

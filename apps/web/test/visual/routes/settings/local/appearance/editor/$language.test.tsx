@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, test, vi } from 'vitest';
@@ -22,18 +22,18 @@ async function mount(
   theme: 'light' | 'dark',
   language: string,
   label: string,
-  languages: Settings['appearance']['editor']['languages'],
+  languages: FrontendSettings['appearance']['editor']['languages'],
   width: number,
 ) {
   await page.viewport(width, 640);
   // The preview takes the editor's colors for the brightness in the settings.
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
-      editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, languages },
     },
   });
   const editor = new EditorManager();

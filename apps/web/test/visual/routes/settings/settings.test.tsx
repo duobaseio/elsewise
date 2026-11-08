@@ -1,4 +1,5 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, onTestFinished, test } from 'vitest';
@@ -41,20 +42,20 @@ const WORDS: InstalledFrontendPlugin = {
 };
 
 // A few languages under the editor, for the sidebar to fit.
-const LANGUAGES: Settings['appearance']['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
+const LANGUAGES: FrontendSettings['appearance']['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
 
-async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appearance.editor.languages) {
+async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTINGS.appearance.editor.languages) {
   // The app sets the page's brightness from the settings, which the search results, portalled to the body, take.
   onTestFinished(() => {
     delete document.documentElement.dataset.brightness;
   });
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
-      editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, languages },
     },
   });
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ['/settings'] }) });

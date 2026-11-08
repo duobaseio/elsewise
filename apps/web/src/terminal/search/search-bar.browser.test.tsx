@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { useEffect, useRef, useState } from 'react';
@@ -15,11 +15,11 @@ import '@xterm/xterm/css/xterm.css';
 import { ApplicationManagerContext } from '@/application-context';
 import { builtInApplication } from '../../../test/commands';
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
   appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
+    ...DEFAULT_FRONTEND_SETTINGS.appearance,
+    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
   },
 };
 
@@ -185,7 +185,7 @@ describe('TerminalSearch', () => {
         ...SETTINGS.appearance,
         general: { ...SETTINGS.appearance.general, brightness: 'dark' },
       },
-    } satisfies Settings);
+    } satisfies FrontendSettings);
 
     await expect.poll(current).toBe('rgb(217, 179, 106)');
   });

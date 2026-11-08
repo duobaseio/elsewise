@@ -67,6 +67,24 @@ export {
   type EditorToolbarItem,
   type EditorToolbarProps,
 } from './editor/toolbar';
+export {
+  Brightness,
+  BundledKeymap,
+  BundledTheme,
+  CursorStyle,
+  DEFAULT_FRONTEND_SETTINGS,
+  DEFAULT_LANGUAGES,
+  DiffLayout,
+  EditorLanguageSettings,
+  FONT_SIZES,
+  Font,
+  FontSize,
+  FrontendSettings,
+  KeymapId,
+  LineHeight,
+  LineSeparator,
+  ThemeId,
+} from './frontend-settings';
 export { Key, Keymap, Keys, PlatformKey } from './keymap';
 export type { Platform } from './platform';
 export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin';

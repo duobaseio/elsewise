@@ -1,5 +1,10 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type KeymapId, type Settings } from '@elsewise/bridge';
-import type { Keymap } from '@elsewise/frontend-plugin';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import {
+  DEFAULT_FRONTEND_SETTINGS,
+  type FrontendSettings,
+  type Keymap,
+  type KeymapId,
+} from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -155,13 +160,16 @@ describe('KeymapActions', () => {
 
   const VIM: Keymap = { name: 'Vim', keys: { [FIND]: ['F9'] } };
 
-  const SELECT_MINE: Settings = { ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'mine' } };
+  const SELECT_MINE: FrontendSettings = { ...DEFAULT_FRONTEND_SETTINGS, keymap: { source: 'user', id: 'mine' } };
 
-  const SELECT_VIM: Settings = { ...DEFAULT_SETTINGS, keymap: { source: 'plugin', plugin: 'io.example', id: 'vim' } };
+  const SELECT_VIM: FrontendSettings = {
+    ...DEFAULT_FRONTEND_SETTINGS,
+    keymap: { source: 'plugin', plugin: 'io.example', id: 'vim' },
+  };
 
   // Renders the actions on `keymap`, the user keymap `MINE` when `user`, with `settings`. Returns the bridge's saves and
   // deletes.
-  async function mount(keymap: Keymap, user: string | undefined, settings: Settings) {
+  async function mount(keymap: Keymap, user: string | undefined, settings: FrontendSettings) {
     const save = vi.fn(async () => {});
     const saveUserKeymap = vi.fn(async () => {});
     const deleteUserKeymap = vi.fn(async () => {});
@@ -227,6 +235,6 @@ describe('KeymapActions', () => {
     await expect.poll(() => deleteUserKeymap.mock.calls.length).toBe(1);
     expect(deleteUserKeymap).toHaveBeenCalledWith('mine');
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith({ ...SELECT_MINE, keymap: DEFAULT_SETTINGS.keymap });
+    expect(save).toHaveBeenCalledWith({ ...SELECT_MINE, keymap: DEFAULT_FRONTEND_SETTINGS.keymap });
   });
 });

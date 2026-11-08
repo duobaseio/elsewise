@@ -1,8 +1,14 @@
 import { type Extension, Prec } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
-import { BundledKeymap, DEFAULT_SETTINGS, type KeymapId } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { Keymap, type Project, type Workspace } from '@elsewise/frontend-plugin';
+import {
+  BundledKeymap,
+  DEFAULT_FRONTEND_SETTINGS,
+  Keymap,
+  type KeymapId,
+  type Project,
+  type Workspace,
+} from '@elsewise/frontend-plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import type { ITerminalAddon } from '@xterm/xterm';
 import { useMemo, useReducer, useRef } from 'react';
@@ -68,7 +74,7 @@ const BUNDLED_KEYMAPS: readonly LoadedKeymap[] = Object.entries(
   keymap: Keymap.parse(content),
 }));
 
-const ELSEWISE: LoadedKeymap = { id: DEFAULT_SETTINGS.keymap, keymap: Keymap.parse(elsewise) };
+const ELSEWISE: LoadedKeymap = { id: DEFAULT_FRONTEND_SETTINGS.keymap, keymap: Keymap.parse(elsewise) };
 
 /**
  * The user's keymaps, and the ones that could not be read, which it logs.
@@ -272,7 +278,7 @@ export function useDeleteKeymap(): (id: string) => void {
     void client.cancelQueries(userKeymapsQuery);
     client.setQueryData(userKeymapsQuery.queryKey, (entries) => entries?.filter((entry) => entry.id !== id));
     mutate(id);
-    updateSettings((settings) => ({ ...settings, keymap: DEFAULT_SETTINGS.keymap }));
+    updateSettings((settings) => ({ ...settings, keymap: DEFAULT_FRONTEND_SETTINGS.keymap }));
   };
 }
 

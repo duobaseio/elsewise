@@ -1,5 +1,6 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
 import { formatKey } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -52,9 +53,12 @@ const MINE = { name: 'Mine', keys: { [FIND]: ['Mod-Shift-x', 'F9'] } };
 // Binds F9 to two editor commands and a terminal one.
 const SHARING = { name: 'Mine', keys: { [FIND]: ['Mod-Shift-x', 'F9'], [DUPLICATE]: ['F9'], [COPY]: ['F9'] } };
 
-const SELECT_MINE: Settings = { ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'mine' } };
+const SELECT_MINE: FrontendSettings = { ...DEFAULT_FRONTEND_SETTINGS, keymap: { source: 'user', id: 'mine' } };
 
-const SELECT_VIM: Settings = { ...DEFAULT_SETTINGS, keymap: { source: 'plugin', plugin: 'io.example', id: 'vim' } };
+const SELECT_VIM: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
+  keymap: { source: 'plugin', plugin: 'io.example', id: 'vim' },
+};
 
 afterEach(() => {
   window.bridge = undefined;
@@ -62,7 +66,11 @@ afterEach(() => {
 
 // Opens the Keymap page with `settings`, `plugins` installed and `keymap` as the user keymap `mine`. Returns the
 // bridge's saves and deletes.
-async function mount(settings: Settings = DEFAULT_SETTINGS, plugins: InstalledFrontendPlugin[] = [], keymap = MINE) {
+async function mount(
+  settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS,
+  plugins: InstalledFrontendPlugin[] = [],
+  keymap = MINE,
+) {
   const save = vi.fn(async () => {});
   const saveUserKeymap = vi.fn(async () => {});
   const deleteUserKeymap = vi.fn(async () => {});
@@ -143,7 +151,7 @@ function keys(id: string) {
 
 describe('Keymap', () => {
   test('lists sections by group path in addition order, skipping groups without commands', async () => {
-    await mount(DEFAULT_SETTINGS, [PLUGIN]);
+    await mount(DEFAULT_FRONTEND_SETTINGS, [PLUGIN]);
 
     await expect.element(page.getByRole('heading', { name: 'Example Tone' })).toBeVisible();
     expect(headings()).toEqual([
@@ -162,7 +170,7 @@ describe('Keymap', () => {
   });
 
   test('shows keys as written in selected keymap', async () => {
-    await mount({ ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'mine' } });
+    await mount({ ...DEFAULT_FRONTEND_SETTINGS, keymap: { source: 'user', id: 'mine' } });
 
     await expect.poll(() => keys(FIND)).toEqual([formatKey('Mod-Shift-x'), formatKey('F9')]);
   });
@@ -537,7 +545,7 @@ describe('Keymap', () => {
   });
 
   test('matches section by group label', async () => {
-    await mount(DEFAULT_SETTINGS, [PLUGIN]);
+    await mount(DEFAULT_FRONTEND_SETTINGS, [PLUGIN]);
     await expect.element(page.getByRole('heading', { name: 'Example Tone' })).toBeVisible();
 
     await userEvent.fill(search(), 'tone');

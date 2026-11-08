@@ -1,17 +1,19 @@
 import type { InstalledFrontendPlugin } from '@elsewise/bridge';
-import { DEFAULT_COMMAND_GROUPS } from '@elsewise/frontend-plugin';
+import { DEFAULT_COMMAND_GROUPS, DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { AppearanceManager } from '@/appearance/appearance-manager';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { EditorManager } from '@/editor/editor-manager';
 import { PluginStore } from '@/plugins/plugin-store';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { builtInApplication } from '../../test/commands';
 
 // Returns a store over its own application, and a way to install and enable a plugin in it.
 function setUp() {
   const appearance = new AppearanceManager('dark', resolveActiveTheme(undefined, 'dark'));
   const editor = new EditorManager();
-  const application = builtInApplication({ appearance, editor });
+  const settings = new SettingsPanelManager();
+  const application = builtInApplication({ appearance, settings, editor });
   const store = new PluginStore();
   // Installs the plugin `id` with its main module at `url`, enables it, and returns its status.
   async function enable(id: string, url: string | undefined) {
@@ -20,7 +22,7 @@ function setUp() {
     await store.enable(id, application);
     return store.plugins.find((plugin) => plugin.id === id)?.status;
   }
-  return { appearance, editor, commands: application.commands, store, enable };
+  return { appearance, editor, settings, commands: application.commands, store, enable };
 }
 
 // Returns the enabled plugin `id` whose main module is at `url`, or whose frontend part has none when `undefined`.
@@ -179,6 +181,23 @@ describe('enable', () => {
     ]);
 
     expect(events).toEqual([`keymap ${commands.keymap.commands.size - 1}`]);
+  });
+
+  test('calls frontend settings hook while enabled', async () => {
+    const { settings, store, enable } = setUp();
+    await enable(
+      'a',
+      plugin(`
+        export default function () {
+          return { onFrontendSettingsChange: (settings) => events.push('keymap ' + settings.keymap.id) };
+        }
+      `),
+    );
+    settings.frontend = { ...DEFAULT_FRONTEND_SETTINGS, keymap: { source: 'user', id: 'mine' } };
+    await store.disable('a');
+    settings.frontend = DEFAULT_FRONTEND_SETTINGS;
+
+    expect(events).toEqual(['keymap mine']);
   });
 
   test('logs throwing hook', async () => {

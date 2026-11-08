@@ -1,4 +1,5 @@
-import type { InstalledFrontendPlugin, InvalidPlugin } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import type { InvalidPlugin } from '@elsewise/core';
 import { PluginStore } from '@/plugins/plugin-store';
 
 // Returns a store that has loaded `plugins` through the bridge, which it then restores.

@@ -1,6 +1,8 @@
 import {
+  DEFAULT_FRONTEND_SETTINGS,
   DEFAULT_SETTINGS_GROUPS,
   type Disposable,
+  type FrontendSettings,
   type LocalSettingsPanel,
   type RemoteSettingsPanel,
   type Settings,
@@ -17,15 +19,63 @@ const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
  */
 export class SettingsPanelManager implements Settings {
   private readonly listeners = new Set<() => void>();
+  private readonly frontendListeners = new Set<(settings: FrontendSettings) => void>();
+  private sourceFrontend: FrontendSettings;
+  private currentFrontend: FrontendSettings;
   private addedPanels: readonly (readonly (LocalSettingsPanel | RemoteSettingsPanel)[])[] = [];
   private currentLocalPanels: readonly LocalSettingsPanel[] = [];
   private currentRemotePanels: readonly RemoteSettingsPanel[] = [];
   private addedPreviews: readonly (readonly SettingsLanguagePreview[])[] = [];
   private currentPreviews: Readonly<Record<string, SettingsLanguagePreview>> = {};
 
-  constructor(defaults: readonly (LocalSettingsPanel | RemoteSettingsPanel)[] = []) {
+  constructor(
+    defaults: readonly (LocalSettingsPanel | RemoteSettingsPanel)[] = [],
+    frontend: FrontendSettings = DEFAULT_FRONTEND_SETTINGS,
+  ) {
     this.addedPanels = [defaults];
     this.updatePanels();
+    this.sourceFrontend = frontend;
+    this.currentFrontend = this.freeze(structuredClone(frontend));
+  }
+
+  get frontend(): FrontendSettings {
+    return this.currentFrontend;
+  }
+
+  /**
+   * Sets the frontend's settings to a frozen copy of `settings`, and calls the listeners only if they changed.
+   */
+  set frontend(settings: FrontendSettings) {
+    if (settings === this.sourceFrontend) {
+      return;
+    }
+
+    this.sourceFrontend = settings;
+    this.currentFrontend = this.freeze(structuredClone(settings));
+    for (const listener of this.frontendListeners) {
+      try {
+        listener(this.currentFrontend);
+      } catch (error) {
+        console.error('Frontend settings listener failed', error);
+      }
+    }
+  }
+
+  onFrontendChange(listener: (settings: FrontendSettings) => void): Disposable {
+    this.frontendListeners.add(listener);
+    return () => {
+      this.frontendListeners.delete(listener);
+    };
+  }
+
+  private freeze<T>(value: T): T {
+    if (typeof value === 'object' && value !== null) {
+      for (const child of Object.values(value)) {
+        this.freeze(child);
+      }
+      Object.freeze(value);
+    }
+    return value;
   }
 
   /**

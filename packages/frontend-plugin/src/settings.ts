@@ -1,5 +1,6 @@
 import type { Disposable } from '@elsewise/plugin';
 import type { ComponentType } from 'react';
+import type { FrontendSettings } from './frontend-settings';
 
 /**
  * The ids of the settings sidebar's built-in groups.
@@ -19,6 +20,11 @@ export type SettingsGroup = (typeof DEFAULT_SETTINGS_GROUPS)[keyof typeof DEFAUL
  * The settings.
  */
 export interface Settings {
+  /**
+   * The frontend's settings.
+   */
+  readonly frontend: FrontendSettings;
+
   /**
    * Adds `panels` to the settings sidebar.
    *

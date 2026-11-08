@@ -44,6 +44,7 @@ function RootComponent() {
   const brightness = useBrightness();
   const theme = useActiveTheme();
   const { keymap } = useSelectedKeymap();
+  const frontend = useSettings();
   const router = useRouter();
   const client = useQueryClient();
 
@@ -51,7 +52,7 @@ function RootComponent() {
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
       router,
-      new SettingsPanelManager(Object.values(DEFAULT_PANELS)),
+      new SettingsPanelManager(Object.values(DEFAULT_PANELS), frontend),
       new ProjectManager(client, router),
       new EditorManager(),
       new TerminalManager(),
@@ -66,7 +67,7 @@ function RootComponent() {
       languageServers: new LanguageServers(application.editor),
     };
   });
-  const { appearance, commands } = application;
+  const { appearance, commands, settings } = application;
 
   useCurrentTheme(appearance);
   useCurrentFonts();
@@ -74,6 +75,10 @@ function RootComponent() {
   useEffect(() => {
     commands.selected = keymap;
   }, [commands, keymap]);
+
+  useEffect(() => {
+    settings.frontend = frontend;
+  }, [settings, frontend]);
 
   useEffect(() => installApplicationKeys(window, commands), [commands]);
 

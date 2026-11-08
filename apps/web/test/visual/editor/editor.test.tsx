@@ -4,9 +4,13 @@ import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type DiffLayout } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { EditorCompletion, LanguageServer } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_FRONTEND_SETTINGS,
+  type DiffLayout,
+  type EditorCompletion,
+  type LanguageServer,
+} from '@elsewise/frontend-plugin';
 import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, onTestFinished, test, vi } from 'vitest';
@@ -313,10 +317,10 @@ async function mount(
 ): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
     },
   });
   const editor = new EditorManager();
