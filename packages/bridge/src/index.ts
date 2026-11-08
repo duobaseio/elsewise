@@ -5,34 +5,9 @@ import type { SettingsBridge } from './settings';
 import type { WindowBridge } from './window';
 
 export { type DaemonBridge, DaemonConnection } from './daemon';
-export {
-  InstalledFrontendPlugin,
-  InvalidPlugin,
-  PluginEntry,
-  PluginId,
-  type PluginsBridge,
-} from './plugins';
+export { InstalledFrontendPlugin, type PluginsBridge } from './plugins';
 export { DEFAULT_PROJECT_LAYOUT, ProjectLayout, type ProjectsBridge } from './projects';
-export {
-  Brightness,
-  BundledKeymap,
-  BundledTheme,
-  CursorStyle,
-  DEFAULT_LANGUAGES,
-  DEFAULT_SETTINGS,
-  DiffLayout,
-  EditorLanguageSettings,
-  FONT_SIZES,
-  Font,
-  FontSize,
-  type Json,
-  KeymapId,
-  LineHeight,
-  LineSeparator,
-  Settings,
-  type SettingsBridge,
-  ThemeId,
-} from './settings';
+export type { Json, SettingsBridge } from './settings';
 export { FileFilter, type WindowBridge } from './window';
 
 declare global {

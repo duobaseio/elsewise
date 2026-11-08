@@ -1,4 +1,3 @@
-import { FONT_SIZES, type Font, type FontSize } from '@elsewise/bridge';
 import {
   Combobox,
   ComboboxCollection,
@@ -16,7 +15,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
-import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import { FONT_SIZES, type Font, type FontSize, type SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { Fragment, type ReactNode, useEffect, useState } from 'react';
 import { type FontChoice, installedFonts } from '@/settings/fonts';
 

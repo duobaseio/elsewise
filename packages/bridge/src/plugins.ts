@@ -1,8 +1,6 @@
-import { InstalledPlugin, InvalidPlugin, PluginEntry } from '@elsewise/core';
-import { Keymap, PluginId, Theme } from '@elsewise/frontend-plugin';
+import { InstalledPlugin, type InvalidPlugin, type PluginEntry } from '@elsewise/core';
+import { Keymap, Theme } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
-
-export { InvalidPlugin, PluginEntry, PluginId };
 
 export type InstalledFrontendPlugin = z.infer<typeof InstalledFrontendPlugin>;
 

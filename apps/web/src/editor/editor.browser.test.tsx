@@ -3,13 +3,15 @@ import { indentUnit, LanguageDescription, LanguageSupport, StreamLanguage } from
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type DiffLayout, type Settings } from '@elsewise/bridge';
 import {
   DEFAULT_COMMANDS,
   DEFAULT_DIFF_SOURCES,
+  DEFAULT_FRONTEND_SETTINGS,
+  type DiffLayout,
   EDITOR_DOCUMENT,
   type EditorDiffContent,
   type EditorDiffSource,
+  type FrontendSettings,
   type LanguageServer,
 } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -47,12 +49,12 @@ vi.mock('@/appearance/themes', async (original) => {
   return { ...actual, useActiveTheme: () => theme };
 });
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
   appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
-    editor: { ...DEFAULT_SETTINGS.appearance.editor, visualGuides: [] },
+    ...DEFAULT_FRONTEND_SETTINGS.appearance,
+    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, visualGuides: [] },
   },
 };
 

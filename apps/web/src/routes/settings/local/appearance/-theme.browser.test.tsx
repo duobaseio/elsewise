@@ -1,4 +1,5 @@
-import type { InstalledFrontendPlugin, ThemeId } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import type { ThemeId } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';

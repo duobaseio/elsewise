@@ -1,5 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import type { Keymap as KeymapFile } from '@elsewise/frontend-plugin';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings, type Keymap as KeymapFile } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, onTestFinished, test } from 'vitest';
@@ -22,10 +21,10 @@ const DUPLICATE_UP = 'elsewise.editor.edit.duplicateLineUp';
 // Binds Duplicate line's key to Duplicate line up as well.
 const MINE: KeymapFile = { name: 'Mine', keys: { [DUPLICATE_UP]: ['Mod-Shift-d', 'Mod-d'] } };
 
-const SELECT_MINE: Settings = { ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'mine' } };
+const SELECT_MINE: FrontendSettings = { ...DEFAULT_FRONTEND_SETTINGS, keymap: { source: 'user', id: 'mine' } };
 
 // Renders the keymap page with `settings` on a sheet in `theme`, scrolling inside a container as the settings do.
-async function mount(theme: (typeof THEMES)[number], settings = DEFAULT_SETTINGS) {
+async function mount(theme: (typeof THEMES)[number], settings = DEFAULT_FRONTEND_SETTINGS) {
   // Popups are portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
   document.documentElement.dataset.brightness = theme;
   onTestFinished(() => {

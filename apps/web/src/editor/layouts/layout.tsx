@@ -18,9 +18,13 @@ import {
   keymap,
   rectangularSelection,
 } from '@codemirror/view';
-import type { LineSeparator } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { EDITOR_DOCUMENT, type EditorDocument, type EditorDocumentLayout } from '@elsewise/frontend-plugin';
+import {
+  EDITOR_DOCUMENT,
+  type EditorDocument,
+  type EditorDocumentLayout,
+  type LineSeparator,
+} from '@elsewise/frontend-plugin';
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap/keymap';

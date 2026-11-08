@@ -1,4 +1,3 @@
-import type { EditorLanguageSettings, LineSeparator } from '@elsewise/bridge';
 import {
   Combobox,
   ComboboxChip,
@@ -9,7 +8,7 @@ import {
 import { Input } from '@elsewise/components/components/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Row } from '@elsewise/components/components/settings';
-import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import type { EditorLanguageSettings, LineSeparator, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { type ReactNode, useState } from 'react';
 
 type Key = keyof EditorLanguageSettings;
@@ -177,7 +176,7 @@ function parseWidth(text: string): number | undefined {
   return /^\d+$/.test(text) && width >= 1 ? width : undefined;
 }
 
-function VisualGuides({ guides, onChange }: { guides: number[]; onChange: (guides: number[]) => void }) {
+function VisualGuides({ guides, onChange }: { guides: readonly number[]; onChange: (guides: number[]) => void }) {
   const [draft, setDraft] = useState('');
 
   return (

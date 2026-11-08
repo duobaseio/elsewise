@@ -1,9 +1,9 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import type { DiffLayout } from '@elsewise/bridge';
 import {
   DEFAULT_COMMANDS,
   DEFAULT_DIFF_SOURCES,
+  type DiffLayout,
   EDITOR_DOCUMENT,
   type EditorDocumentLayout,
 } from '@elsewise/frontend-plugin';

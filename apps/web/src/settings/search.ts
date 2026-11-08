@@ -1,5 +1,4 @@
-import type { EditorLanguageSettings } from '@elsewise/bridge';
-import type { SettingsPanel, SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import type { EditorLanguageSettings, SettingsPanel, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { LANGUAGES } from '@/settings/languages';
 

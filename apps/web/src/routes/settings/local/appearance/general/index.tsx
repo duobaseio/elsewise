@@ -1,9 +1,13 @@
-import type { Brightness, Settings } from '@elsewise/bridge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Page, Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
-import { DEFAULT_ROUTES, type SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import {
+  type Brightness,
+  DEFAULT_ROUTES,
+  type FrontendSettings,
+  type SettingsSearchTerm,
+} from '@elsewise/frontend-plugin';
 import { createFileRoute, Link } from '@tanstack/react-router';
 import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
@@ -21,7 +25,7 @@ export const GENERAL_TERMS = {
     label: 'Git status badges',
     keywords: ['file tree', 'letters', 'markers', 'decorations', 'modified', 'changed files', 'git'],
   },
-} as const satisfies Record<keyof Settings['appearance']['general'] | 'ligatures', SettingsSearchTerm>;
+} as const satisfies Record<keyof FrontendSettings['appearance']['general'] | 'ligatures', SettingsSearchTerm>;
 
 const BRIGHTNESS: Record<Brightness, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 

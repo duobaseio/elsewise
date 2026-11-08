@@ -1,7 +1,6 @@
-import type { EditorLanguageSettings } from '@elsewise/bridge';
 import { Button } from '@elsewise/components/components/button';
 import { SplitPage } from '@elsewise/components/components/settings';
-import { DEFAULT_ROUTES } from '@elsewise/frontend-plugin';
+import { DEFAULT_ROUTES, type EditorLanguageSettings } from '@elsewise/frontend-plugin';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettings } from '@/settings/settings';

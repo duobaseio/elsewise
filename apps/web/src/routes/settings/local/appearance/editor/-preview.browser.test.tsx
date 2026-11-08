@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -14,11 +14,11 @@ afterEach(() => {
 
 // Opens Rust's page in a window `viewport` wide, and waits for the preview to fit its sample.
 async function mount({ lineWrapping = false, guides = [] as number[], viewport = 1850 } = {}) {
-  const settings: Settings = {
-    ...DEFAULT_SETTINGS,
+  const settings: FrontendSettings = {
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      editor: { ...DEFAULT_SETTINGS.appearance.editor, lineWrapping, visualGuides: guides },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, lineWrapping, visualGuides: guides },
     },
   };
   const client = new QueryClient();

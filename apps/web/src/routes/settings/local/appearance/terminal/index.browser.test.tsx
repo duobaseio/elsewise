@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -18,7 +18,7 @@ async function mount() {
   const save = vi.fn(async () => {});
   window.bridge = {
     settings: {
-      load: async () => DEFAULT_SETTINGS,
+      load: async () => DEFAULT_FRONTEND_SETTINGS,
       save,
       loadPlugin: async () => ({}),
       savePlugin: async () => {},
@@ -32,7 +32,7 @@ async function mount() {
     },
   };
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const router = createRouter({
     routeTree,
     history: createMemoryHistory({ initialEntries: ['/settings/local/appearance/terminal'] }),
@@ -48,12 +48,12 @@ async function mount() {
   return save;
 }
 
-function withTerminal(changes: Partial<Settings['appearance']['terminal']>): Settings {
+function withTerminal(changes: Partial<FrontendSettings['appearance']['terminal']>): FrontendSettings {
   return {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      terminal: { ...DEFAULT_SETTINGS.appearance.terminal, ...changes },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      terminal: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal, ...changes },
     },
   };
 }
@@ -104,7 +104,7 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withTerminal({ font: { ...DEFAULT_SETTINGS.appearance.terminal.font, ligatures: false } }),
+      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal.font, ligatures: false } }),
     );
   });
 
@@ -122,7 +122,7 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withTerminal({ font: { ...DEFAULT_SETTINGS.appearance.terminal.font, lineHeight: 1.2 } }),
+      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal.font, lineHeight: 1.2 } }),
     );
     await expect.element(input).toHaveValue('1.20');
   });
@@ -137,7 +137,7 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(2);
     expect(save).toHaveBeenLastCalledWith(
-      withTerminal({ font: { ...DEFAULT_SETTINGS.appearance.terminal.font, lineHeight: 1 } }),
+      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal.font, lineHeight: 1 } }),
     );
     await expect.element(input).toHaveValue('1.0');
   });

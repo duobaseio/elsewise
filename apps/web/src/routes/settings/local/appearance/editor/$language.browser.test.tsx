@@ -1,4 +1,5 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -9,12 +10,12 @@ import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 import { pluginStore } from '../../../../../../test/plugins';
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
   appearance: {
-    ...DEFAULT_SETTINGS.appearance,
+    ...DEFAULT_FRONTEND_SETTINGS.appearance,
     editor: {
-      ...DEFAULT_SETTINGS.appearance.editor,
+      ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
       tabSize: 4,
       indentUnit: '  ',
       lineSeparator: null,
@@ -88,7 +89,7 @@ async function mount(language: string, settings = SETTINGS, label = language, pl
   return { save, router };
 }
 
-function withLanguages(languages: Settings['appearance']['editor']['languages']): Settings {
+function withLanguages(languages: FrontendSettings['appearance']['editor']['languages']): FrontendSettings {
   return { ...SETTINGS, appearance: { ...SETTINGS.appearance, editor: { ...SETTINGS.appearance.editor, languages } } };
 }
 

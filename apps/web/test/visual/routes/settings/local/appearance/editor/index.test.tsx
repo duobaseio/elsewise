@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
 import { HighlightProvider } from '@elsewise/components/components/settings';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, test, vi } from 'vitest';
@@ -24,10 +24,10 @@ test.each(THEMES)('editor (%s)', async (theme) => {
   // The preview takes the editor's colors for the brightness in the settings.
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
     },
   });
   const editor = new EditorManager();

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { configLocalDir, frontendDataDir } from '@elsewise/core/node';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { BrowserWindow, ipcMain } from 'electron';
 import { afterAll, afterEach, describe, expect, test, vi } from 'vitest';
 import { handleSettings, watchUserThemesAndKeymaps } from './settings';
@@ -55,7 +55,7 @@ describe('settings:load', () => {
   test('returns the defaults when there is no file', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(load()).toEqual(DEFAULT_SETTINGS);
+    expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     expect(error).not.toHaveBeenCalled();
   });
 
@@ -64,7 +64,7 @@ describe('settings:load', () => {
     fs.mkdirSync(configLocalDir(), { recursive: true });
     fs.writeFileSync(FILE, '{not json');
 
-    expect(load()).toEqual(DEFAULT_SETTINGS);
+    expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     expect(error).toHaveBeenCalledOnce();
   });
 
@@ -72,11 +72,11 @@ describe('settings:load', () => {
     write({ appearance: { general: { brightness: 'dark', theme: { source: 'elsewise', id: 'dracula' } } } });
 
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
         general: {
-          ...DEFAULT_SETTINGS.appearance.general,
+          ...DEFAULT_FRONTEND_SETTINGS.appearance.general,
           brightness: 'dark',
           theme: { source: 'elsewise', id: 'dracula' },
         },
@@ -90,10 +90,13 @@ describe('settings:load', () => {
     });
 
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, font: { family: 'Inter', size: 13, ligatures: true } },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        general: {
+          ...DEFAULT_FRONTEND_SETTINGS.appearance.general,
+          font: { family: 'Inter', size: 13, ligatures: true },
+        },
       },
     });
   });
@@ -102,10 +105,10 @@ describe('settings:load', () => {
     write({ appearance: { general: { brightness: 'dark', font: 'Inter' } } });
 
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'dark' },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'dark' },
       },
     });
   });
@@ -114,10 +117,10 @@ describe('settings:load', () => {
     write({ appearance: { general: { brightness: 'light', extra: 1 }, junk: true }, junk: true });
 
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
       },
     });
   });
@@ -125,32 +128,32 @@ describe('settings:load', () => {
   test('returns the defaults when the file is not an object', () => {
     for (const bad of [null, [], 'dark']) {
       write(bad);
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
   test('returns the defaults when a section is not an object', () => {
     write({ appearance: 'dark' });
-    expect(load()).toEqual(DEFAULT_SETTINGS);
+    expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
 
     write({ appearance: { general: 'dark', terminal: { cursorStyle: 'bar' } } });
-    expect(load()).toEqual(DEFAULT_SETTINGS);
+    expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
   });
 
   test('lets the editor and terminal follow the interface theme or name their own', () => {
     write({ appearance: { editor: { theme: { source: 'elsewise', id: 'dracula' } }, terminal: { theme: null } } });
 
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, theme: { source: 'elsewise', id: 'dracula' } },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, theme: { source: 'elsewise', id: 'dracula' } },
       },
     });
 
     for (const bad of [{ editor: { theme: '' } }, { terminal: { theme: 7 } }, { general: { theme: null } }]) {
       write({ appearance: bad });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
@@ -161,8 +164,11 @@ describe('settings:load', () => {
     ]) {
       write({ appearance: { general: { theme } } });
       expect(load()).toEqual({
-        ...DEFAULT_SETTINGS,
-        appearance: { ...DEFAULT_SETTINGS.appearance, general: { ...DEFAULT_SETTINGS.appearance.general, theme } },
+        ...DEFAULT_FRONTEND_SETTINGS,
+        appearance: {
+          ...DEFAULT_FRONTEND_SETTINGS.appearance,
+          general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, theme },
+        },
       });
     }
 
@@ -179,19 +185,19 @@ describe('settings:load', () => {
       { source: 'user', plugin: 'com.acme.themes', id: 'nord' },
     ]) {
       write({ appearance: { general: { theme: bad } } });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
   test('keeps valid keymap and replaces malformed one', () => {
-    expect(DEFAULT_SETTINGS.keymap).toEqual({ source: 'elsewise', id: 'elsewise' });
+    expect(DEFAULT_FRONTEND_SETTINGS.keymap).toEqual({ source: 'elsewise', id: 'elsewise' });
 
     for (const keymap of [
       { source: 'user', id: 'Eclipse' },
       { source: 'plugin', plugin: 'io.example', id: 'Eclipse' },
     ]) {
       write({ keymap });
-      expect(load()).toEqual({ ...DEFAULT_SETTINGS, keymap });
+      expect(load()).toEqual({ ...DEFAULT_FRONTEND_SETTINGS, keymap });
     }
 
     for (const bad of [
@@ -203,7 +209,7 @@ describe('settings:load', () => {
       { source: 'plugin', plugin: 'io.example', id: 'Eclipse', extra: 1 },
     ]) {
       write({ keymap: bad });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
@@ -221,27 +227,27 @@ describe('settings:load', () => {
     });
 
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
         editor: {
-          ...DEFAULT_SETTINGS.appearance.editor,
+          ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
           languages: { Markdown: { lineSeparator: '\n' }, Brainfuck: { visualGuides: [80] }, Rust: {} },
         },
       },
     });
     // A leaf that is dropped leaves no key behind, which would override the editor's own value when spread.
-    expect(Object.keys((load() as Settings).appearance.editor.languages.Markdown)).toEqual(['lineSeparator']);
+    expect(Object.keys((load() as FrontendSettings).appearance.editor.languages.Markdown)).toEqual(['lineSeparator']);
   });
 
   test('keeps a valid guide list and replaces a bad one', () => {
     write({ appearance: { editor: { visualGuides: [80, 120], languages: { Markdown: { visualGuides: [72] } } } } });
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
         editor: {
-          ...DEFAULT_SETTINGS.appearance.editor,
+          ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
           visualGuides: [80, 120],
           languages: { Markdown: { visualGuides: [72] } },
         },
@@ -250,41 +256,41 @@ describe('settings:load', () => {
 
     for (const bad of [[80, 501], 80, [1.5]]) {
       write({ appearance: { editor: { visualGuides: bad } } });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
   test('keeps a valid completion documentation toggle and turns a bad or missing one on', () => {
     write({ appearance: { editor: { completionDocumentation: false } } });
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, completionDocumentation: false },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, completionDocumentation: false },
       },
     });
 
     for (const editor of [{ completionDocumentation: 'yes' }, {}]) {
       write({ appearance: { editor } });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
-      expect((load() as Settings).appearance.editor.completionDocumentation).toBe(true);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
+      expect((load() as FrontendSettings).appearance.editor.completionDocumentation).toBe(true);
     }
   });
 
   test('keeps a valid usage highlighting toggle and turns a bad or missing one on', () => {
     write({ appearance: { editor: { highlightUsages: false } } });
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, highlightUsages: false },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, highlightUsages: false },
       },
     });
 
     for (const editor of [{ highlightUsages: 'yes' }, {}]) {
       write({ appearance: { editor } });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
-      expect((load() as Settings).appearance.editor.highlightUsages).toBe(true);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
+      expect((load() as FrontendSettings).appearance.editor.highlightUsages).toBe(true);
     }
   });
 
@@ -300,7 +306,10 @@ describe('settings:load', () => {
       scrollback: 50000,
     };
     write({ appearance: { terminal } });
-    expect(load()).toEqual({ ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_SETTINGS.appearance, terminal } });
+    expect(load()).toEqual({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, terminal },
+    });
 
     for (const bad of [
       { cursorStyle: 'beam' },
@@ -313,52 +322,52 @@ describe('settings:load', () => {
       { scrollback: 5000.5 },
     ]) {
       write({ appearance: { terminal: bad } });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
   test('keeps a valid line height and replaces a bad one', () => {
     write({ appearance: { editor: { font: { lineHeight: 1.8 } } } });
     expect(load()).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
         editor: {
-          ...DEFAULT_SETTINGS.appearance.editor,
-          font: { ...DEFAULT_SETTINGS.appearance.editor.font, lineHeight: 1.8 },
+          ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
+          font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, lineHeight: 1.8 },
         },
       },
     });
 
     for (const lineHeight of [0.9, 2.6, '1.5']) {
       write({ appearance: { editor: { font: { lineHeight } }, terminal: { font: { lineHeight } } } });
-      expect(load()).toEqual(DEFAULT_SETTINGS);
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
     }
   });
 
   test('drops the interface font line height', () => {
     write({ appearance: { general: { font: { lineHeight: 2 } } } });
 
-    expect(load()).toEqual(DEFAULT_SETTINGS);
+    expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
   });
 
   test('replaces a non-object language map with the default', () => {
     write({ appearance: { editor: { languages: [] } } });
 
-    expect(load()).toEqual(DEFAULT_SETTINGS);
+    expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
   });
 });
 
 describe('settings:save', () => {
   test('writes the settings and drops unknown keys', () => {
     const general = {
-      ...DEFAULT_SETTINGS.appearance.general,
+      ...DEFAULT_FRONTEND_SETTINGS.appearance.general,
       brightness: 'dark',
       font: { family: 'Inter', size: 16, ligatures: true },
     };
-    save({ appearance: { ...DEFAULT_SETTINGS.appearance, general: { ...general, extra: 1 } } });
+    save({ appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, general: { ...general, extra: 1 } } });
 
-    const expected = { ...DEFAULT_SETTINGS, appearance: { ...DEFAULT_SETTINGS.appearance, general } };
+    const expected = { ...DEFAULT_FRONTEND_SETTINGS, appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, general } };
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual(expected);
     expect(load()).toEqual(expected);
   });
@@ -367,10 +376,10 @@ describe('settings:save', () => {
     save({ appearance: { general: { brightness: 'light' } } });
 
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
       },
     });
   });
@@ -378,18 +387,18 @@ describe('settings:save', () => {
   test('replaces an invalid leaf with its default', () => {
     save({
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
         general: { brightness: 'sepia', theme: null, font: { family: '', size: 16, ligatures: 'yes' } },
-        terminal: { ...DEFAULT_SETTINGS.appearance.terminal, cursorStyle: 'bar', scrollback: 100001 },
+        terminal: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal, cursorStyle: 'bar', scrollback: 100001 },
       },
     });
 
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual({
-      ...DEFAULT_SETTINGS,
+      ...DEFAULT_FRONTEND_SETTINGS,
       appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, font: { family: null, size: 16, ligatures: true } },
-        terminal: { ...DEFAULT_SETTINGS.appearance.terminal, cursorStyle: 'bar' },
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, font: { family: null, size: 16, ligatures: true } },
+        terminal: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal, cursorStyle: 'bar' },
       },
     });
   });
@@ -401,7 +410,7 @@ describe('settings:save', () => {
   });
 
   test('leaves no temporary file behind', () => {
-    save(DEFAULT_SETTINGS);
+    save(DEFAULT_FRONTEND_SETTINGS);
 
     expect(fs.readdirSync(configLocalDir())).toEqual(['settings.json']);
   });

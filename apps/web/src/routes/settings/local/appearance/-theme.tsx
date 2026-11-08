@@ -1,4 +1,3 @@
-import { DEFAULT_SETTINGS, type ThemeId } from '@elsewise/bridge';
 import {
   Combobox,
   ComboboxCollection,
@@ -13,6 +12,7 @@ import {
   ComboboxTrigger,
   ComboboxValue,
 } from '@elsewise/components/components/combobox';
+import { DEFAULT_FRONTEND_SETTINGS, type ThemeId } from '@elsewise/frontend-plugin';
 import { Fragment, useMemo } from 'react';
 import { sameTheme, useLoadedThemes } from '@/appearance/themes';
 import { usePluginStore } from '@/plugins/plugin-store';
@@ -45,7 +45,7 @@ export function ThemeSelect(
   );
   const selected = useMemo(() => {
     const items = groups.flatMap((group) => group.items);
-    const fallback = props.inheritable ? null : DEFAULT_SETTINGS.appearance.general.theme;
+    const fallback = props.inheritable ? null : DEFAULT_FRONTEND_SETTINGS.appearance.general.theme;
     return (
       items.find((item) => sameThemeOrNone(item.value, props.theme)) ??
       items.find((item) => sameThemeOrNone(item.value, fallback)) ??

@@ -1,4 +1,3 @@
-import { DEFAULT_SETTINGS, type KeymapId } from '@elsewise/bridge';
 import { Button } from '@elsewise/components/components/button';
 import {
   Combobox,
@@ -34,7 +33,12 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { Row } from '@elsewise/components/components/settings';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import type { Keymap, SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_FRONTEND_SETTINGS,
+  type Keymap,
+  type KeymapId,
+  type SettingsSearchTerm,
+} from '@elsewise/frontend-plugin';
 import { Fragment, type Ref, type RefObject, useMemo, useRef, useState } from 'react';
 import {
   sameKeymap,
@@ -137,7 +141,7 @@ export function KeymapSelect({
     const items = groups.flatMap((group) => group.items);
     return (
       items.find((item) => sameKeymap(item.value, keymap)) ??
-      items.find((item) => sameKeymap(item.value, DEFAULT_SETTINGS.keymap)) ??
+      items.find((item) => sameKeymap(item.value, DEFAULT_FRONTEND_SETTINGS.keymap)) ??
       null
     );
   }, [groups, keymap]);

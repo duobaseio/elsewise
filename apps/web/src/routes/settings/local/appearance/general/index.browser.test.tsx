@@ -1,5 +1,5 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { HighlightProvider } from '@elsewise/components/components/settings';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 // Renders the page with `settings`, highlighting the row `highlight`. Returns the bridge's save.
-async function mount(settings: Settings = DEFAULT_SETTINGS, highlight?: string) {
+async function mount(settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS, highlight?: string) {
   const save = vi.fn(async () => {});
   window.bridge = {
     settings: {
@@ -55,12 +55,12 @@ async function mount(settings: Settings = DEFAULT_SETTINGS, highlight?: string) 
   return save;
 }
 
-function withGeneral(changes: Partial<Settings['appearance']['general']>): Settings {
+function withGeneral(changes: Partial<FrontendSettings['appearance']['general']>): FrontendSettings {
   return {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, ...changes },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, ...changes },
     },
   };
 }
@@ -85,7 +85,7 @@ describe('General', () => {
   });
 
   test.each([true, false])('reflects ligatures (%s)', async (ligatures) => {
-    await mount(withGeneral({ font: { ...DEFAULT_SETTINGS.appearance.general.font, ligatures } }));
+    await mount(withGeneral({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general.font, ligatures } }));
     const toggle = page.getByRole('switch', { name: 'Ligatures' });
     await (ligatures ? expect.element(toggle).toBeChecked() : expect.element(toggle).not.toBeChecked());
   });
@@ -100,7 +100,7 @@ describe('General', () => {
     await expect.element(toggle).not.toBeChecked();
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withGeneral({ font: { ...DEFAULT_SETTINGS.appearance.general.font, ligatures: false } }),
+      withGeneral({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general.font, ligatures: false } }),
     );
   });
 
@@ -110,7 +110,9 @@ describe('General', () => {
     await userEvent.click(page.getByRole('option', { name: '16' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withGeneral({ font: { ...DEFAULT_SETTINGS.appearance.general.font, size: 16 } }));
+    expect(save).toHaveBeenCalledWith(
+      withGeneral({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general.font, size: 16 } }),
+    );
   });
 
   test('saves only git status badges leaf', async () => {
@@ -126,7 +128,7 @@ describe('General', () => {
   });
 
   test('washes highlighted row only', async () => {
-    await mount(DEFAULT_SETTINGS, 'ligatures');
+    await mount(DEFAULT_FRONTEND_SETTINGS, 'ligatures');
 
     expect(document.querySelectorAll('[data-highlighted]')).toHaveLength(1);
     expect(document.querySelector('#ligatures')).toHaveAttribute('data-highlighted');

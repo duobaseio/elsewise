@@ -1,8 +1,12 @@
 import { openSearchPanel, search } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type EditorToolbarProps } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_FRONTEND_SETTINGS,
+  type EditorCommand,
+  type EditorToolbarProps,
+} from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -39,7 +43,7 @@ function mount(
     resolve = r;
   });
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   function Probe() {
     const { toolbar, portal } = useToolbarExtension();
     const host = useRef<HTMLDivElement>(null);

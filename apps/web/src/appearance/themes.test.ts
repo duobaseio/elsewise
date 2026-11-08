@@ -1,5 +1,6 @@
-import { BundledTheme, type InstalledFrontendPlugin, type InvalidPlugin } from '@elsewise/bridge';
-import { Theme, type ThemeVariant } from '@elsewise/frontend-plugin';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import type { InvalidPlugin } from '@elsewise/core';
+import { BundledTheme, Theme, type ThemeVariant } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';

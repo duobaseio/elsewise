@@ -1,5 +1,5 @@
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
@@ -17,7 +17,7 @@ const CODE = ['alpha', 'beta', 'gamma'].join('\n');
 // Renders a `PreviewLayout` of `CODE` in the app's contexts, and returns its view.
 async function mount(editor = new EditorManager()) {
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const application = builtInApplication({ editor });
   const screen = await render(
     <QueryClientProvider client={client}>

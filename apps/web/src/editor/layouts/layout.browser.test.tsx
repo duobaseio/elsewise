@@ -3,14 +3,15 @@ import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirro
 import { openSearchPanel } from '@codemirror/search';
 import { Compartment, EditorState, type Extension, Facet, Prec, StateField } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import {
   DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
+  DEFAULT_FRONTEND_SETTINGS,
   EDITOR_DOCUMENT,
   type EditorCommand,
   type EditorDocument,
   type EditorDocumentLayout,
+  type FrontendSettings,
   type LanguageServer,
 } from '@elsewise/frontend-plugin';
 import { notifyManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -87,7 +88,7 @@ interface MountOptions {
   readonly relativePath?: string;
   readonly code?: string;
   readonly layout?: EditorDocumentLayout;
-  readonly settings?: Settings;
+  readonly settings?: FrontendSettings;
   readonly editor?: EditorManager;
 }
 
@@ -145,7 +146,7 @@ async function mount(
   return {
     view,
     commands,
-    settings: (settings: Settings) => client.setQueryData(settingsQuery.queryKey, settings),
+    settings: (settings: FrontendSettings) => client.setQueryData(settingsQuery.queryKey, settings),
     source: (source: EditorSource) => setSource(source),
     code: (code: string) => setCode(code),
   };
@@ -153,15 +154,15 @@ async function mount(
 
 // Returns the settings with `general` and `editor` over the defaults, in light brightness.
 function withSettings(
-  general: Partial<Settings['appearance']['general']> = {},
-  editor: Partial<Settings['appearance']['editor']> = {},
-): Settings {
+  general: Partial<FrontendSettings['appearance']['general']> = {},
+  editor: Partial<FrontendSettings['appearance']['editor']> = {},
+): FrontendSettings {
   return {
-    ...DEFAULT_SETTINGS,
+    ...DEFAULT_FRONTEND_SETTINGS,
     appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light', ...general },
-      editor: { ...DEFAULT_SETTINGS.appearance.editor, visualGuides: [], ...editor },
+      ...DEFAULT_FRONTEND_SETTINGS.appearance,
+      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light', ...general },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, visualGuides: [], ...editor },
     },
   };
 }
@@ -250,8 +251,14 @@ describe('useEditorExtensions', () => {
       // Keeps the lines' height, as the app's theme does, so that a change of font does not resize the lines.
       document.documentElement.style.setProperty('--text-code--line-height', '20px');
       document.documentElement.style.setProperty('--font-mono', 'monospace');
-      const monospace = withSettings({}, { font: { ...DEFAULT_SETTINGS.appearance.editor.font, family: 'monospace' } });
-      const serif = withSettings({}, { font: { ...DEFAULT_SETTINGS.appearance.editor.font, family: 'serif' } });
+      const monospace = withSettings(
+        {},
+        { font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, family: 'monospace' } },
+      );
+      const serif = withSettings(
+        {},
+        { font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, family: 'serif' } },
+      );
       const { view, settings, code } = await mount('workingTree', {
         code: 'fn main() {}',
         settings: monospace,
@@ -281,7 +288,7 @@ describe('useEditorExtensions', () => {
       // Changes the CSS variable that the editor's theme reads the line height from along with the settings, as the
       // app does.
       document.documentElement.style.setProperty('--text-code--line-height', '30px');
-      settings(withSettings({}, { font: { ...DEFAULT_SETTINGS.appearance.editor.font, lineHeight: 2.5 } }));
+      settings(withSettings({}, { font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, lineHeight: 2.5 } }));
 
       await expect.poll(() => view().defaultLineHeight).toBe(30);
     });

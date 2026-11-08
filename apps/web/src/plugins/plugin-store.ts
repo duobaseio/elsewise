@@ -1,5 +1,5 @@
-import type { InstalledFrontendPlugin, InvalidPlugin } from '@elsewise/bridge';
-import { type EnabledSnapshot, PluginResolver, type PluginSnapshot } from '@elsewise/core';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import { type EnabledSnapshot, type InvalidPlugin, PluginResolver, type PluginSnapshot } from '@elsewise/core';
 import type { Disposable, Keymap, Plugin as PluginImplementation, Theme } from '@elsewise/frontend-plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import type { ApplicationManager } from '@/application-manager';
@@ -70,6 +70,14 @@ export class PluginStore extends PluginResolver<
       listeners.push(
         application.commands.onKeymapChange((keymap) =>
           this.call(id, 'onKeymapChange', () => plugin.onKeymapChange?.(keymap)),
+        ),
+      );
+    }
+
+    if (plugin.onFrontendSettingsChange) {
+      listeners.push(
+        application.settings.onFrontendChange((settings) =>
+          this.call(id, 'onFrontendSettingsChange', () => plugin.onFrontendSettingsChange?.(settings)),
         ),
       );
     }

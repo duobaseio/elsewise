@@ -1,10 +1,9 @@
-import type { CursorStyle, Settings } from '@elsewise/bridge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Row, SplitPage } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { SettingsSearchTerm } from '@elsewise/frontend-plugin';
+import type { CursorStyle, FrontendSettings, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import type { ITerminalAddon } from '@xterm/xterm';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
@@ -34,7 +33,7 @@ export const TERMINAL_TERMS = {
   }),
   scrollback: { label: 'Scrollback', keywords: ['history', 'lines', 'buffer', 'scroll'] },
 } as const satisfies Partial<
-  Record<keyof Settings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>
+  Record<keyof FrontendSettings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>
 >;
 
 const CURSOR_STYLES: Record<CursorStyle, string> = { block: 'Block', underline: 'Underline', bar: 'Bar' };

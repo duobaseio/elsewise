@@ -1,5 +1,5 @@
-import { LineHeight } from '@elsewise/bridge';
 import { Input } from '@elsewise/components/components/input';
+import { LineHeight } from '@elsewise/frontend-plugin';
 import { useState } from 'react';
 
 export function LineHeightInput({

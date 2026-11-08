@@ -1,5 +1,12 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type InvalidPlugin, type KeymapId } from '@elsewise/bridge';
-import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/frontend-plugin';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import type { InvalidPlugin } from '@elsewise/core';
+import {
+  type ApplicationCommand,
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_FRONTEND_SETTINGS,
+  Keymap,
+  type KeymapId,
+} from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -86,7 +93,7 @@ async function probe<T>(
   vi.stubGlobal('window', { bridge: { settings: bridge } });
   const store = await pluginStore(plugins);
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_SETTINGS, keymap: selected });
+  client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_FRONTEND_SETTINGS, keymap: selected });
   client.setQueryData(userKeymapsQuery.queryKey, user);
   let result: T | undefined;
   function Probe() {
@@ -386,7 +393,10 @@ describe('useUpdateKeymap', () => {
       ],
     );
     update((keys) => ({ ...keys, ...KEYS }));
-    client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'other' } });
+    client.setQueryData(settingsQuery.queryKey, {
+      ...DEFAULT_FRONTEND_SETTINGS,
+      keymap: { source: 'user', id: 'other' },
+    });
     undo();
 
     expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([
@@ -423,7 +433,7 @@ describe('useCopyKeymap', () => {
     await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('elsewise-copy', keymap));
     await vi.waitFor(() =>
       expect(bridge.save).toHaveBeenCalledExactlyOnceWith({
-        ...DEFAULT_SETTINGS,
+        ...DEFAULT_FRONTEND_SETTINGS,
         keymap: { source: 'user', id: 'elsewise-copy' },
       }),
     );
@@ -507,8 +517,8 @@ describe('useDeleteKeymap', () => {
     remove('mine');
 
     expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([other]);
-    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual(DEFAULT_SETTINGS.keymap);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual(DEFAULT_FRONTEND_SETTINGS.keymap);
     await vi.waitFor(() => expect(bridge.deleteUserKeymap).toHaveBeenCalledExactlyOnceWith('mine'));
-    await vi.waitFor(() => expect(bridge.save).toHaveBeenCalledExactlyOnceWith(DEFAULT_SETTINGS));
+    await vi.waitFor(() => expect(bridge.save).toHaveBeenCalledExactlyOnceWith(DEFAULT_FRONTEND_SETTINGS));
   });
 });

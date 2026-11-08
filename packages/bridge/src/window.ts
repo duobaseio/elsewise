@@ -1,5 +1,5 @@
+import type { Brightness } from '@elsewise/frontend-plugin';
 import * as z from 'zod';
-import type { Brightness } from './settings';
 
 export type FileFilter = z.infer<typeof FileFilter>;
 

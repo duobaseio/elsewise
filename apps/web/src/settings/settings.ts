@@ -1,10 +1,12 @@
-import { DEFAULT_SETTINGS, type EditorLanguageSettings, type Settings } from '@elsewise/bridge';
 import {
   type ApplicationCommand,
   DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
+  DEFAULT_FRONTEND_SETTINGS,
   DEFAULT_KEYS,
   DEFAULT_ROUTES,
+  type EditorLanguageSettings,
+  type FrontendSettings,
 } from '@elsewise/frontend-plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
 import { useSyncExternalStore } from 'react';
@@ -30,7 +32,7 @@ export const OPEN_SETTINGS: ApplicationCommand = {
  */
 export const settingsQuery = queryOptions({
   queryKey: ['settings'],
-  queryFn: async (): Promise<Settings> => (await window.bridge?.settings?.load()) ?? DEFAULT_SETTINGS,
+  queryFn: async (): Promise<FrontendSettings> => (await window.bridge?.settings?.load()) ?? DEFAULT_FRONTEND_SETTINGS,
   staleTime: 'static',
   gcTime: Number.POSITIVE_INFINITY,
 });
@@ -38,9 +40,9 @@ export const settingsQuery = queryOptions({
 /**
  * Returns the settings.
  */
-export function useSettings(): Settings;
-export function useSettings<T>(select: (settings: Settings) => T): T;
-export function useSettings<T>(select?: (settings: Settings) => T): Settings | T {
+export function useSettings(): FrontendSettings;
+export function useSettings<T>(select: (settings: FrontendSettings) => T): T;
+export function useSettings<T>(select?: (settings: FrontendSettings) => T): FrontendSettings | T {
   return useSuspenseQuery({ ...settingsQuery, select }).data;
 }
 
@@ -55,18 +57,20 @@ export function useEditorSettings<K extends keyof EditorLanguageSettings>(
 ): EditorLanguageSettings[K] {
   const name = language === undefined ? undefined : (LANGUAGES[language]?.name ?? language);
   return useSettings(({ appearance: { editor } }) => {
-    const override = name === undefined ? undefined : editor.languages[name]?.[key];
-    return override ?? editor[key];
+    const defaults: EditorLanguageSettings = editor;
+    const overrides: Partial<EditorLanguageSettings> | undefined =
+      name === undefined ? undefined : editor.languages[name];
+    return overrides?.[key] ?? defaults[key];
   });
 }
 
 /**
  * Returns a function that applies `update` to the settings.
  */
-export function useUpdateSettings(): (update: (settings: Settings) => Settings) => void {
+export function useUpdateSettings(): (update: (settings: FrontendSettings) => FrontendSettings) => void {
   const client = useQueryClient();
   const { mutate } = useMutation({
-    mutationFn: async (next: Settings) => window.bridge?.settings?.save(next),
+    mutationFn: async (next: FrontendSettings) => window.bridge?.settings?.save(next),
     onError: (error: unknown) => {
       console.error('settings: save failed', error);
     },
