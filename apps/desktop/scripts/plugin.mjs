@@ -11,7 +11,21 @@
 // daemon, to load the change.
 import fs from 'node:fs';
 import path from 'node:path';
-import { daemonDataDir, frontendDataDir, writeJsonSync } from '@elsewise/core/node';
+import { build } from 'esbuild';
+
+// Bundled, as Node cannot resolve the workspace packages' extensionless imports.
+const { outputFiles } = await build({
+  entryPoints: ['@elsewise/core/node'],
+  absWorkingDir: import.meta.dirname,
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+  write: false,
+});
+const { daemonDataDir, frontendDataDir, writeJsonSync } = await import(
+  `data:text/javascript,${encodeURIComponent(outputFiles[0].text)}`
+);
 
 const [command, argument] = process.argv.slice(2);
 if (command !== 'add' && !(command === 'remove' && argument !== undefined)) {

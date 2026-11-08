@@ -11,6 +11,5 @@ This is a **source package**: `exports` points straight at `src/` and there is n
 
 - **Zod and `@elsewise/plugin` are the only dependencies**, for the contract's schemas, e.g. `Theme`. React and
   CodeMirror are peer dependencies.
-- **Relative imports only**, with `.ts` extensions. No aliases. Node loads this source as-is when
-  `apps/web/vite.config.ts` imports it, and Node doesn't map `.js` to `.ts`.
+- **Relative imports only**, without extensions. No aliases.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.
