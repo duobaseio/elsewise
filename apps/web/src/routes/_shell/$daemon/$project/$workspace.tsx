@@ -4,6 +4,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import type { DiffLayout } from '@elsewise/frontend-plugin';
+import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import type { IDisposable, ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import {
@@ -16,8 +17,12 @@ import {
   type IDockviewPanelProps,
 } from 'dockview-react';
 import { useEffect, useRef, useState } from 'react';
+import { daemonQuery } from '@/daemon';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
+import { DirectoryWatcher } from '@/fs/directory-watcher';
+import { watchGitStatus } from '@/git/status';
+import { workspacesQuery } from '@/projects/workspace-manager';
 import { useSettings } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
 // TODO: Back this with the daemon.
@@ -349,60 +354,35 @@ class EchoStub implements ITerminalAddon {
   }
 }
 
-// TODO: Back this with the daemon.
 function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
-  const paths = [
-    'apps/',
-    'apps/web/',
-    'apps/web/src/',
-    'apps/web/src/App.tsx',
-    'apps/web/src/main.py',
-    'apps/web/src/schema.proto',
-    'apps/web/Dockerfile',
-    'apps/web/index.html',
-    'apps/web/package.json',
-    'apps/web/styles.css',
-    'daemon/',
-    'daemon/src/',
-    'daemon/src/envelope.rs',
-    'daemon/src/main.rs',
-    'daemon/src/scratch.rs',
-    'daemon/src/transport.rs',
-    'daemon/target/',
-    'daemon/target/debug.log',
-    'daemon/Cargo.toml',
-    'proto/',
-    'proto/envelope.proto',
-    'Cargo.toml',
-    'Makefile',
-    'README.md',
-  ];
+  const { daemon, project, workspace } = Route.useParams();
+  const client = useQuery(daemonQuery(daemon)).data;
+  const root = useQuery({
+    ...workspacesQuery(daemon, project),
+    select: (workspaces) => workspaces.find((candidate) => candidate.id === workspace)?.absolutePath,
+  }).data;
 
-  const expanded = ['daemon/', 'daemon/src/', 'proto/'];
-
-  const selected = ['daemon/src/transport.rs'];
-
-  const statuses = [
-    { path: 'daemon/src/main.rs', status: 'modified' },
-    { path: 'daemon/src/transport.rs', status: 'added' },
-    { path: 'daemon/src/scratch.rs', status: 'untracked' },
-    { path: 'daemon/src/envelope.rs', status: 'conflict' },
-    { path: 'daemon/target/', status: 'ignored' },
-  ] as const;
-
-  // TODO: FolderService.WatchFolders — TYPE_ADD on expand, TYPE_REMOVE on collapse, driven by `model.onExpansion`.
-  // Expansion state *is* the subscription table, so this is also what a reconnect replays.
   const model = useFileTree({
-    initialPaths: paths,
-    initialExpandedPaths: expanded,
-    initialSelectedPaths: selected,
-    initialGitStatus: statuses,
-    // TODO: FolderService.RenameEntry, then let the resulting WatchFolders listing move the row.
-    onRename: () => {},
-    // TODO: FolderService.RenameEntry again — a move is a rename across folders.
-    onDropComplete: () => {},
+    initialPaths: [],
+    // TODO: Rename through FileSystemService.RenameEntry, then let the resulting listing move the row.
+    canRename: () => false,
+    // TODO: Move through FileSystemService.RenameEntry, as a move is a rename across folders.
+    canDrag: () => false,
   });
 
+  useEffect(() => {
+    if (client === undefined || root === undefined) {
+      return undefined;
+    }
+
+    const watcher = new DirectoryWatcher(root, model, client.fileSystem.watchDirectories());
+    const unsubscribe = watchGitStatus(client.git, root, model);
+    return () => {
+      watcher.dispose();
+      unsubscribe();
+    };
+  }, [client, root, model]);
+
   // TODO: Pass `gitStatusBadges` from the settings once it exists.
-  return <FileTree aria-label="Files in Test Folder" model={model} />;
+  return <FileTree aria-label="Files" model={model} />;
 }

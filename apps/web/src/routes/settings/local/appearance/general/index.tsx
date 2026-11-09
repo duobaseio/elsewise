@@ -13,6 +13,7 @@ import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { FontRows } from '../-font-rows';
 import { ThemeSelect } from '../-theme';
+import { GitStatusBadgesHelp } from './-help';
 
 export const Route = createFileRoute('/settings/local/appearance/general/')({ component: General });
 
@@ -108,6 +109,7 @@ export function General() {
         id="gitStatusBadges"
         label={GENERAL_TERMS.gitStatusBadges.label}
         description="Indicate changed files in the file tree with a badge."
+        help={<GitStatusBadgesHelp>Requires a git repository.</GitStatusBadgesHelp>}
       >
         <Switch
           aria-label={GENERAL_TERMS.gitStatusBadges.label}

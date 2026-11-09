@@ -162,8 +162,11 @@ describe('status', () => {
     await repo.write('a.txt', 'changed\n');
     await repo.run('mv', 'b.txt', 'c.txt');
     await repo.write('new.txt', '');
-    await repo.write('.gitignore', 'ignored.txt\n');
+    await repo.write('.gitignore', 'ignored.txt\nbuild/\n');
     await repo.write('ignored.txt', '');
+    await repo.write('build/out.js', '');
+    await repo.run('init', '--quiet', 'nested');
+    await repo.write('nested/x.txt', '');
 
     const { status } = await harness.client.getStatus({ absolutePath: root, includeIgnored: true });
 
@@ -177,9 +180,11 @@ describe('status', () => {
         relativePath: 'c.txt',
         kind: { case: 'changed', value: { staged: Change.RENAMED, originalRelativePath: 'b.txt' } },
       },
-      { relativePath: '.gitignore', kind: { case: 'untracked' } },
-      { relativePath: 'new.txt', kind: { case: 'untracked' } },
-      { relativePath: 'ignored.txt', kind: { case: 'ignored' } },
+      { relativePath: '.gitignore', kind: { case: 'untracked' }, directory: false },
+      { relativePath: 'nested', kind: { case: 'untracked' }, directory: true },
+      { relativePath: 'new.txt', kind: { case: 'untracked' }, directory: false },
+      { relativePath: 'build', kind: { case: 'ignored' }, directory: true },
+      { relativePath: 'ignored.txt', kind: { case: 'ignored' }, directory: false },
     ]);
     const without = await harness.client.getStatus({ absolutePath: root });
     expect(without.status?.entries.map((entry) => entry.relativePath)).not.toContain('ignored.txt');

@@ -87,33 +87,47 @@ export function parseStatus(text: string): Omit<StatusInit, 'operation'> {
         break;
       }
       case '1': {
-        const match = /^1 (\S)(\S) \S+ \S+ \S+ \S+ \S+ \S+ (.*)$/s.exec(token);
+        const match = /^1 (\S)(\S) (\S+) \S+ \S+ \S+ \S+ \S+ (.*)$/s.exec(token);
         if (match) {
-          entries.push(changed(match[3] as string, match[1] as string, match[2] as string, ''));
+          entries.push(changed(match[4] as string, match[1] as string, match[2] as string, '', match[3] as string));
         }
         break;
       }
       case '2': {
-        const match = /^2 (\S)(\S) \S+ \S+ \S+ \S+ \S+ \S+ [RC]\d+ (.*)$/s.exec(token);
+        const match = /^2 (\S)(\S) (\S+) \S+ \S+ \S+ \S+ \S+ [RC]\d+ (.*)$/s.exec(token);
         if (match) {
           i++;
-          entries.push(changed(match[3] as string, match[1] as string, match[2] as string, tokens[i] ?? ''));
+          entries.push(
+            changed(match[4] as string, match[1] as string, match[2] as string, tokens[i] ?? '', match[3] as string),
+          );
         }
         break;
       }
       case 'u': {
-        const match = /^u (\S\S) \S+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ (.*)$/s.exec(token);
+        const match = /^u (\S\S) (\S+) \S+ \S+ \S+ \S+ \S+ \S+ \S+ (.*)$/s.exec(token);
         if (match) {
           const kind = CONFLICTS[match[1] as string] ?? Kind.OTHER;
-          entries.push({ relativePath: match[2] as string, kind: { case: 'conflicted', value: { kind } } });
+          entries.push({
+            relativePath: match[3] as string,
+            kind: { case: 'conflicted', value: { kind } },
+            directory: submodule(match[2] as string),
+          });
         }
         break;
       }
       case '?':
-        entries.push({ relativePath: entryPath(token.slice(2)), kind: { case: 'untracked', value: {} } });
+        entries.push({
+          relativePath: entryPath(token.slice(2)),
+          kind: { case: 'untracked', value: {} },
+          directory: token.endsWith('/'),
+        });
         break;
       case '!':
-        entries.push({ relativePath: entryPath(token.slice(2)), kind: { case: 'ignored', value: {} } });
+        entries.push({
+          relativePath: entryPath(token.slice(2)),
+          kind: { case: 'ignored', value: {} },
+          directory: token.endsWith('/'),
+        });
         break;
     }
   }
@@ -179,7 +193,13 @@ export async function hasConflicts(git: Git): Promise<boolean> {
   return (await git.run(['ls-files', '--unmerged', '-z'])).length > 0;
 }
 
-function changed(relativePath: string, staged: string, unstaged: string, originalRelativePath: string): EntryInit {
+function changed(
+  relativePath: string,
+  staged: string,
+  unstaged: string,
+  originalRelativePath: string,
+  sub: string,
+): EntryInit {
   return {
     relativePath,
     kind: {
@@ -190,7 +210,12 @@ function changed(relativePath: string, staged: string, unstaged: string, origina
         originalRelativePath,
       },
     },
+    directory: submodule(sub),
   };
+}
+
+function submodule(sub: string): boolean {
+  return sub.startsWith('S');
 }
 
 function entryPath(relativePath: string): string {

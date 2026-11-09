@@ -1,10 +1,11 @@
 'use client';
 
-import type {
-  FileTreeDropContext,
-  FileTreeDropResult,
-  FileTreeRenameEvent,
-  FileTreeRenamingItem,
+import {
+  type FileTreeDropContext,
+  type FileTreeDropResult,
+  type FileTreeRenameEvent,
+  type FileTreeRenamingItem,
+  type GitStatusEntry,
   FileTree as PierreFileTreeModel,
 } from '@pierre/trees';
 import { FileTree as PierreFileTree, useFileTree as usePierreFileTree } from '@pierre/trees/react';
@@ -95,6 +96,9 @@ export interface FileTreeGitStatus {
 
 /** The file tree's model, which is used to read and mutate the tree after mount. */
 export interface FileTreeModel extends PierreFileTreeModel {
+  setGitStatus(statuses?: readonly FileTreeGitStatus[]): void;
+  setGitStatus(statuses?: readonly GitStatusEntry[]): void;
+
   /**
    * Calls `listener` when a folder opens or closes.
    *
@@ -118,10 +122,7 @@ export function useFileTree(options: FileTreeOptions): FileTreeModel {
     initialExpandedPaths: options.initialExpandedPaths,
     initialSelectedPaths: options.initialSelectedPaths,
     density: 'compact',
-    gitStatus: options.initialGitStatus?.map((entry) => ({
-      path: entry.path,
-      status: entry.status === 'conflict' ? 'deleted' : entry.status,
-    })),
+    gitStatus: options.initialGitStatus && mapGitStatus(options.initialGitStatus),
     icons,
     onSelectionChange: (selectedPaths) => latest.current.onSelectionChange?.(selectedPaths),
     renaming: {
@@ -148,6 +149,9 @@ export function useFileTree(options: FileTreeOptions): FileTreeModel {
   }, [model, icons]);
 
   return Object.assign(model, {
+    setGitStatus(statuses?: readonly (FileTreeGitStatus | GitStatusEntry)[]) {
+      PierreFileTreeModel.prototype.setGitStatus.call(model, statuses && mapGitStatus(statuses));
+    },
     onExpansion(listener: (path: string, expanded: boolean) => void) {
       let open = openFolders(model, new Set());
 
@@ -167,6 +171,13 @@ export function useFileTree(options: FileTreeOptions): FileTreeModel {
       });
     },
   });
+}
+
+function mapGitStatus(statuses: readonly (FileTreeGitStatus | GitStatusEntry)[]): GitStatusEntry[] {
+  return statuses.map((entry) => ({
+    path: entry.path,
+    status: entry.status === 'conflict' ? ('deleted' as const) : entry.status,
+  }));
 }
 
 function openFolders(model: PierreFileTreeModel, previous: ReadonlySet<string>): Set<string> {
