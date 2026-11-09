@@ -1,13 +1,14 @@
+import { DEFAULT_WORKSPACE_STATE } from '@elsewise/bridge';
 import { FileTree, useFileTree } from '@elsewise/components/components/file-tree';
 import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { daemonQuery } from '@/daemon';
 import { DirectoryWatcher } from '@/fs/directory-watcher';
 import { watchGitStatus } from '@/git/status';
 import { workspacesQuery } from '@/projects/workspace-manager';
-import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
+import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
@@ -22,8 +23,6 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const gitStatusBadges = useSettings((settings) => settings.appearance.general.gitStatusBadges);
 
   const store = useWorkspaceStateStore();
-  const { fileTree } = useWorkspaceState({ daemon, project, workspace });
-  const [restored] = useState(fileTree);
   const model = useFileTree({
     initialPaths: [],
     // TODO: Rename through FileSystemService.RenameEntry, then let the resulting listing move the row.
@@ -37,17 +36,21 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       return undefined;
     }
 
-    const watcher = new DirectoryWatcher(root, model, client.fileSystem.watchDirectories(), restored);
-    const unsubscribe = watchGitStatus(client.git, root, model);
-    const stopSaving = model.subscribe(() =>
-      store.update({ daemon, project, workspace }, { fileTree: watcher.snapshot() }),
+    const id = { daemon, project, workspace };
+    const watcher = new DirectoryWatcher(
+      root,
+      model,
+      client.fileSystem.watchDirectories(),
+      store.get(id)?.fileTree ?? DEFAULT_WORKSPACE_STATE.fileTree,
     );
+    const unsubscribe = watchGitStatus(client.git, root, model);
+    const stopSaving = model.subscribe(() => store.update(id, { fileTree: watcher.snapshot() }));
     return () => {
       watcher.dispose();
       unsubscribe();
       stopSaving();
     };
-  }, [client, root, model, restored, store, daemon, project, workspace]);
+  }, [client, root, model, store, daemon, project, workspace]);
 
   return <FileTree model={model} gitStatusBadges={gitStatusBadges} aria-label="Files" />;
 }
