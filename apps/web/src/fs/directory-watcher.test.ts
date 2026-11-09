@@ -6,11 +6,12 @@ import {
   type WatchDirectoriesResponse,
   WatchDirectoriesResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { DirectoryWatcher, type DirectoryWatcherModel } from './directory-watcher';
+import { DirectoryWatcher, type DirectoryWatcherModel, type DirectoryWatcherSnapshot } from './directory-watcher';
 
 // A model that keeps its paths in a set, and a stream that sends what `respond` is given.
-function fake() {
+function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] }) {
   const paths = new Set<string>(['stale.ts']);
+  const selected = new Set<string>();
   let expansion: ((path: string, expanded: boolean) => void) | undefined;
   const model = {
     batch: (operations) => {
@@ -30,6 +31,36 @@ function fake() {
         paths.add(path);
       }
     },
+    getItem: (path: string) => {
+      if (!paths.has(path)) {
+        return null;
+      }
+
+      const item = {
+        deselect: () => {
+          selected.delete(path);
+        },
+        focus: () => {},
+        getPath: () => path,
+        isFocused: () => false,
+        isSelected: () => selected.has(path),
+        select: () => {
+          selected.add(path);
+        },
+        toggleSelect: () => {},
+      };
+      return path.endsWith('/')
+        ? {
+            ...item,
+            collapse: () => expansion?.(path, false),
+            expand: () => expansion?.(path, true),
+            isDirectory: () => true as const,
+            isExpanded: () => false,
+            toggle: () => {},
+          }
+        : { ...item, isDirectory: () => false as const };
+    },
+    getSelectedPaths: () => [...selected],
     onExpansion: (listener) => {
       expansion = listener;
       return () => {
@@ -65,11 +96,12 @@ function fake() {
     })(),
   };
 
-  const watcher = new DirectoryWatcher('/repo', model, call);
+  const watcher = new DirectoryWatcher('/repo', model, call, restored);
   return {
     watcher,
     sent,
     paths: () => [...paths].sort(),
+    selected: () => [...selected],
     cancelled: () => cancelled,
     expand: (path: string, expanded: boolean) => expansion?.(path, expanded),
     respond(response: WatchDirectoriesResponse) {
@@ -160,6 +192,51 @@ describe('DirectoryWatcher', () => {
     respond(create(WatchDirectoriesResponseSchema, { relativePath: '', state: { case: 'unavailable', value: {} } }));
 
     await expect.poll(paths).toEqual([]);
+  });
+
+  test('expands remembered folder once listed', async () => {
+    const { respond, sent } = fake({ expanded: ['src/'], selected: [] });
+
+    respond(listing('', ['src/']));
+
+    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+  });
+
+  test('expands nested remembered folders level by level', async () => {
+    const { respond, sent } = fake({ expanded: ['src/', 'src/lib/'], selected: [] });
+    respond(listing('', ['src/']));
+    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+
+    respond(listing('src', ['lib/']));
+
+    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src', 'src/lib']);
+  });
+
+  test('selects remembered path once listed', async () => {
+    const { respond, selected } = fake({ expanded: ['src/'], selected: ['src/main.ts'] });
+
+    respond(listing('', ['src/']));
+    respond(listing('src', ['main.ts']));
+
+    await expect.poll(selected).toEqual(['src/main.ts']);
+  });
+
+  test('forgets remembered paths gone from listing', async () => {
+    const { respond, paths, watcher } = fake({ expanded: ['gone/'], selected: ['gone.ts'] });
+
+    respond(listing('', ['src/']));
+    await expect.poll(paths).toEqual(['src/']);
+
+    expect(watcher.snapshot()).toEqual({ expanded: [], selected: [] });
+  });
+
+  test('reports open and remembered folders', async () => {
+    const { respond, sent, watcher } = fake({ expanded: ['src/', 'src/lib/'], selected: ['src/lib/a.ts'] });
+
+    respond(listing('', ['src/']));
+    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+
+    expect(watcher.snapshot()).toEqual({ expanded: ['src/', 'src/lib/'], selected: ['src/lib/a.ts'] });
   });
 
   test('cancels stream on dispose', () => {

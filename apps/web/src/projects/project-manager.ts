@@ -26,6 +26,7 @@ import { OrderedItems } from '@/plugins/ordered-items';
 import { DEFAULT_PROJECT_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
+import { WorkspaceStateStore } from '@/projects/workspace-state-store';
 
 /**
  * Returns the query for every project on the daemon with `daemonId`.
@@ -56,8 +57,9 @@ export class ProjectManager implements Projects {
   constructor(
     private readonly client: QueryClient,
     router: AnyRouter,
+    private readonly states = new WorkspaceStateStore(undefined),
   ) {
-    this.workspaces = new WorkspaceManager(client, router);
+    this.workspaces = new WorkspaceManager(client, router, states);
   }
 
   async list(daemonId: string): Promise<readonly Project[]> {
@@ -120,6 +122,7 @@ export class ProjectManager implements Projects {
     await daemon.projects.deleteProject({ projectId: project.project, deleteFiles });
 
     await this.workspaces.close(project, DEFAULT_ROUTES.home);
+    await this.states.delete(project);
 
     updateProjectLayout(this.client, project.daemon).removeProject(project.project);
 

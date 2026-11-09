@@ -1,10 +1,8 @@
 import { Button } from '@elsewise/components/components/button';
-import { FileTree, useFileTree } from '@elsewise/components/components/file-tree';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import type { DiffLayout } from '@elsewise/frontend-plugin';
-import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import type { IDisposable, ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import {
@@ -15,16 +13,15 @@ import {
   type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type IDockviewPanelProps,
+  type SerializedDockview,
 } from 'dockview-react';
-import { useEffect, useRef, useState } from 'react';
-import { daemonQuery } from '@/daemon';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
-import { DirectoryWatcher } from '@/fs/directory-watcher';
-import { watchGitStatus } from '@/git/status';
-import { workspacesQuery } from '@/projects/workspace-manager';
+import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
+import { FileTreePanel } from './-file-tree-panel';
 // TODO: Back this with the daemon.
 import FAKE_CODE from './$workspace.tsx?raw';
 
@@ -38,7 +35,8 @@ declare global {
 }
 
 export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
-  component: WorkspaceDock,
+  component: WorkspaceRoute,
+  wrapInSuspense: true,
 });
 
 type PanelKind = keyof typeof PANELS;
@@ -53,12 +51,33 @@ const PANELS = {
 
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 
+function WorkspaceRoute() {
+  const { daemon, project, workspace } = Route.useParams();
+  const store = useWorkspaceStateStore();
+  const { dock } = useWorkspaceState({ daemon, project, workspace });
+  const onLayoutChange = useCallback(
+    (layout: SerializedDockview) => store.update({ daemon, project, workspace }, { dock: layout }),
+    [store, daemon, project, workspace],
+  );
+
+  return (
+    <WorkspaceDock key={JSON.stringify([daemon, project, workspace])} layout={dock} onLayoutChange={onLayoutChange} />
+  );
+}
+
 export function WorkspaceDock({
   panels = PANELS,
+  layout,
   onDockviewReady,
+  onLayoutChange,
 }: {
   panels?: typeof PANELS;
+  /**
+   * The layout to restore, as the dock serialized it.
+   */
+  layout?: unknown;
   onDockviewReady?: (api: DockviewApi) => void;
+  onLayoutChange?: (layout: SerializedDockview) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
@@ -97,7 +116,28 @@ export function WorkspaceDock({
     return undefined;
   }, [dockview]);
 
+  useEffect(() => {
+    if (dockview && onLayoutChange) {
+      const disposable = dockview.onDidLayoutChange(() => onLayoutChange(dockview.toJSON()));
+      return () => disposable.dispose();
+    }
+    return undefined;
+  }, [dockview, onLayoutChange]);
+
   const onReady = (event: DockviewReadyEvent) => {
+    if (layout != null) {
+      try {
+        // An invalid layout makes fromJSON throw.
+        event.api.fromJSON(layout as SerializedDockview);
+        setDockview(event.api);
+        onDockviewReady?.(event.api);
+        return;
+      } catch (error) {
+        console.error('Restoring the dock failed', error);
+        event.api.clear();
+      }
+    }
+
     event.api.addPanel({
       id: 'editor:$workspace.tsx',
       component: 'editor' satisfies PanelKind,
@@ -352,37 +392,4 @@ class EchoStub implements ITerminalAddon {
   dispose(): void {
     this.input?.dispose();
   }
-}
-
-function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
-  const { daemon, project, workspace } = Route.useParams();
-  const client = useQuery(daemonQuery(daemon)).data;
-  const root = useQuery({
-    ...workspacesQuery(daemon, project),
-    select: (workspaces) => workspaces.find((candidate) => candidate.id === workspace)?.absolutePath,
-  }).data;
-
-  const model = useFileTree({
-    initialPaths: [],
-    // TODO: Rename through FileSystemService.RenameEntry, then let the resulting listing move the row.
-    canRename: () => false,
-    // TODO: Move through FileSystemService.RenameEntry, as a move is a rename across folders.
-    canDrag: () => false,
-  });
-
-  useEffect(() => {
-    if (client === undefined || root === undefined) {
-      return undefined;
-    }
-
-    const watcher = new DirectoryWatcher(root, model, client.fileSystem.watchDirectories());
-    const unsubscribe = watchGitStatus(client.git, root, model);
-    return () => {
-      watcher.dispose();
-      unsubscribe();
-    };
-  }, [client, root, model]);
-
-  // TODO: Pass `gitStatusBadges` from the settings once it exists.
-  return <FileTree aria-label="Files" model={model} />;
 }

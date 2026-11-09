@@ -1,4 +1,11 @@
-import type { DaemonBridge, PluginsBridge, ProjectsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
+import type {
+  DaemonBridge,
+  PluginsBridge,
+  ProjectsBridge,
+  SettingsBridge,
+  WindowBridge,
+  WorkspacesBridge,
+} from '@elsewise/bridge';
 import { contextBridge, ipcRenderer } from 'electron';
 
 // The app's version from package.json, defined by bundle.mjs.
@@ -34,6 +41,12 @@ const projects: ProjectsBridge = {
   save: (layout) => ipcRenderer.invoke('projects:save', layout),
 };
 
+const workspaces: WorkspacesBridge = {
+  load: (workspace) => ipcRenderer.invoke('workspaces:load', workspace),
+  save: (workspace, state) => ipcRenderer.invoke('workspaces:save', workspace, state),
+  delete: (id) => ipcRenderer.invoke('workspaces:delete', id),
+};
+
 let close: (() => Promise<void>) | undefined;
 ipcRenderer.on('window:close', async () => {
   try {
@@ -66,4 +79,5 @@ contextBridge.exposeInMainWorld('bridge', {
   settings,
   projects,
   window,
+  workspaces,
 });
