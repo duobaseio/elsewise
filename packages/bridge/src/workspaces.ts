@@ -44,11 +44,11 @@ export const WorkspaceState = z.object({
       /**
        * The open folders, each ending with `/`.
        */
-      expanded: z.array(z.string()).catch([]),
+      expanded: z.array(z.string()).readonly().catch([]),
       /**
        * The selected folders, each ending with `/`.
        */
-      selected: z.array(z.string()).catch([]),
+      selected: z.array(z.string()).readonly().catch([]),
     })
     .catch({ expanded: [], selected: [] }),
 });

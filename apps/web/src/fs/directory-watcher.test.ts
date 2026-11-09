@@ -12,6 +12,9 @@ import { DirectoryWatcher, type DirectoryWatcherModel, type DirectoryWatcherSnap
 function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] }) {
   const paths = new Set<string>(['stale.ts']);
   const selected = new Set<string>();
+  const expanded = new Set<string>();
+  const snapshots: DirectoryWatcherSnapshot[] = [];
+  let created: DirectoryWatcher | undefined;
   let expansion: ((path: string, expanded: boolean) => void) | undefined;
   const model = {
     batch: (operations) => {
@@ -25,10 +28,20 @@ function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] 
         }
       }
     },
-    resetPaths: (next: readonly string[] | { preparedInput: unknown }) => {
+    resetPaths: (
+      next: readonly string[] | { preparedInput: unknown },
+      options?: { initialExpandedPaths?: readonly string[] },
+    ) => {
       paths.clear();
       for (const path of 'preparedInput' in next ? [] : next) {
         paths.add(path);
+      }
+      expanded.clear();
+      for (const path of options?.initialExpandedPaths ?? []) {
+        expanded.add(path);
+      }
+      if (created !== undefined) {
+        snapshots.push(created.snapshot());
       }
     },
     getItem: (path: string) => {
@@ -97,11 +110,14 @@ function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] 
   };
 
   const watcher = new DirectoryWatcher('/repo', model, call, restored);
+  created = watcher;
   return {
     watcher,
     sent,
     paths: () => [...paths].sort(),
     selected: () => [...selected],
+    expanded: () => [...expanded],
+    snapshots: () => snapshots,
     cancelled: () => cancelled,
     expand: (path: string, expanded: boolean) => expansion?.(path, expanded),
     respond(response: WatchDirectoriesResponse) {
@@ -109,6 +125,10 @@ function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] 
       wake?.();
     },
   };
+}
+
+function unavailable(directory: string) {
+  return create(WatchDirectoriesResponseSchema, { relativePath: directory, state: { case: 'unavailable', value: {} } });
 }
 
 // A listing of `directory`, where a trailing `/` marks a folder.
@@ -163,8 +183,10 @@ describe('DirectoryWatcher', () => {
   });
 
   test('adds children under folder', async () => {
-    const { respond, paths } = fake();
+    const { respond, paths, expand } = fake();
     respond(listing('', ['src/']));
+    await expect.poll(paths).toEqual(['src/']);
+    expand('src/', true);
 
     respond(listing('src', ['main.ts', 'lib/']));
 
@@ -172,8 +194,10 @@ describe('DirectoryWatcher', () => {
   });
 
   test('relists recreated folder', async () => {
-    const { respond, paths } = fake();
+    const { respond, paths, expand } = fake();
     respond(listing('', ['src/']));
+    await expect.poll(paths).toEqual(['src/']);
+    expand('src/', true);
     respond(listing('src', ['main.ts']));
     respond(listing('', []));
     await expect.poll(paths).toEqual([]);
@@ -194,25 +218,33 @@ describe('DirectoryWatcher', () => {
     await expect.poll(paths).toEqual([]);
   });
 
-  test('expands remembered folder once listed', async () => {
-    const { respond, sent } = fake({ expanded: ['src/'], selected: [] });
+  test('watches remembered folders', () => {
+    const { sent } = fake({ expanded: ['src/', 'src/lib/'], selected: [] });
 
-    respond(listing('', ['src/']));
-
-    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+    expect(sent).toEqual([{ root: '/repo', relativePaths: ['', 'src', 'src/lib'] }]);
   });
 
-  test('expands nested remembered folders level by level', async () => {
-    const { respond, sent } = fake({ expanded: ['src/', 'src/lib/'], selected: [] });
-    respond(listing('', ['src/']));
-    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+  test('waits for remembered folders', async () => {
+    const { respond, paths } = fake({ expanded: ['src/'], selected: [] });
 
+    respond(listing('', ['src/']));
+    await new Promise((resolve) => setTimeout(resolve));
+
+    expect(paths()).toEqual([]);
+  });
+
+  test('restores remembered folders in one reset', async () => {
+    const { respond, paths, expanded } = fake({ expanded: ['src/', 'src/lib/'], selected: [] });
+
+    respond(listing('', ['src/']));
     respond(listing('src', ['lib/']));
+    respond(listing('src/lib', ['a.ts']));
 
-    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src', 'src/lib']);
+    await expect.poll(paths).toEqual(['src/', 'src/lib/', 'src/lib/a.ts']);
+    expect(expanded()).toEqual(['src/', 'src/lib/']);
   });
 
-  test('selects remembered path once listed', async () => {
+  test('selects remembered path', async () => {
     const { respond, selected } = fake({ expanded: ['src/'], selected: ['src/main.ts'] });
 
     respond(listing('', ['src/']));
@@ -221,22 +253,67 @@ describe('DirectoryWatcher', () => {
     await expect.poll(selected).toEqual(['src/main.ts']);
   });
 
-  test('forgets remembered paths gone from listing', async () => {
-    const { respond, paths, watcher } = fake({ expanded: ['gone/'], selected: ['gone.ts'] });
+  test('stops watching missing remembered folders', async () => {
+    const { respond, sent, watcher } = fake({ expanded: ['gone/', 'src/'], selected: [] });
+
+    respond(listing('', ['src/']));
+    respond(listing('src', []));
+    respond(
+      create(WatchDirectoriesResponseSchema, { relativePath: 'gone', state: { case: 'unavailable', value: {} } }),
+    );
+
+    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+    expect(watcher.snapshot()).toEqual({ expanded: ['src/'], selected: [] });
+  });
+
+  test('forgets remembered selection gone from listing', async () => {
+    const { respond, paths, snapshots } = fake({ expanded: [], selected: ['gone.ts'] });
 
     respond(listing('', ['src/']));
     await expect.poll(paths).toEqual(['src/']);
 
-    expect(watcher.snapshot()).toEqual({ expanded: [], selected: [] });
+    expect(snapshots().at(-1)?.selected).toEqual([]);
   });
 
-  test('reports open and remembered folders', async () => {
-    const { respond, sent, watcher } = fake({ expanded: ['src/', 'src/lib/'], selected: ['src/lib/a.ts'] });
+  test('ignores listing of unwatched folder', async () => {
+    const { respond, sent, paths } = fake({ expanded: ['gone/'], selected: [] });
+    respond(listing('', ['src/']));
+    respond(unavailable('gone'));
+    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['']);
+
+    respond(listing('gone', ['a.ts']));
+    respond(listing('', ['src/', 'README.md']));
+
+    await expect.poll(paths).toEqual(['README.md', 'src/']);
+  });
+
+  test('waits for unavailable root', async () => {
+    const { respond, paths, expanded } = fake({ expanded: ['src/'], selected: [] });
+
+    respond(unavailable(''));
+    respond(listing('src', ['a.ts']));
+    respond(listing('', ['src/']));
+
+    await expect.poll(paths).toEqual(['src/', 'src/a.ts']);
+    expect(expanded()).toEqual(['src/']);
+  });
+
+  test('keeps folders under unavailable folder', async () => {
+    const { respond, paths, sent, watcher } = fake({ expanded: ['src/', 'src/lib/'], selected: [] });
 
     respond(listing('', ['src/']));
-    await expect.poll(() => sent.at(-1)?.relativePaths).toEqual(['', 'src']);
+    respond(unavailable('src'));
+    respond(unavailable('src/lib'));
 
-    expect(watcher.snapshot()).toEqual({ expanded: ['src/', 'src/lib/'], selected: ['src/lib/a.ts'] });
+    await expect.poll(paths).toEqual(['src/']);
+    expect(sent).toHaveLength(1);
+    expect(watcher.snapshot()).toEqual({ expanded: ['src/', 'src/lib/'], selected: [] });
+  });
+
+  test('reports remembered state until restored', () => {
+    const { watcher } = fake({ expanded: ['src/'], selected: ['src/a.ts'] });
+
+    expect(watcher.snapshot()).toEqual({ expanded: ['src/'], selected: ['src/a.ts'] });
   });
 
   test('cancels stream on dispose', () => {

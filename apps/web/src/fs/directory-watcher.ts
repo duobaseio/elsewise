@@ -22,14 +22,16 @@ type Watcher = BidiCall<MessageInitShape<typeof WatchDirectoriesRequestSchema>, 
 
 /**
  * Syncs the daemon's file watcher and file tree component.
+ *
+ * Daemon reports the directories without trailing `/`s while file tree component requires them.
  */
 export class DirectoryWatcher {
   private readonly root: string;
   private readonly model: DirectoryWatcherModel;
   private readonly watcher: Watcher;
-  private readonly watched = new Set(['']);
-  private readonly listings = new Map<string, Set<string>>();
-  private readonly pending: { readonly expanded: Set<string>; readonly selected: Set<string> };
+  private readonly watched: Set<string>;
+  private readonly listings = new Map<string, Set<string> | null>();
+  private pending: DirectoryWatcherSnapshot | undefined;
   private readonly unsubscribe: () => void;
   private disposed = false;
 
@@ -37,13 +39,18 @@ export class DirectoryWatcher {
     this.root = root;
     this.model = model;
     this.watcher = watcher;
-    this.pending = { expanded: new Set(pending.expanded), selected: new Set(pending.selected) };
+    this.watched = new Set(['', ...pending.expanded]);
+    this.pending = pending;
     this.model.resetPaths([]);
     this.unsubscribe = model.onExpansion((path, expanded) => {
+      if (expanded === this.watched.has(path)) {
+        return;
+      }
+
       if (expanded) {
-        this.watched.add(path.slice(0, -1));
+        this.watched.add(path);
       } else {
-        this.watched.delete(path.slice(0, -1));
+        this.watched.delete(path);
       }
       void this.watch();
     });
@@ -53,21 +60,18 @@ export class DirectoryWatcher {
   }
 
   /**
-   * The open folders and the selected paths, including those that have not loaded into the file tree yet.
+   * The open folders and the selected paths.
    */
-  snapshot(): { expanded: string[]; selected: string[] } {
+  snapshot(): DirectoryWatcherSnapshot {
     return {
-      expanded: [
-        ...[...this.watched].filter((path) => path !== '').map((path) => `${path}/`),
-        ...this.pending.expanded,
-      ],
-      selected: [...new Set([...this.model.getSelectedPaths(), ...this.pending.selected])],
+      expanded: [...this.watched].filter((path) => path !== ''),
+      selected: [...(this.pending?.selected ?? this.model.getSelectedPaths())],
     };
   }
 
   private async watch(): Promise<void> {
     try {
-      await this.watcher.send({ root: this.root, relativePaths: [...this.watched] });
+      await this.watcher.send({ root: this.root, relativePaths: [...this.watched].map((path) => path.slice(0, -1)) });
     } catch {
       // `listen` reports the stream's failure.
     }
@@ -85,24 +89,41 @@ export class DirectoryWatcher {
     }
   }
 
+  // TODO: Show that a folder has more children once the tree can show `truncated` and `skipped`.
   private apply(response: WatchDirectoriesResponse): void {
-    const directory = response.relativePath;
-    if (response.state.case !== 'listing') {
-      if (directory === '') {
-        this.model.resetPaths([]);
-        this.listings.clear();
+    const directory = response.relativePath === '' ? '' : `${response.relativePath}/`;
+    if (!this.watched.has(directory)) {
+      return;
+    }
+
+    const children =
+      response.state.case === 'listing'
+        ? new Set(
+            response.state.value.entries.map(
+              ({ name, type }) => `${directory}${name}${type === DirectoryListing_Entry_Type.DIRECTORY ? '/' : ''}`,
+            ),
+          )
+        : null;
+
+    if (this.pending !== undefined) {
+      this.listings.set(directory, children);
+      if (this.listings.get('') !== null && [...this.watched].every((watched) => this.listings.has(watched))) {
+        const pending = this.pending;
+        this.pending = undefined;
+        this.restore(pending);
       }
 
       return;
     }
 
-    // TODO: Show that a folder has more children once the tree can show `truncated` and `skipped`.
-    const prefix = directory === '' ? '' : `${directory}/`;
-    const children = new Set(
-      response.state.value.entries.map(
-        ({ name, type }) => `${prefix}${name}${type === DirectoryListing_Entry_Type.DIRECTORY ? '/' : ''}`,
-      ),
-    );
+    if (children === null) {
+      if (directory === '') {
+        this.model.resetPaths([]);
+        this.listings.clear();
+      }
+      return;
+    }
+
     const previous = this.listings.get(directory) ?? new Set();
     this.listings.set(directory, children);
 
@@ -110,7 +131,7 @@ export class DirectoryWatcher {
     const removed = [...previous].filter((path) => !children.has(path));
     for (const path of removed.filter((path) => path.endsWith('/'))) {
       for (const listed of this.listings.keys()) {
-        if (`${listed}/`.startsWith(path)) {
+        if (listed.startsWith(path)) {
           this.listings.delete(listed);
         }
       }
@@ -122,24 +143,35 @@ export class DirectoryWatcher {
         ...removed.map((path) => ({ type: 'remove' as const, path, recursive: true })),
       ]);
     }
+  }
 
-    for (const path of added) {
-      const item = this.model.getItem(path);
-      if (this.pending.selected.delete(path)) {
-        item?.select();
-      }
-      if (this.pending.expanded.delete(path) && item !== null && 'expand' in item) {
-        item.expand();
+  private restore(pending: DirectoryWatcherSnapshot): void {
+    const paths: string[] = [];
+    const expanded = [''];
+    for (const directory of expanded) {
+      for (const path of this.listings.get(directory) ?? []) {
+        paths.push(path);
+        if (this.watched.has(path)) {
+          expanded.push(path);
+        }
       }
     }
 
-    for (const paths of [this.pending.expanded, this.pending.selected]) {
-      for (const path of paths) {
-        const name = path.endsWith('/') ? path.slice(0, -1) : path;
-        if (name.slice(0, Math.max(name.lastIndexOf('/'), 0)) === directory) {
-          paths.delete(path);
-        }
-      }
+    const gone = [...this.watched].filter((directory) => {
+      const parent = this.listings.get(directory.slice(0, directory.slice(0, -1).lastIndexOf('/') + 1));
+      return directory !== '' && parent !== null && !parent?.has(directory);
+    });
+    for (const directory of gone) {
+      this.watched.delete(directory);
+      this.listings.delete(directory);
+    }
+    if (gone.length > 0) {
+      void this.watch();
+    }
+
+    this.model.resetPaths(paths, { initialExpandedPaths: expanded.slice(1) });
+    for (const path of pending.selected) {
+      this.model.getItem(path)?.select();
     }
   }
 
