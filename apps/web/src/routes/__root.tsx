@@ -12,6 +12,7 @@ import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { usePluginStore } from '@/plugins/plugin-store';
 import { ProjectManager } from '@/projects/project-manager';
+import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
@@ -47,13 +48,14 @@ function RootComponent() {
   const frontend = useSettings();
   const router = useRouter();
   const client = useQueryClient();
+  const workspaceStates = useWorkspaceStateStore();
 
   const [{ application, languageServers }] = useState(() => {
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
       router,
       new SettingsPanelManager(Object.values(DEFAULT_PANELS), frontend),
-      new ProjectManager(client, router),
+      new ProjectManager(client, router, workspaceStates),
       new EditorManager(),
       new TerminalManager(),
       keymap,

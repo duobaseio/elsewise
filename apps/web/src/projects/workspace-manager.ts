@@ -22,6 +22,7 @@ import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/projec
 import { OrderedItems } from '@/plugins/ordered-items';
 import { DEFAULT_WORKSPACE_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
+import { WorkspaceStateStore } from '@/projects/workspace-state-store';
 
 /**
  * Returns the query for the workspaces of the project with `projectId` on the daemon with `daemonId`, the main one
@@ -62,6 +63,7 @@ export class WorkspaceManager implements Workspaces {
   constructor(
     private readonly client: QueryClient,
     private readonly router: AnyRouter,
+    private readonly states = new WorkspaceStateStore(undefined),
   ) {
     router.subscribe('onResolved', () => void this.onNavigate());
     client.getQueryCache().subscribe((event) => {
@@ -182,6 +184,7 @@ export class WorkspaceManager implements Workspaces {
       workspace,
       main ? DEFAULT_ROUTES.workspace(workspace.daemon, workspace.project, main.id) : DEFAULT_ROUTES.home,
     );
+    await this.states.delete(workspace);
 
     updateProjectLayout(this.client, workspace.daemon).removeWorkspace(workspace.project, workspace.workspace);
 

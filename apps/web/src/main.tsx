@@ -6,6 +6,7 @@ import { userThemesQuery } from '@/appearance/themes';
 import { userKeymapsQuery } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { projectLayoutQuery } from '@/projects/layout';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { type FileRouteTypes, routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
@@ -22,10 +23,13 @@ void (DEFAULT_ROUTES satisfies Routes);
 
 const queryClient = new QueryClient();
 const plugins = new PluginStore();
+const workspaces = new WorkspaceStateStore(window.bridge?.workspaces);
 
-// TODO: Disable the plugins on reloads from the menu or DevTools
-import.meta.hot?.on('vite:beforeFullReload', () => plugins.disableAll());
-window.bridge?.window?.onClose(() => plugins.disableAll());
+// TODO: Disable the plugins and save the workspaces on reloads from the menu or DevTools
+import.meta.hot?.on('vite:beforeFullReload', () => Promise.all([plugins.disableAll(), workspaces.flush()]));
+window.bridge?.window?.onClose(async () => {
+  await Promise.all([plugins.disableAll(), workspaces.flush()]);
+});
 
 window.bridge?.settings?.onChange((changed) => {
   if (changed === 'themes') {
@@ -58,7 +62,9 @@ if (root && !root.innerHTML) {
   createRoot(root).render(
     <QueryClientProvider client={queryClient}>
       <PluginStoreContext value={plugins}>
-        <RouterProvider router={router} />
+        <WorkspaceStateStoreContext value={workspaces}>
+          <RouterProvider router={router} />
+        </WorkspaceStateStoreContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );

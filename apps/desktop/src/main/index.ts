@@ -11,6 +11,7 @@ import { handleProjects } from './projects';
 import { handleAppScheme } from './protocol';
 import { handleSettings, watchUserThemesAndKeymaps } from './settings';
 import { closeAfterRenderer, loadWindow, saveWindow } from './window';
+import { handleWorkspaces } from './workspaces';
 
 app.setName('Elsewise');
 app.setPath('userData', path.join(dataLocalDir(), 'chromium'));
@@ -42,6 +43,7 @@ app.whenReady().then(() => {
   handlePlugins();
   handleSettings();
   handleProjects();
+  handleWorkspaces();
 
   installMenu();
   watchUserThemesAndKeymaps();
