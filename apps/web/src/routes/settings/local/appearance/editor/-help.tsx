@@ -1,10 +1,10 @@
-import { Icon } from '@elsewise/components/components/icon';
 import { letterformClass } from '@elsewise/components/components/letter-icon';
 import { cn } from '@elsewise/components/lib/utils';
 import type { ActiveTheme } from '@elsewise/frontend-plugin';
 import type { CSSProperties, ReactNode } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
 import { SCROLLBAR_WIDTH } from '@/editor/theme';
+import { HelpIllustration } from '../-help-illustration';
 
 type Role = keyof ActiveTheme['editor']['tokens'];
 
@@ -279,19 +279,13 @@ export function ScrollbarMarkersHelp({ children }: { children: ReactNode }) {
 function Illustration({ note, children }: { note: ReactNode; children: ReactNode }) {
   const { editor } = useActiveTheme();
   return (
-    <div className="flex w-96 flex-col">
-      <div
-        aria-hidden
-        className="font-mono text-code select-none"
-        style={{ backgroundColor: editor.background, color: editor.foreground }}
-      >
-        {children}
-      </div>
-      <p className="flex items-center gap-1.5 border-foreground/10 border-t px-3 py-2 text-text-2">
-        <Icon className="shrink-0 text-text-3" name="info" />
-        {note}
-      </p>
-    </div>
+    <HelpIllustration
+      className="font-mono text-code"
+      note={note}
+      style={{ backgroundColor: editor.background, color: editor.foreground }}
+    >
+      {children}
+    </HelpIllustration>
   );
 }
 

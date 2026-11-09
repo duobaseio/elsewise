@@ -87,12 +87,15 @@ message Status {
     // The entry's path.
     string relative_path = 1;
 
+    // Whether the entry is a directory.
+    bool directory = 2;
+
     // What the entry is.
     oneof kind {
-      Changed changed = 2;
-      Untracked untracked = 3;
-      Ignored ignored = 4;
-      Conflicted conflicted = 5;
+      Changed changed = 3;
+      Untracked untracked = 4;
+      Ignored ignored = 5;
+      Conflicted conflicted = 6;
     }
 
     // A tracked entry with a staged or unstaged change.
