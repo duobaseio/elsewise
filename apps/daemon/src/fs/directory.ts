@@ -35,6 +35,20 @@ export async function listDirectory(
   return { entries, truncated: named.length - kept.length, skipped: children.length - named.length };
 }
 
+function compare(a: string, b: string): number {
+  if (a === b) {
+    return 0;
+  }
+  return a < b ? -1 : 1;
+}
+
+function typeOf(entry: Dirent<Buffer> | Stats): DirectoryListing_Entry_Type {
+  if (entry.isDirectory()) {
+    return DirectoryListing_Entry_Type.DIRECTORY;
+  }
+  return entry.isFile() ? DirectoryListing_Entry_Type.FILE : DirectoryListing_Entry_Type.OTHER;
+}
+
 /** Fails with ALREADY_EXISTS unless the path is refused. */
 export async function refuseOccupiedPath(absoluteNativePath: string, acceptable: 'empty' | 'missing'): Promise<void> {
   const entries = await fs.readdir(absoluteNativePath).catch((error: unknown) => {
@@ -48,16 +62,41 @@ export async function refuseOccupiedPath(absoluteNativePath: string, acceptable:
   }
 }
 
-function compare(a: string, b: string): number {
-  if (a === b) {
-    return 0;
+/**
+ * Fails with ALREADY_EXISTS if an entry is at `newAbsoluteNativePath`, or with INVALID_ARGUMENT if it is inside the
+ * entry at `absoluteNativePath`.
+ */
+export async function refuseDestination(absoluteNativePath: string, newAbsoluteNativePath: string): Promise<void> {
+  const source = await fs.lstat(absoluteNativePath, { bigint: true });
+  const destination = await fs.lstat(newAbsoluteNativePath, { bigint: true }).catch((error: unknown) => {
+    if (errnoOf(error) === 'ENOENT') {
+      return undefined;
+    }
+    throw error;
+  });
+
+  // On a case-insensitive file system, `newAbsoluteNativePath` may be present even though the case is different
+  // (e.g. readme.md -> README.md).
+  const respelled =
+    destination?.dev === source.dev &&
+    destination.ino === source.ino &&
+    fold(absoluteNativePath) === fold(newAbsoluteNativePath);
+  if (destination && !respelled) {
+    throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the new path');
   }
-  return a < b ? -1 : 1;
+
+  for (
+    let folder = path.dirname(newAbsoluteNativePath);
+    folder !== path.dirname(folder);
+    folder = path.dirname(folder)
+  ) {
+    const ancestor = await fs.lstat(folder, { bigint: true }).catch(() => undefined);
+    if (ancestor?.dev === source.dev && ancestor.ino === source.ino) {
+      throw new TransportError(Code.INVALID_ARGUMENT, 'an entry cannot be moved into itself');
+    }
+  }
 }
 
-function typeOf(entry: Dirent<Buffer> | Stats): DirectoryListing_Entry_Type {
-  if (entry.isDirectory()) {
-    return DirectoryListing_Entry_Type.DIRECTORY;
-  }
-  return entry.isFile() ? DirectoryListing_Entry_Type.FILE : DirectoryListing_Entry_Type.OTHER;
+function fold(absoluteNativePath: string): string {
+  return absoluteNativePath.normalize('NFC').toLowerCase();
 }

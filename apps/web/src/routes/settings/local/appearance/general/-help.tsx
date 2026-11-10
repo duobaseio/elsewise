@@ -22,3 +22,18 @@ export function GitStatusBadgesHelp({ children }: { children: ReactNode }) {
     </HelpIllustration>
   );
 }
+
+/**
+ * Shows the file tree's indent guides.
+ */
+export function IndentGuidesHelp() {
+  const model = useFileTree({
+    initialPaths: ['src/', 'src/lexer/', 'src/lexer/mod.rs', 'src/lexer/token.rs', 'src/main.rs', 'Cargo.toml'],
+    initialExpandedPaths: ['src/', 'src/lexer/'],
+  });
+  return (
+    <HelpIllustration className="h-38 bg-background py-1">
+      <FileTree model={model} />
+    </HelpIllustration>
+  );
+}

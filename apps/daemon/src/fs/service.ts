@@ -22,7 +22,7 @@ import {
   type WatchRootsRequest,
   type WriteFileRequest,
 } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { listDirectory } from './directory';
+import { listDirectory, refuseDestination } from './directory';
 import { attempt, errnoOf } from './error';
 import { createFile, hashContent, hashFile, isBinary, replaceFile } from './file';
 import { toNativePath, toNativePathOrRoot, toProtocolPath } from './path';
@@ -156,20 +156,7 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
     return attempt(async () => {
       const absoluteNativePath = toNativePath(request.root, request.relativePath);
       const newAbsoluteNativePath = toNativePath(request.root, request.newRelativePath);
-      const from = await fs.lstat(absoluteNativePath, { bigint: true });
-      const to = await fs.lstat(newAbsoluteNativePath, { bigint: true }).catch((error) => {
-        if (errnoOf(error) === 'ENOENT') {
-          return undefined;
-        }
-        throw error;
-      });
-      // On a case-insensitive file system, `to` may be present even though the case is different
-      // (e.g. readme.md -> README.md).
-      const respelled =
-        to?.dev === from.dev && to.ino === from.ino && fold(absoluteNativePath) === fold(newAbsoluteNativePath);
-      if (to && !respelled) {
-        throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the new path');
-      }
+      await refuseDestination(absoluteNativePath, newAbsoluteNativePath);
       await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
       await fs.rename(absoluteNativePath, newAbsoluteNativePath);
       return {};
@@ -254,9 +241,4 @@ function fileReason(error: unknown): FileReason {
     default:
       return FileReason.OTHER;
   }
-}
-
-/** Returns the path as a case-insensitive file system compares it. */
-function fold(absoluteNativePath: string): string {
-  return absoluteNativePath.normalize('NFC').toLowerCase();
 }

@@ -6,8 +6,35 @@ import {
   type FileTreeCommand,
   type Workspace,
 } from '@elsewise/frontend-plugin';
+import type { ApplicationManager } from '@/application-manager';
 import { LOCAL_DAEMON_ID } from '@/daemon';
 import { FILE_MANAGER } from '@/projects/commands';
+
+export const FILE_TREE_RENAME: FileTreeCommand = {
+  scope: 'fileTree',
+  id: DEFAULT_COMMANDS.fileTree.edit.rename,
+  group: DEFAULT_COMMAND_GROUPS.fileTree.id,
+  label: 'Rename…',
+  defaultKeys: DEFAULT_KEYS.fileTree.edit.rename,
+  enabled: (_, { paths }) => paths.length === 1,
+  run: ({ fileTree }: ApplicationManager, { workspace, paths: [path = ''] }) => {
+    fileTree.renaming = { workspace: workspace.id, path };
+    return true;
+  },
+};
+
+export const FILE_TREE_DELETE: FileTreeCommand = {
+  scope: 'fileTree',
+  id: DEFAULT_COMMANDS.fileTree.edit.delete,
+  group: DEFAULT_COMMAND_GROUPS.fileTree.id,
+  label: 'Delete…',
+  defaultKeys: DEFAULT_KEYS.fileTree.edit.delete,
+  enabled: (_, { paths }) => paths.length > 0,
+  run: ({ fileTree }: ApplicationManager, selection) => {
+    fileTree.deleteDialog.openWithPayload(selection);
+    return true;
+  },
+};
 
 export const FILE_TREE_OPEN_FILE_MANAGER: FileTreeCommand = {
   scope: 'fileTree',

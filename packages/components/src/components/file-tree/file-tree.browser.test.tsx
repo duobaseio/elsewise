@@ -174,6 +174,26 @@ test("a file's icon aligns with a sibling folder's icon", async () => {
   expect(fileIconCentre(shadowRoot, 'daemon/sibling.rs')).toBeCloseTo(folderIconCentre(shadowRoot, 'daemon/src/'), 1);
 });
 
+test('files without sibling folders start where chevron draws', async () => {
+  function Tree() {
+    const model = useFileTree({ initialPaths: ['a.rs', 'b.rs'] });
+    return <FileTree aria-label="Flat" model={model} />;
+  }
+
+  await render(
+    <div className="h-64 w-72">
+      <Tree />
+    </div>,
+  );
+  await settleTree(2);
+  const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
+  if (shadowRoot == null) {
+    throw new Error('no shadow root');
+  }
+
+  expect(getComputedStyle(section(shadowRoot, 'a.rs', 'icon')).marginLeft).toBe('3px');
+});
+
 test("a child's chevron aligns with its parent's folder icon", async () => {
   const { shadowRoot } = await mount();
   expect(chevronCentre(shadowRoot, 'daemon/src/')).toBeCloseTo(folderIconCentre(shadowRoot, 'daemon/'), 1);

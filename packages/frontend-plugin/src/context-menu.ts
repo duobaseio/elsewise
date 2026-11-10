@@ -103,9 +103,10 @@ export const DEFAULT_TERMINAL_CONTEXT_MENU = {
  * The file tree context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_FILE_TREE_CONTEXT_MENU = {
+  edit: { id: 'io.duobase.elsewise.fileTree.contextMenu.edit', order: 30, items: { rename: 10, delete: 20 } },
   open: {
     id: 'io.duobase.elsewise.fileTree.contextMenu.open',
-    order: 10,
+    order: 40,
     items: {
       openIn: {
         id: 'io.duobase.elsewise.fileTree.contextMenu.open.openIn',

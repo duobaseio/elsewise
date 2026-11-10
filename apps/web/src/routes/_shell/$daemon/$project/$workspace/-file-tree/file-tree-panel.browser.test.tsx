@@ -9,7 +9,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
@@ -19,7 +19,7 @@ import {
   FileSystemService,
   WatchDirectoriesResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { GitService } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
+import { GitService, MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import {
   GetWorkspacesResponseSchema,
   ProjectService,
@@ -27,8 +27,8 @@ import {
 } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { settingsQuery } from '@/settings/settings';
-import { builtInApplication } from '../../../../../test/commands';
-import { FileTreePanel } from './-file-tree-panel';
+import { builtInApplication } from '../../../../../../../test/commands';
+import { FileTreePanel } from './file-tree-panel';
 
 const NAMES = ['a.ts', 'b.ts', 'c.ts'];
 
@@ -48,7 +48,7 @@ function unused(service: { methods: readonly { localName: string }[] }) {
 }
 
 // A daemon with the workspace Singapore at /elsewise, which holds `NAMES` and no git changes.
-function fakeDaemon(): Daemon {
+function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
   return {
     projects: {
       ...(unused(ProjectService) as unknown as Daemon['projects']),
@@ -85,13 +85,14 @@ function fakeDaemon(): Daemon {
     },
     git: {
       ...(unused(GitService) as unknown as Daemon['git']),
+      ...git,
       watchStatus: async function* () {},
     },
   };
 }
 
 // Renders the panel of Singapore, with the bridge to open a folder so the context menu has an item.
-async function mount() {
+async function mount(git: Partial<Daemon['git']> = {}) {
   window.bridge = {
     window: {
       cut() {},
@@ -106,7 +107,7 @@ async function mount() {
     },
   };
   const client = new QueryClient();
-  client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, fakeDaemon());
+  client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, fakeDaemon(git));
   client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const root = createRootRoute();
   const shell = createRoute({ getParentRoute: () => root, id: '_shell' });
@@ -151,5 +152,38 @@ describe('FileTreePanel', () => {
         document.querySelector('file-tree-container')?.shadowRoot?.activeElement?.getAttribute('data-item-path'),
       )
       .toBe('b.ts');
+  });
+
+  test('renames through git', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    const row = page.getByRole('treeitem', { name: 'a.ts' });
+    await expect.element(row).toBeVisible();
+
+    await userEvent.click(row, { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem', { name: /Rename/ }));
+    await userEvent.fill(page.getByRole('textbox'), 'z.ts');
+    await userEvent.keyboard('{Enter}');
+
+    await expect
+      .poll(() => move.mock.calls)
+      .toEqual([[{ absolutePath: '/elsewise', relativePath: 'a.ts', newRelativePath: 'z.ts' }]]);
+  });
+
+  test('restores row when rename fails', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => {
+      throw new Error('denied');
+    });
+    await mount({ move });
+    const row = page.getByRole('treeitem', { name: 'a.ts' });
+    await expect.element(row).toBeVisible();
+
+    await userEvent.click(row, { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem', { name: /Rename/ }));
+    await userEvent.fill(page.getByRole('textbox'), 'z.ts');
+    await userEvent.keyboard('{Enter}');
+
+    await expect.element(page.getByRole('treeitem', { name: 'a.ts' })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'z.ts' })).not.toBeInTheDocument();
   });
 });

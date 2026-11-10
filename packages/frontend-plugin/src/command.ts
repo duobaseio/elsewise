@@ -162,6 +162,10 @@ export const DEFAULT_COMMANDS = {
     },
   },
   fileTree: {
+    edit: {
+      rename: 'elsewise.fileTree.edit.rename',
+      delete: 'elsewise.fileTree.edit.delete',
+    },
     open: {
       fileManager: 'elsewise.fileTree.open.fileManager',
     },
@@ -308,6 +312,10 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
   },
   fileTree: {
+    edit: {
+      rename: ['Shift-F6'],
+      delete: ['Delete', 'Backspace'],
+    },
     open: {
       fileManager: [],
     },

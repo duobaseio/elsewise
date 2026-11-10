@@ -79,7 +79,7 @@ export function SplitPage({ title, preview, children }: SplitPageProps) {
 function FormPanel(_props: ISplitviewPanelProps) {
   return (
     <div className="h-full pr-2">
-      <div className="flex h-full flex-col gap-8 overflow-y-auto p-8 pr-6">{useContext(SplitContext).form}</div>
+      <div className="flex h-full flex-col gap-8 overflow-y-auto p-8 pr-6 pb-16">{useContext(SplitContext).form}</div>
     </div>
   );
 }

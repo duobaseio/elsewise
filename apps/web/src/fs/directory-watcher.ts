@@ -137,10 +137,15 @@ export class DirectoryWatcher {
       }
     }
 
-    if (added.length > 0 || removed.length > 0) {
+    // Changes originating from the file tree immediately updates the file tree's model. We filter those changes out to
+    // avoid batch(...) throwing errors on those.
+    const adds = added.filter((path) => this.model.getItem(path) === null);
+    const removes = removed.filter((path) => this.model.getItem(path) !== null);
+
+    if (adds.length > 0 || removes.length > 0) {
       this.model.batch([
-        ...added.map((path) => ({ type: 'add' as const, path })),
-        ...removed.map((path) => ({ type: 'remove' as const, path, recursive: true })),
+        ...adds.map((path) => ({ type: 'add' as const, path })),
+        ...removes.map((path) => ({ type: 'remove' as const, path, recursive: true })),
       ]);
     }
   }

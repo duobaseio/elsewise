@@ -21,9 +21,10 @@ import { Editor } from '@/editor/editor';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
-import { FileTreePanel } from './-file-tree-panel';
+import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
+import { FileTreePanel } from './-file-tree/file-tree-panel';
 // TODO: Back this with the daemon.
-import FAKE_CODE from './$workspace.tsx?raw';
+import FAKE_CODE from './route.tsx?raw';
 
 declare global {
   interface ImportMetaEnv {
@@ -61,7 +62,10 @@ function WorkspaceRoute() {
   );
 
   return (
-    <WorkspaceDock key={JSON.stringify([daemon, project, workspace])} layout={dock} onLayoutChange={onLayoutChange} />
+    <>
+      <WorkspaceDock key={JSON.stringify([daemon, project, workspace])} layout={dock} onLayoutChange={onLayoutChange} />
+      <DeleteEntriesDialog />
+    </>
   );
 }
 

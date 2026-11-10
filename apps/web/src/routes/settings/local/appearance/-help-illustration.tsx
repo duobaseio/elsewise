@@ -3,7 +3,7 @@ import { cn } from '@elsewise/components/lib/utils';
 import type { CSSProperties, ReactNode } from 'react';
 
 /**
- * An illustration filling the tooltip above a note.
+ * An illustration filling the tooltip, above an optional note.
  */
 export function HelpIllustration({
   note,
@@ -11,7 +11,7 @@ export function HelpIllustration({
   style,
   children,
 }: {
-  note: ReactNode;
+  note?: ReactNode;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
@@ -21,10 +21,12 @@ export function HelpIllustration({
       <div aria-hidden className={cn('select-none', className)} inert style={style}>
         {children}
       </div>
-      <p className="flex items-center gap-1.5 border-foreground/10 border-t px-3 py-2 text-text-2">
-        <Icon className="shrink-0 text-text-3" name="info" />
-        {note}
-      </p>
+      {note && (
+        <p className="flex items-center gap-1.5 border-foreground/10 border-t px-3 py-2 text-text-2">
+          <Icon className="shrink-0 text-text-3" name="info" />
+          {note}
+        </p>
+      )}
     </div>
   );
 }

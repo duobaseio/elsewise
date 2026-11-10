@@ -1,8 +1,8 @@
 import type { DockviewApi, SerializedDockview } from 'dockview-react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
-import { STUB_PANELS } from '../../../../../test/dock-stubs';
-import { WorkspaceDock } from './$workspace';
+import { STUB_PANELS } from '../../../../../../test/dock-stubs';
+import { WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 

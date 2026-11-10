@@ -66,6 +66,10 @@
   border-left-color: transparent;
 }
 
+:host([data-flat]) [data-item-type="file"] [data-item-section="icon"] {
+  margin-left: 3px;
+}
+
 /* Hide the git badge on folders that only contain changed files. */
 [data-item-contains-git-change="true"] > [data-item-section="git"] {
   display: none;
@@ -84,4 +88,22 @@
 [data-item-git-status="deleted"] > [data-item-section="git"] > span::after {
   content: "!";
   font-size: var(--trees-font-size);
+}
+
+/* The rename field matches `Input`, as the sidebar's rename field uses it. */
+/* noinspection CssUnresolvedCustomProperty */
+[data-item-rename-input] {
+  padding-inline: 6px;
+  border: 1px solid var(--input);
+  border-radius: calc(var(--radius) * 0.8);
+  background-color: transparent;
+  transition: border-color 150ms;
+}
+
+:host-context([data-brightness="dark"]) [data-item-rename-input] {
+  background-color: color-mix(in oklab, var(--input) 30%, transparent);
+}
+
+[data-item-rename-input]:focus-visible {
+  border-color: var(--foreground);
 }

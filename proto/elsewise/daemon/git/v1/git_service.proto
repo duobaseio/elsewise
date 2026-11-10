@@ -24,6 +24,12 @@ service GitService {
   // Watches the status of a worktree.
   rpc WatchStatus(WatchStatusRequest) returns (stream WatchStatusResponse);
 
+  // Moves or renames an entry before staging it.
+  //
+  // Creates the destination's parent directories if required. Returns ALREADY_EXISTS if an entry already exists at the
+  // destination.
+  rpc Move(MoveRequest) returns (MoveResponse);
+
   // Stages changes.
   //
   // Staging a conflicted entry marks it resolved.
@@ -226,6 +232,19 @@ message WatchStatusResponse {
   // The worktree's status.
   Status status = 1;
 }
+
+message MoveRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // The entry's relative path.
+  string relative_path = 2;
+
+  // The entry's new relative path.
+  string new_relative_path = 3;
+}
+
+message MoveResponse {}
 
 message StageRequest {
   // The worktree's path.
