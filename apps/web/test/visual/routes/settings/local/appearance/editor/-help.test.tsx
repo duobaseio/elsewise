@@ -1,5 +1,6 @@
 import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -13,7 +14,25 @@ import { settingsQuery } from '@/settings/settings';
 
 import { THEMES } from '../../../../../../sheet';
 
-test.each(THEMES)('editor help (%s)', async (theme) => {
+const HELPS: Record<string, (enabled: boolean) => ReactNode> = {
+  'completion-documentation-help': (enabled) => (
+    <CompletionDocumentationHelp enabled={enabled}>
+      Documentation may require a language server.
+    </CompletionDocumentationHelp>
+  ),
+  'highlight-usages-help': (enabled) => (
+    <HighlightUsagesHelp enabled={enabled}>Requires a language server.</HighlightUsagesHelp>
+  ),
+  'scrollbar-markers-help': (enabled) => (
+    <ScrollbarMarkersHelp enabled={enabled}>Diagnostics may require a language server.</ScrollbarMarkersHelp>
+  ),
+};
+
+test.each(
+  Object.keys(HELPS).flatMap((name) =>
+    [true, false].flatMap((enabled) => THEMES.map((theme) => [name, enabled, theme] as const)),
+  ),
+)('%s enabled %s (%s)', async (name, enabled, theme) => {
   // The illustrations take the editor's colors for the brightness in the settings.
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
@@ -31,20 +50,12 @@ test.each(THEMES)('editor help (%s)', async (theme) => {
           data-brightness={theme}
           data-testid="sheet"
         >
-          <div>
-            <CompletionDocumentationHelp>Documentation may require a language server.</CompletionDocumentationHelp>
-          </div>
-          <div>
-            <HighlightUsagesHelp>Requires a language server.</HighlightUsagesHelp>
-          </div>
-          <div>
-            <ScrollbarMarkersHelp>Diagnostics may require a language server.</ScrollbarMarkersHelp>
-          </div>
+          <div>{HELPS[name]?.(enabled)}</div>
         </div>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
-  await expect.element(page.getByText('Returns an iterator over the slice.')).toBeVisible();
+  await expect.element(page.getByText(/language server/)).toBeVisible();
 
-  await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-help-${theme}`);
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`${name}${enabled ? '' : '-disabled'}-${theme}`);
 });

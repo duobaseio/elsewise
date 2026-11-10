@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
@@ -54,7 +55,9 @@ async function mount(settings = SETTINGS) {
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <RouterProvider router={router} />
+        <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+          <RouterProvider router={router} />
+        </WorkspaceStateStoreContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
@@ -89,6 +92,22 @@ describe('Editor', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(withEditor({ [key]: !SETTINGS.appearance.editor[key] }));
+  });
+
+  test.each([true, false])('help follows completion documentation (%s)', async (completionDocumentation) => {
+    await mount(withEditor({ completionDocumentation }));
+
+    await userEvent.hover(document.querySelector('#completionDocumentation [data-slot="row-help"]') as Element);
+
+    await expect
+      .poll(() => document.querySelector('[data-slot="tooltip-content"]')?.textContent)
+      .toContain('Documentation may require a language server.');
+    const documentation = expect(document.querySelector('[data-slot="tooltip-content"]')?.textContent);
+    if (completionDocumentation) {
+      documentation.toContain('Returns an iterator over the slice.');
+    } else {
+      documentation.not.toContain('Returns an iterator over the slice.');
+    }
   });
 
   test('saves diff layout', async () => {

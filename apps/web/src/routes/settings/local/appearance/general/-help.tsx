@@ -5,7 +5,7 @@ import { HelpIllustration } from '../-help-illustration';
 /**
  * Shows the git status badges of a worktree's files in the file tree.
  */
-export function GitStatusBadgesHelp({ children }: { children: ReactNode }) {
+export function GitStatusBadgesHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const model = useFileTree({
     initialPaths: ['added.rs', 'conflict.rs', 'ignored.rs', 'modified.rs', 'unchanged.rs', 'untracked.rs'],
     initialGitStatus: [
@@ -18,7 +18,7 @@ export function GitStatusBadgesHelp({ children }: { children: ReactNode }) {
   });
   return (
     <HelpIllustration className="h-38 bg-background py-1" note={children}>
-      <FileTree model={model} />
+      <FileTree model={model} gitStatusBadges={enabled} />
     </HelpIllustration>
   );
 }
@@ -26,14 +26,14 @@ export function GitStatusBadgesHelp({ children }: { children: ReactNode }) {
 /**
  * Shows the file tree's indent guides.
  */
-export function IndentGuidesHelp() {
+export function IndentGuidesHelp({ enabled }: { enabled: boolean }) {
   const model = useFileTree({
     initialPaths: ['src/', 'src/lexer/', 'src/lexer/mod.rs', 'src/lexer/token.rs', 'src/main.rs', 'Cargo.toml'],
     initialExpandedPaths: ['src/', 'src/lexer/'],
   });
   return (
     <HelpIllustration className="h-38 bg-background py-1">
-      <FileTree model={model} />
+      <FileTree model={model} indentGuides={enabled} />
     </HelpIllustration>
   );
 }

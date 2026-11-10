@@ -202,8 +202,11 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
         return {};
       }
 
+      // The git index path & fs path may have different casing. We do this to get the index's path. Tracked is always
+      // a file.
       const segments = relativePath.split('/');
       const indexedRelativePath = tracked.split('/').slice(0, segments.length).join('/');
+
       if (respelled) {
         const temporaryRelativePath = `${newRelativePath}.${randomUUID()}`;
         await this.#gitMove(git, request.absolutePath, indexedRelativePath, temporaryRelativePath);

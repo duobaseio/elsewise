@@ -7,12 +7,16 @@ import { GitStatusBadgesHelp, IndentGuidesHelp } from '@/routes/settings/local/a
 import { THEMES } from '../../../../../../sheet';
 
 const HELPS: Record<string, ReactNode> = {
-  'git-status-badges': <GitStatusBadgesHelp>Requires a git repository.</GitStatusBadgesHelp>,
-  'indent-guides': <IndentGuidesHelp />,
+  'git-status-badges-help': <GitStatusBadgesHelp enabled>Requires a git repository.</GitStatusBadgesHelp>,
+  'git-status-badges-help-disabled': (
+    <GitStatusBadgesHelp enabled={false}>Requires a git repository.</GitStatusBadgesHelp>
+  ),
+  'indent-guides-help': <IndentGuidesHelp enabled />,
+  'indent-guides-help-disabled': <IndentGuidesHelp enabled={false} />,
 };
 
 test.each(Object.keys(HELPS).flatMap((name) => THEMES.map((theme) => [name, theme] as const)))(
-  '%s help (%s)',
+  '%s (%s)',
   async (name, theme) => {
     await render(
       <div
@@ -35,6 +39,6 @@ test.each(Object.keys(HELPS).flatMap((name) => THEMES.map((theme) => [name, them
     await Promise.all(icons.map((url) => fetch(url)));
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-    await expect(page.getByTestId('sheet')).toMatchScreenshot(`${name}-help-${theme}`);
+    await expect(page.getByTestId('sheet')).toMatchScreenshot(`${name}-${theme}`);
   },
 );
