@@ -3,6 +3,8 @@ import type { Platform } from '@elsewise/components/lib/platform';
 import {
   DEFAULT_COMMAND_GROUPS,
   type EditorCommand,
+  type FileTreeCommand,
+  type FileTreeSelection,
   type Keys,
   type Project,
   type ProjectCommand,
@@ -357,6 +359,19 @@ describe('run', () => {
     expect(run.mock.lastCall?.[1]).toBe(target);
   });
 
+  test('runs file tree command against selection only', () => {
+    const manager = commands();
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+    manager.add([{ id: 'c', label: 'C', scope: 'fileTree', group: APPLICATION, run }]);
+    const selection: FileTreeSelection = { workspace: WORKSPACE, paths: ['src/'] };
+
+    expect(manager.run('c')).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+
+    expect(manager.run('c', selection)).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(selection);
+  });
+
   test('refuses target of other surface', () => {
     const manager = commands();
     const run = vi.fn(() => true);
@@ -365,15 +380,18 @@ describe('run', () => {
       { id: 'workspace', label: 'Workspace', scope: 'workspace', group: APPLICATION, run },
       { id: 'editor', label: 'Editor', scope: 'editor', group: EDITOR, run },
       { id: 'terminal', label: 'Terminal', scope: 'terminal', group: TERMINAL, run },
+      { id: 'fileTree', label: 'File tree', scope: 'fileTree', group: APPLICATION, run },
     ]);
 
     expect(manager.run('project', WORKSPACE)).toBe(false);
     expect(manager.run('workspace', PROJECT)).toBe(false);
     expect(manager.run('editor', PROJECT)).toBe(false);
+    expect(manager.run('editor', { workspace: WORKSPACE, paths: [] })).toBe(false);
     expect(manager.run('editor', terminal('a'))).toBe(false);
     expect(manager.run('terminal', view('a'))).toBe(false);
+    expect(manager.run('fileTree', WORKSPACE)).toBe(false);
     expect(run).not.toHaveBeenCalled();
-    expect(warn).toHaveBeenCalledTimes(5);
+    expect(warn).toHaveBeenCalledTimes(7);
   });
 
   test('runs application command regardless of view', () => {

@@ -6,6 +6,7 @@ import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 import { pluginStore } from '../../../plugins';
@@ -64,7 +65,9 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTI
     <div className="font-sans" data-brightness={theme} data-testid="sheet" style={{ width: 900, height: 480 }}>
       <QueryClientProvider client={client}>
         <PluginStoreContext value={store}>
-          <RouterProvider router={router} />
+          <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+            <RouterProvider router={router} />
+          </WorkspaceStateStoreContext>
         </PluginStoreContext>
       </QueryClientProvider>
     </div>,

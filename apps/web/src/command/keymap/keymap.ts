@@ -4,6 +4,7 @@ import { PLATFORM } from '@elsewise/components/lib/platform';
 import {
   BundledKeymap,
   DEFAULT_FRONTEND_SETTINGS,
+  type FileTreeSelection,
   Keymap,
   type KeymapId,
   type Project,
@@ -333,6 +334,30 @@ export function runSidebarKeys(commands: CommandManager, target: Project | Works
   const keys = isWorkspace(target) ? commands.keymap.keys.workspace : commands.keymap.keys.project;
   for (const key of eventKeys(event, PLATFORM)) {
     if (keys.get(key)?.some((id) => commands.run(id, target))) {
+      event.preventDefault();
+      return;
+    }
+  }
+}
+
+/**
+ * Runs the file tree commands bound to the key of `event`, pressed in a file tree, on `selection`.
+ *
+ * Does nothing without a selection, or for a key typed into an input, e.g. the tree's search.
+ */
+export function runFileTreeKeys(commands: CommandManager, selection: FileTreeSelection, event: KeyboardEvent): void {
+  const origin = event.composedPath()[0];
+  if (
+    event.defaultPrevented ||
+    event.isComposing ||
+    selection.paths.length === 0 ||
+    (origin !== undefined && 'tagName' in origin && origin.tagName === 'INPUT')
+  ) {
+    return;
+  }
+
+  for (const key of eventKeys(event, PLATFORM)) {
+    if (commands.keymap.keys.fileTree.get(key)?.some((id) => commands.run(id, selection))) {
       event.preventDefault();
       return;
     }

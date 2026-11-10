@@ -100,6 +100,29 @@ export const DEFAULT_TERMINAL_CONTEXT_MENU = {
 } as const;
 
 /**
+ * The file tree context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_FILE_TREE_CONTEXT_MENU = {
+  open: {
+    id: 'io.duobase.elsewise.fileTree.contextMenu.open',
+    order: 10,
+    items: {
+      openIn: {
+        id: 'io.duobase.elsewise.fileTree.contextMenu.open.openIn',
+        order: 10,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.fileTree.contextMenu.open.openIn.apps',
+            order: 10,
+            items: { fileManager: 10 },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
  * A group of items, separated from other groups in a context menu.
  *
  * Groups with the same id in a scope, e.g. the editor or the terminal, are merged. `order`, `in` and items with duplicate ids all use

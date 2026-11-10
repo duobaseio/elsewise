@@ -12,7 +12,7 @@ import {
   type WorkspaceStatusHandle,
   type Workspaces,
 } from '@elsewise/frontend-plugin';
-import { type QueryClient, queryOptions } from '@tanstack/react-query';
+import { type QueryClient, queryOptions, useQuery } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
@@ -382,6 +382,19 @@ export function mapWorkspace(daemon: string, message: WorkspaceMessage | undefin
     main: message.main,
     absolutePath: message.absolutePath,
   };
+}
+
+/**
+ * Returns a `workspace`, or undefined until it has loaded or when it does not exist.
+ */
+export function useWorkspace(workspace: WorkspaceId): Workspace | undefined {
+  return useQuery({
+    ...workspacesQuery(workspace.daemon, workspace.project),
+    select: (workspaces) => {
+      const found = workspaces.find((candidate) => candidate.id === workspace.workspace);
+      return found && mapWorkspace(workspace.daemon, found);
+    },
+  }).data;
 }
 
 /**

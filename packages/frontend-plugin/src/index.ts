@@ -14,6 +14,7 @@ export type {
   CommandGroup,
   Commands,
   EditorCommand,
+  FileTreeCommand,
   ProjectCommand,
   TerminalCommand,
   WorkspaceCommand,
@@ -24,6 +25,7 @@ export {
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
+  DEFAULT_FILE_TREE_CONTEXT_MENU,
   DEFAULT_PROJECT_CONTEXT_MENU,
   DEFAULT_TERMINAL_CONTEXT_MENU,
   DEFAULT_WORKSPACE_CONTEXT_MENU,
@@ -67,6 +69,7 @@ export {
   type EditorToolbarItem,
   type EditorToolbarProps,
 } from './editor/toolbar';
+export type { FileTree, FileTreeSelection } from './file-tree';
 export {
   Brightness,
   BundledKeymap,
