@@ -26,6 +26,7 @@ export const GENERAL_TERMS = {
     label: 'Git status badges',
     keywords: ['file tree', 'letters', 'markers', 'decorations', 'modified', 'changed files', 'git'],
   },
+  indentGuides: { label: 'Indent guides', keywords: ['file tree', 'indentation', 'lines', 'nesting', 'levels'] },
 } as const satisfies Record<keyof FrontendSettings['appearance']['general'] | 'ligatures', SettingsSearchTerm>;
 
 const BRIGHTNESS: Record<Brightness, string> = { system: 'System', light: 'Light', dark: 'Dark' };
@@ -115,6 +116,18 @@ export function General() {
           aria-label={GENERAL_TERMS.gitStatusBadges.label}
           checked={general.gitStatusBadges}
           onCheckedChange={(gitStatusBadges) => set({ gitStatusBadges })}
+        />
+      </Row>
+
+      <Row
+        id="indentGuides"
+        label={GENERAL_TERMS.indentGuides.label}
+        description="Show a vertical line for each folder level in the file tree."
+      >
+        <Switch
+          aria-label={GENERAL_TERMS.indentGuides.label}
+          checked={general.indentGuides}
+          onCheckedChange={(indentGuides) => set({ indentGuides })}
         />
       </Row>
     </Page>

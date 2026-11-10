@@ -87,12 +87,13 @@ function Tree({
   box,
   label,
   gitStatusBadges,
+  indentGuides,
   ...options
-}: FileTreeOptions & { box: string; label: string; gitStatusBadges?: boolean }) {
+}: FileTreeOptions & { box: string; label: string; gitStatusBadges?: boolean; indentGuides?: boolean }) {
   const model = useFileTree(options);
   return (
     <div className={box}>
-      <FileTree aria-label={label} gitStatusBadges={gitStatusBadges} model={model} />
+      <FileTree aria-label={label} gitStatusBadges={gitStatusBadges} indentGuides={indentGuides} model={model} />
     </div>
   );
 }
@@ -176,4 +177,22 @@ test.each(THEMES)('file tree without git status badges (%s)', async (theme) => {
   await settleTree(BADGES_ROWS);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-no-badges-${theme}`);
+});
+
+test.each(THEMES)('file tree without indent guides (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <Tree
+        box={STRUCTURE_BOX}
+        indentGuides={false}
+        initialExpandedPaths={STRUCTURE_EXPANDED}
+        initialPaths={STRUCTURE_PATHS}
+        label="No indent guides"
+      />
+    </Sheet>,
+  );
+
+  await settleTree(STRUCTURE_ROWS);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-no-indent-guides-${theme}`);
 });

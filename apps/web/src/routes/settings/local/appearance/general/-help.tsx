@@ -7,18 +7,17 @@ import { HelpIllustration } from '../-help-illustration';
  */
 export function GitStatusBadgesHelp({ children }: { children: ReactNode }) {
   const model = useFileTree({
-    initialPaths: ['src/', 'src/lexer.rs', 'src/main.rs', 'src/parser.rs', 'target/', 'build.rs', 'notes.md'],
-    initialExpandedPaths: ['src/'],
+    initialPaths: ['added.rs', 'conflict.rs', 'ignored.rs', 'modified.rs', 'unchanged.rs', 'untracked.rs'],
     initialGitStatus: [
-      { path: 'src/main.rs', status: 'modified' },
-      { path: 'src/parser.rs', status: 'added' },
-      { path: 'target/', status: 'ignored' },
-      { path: 'build.rs', status: 'conflict' },
-      { path: 'notes.md', status: 'untracked' },
+      { path: 'added.rs', status: 'added' },
+      { path: 'conflict.rs', status: 'conflict' },
+      { path: 'ignored.rs', status: 'ignored' },
+      { path: 'modified.rs', status: 'modified' },
+      { path: 'untracked.rs', status: 'untracked' },
     ],
   });
   return (
-    <HelpIllustration className="h-44 bg-background py-1" note={children}>
+    <HelpIllustration className="h-38 bg-background py-1" note={children}>
       <FileTree model={model} />
     </HelpIllustration>
   );

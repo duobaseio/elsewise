@@ -127,6 +127,18 @@ describe('General', () => {
     expect(save).toHaveBeenCalledWith(withGeneral({ gitStatusBadges: false }));
   });
 
+  test('saves only indent guides leaf', async () => {
+    const save = await mount();
+    const toggle = page.getByRole('switch', { name: 'Indent guides' });
+    await expect.element(toggle).toBeChecked();
+
+    await userEvent.click(toggle);
+
+    await expect.element(toggle).not.toBeChecked();
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withGeneral({ indentGuides: false }));
+  });
+
   test('washes highlighted row only', async () => {
     await mount(DEFAULT_FRONTEND_SETTINGS, 'ligatures');
 
