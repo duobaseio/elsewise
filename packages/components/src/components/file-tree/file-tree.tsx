@@ -22,10 +22,17 @@ export interface FileTreeProps {
   model: FileTreeModel;
   className?: string;
   gitStatusBadges?: boolean;
+  indentGuides?: boolean;
   'aria-label'?: string;
 }
 
-export function FileTree({ model, className, gitStatusBadges = true, 'aria-label': ariaLabel }: FileTreeProps) {
+export function FileTree({
+  model,
+  className,
+  gitStatusBadges = true,
+  indentGuides = true,
+  'aria-label': ariaLabel,
+}: FileTreeProps) {
   const icons = useIcons();
   const style = {
     '--ew-folder-icon': `url("${iconUrl(icons.folder)}")`,
@@ -39,6 +46,7 @@ export function FileTree({ model, className, gitStatusBadges = true, 'aria-label
       className={cn('h-full scheme-light dark:scheme-dark', className)}
       style={style}
       data-git-status-badges={gitStatusBadges}
+      data-indent-guides={indentGuides}
     />
   );
 }

@@ -22,6 +22,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const { daemon, project, workspace: workspaceId } = route.useParams();
   const client = useQuery(daemonQuery(daemon)).data;
   const gitStatusBadges = useSettings((settings) => settings.appearance.general.gitStatusBadges);
+  const indentGuides = useSettings((settings) => settings.appearance.general.indentGuides);
   const workspace = useWorkspace({ daemon, project, workspace: workspaceId });
   const root = workspace?.absolutePath;
 
@@ -88,6 +89,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       onClosed={() => {
         if (clicked.current !== null) {
           model.focusPath(clicked.current);
+          model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>('[role="tree"]')?.focus();
         }
       }}
       render={
@@ -102,7 +104,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       }
       className="h-full"
     >
-      <FileTree model={model} gitStatusBadges={gitStatusBadges} aria-label="Files" />
+      <FileTree model={model} gitStatusBadges={gitStatusBadges} indentGuides={indentGuides} aria-label="Files" />
     </CommandContextMenu>
   );
 }

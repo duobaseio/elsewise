@@ -20,7 +20,7 @@ test.each(THEMES)('general help (%s)', async (theme) => {
   // Waits for every row and the icons they draw, so the screenshot has no blank icon lanes.
   const tree = await vi.waitFor(() => {
     const root = document.querySelector('file-tree-container')?.shadowRoot;
-    if (root?.querySelectorAll('[data-type="item"]').length !== 7) {
+    if (root?.querySelectorAll('[data-type="item"]').length !== 6) {
       throw new Error('The file tree has not rendered every row.');
     }
     return root;

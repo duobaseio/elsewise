@@ -62,6 +62,10 @@
   transition: none;
 }
 
+:host([data-indent-guides="false"]) [data-item-section="spacing-item"] {
+  border-left-color: transparent;
+}
+
 /* Hide the git badge on folders that only contain changed files. */
 [data-item-contains-git-change="true"] > [data-item-section="git"] {
   display: none;

@@ -31,7 +31,7 @@ const ROWS = 8;
 const ICON_LANE = 16;
 const ROW_GAP = 6;
 
-async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: boolean) {
+async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: boolean, indentGuides?: boolean) {
   const model: { current: FileTreeModel | null } = { current: null };
 
   function Harness() {
@@ -41,7 +41,14 @@ async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: b
       initialPaths: PATHS,
       ...options,
     });
-    return <FileTree aria-label="Geometry" gitStatusBadges={gitStatusBadges} model={model.current} />;
+    return (
+      <FileTree
+        aria-label="Geometry"
+        gitStatusBadges={gitStatusBadges}
+        indentGuides={indentGuides}
+        model={model.current}
+      />
+    );
   }
 
   await render(
@@ -310,6 +317,17 @@ test('the indent guides do not wait for a hover', async () => {
 
   expect(getComputedStyle(guide).opacity).toBe('1');
   expect(getComputedStyle(guide).transitionDuration).toBe('0s');
+});
+
+test('indent guides off clears the guide and keeps its width', async () => {
+  const { shadowRoot } = await mount({}, undefined, false);
+  const guide = row(shadowRoot, 'daemon/src/main.rs').querySelector('[data-item-section="spacing-item"]');
+  if (guide == null) {
+    throw new Error('no indent guide');
+  }
+
+  expect(getComputedStyle(guide).borderLeftColor).toBe('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(guide).borderLeftWidth).toBe('1px');
 });
 
 test('the focus ring is keyboard-only', async () => {
