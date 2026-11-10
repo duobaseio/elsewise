@@ -180,15 +180,16 @@ test('a folder with no aria-expanded still renders the open icon', async () => {
     throw new Error('no icon lane');
   }
 
-  const open = getComputedStyle(lane, '::after').maskImage;
-  expect(open).toMatch(/^url\("data:image\/svg\+xml,/);
+  const mask = () => getComputedStyle(lane, '::after').maskImage;
+  const open = getComputedStyle(lane).getPropertyValue('--ew-folder-open-icon');
+  const closed = getComputedStyle(lane).getPropertyValue('--ew-folder-icon');
+  expect(mask()).toBe(open);
 
   folder.setAttribute('aria-expanded', 'false');
-  const closed = getComputedStyle(lane, '::after').maskImage;
-  expect(closed).not.toBe(open);
+  expect(mask()).toBe(closed);
 
   folder.removeAttribute('aria-expanded');
-  expect(getComputedStyle(lane, '::after').maskImage).toBe(open);
+  expect(mask()).toBe(open);
 });
 
 test('git status colours the name, never the icon', async () => {
@@ -199,6 +200,12 @@ test('git status colours the name, never the icon', async () => {
   expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'icon')).color).toBe(
     rgb(token('--trees-fg-muted')),
   );
+});
+
+test('selection never colours the icon', async () => {
+  const { shadowRoot } = await mount({ initialSelectedPaths: ['daemon/'] });
+  expect(row(shadowRoot, 'daemon/').dataset.itemSelected).toBe('true');
+  expect(getComputedStyle(section(shadowRoot, 'daemon/', 'icon')).color).toBe(rgb(token('--trees-fg-muted')));
 });
 
 test('each status carries its letter', async () => {
