@@ -14,7 +14,7 @@ import { Route as SettingsRouteRouteImport } from './routes/settings/route'
 import { Route as ShellIndexRouteImport } from './routes/_shell/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as SettingsLocalIdRouteImport } from './routes/settings/local/$id'
-import { Route as ShellDaemonProjectWorkspaceRouteImport } from './routes/_shell/$daemon/$project/$workspace'
+import { Route as ShellDaemonProjectWorkspaceRouteRouteImport } from './routes/_shell/$daemon/$project/$workspace/route'
 import { Route as SettingsRemoteRemoteIdRouteImport } from './routes/settings/remote/$remote/$id'
 import { Route as SettingsLocalAppearanceEditorIndexRouteImport } from './routes/settings/local/appearance/editor/index'
 import { Route as SettingsLocalAppearanceEditorLanguageRouteImport } from './routes/settings/local/appearance/editor/$language'
@@ -46,8 +46,8 @@ const SettingsLocalIdRoute = SettingsLocalIdRouteImport.update({
   path: '/local/$id',
   getParentRoute: () => SettingsRouteRoute,
 } as any)
-const ShellDaemonProjectWorkspaceRoute =
-  ShellDaemonProjectWorkspaceRouteImport.update({
+const ShellDaemonProjectWorkspaceRouteRoute =
+  ShellDaemonProjectWorkspaceRouteRouteImport.update({
     id: '/$daemon/$project/$workspace',
     path: '/$daemon/$project/$workspace',
     getParentRoute: () => ShellRouteRoute,
@@ -93,7 +93,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteRouteWithChildren
   '/settings/': typeof SettingsIndexRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
-  '/$daemon/$project/$workspace': typeof ShellDaemonProjectWorkspaceRoute
+  '/$daemon/$project/$workspace': typeof ShellDaemonProjectWorkspaceRouteRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
   '/settings/local/appearance/editor/': typeof SettingsLocalAppearanceEditorIndexRoute
@@ -105,7 +105,7 @@ export interface FileRoutesByTo {
   '/': typeof ShellIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
-  '/$daemon/$project/$workspace': typeof ShellDaemonProjectWorkspaceRoute
+  '/$daemon/$project/$workspace': typeof ShellDaemonProjectWorkspaceRouteRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
   '/settings/local/appearance/editor': typeof SettingsLocalAppearanceEditorIndexRoute
@@ -120,7 +120,7 @@ export interface FileRoutesById {
   '/_shell/': typeof ShellIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/settings/local/$id': typeof SettingsLocalIdRoute
-  '/_shell/$daemon/$project/$workspace': typeof ShellDaemonProjectWorkspaceRoute
+  '/_shell/$daemon/$project/$workspace': typeof ShellDaemonProjectWorkspaceRouteRoute
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/editor/$language': typeof SettingsLocalAppearanceEditorLanguageRoute
   '/settings/local/appearance/editor/': typeof SettingsLocalAppearanceEditorIndexRoute
@@ -216,7 +216,7 @@ declare module '@tanstack/react-router' {
       id: '/_shell/$daemon/$project/$workspace'
       path: '/$daemon/$project/$workspace'
       fullPath: '/$daemon/$project/$workspace'
-      preLoaderRoute: typeof ShellDaemonProjectWorkspaceRouteImport
+      preLoaderRoute: typeof ShellDaemonProjectWorkspaceRouteRouteImport
       parentRoute: typeof ShellRouteRoute
     }
     '/settings/remote/$remote/$id': {
@@ -266,12 +266,12 @@ declare module '@tanstack/react-router' {
 
 interface ShellRouteRouteChildren {
   ShellIndexRoute: typeof ShellIndexRoute
-  ShellDaemonProjectWorkspaceRoute: typeof ShellDaemonProjectWorkspaceRoute
+  ShellDaemonProjectWorkspaceRouteRoute: typeof ShellDaemonProjectWorkspaceRouteRoute
 }
 
 const ShellRouteRouteChildren: ShellRouteRouteChildren = {
   ShellIndexRoute: ShellIndexRoute,
-  ShellDaemonProjectWorkspaceRoute: ShellDaemonProjectWorkspaceRoute,
+  ShellDaemonProjectWorkspaceRouteRoute: ShellDaemonProjectWorkspaceRouteRoute,
 }
 
 const ShellRouteRouteWithChildren = ShellRouteRoute._addFileChildren(

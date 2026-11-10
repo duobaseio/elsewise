@@ -1,15 +1,23 @@
 'use client';
 
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
+import { createContext, useContext } from 'react';
 
 import { cn } from '../lib/utils';
 
-export function TooltipProvider({ ...props }: TooltipPrimitive.Provider.Props) {
-  return <TooltipPrimitive.Provider data-slot="tooltip-provider" {...props} />;
+const TooltipGroupContext = createContext(false);
+
+export function TooltipProvider({ delay = 300, ...props }: TooltipPrimitive.Provider.Props) {
+  return (
+    <TooltipGroupContext value>
+      <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />
+    </TooltipGroupContext>
+  );
 }
 
 export function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
+  const root = <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
+  return useContext(TooltipGroupContext) ? root : <TooltipProvider>{root}</TooltipProvider>;
 }
 
 export function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {

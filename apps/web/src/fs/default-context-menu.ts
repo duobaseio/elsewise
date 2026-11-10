@@ -1,9 +1,17 @@
 import { type ContextMenuGroup, DEFAULT_COMMANDS, DEFAULT_FILE_TREE_CONTEXT_MENU } from '@elsewise/frontend-plugin';
 import { FILE_MANAGER } from '@/projects/commands';
 
-const { open } = DEFAULT_FILE_TREE_CONTEXT_MENU;
+const { edit, open } = DEFAULT_FILE_TREE_CONTEXT_MENU;
 
 export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
+  {
+    id: edit.id,
+    order: edit.order,
+    items: [
+      { order: edit.items.rename, command: DEFAULT_COMMANDS.fileTree.edit.rename },
+      { order: edit.items.delete, command: DEFAULT_COMMANDS.fileTree.edit.delete },
+    ],
+  },
   {
     id: open.id,
     order: open.order,

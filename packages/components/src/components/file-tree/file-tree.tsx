@@ -9,7 +9,7 @@ import {
   FileTree as PierreFileTreeModel,
 } from '@pierre/trees';
 import { FileTree as PierreFileTree, useFileTree as usePierreFileTree } from '@pierre/trees/react';
-import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { cn } from '../../lib/utils';
 import { iconUrl, useIcons } from '../icon';
 import themeCss from './file-tree.css?inline';
@@ -34,6 +34,10 @@ export function FileTree({
   'aria-label': ariaLabel,
 }: FileTreeProps) {
   const icons = useIcons();
+  const flat = useSyncExternalStore(
+    (listener) => model.subscribe(listener),
+    () => model.getVisibleRows(0, 0)[0]?.kind !== 'directory',
+  );
   const style = {
     '--ew-folder-icon': `url("${iconUrl(icons.folder)}")`,
     '--ew-folder-open-icon': `url("${iconUrl(icons['folder-open'])}")`,
@@ -47,6 +51,7 @@ export function FileTree({
       style={style}
       data-git-status-badges={gitStatusBadges}
       data-indent-guides={indentGuides}
+      data-flat={flat || undefined}
     />
   );
 }

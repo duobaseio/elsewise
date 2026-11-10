@@ -20,8 +20,14 @@ function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] 
     batch: (operations) => {
       for (const operation of operations) {
         if (operation.type === 'add') {
+          if (paths.has(operation.path)) {
+            throw new Error(`Path already exists: "${operation.path}"`);
+          }
           paths.add(operation.path);
         } else if (operation.type === 'remove') {
+          if (!paths.has(operation.path)) {
+            throw new Error(`Path does not exist: "${operation.path}"`);
+          }
           for (const path of [...paths].filter((path) => path.startsWith(operation.path))) {
             paths.delete(path);
           }
@@ -117,6 +123,10 @@ function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] 
     paths: () => [...paths].sort(),
     selected: () => [...selected],
     expanded: () => [...expanded],
+    rename(from: string, to: string) {
+      paths.delete(from);
+      paths.add(to);
+    },
     snapshots: () => snapshots,
     cancelled: () => cancelled,
     expand: (path: string, expanded: boolean) => expansion?.(path, expanded),
@@ -171,6 +181,17 @@ describe('DirectoryWatcher', () => {
     respond(listing('', ['src/']));
 
     await expect.poll(paths).toEqual(['src/']);
+  });
+
+  test('skips entries tree already has', async () => {
+    const { respond, paths, rename } = fake();
+    respond(listing('', ['a.ts', 'c.ts']));
+    await expect.poll(paths).toEqual(['a.ts', 'c.ts']);
+    rename('a.ts', 'b.ts');
+
+    respond(listing('', ['b.ts', 'd.ts']));
+
+    await expect.poll(paths).toEqual(['b.ts', 'd.ts']);
   });
 
   test('watches opened folder until closed', () => {

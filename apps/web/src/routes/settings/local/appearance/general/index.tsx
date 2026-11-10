@@ -13,7 +13,7 @@ import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettings } from '@/settings/settings';
 import { FontRows } from '../-font-rows';
 import { ThemeSelect } from '../-theme';
-import { GitStatusBadgesHelp } from './-help';
+import { GitStatusBadgesHelp, IndentGuidesHelp } from './-help';
 
 export const Route = createFileRoute('/settings/local/appearance/general/')({ component: General });
 
@@ -123,6 +123,7 @@ export function General() {
         id="indentGuides"
         label={GENERAL_TERMS.indentGuides.label}
         description="Show a vertical line for each folder level in the file tree."
+        help={<IndentGuidesHelp />}
       >
         <Switch
           aria-label={GENERAL_TERMS.indentGuides.label}

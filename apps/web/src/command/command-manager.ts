@@ -85,7 +85,7 @@ import { EDITOR_GO_TO_DEFINITION } from '@/editor/lsp/definition';
 import { EDITOR_FIND_USAGES } from '@/editor/lsp/references';
 import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
-import { FILE_TREE_OPEN_FILE_MANAGER } from '@/fs/commands';
+import { FILE_TREE_DELETE, FILE_TREE_OPEN_FILE_MANAGER, FILE_TREE_RENAME } from '@/fs/commands';
 import {
   PROJECT_COPY_PATH,
   PROJECT_DELETE,
@@ -199,6 +199,8 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   TERMINAL_SELECT_ALL,
   TERMINAL_CLEAR,
   // File tree
+  FILE_TREE_RENAME,
+  FILE_TREE_DELETE,
   FILE_TREE_OPEN_FILE_MANAGER,
 ];
 

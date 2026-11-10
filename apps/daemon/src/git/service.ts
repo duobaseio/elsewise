@@ -1,10 +1,12 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
-import { refuseOccupiedPath } from '../fs/directory';
+import { refuseDestination, refuseOccupiedPath } from '../fs/directory';
 import { isBinary } from '../fs/file';
-import { toNativeRoot } from '../fs/path';
+import { toNativePath, toNativeRoot } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
 import {
   type AbortOperationRequest,
@@ -38,6 +40,7 @@ import {
   type GitService,
   type LockWorktreeRequest,
   type MergeRequest,
+  type MoveRequest,
   type MoveWorktreeRequest,
   type PruneWorktreesRequest,
   type PullRequest,
@@ -163,6 +166,64 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
       }
     } catch (error) {
       throw gitToTransportError(error);
+    }
+  }
+
+  move(request: MoveRequest) {
+    return attempt(async () => {
+      for (const relativePath of [request.relativePath, request.newRelativePath]) {
+        if (relativePath.split('/').some((segment) => segment.toLowerCase() === '.git')) {
+          throw new TransportError(Code.INVALID_ARGUMENT, `"${relativePath}" is in a git directory`);
+        }
+      }
+
+      const git = await this.#open(request.absolutePath);
+      const absoluteNativePath = toNativePath(request.absolutePath, request.relativePath);
+      const newAbsoluteNativePath = toNativePath(request.absolutePath, request.newRelativePath);
+      await refuseDestination(absoluteNativePath, newAbsoluteNativePath);
+
+      const relativePath = filePath(request.relativePath);
+      const newRelativePath = filePath(request.newRelativePath);
+      const ignoreCase = (await git.text(['config', '--bool', 'core.ignorecase']).catch(() => '')).trim() === 'true';
+      const pathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${relativePath}`];
+      if ((await git.text(withPathspecs(['ls-files', '--unmerged', '-z'], pathSpecs))) !== '') {
+        throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" has conflicts`);
+      }
+
+      const [tracked] = (await git.text(withPathspecs(['ls-files', '-z'], pathSpecs))).split('\0');
+      const respelled = await fs.lstat(newAbsoluteNativePath).then(
+        () => true,
+        () => false,
+      );
+      await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+
+      if (!tracked) {
+        await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+        return {};
+      }
+
+      const segments = relativePath.split('/');
+      const indexedRelativePath = tracked.split('/').slice(0, segments.length).join('/');
+      if (respelled) {
+        const temporaryRelativePath = `${newRelativePath}.${randomUUID()}`;
+        await this.#gitMove(git, request.absolutePath, indexedRelativePath, temporaryRelativePath);
+        await this.#gitMove(git, request.absolutePath, temporaryRelativePath, newRelativePath);
+      } else {
+        await this.#gitMove(git, request.absolutePath, indexedRelativePath, newRelativePath);
+      }
+      return {};
+    });
+  }
+
+  async #gitMove(git: Git, absolutePath: string, relativePath: string, newRelativePath: string): Promise<void> {
+    await git.run(['mv', '-k', '--', relativePath, newRelativePath]);
+    const moved = await fs.lstat(toNativePath(absolutePath, relativePath)).then(
+      () => false,
+      () => true,
+    );
+
+    if (!moved) {
+      throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" could not be moved`);
     }
   }
 
@@ -833,7 +894,6 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  /** Returns git running in the worktree. */
   async #open(absolutePath: string): Promise<Git> {
     const absoluteNativePath = toNativeRoot(absolutePath);
     const stats = await fs.stat(absoluteNativePath);

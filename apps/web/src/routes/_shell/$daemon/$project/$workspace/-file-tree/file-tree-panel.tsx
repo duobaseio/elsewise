@@ -1,10 +1,12 @@
 import { DEFAULT_WORKSPACE_STATE } from '@elsewise/bridge';
 import { FileTree, useFileTree } from '@elsewise/components/components/file-tree';
+import { toast } from '@elsewise/components/components/toast';
 import type { FileTreeSelection } from '@elsewise/frontend-plugin';
 import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
 import { useEffect, useRef } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { runFileTreeKeys } from '@/command/keymap/keymap';
@@ -27,16 +29,34 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const root = workspace?.absolutePath;
 
   const commands = useCommandManager();
-  const menu = useFileTreeManager((fileTree) => fileTree.contextMenu);
+  const { fileTree } = useApplicationManager();
+  const menu = useFileTreeManager((manager) => manager.contextMenu);
   const clicked = useRef<string | null>(null);
   const target = useRef<FileTreeSelection | null>(null);
 
   const store = useWorkspaceStateStore();
   const model = useFileTree({
     initialPaths: [],
-    // TODO: Rename through FileSystemService.RenameEntry, then let the resulting listing move the row.
-    canRename: () => false,
-    // TODO: Move through FileSystemService.RenameEntry, as a move is a rename across folders.
+    canRename: () => true,
+    onRename: ({ sourcePath, destinationPath }) => {
+      if (client === undefined || root === undefined) {
+        return;
+      }
+
+      const relativePath = sourcePath.replace(/\/$/, '');
+      const newRelativePath = destinationPath.replace(/\/$/, '');
+      const renamed: Promise<unknown> =
+        workspace?.state === 'ok'
+          ? client.git.move({ absolutePath: root, relativePath, newRelativePath })
+          : client.fileSystem.renameEntry({ root, relativePath, newRelativePath });
+
+      renamed.catch((error: Error) => {
+        model.move(destinationPath, sourcePath);
+        toast.add({ type: 'error', title: 'Renaming failed', description: error.message });
+      });
+    },
+    onRenameError: (error) => toast.add({ type: 'error', title: 'Renaming failed', description: error }),
+    // TODO: Move through GitService.Move, as a move is a rename across folders.
     canDrag: () => false,
   });
 
@@ -60,6 +80,19 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       stopSaving();
     };
   }, [client, root, model, store, daemon, project, workspaceId]);
+
+  const renaming = useFileTreeManager((manager) => manager.renaming);
+  useEffect(() => {
+    if (
+      renaming !== null &&
+      renaming.workspace.daemon === daemon &&
+      renaming.workspace.project === project &&
+      renaming.workspace.workspace === workspaceId
+    ) {
+      fileTree.renaming = null;
+      model.startRenaming(renaming.path);
+    }
+  }, [renaming, fileTree, model, daemon, project, workspaceId]);
 
   return (
     <CommandContextMenu

@@ -48,14 +48,14 @@ test('the sheet is not mistakable for the library’s own', () => {
   expect(builtIn.filter((id) => definedIds.has(id))).toEqual([]);
 });
 
-test('the chevron draws at three quarters of its lane', () => {
+test('the chevron draws at seven eighths of its lane', () => {
   const viewBox = /<symbol id="ew-chevron" viewBox="([^"]+)"/.exec(spriteSheet)?.[1];
   if (viewBox === undefined) {
     throw new Error('no chevron symbol');
   }
 
   const [x, y, width, height] = viewBox.split(/\s+/).map(Number);
-  expect(256 / width).toBeCloseTo(0.75, 4);
+  expect(256 / width).toBeCloseTo(0.875, 4);
   expect(height).toBeCloseTo(width, 4);
   expect(x).toBeCloseTo(-(width - 256) / 2, 4);
   expect(y).toBeCloseTo(x, 4);
