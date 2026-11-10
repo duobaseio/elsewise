@@ -172,7 +172,7 @@ const BELOW: readonly (readonly [top: number, marker: Marker])[] = [
 /**
  * Shows a completion's documentation beside the list.
  */
-export function CompletionDocumentationHelp({ children }: { children: ReactNode }) {
+export function CompletionDocumentationHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const { editor } = useActiveTheme();
   const method = editor.tokens.method?.color ?? editor.foreground;
   return (
@@ -203,25 +203,27 @@ export function CompletionDocumentationHelp({ children }: { children: ReactNode 
             </li>
           ))}
         </ul>
-        <div
-          className="min-w-0 flex-1 rounded-lg px-3 py-2 font-sans text-xs shadow-md ring-1 ring-foreground/10"
-          style={{ backgroundColor: editor.tooltipBackground }}
-        >
-          <div className="font-mono text-code">
-            <Tokens
-              tokens={[
-                ['fn', 'declarationKeyword'],
-                [' '],
-                ['iter', 'function'],
-                ['(', 'bracket'],
-                ['&', 'operator'],
-                ['self', 'self'],
-                [')', 'bracket'],
-              ]}
-            />
+        {enabled && (
+          <div
+            className="min-w-0 flex-1 rounded-lg px-3 py-2 font-sans text-xs shadow-md ring-1 ring-foreground/10"
+            style={{ backgroundColor: editor.tooltipBackground }}
+          >
+            <div className="font-mono text-code">
+              <Tokens
+                tokens={[
+                  ['fn', 'declarationKeyword'],
+                  [' '],
+                  ['iter', 'function'],
+                  ['(', 'bracket'],
+                  ['&', 'operator'],
+                  ['self', 'self'],
+                  [')', 'bracket'],
+                ]}
+              />
+            </div>
+            <p className="mt-1 text-text-2">Returns an iterator over the slice.</p>
           </div>
-          <p className="mt-1 text-text-2">Returns an iterator over the slice.</p>
-        </div>
+        )}
       </div>
     </Illustration>
   );
@@ -230,11 +232,11 @@ export function CompletionDocumentationHelp({ children }: { children: ReactNode 
 /**
  * Shows the usages of the symbol under the caret highlighted.
  */
-export function HighlightUsagesHelp({ children }: { children: ReactNode }) {
+export function HighlightUsagesHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   return (
     <Illustration note={children}>
       <div className="py-2">
-        <Code lines={USAGES} active={2} />
+        <Code lines={USAGES} active={2} hidden={enabled ? undefined : 'usage'} />
       </div>
     </Illustration>
   );
@@ -243,7 +245,7 @@ export function HighlightUsagesHelp({ children }: { children: ReactNode }) {
 /**
  * Shows a file's diagnostics, search matches and usages marked on its scrollbar.
  */
-export function ScrollbarMarkersHelp({ children }: { children: ReactNode }) {
+export function ScrollbarMarkersHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const { editor } = useActiveTheme();
   // A line's tick is its last marker's, as the editor draws search matches over usages.
   const shown = MARKED.flatMap((tokens, line) => {
@@ -260,13 +262,14 @@ export function ScrollbarMarkersHelp({ children }: { children: ReactNode }) {
             className="absolute top-0.5 rounded-full bg-border"
             style={{ left: (SCROLLBAR_WIDTH - 4) / 2, right: (SCROLLBAR_WIDTH - 4) / 2, height: `${SHOWN * 100}%` }}
           />
-          {[...shown, ...BELOW].map(([top, marker]) => (
-            <span
-              className="absolute inset-x-0 h-[3px]"
-              key={top}
-              style={{ top: `calc(${top * 100}% - 1.5px)`, backgroundColor: editor.scrollbarMarkers[marker] }}
-            />
-          ))}
+          {enabled &&
+            [...shown, ...BELOW].map(([top, marker]) => (
+              <span
+                className="absolute inset-x-0 h-[3px]"
+                key={top}
+                style={{ top: `calc(${top * 100}% - 1.5px)`, backgroundColor: editor.scrollbarMarkers[marker] }}
+              />
+            ))}
         </div>
       </div>
     </Illustration>
@@ -289,7 +292,7 @@ function Illustration({ note, children }: { note: ReactNode; children: ReactNode
   );
 }
 
-function Code({ lines, active }: { lines: readonly (readonly Token[])[]; active: number }) {
+function Code({ lines, active, hidden }: { lines: readonly (readonly Token[])[]; active: number; hidden?: Marker }) {
   const { editor } = useActiveTheme();
   return lines.map((tokens, i) => (
     <div
@@ -298,12 +301,12 @@ function Code({ lines, active }: { lines: readonly (readonly Token[])[]; active:
       key={i}
       style={i === active ? { backgroundColor: editor.activeLine } : undefined}
     >
-      <Tokens tokens={tokens} />
+      <Tokens tokens={tokens} hidden={hidden} />
     </div>
   ));
 }
 
-function Tokens({ tokens }: { tokens: readonly Token[] }) {
+function Tokens({ tokens, hidden }: { tokens: readonly Token[]; hidden?: Marker }) {
   const { editor } = useActiveTheme();
   // Draws a diagnostic's squiggle like the editor does, in its color.
   const squiggle = (color: string) =>
@@ -327,7 +330,8 @@ function Tokens({ tokens }: { tokens: readonly Token[] }) {
       );
     }
 
-    const [text, role, marker] = token;
+    const [text, role] = token;
+    const marker = token[2] === hidden ? undefined : token[2];
     const style = role === undefined ? undefined : editor.tokens[role];
     return (
       <span

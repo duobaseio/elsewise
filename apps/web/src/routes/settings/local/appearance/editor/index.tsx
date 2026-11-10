@@ -140,7 +140,7 @@ export function Editor() {
         id="highlightUsages"
         label={EDITOR_TERMS.highlightUsages.label}
         description="Highlight usages of the symbol under the cursor."
-        help={<HighlightUsagesHelp>Requires a language server.</HighlightUsagesHelp>}
+        help={<HighlightUsagesHelp enabled={editor.highlightUsages}>Requires a language server.</HighlightUsagesHelp>}
       >
         <Switch
           aria-label={EDITOR_TERMS.highlightUsages.label}
@@ -153,7 +153,11 @@ export function Editor() {
         id="completionDocumentation"
         label={EDITOR_TERMS.completionDocumentation.label}
         description="Show a completion's documentation beside the list."
-        help={<CompletionDocumentationHelp>Documentation may require a language server.</CompletionDocumentationHelp>}
+        help={
+          <CompletionDocumentationHelp enabled={editor.completionDocumentation}>
+            Documentation may require a language server.
+          </CompletionDocumentationHelp>
+        }
       >
         <Switch
           aria-label={EDITOR_TERMS.completionDocumentation.label}
@@ -166,7 +170,11 @@ export function Editor() {
         id="scrollbarMarkers"
         label={EDITOR_TERMS.scrollbarMarkers.label}
         description="Mark diagnostics, usages and search matches on the scrollbar."
-        help={<ScrollbarMarkersHelp>Diagnostics may require a language server.</ScrollbarMarkersHelp>}
+        help={
+          <ScrollbarMarkersHelp enabled={editor.scrollbarMarkers}>
+            Diagnostics may require a language server.
+          </ScrollbarMarkersHelp>
+        }
       >
         <Switch
           aria-label={EDITOR_TERMS.scrollbarMarkers.label}

@@ -139,6 +139,18 @@ describe('General', () => {
     expect(save).toHaveBeenCalledWith(withGeneral({ indentGuides: false }));
   });
 
+  test.each([true, false])('help follows indent guides (%s)', async (indentGuides) => {
+    await mount(withGeneral({ indentGuides }));
+
+    await userEvent.hover(document.querySelector('#indentGuides [data-slot="row-help"]') as Element);
+
+    await expect
+      .poll(() => document.querySelector('[data-slot="tooltip-content"] [data-indent-guides]'))
+      .not.toBeNull();
+    const tree = document.querySelector('[data-slot="tooltip-content"] [data-indent-guides]');
+    expect(tree?.getAttribute('data-indent-guides') !== 'false').toBe(indentGuides);
+  });
+
   test('washes highlighted row only', async () => {
     await mount(DEFAULT_FRONTEND_SETTINGS, 'ligatures');
 

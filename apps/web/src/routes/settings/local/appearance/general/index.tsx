@@ -110,7 +110,7 @@ export function General() {
         id="gitStatusBadges"
         label={GENERAL_TERMS.gitStatusBadges.label}
         description="Indicate changed files in the file tree with a badge."
-        help={<GitStatusBadgesHelp>Requires a git repository.</GitStatusBadgesHelp>}
+        help={<GitStatusBadgesHelp enabled={general.gitStatusBadges}>Requires a git repository.</GitStatusBadgesHelp>}
       >
         <Switch
           aria-label={GENERAL_TERMS.gitStatusBadges.label}
@@ -123,7 +123,7 @@ export function General() {
         id="indentGuides"
         label={GENERAL_TERMS.indentGuides.label}
         description="Show a vertical line for each folder level in the file tree."
-        help={<IndentGuidesHelp />}
+        help={<IndentGuidesHelp enabled={general.indentGuides} />}
       >
         <Switch
           aria-label={GENERAL_TERMS.indentGuides.label}
