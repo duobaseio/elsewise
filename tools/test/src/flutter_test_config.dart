@@ -13,7 +13,7 @@ Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   // The families FileIcon and its surroundings set in, read from the components package's install rather than
   // vendored a second time.
   for (final (family, file) in [
-    (sans, 'work-sans/files/work-sans-latin-wght-normal.woff2'),
+    (sans, 'public-sans/files/public-sans-latin-wght-normal.woff2'),
     (mono, 'jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2'),
   ]) {
     final loader = FontLoader(family)

@@ -10,10 +10,12 @@ import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keym
 import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { FileTreeManager } from '@/fs/file-tree-manager';
 import { usePluginStore } from '@/plugins/plugin-store';
 import { ProjectManager } from '@/projects/project-manager';
 import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
+import { DEFAULT_FONTS } from '@/settings/fonts';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
@@ -58,6 +60,7 @@ function RootComponent() {
       new ProjectManager(client, router, workspaceStates),
       new EditorManager(),
       new TerminalManager(),
+      new FileTreeManager(),
       keymap,
     );
 
@@ -137,7 +140,7 @@ function useCurrentFonts() {
   useLayoutEffect(() => {
     const style = document.documentElement.style;
     const fonts = [
-      { font: general, name: 'sans', text: 'base', fallback: "'Work Sans Variable', system-ui, sans-serif" },
+      { font: general, name: 'sans', text: 'base', fallback: "'Public Sans Variable', system-ui, sans-serif" },
       { font: editor, name: 'mono', text: 'code', fallback: "'JetBrains Mono Variable', monospace" },
     ];
     for (const { font, name, text, fallback } of fonts) {
@@ -157,6 +160,13 @@ function useCurrentFonts() {
         style.setProperty(`--text-${text}-gutter--line-height`, grid);
       }
       style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
+    }
+
+    const features = DEFAULT_FONTS.find((choice) => choice.value === general.family)?.features;
+    if (features) {
+      style.setProperty('--font-sans-features', features);
+    } else {
+      style.removeProperty('--font-sans-features');
     }
   }, [general, editor]);
 }

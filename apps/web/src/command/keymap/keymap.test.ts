@@ -4,6 +4,7 @@ import {
   type ApplicationCommand,
   DEFAULT_COMMAND_GROUPS,
   DEFAULT_FRONTEND_SETTINGS,
+  type FileTreeCommand,
   Keymap,
   type KeymapId,
 } from '@elsewise/frontend-plugin';
@@ -16,6 +17,7 @@ import {
   installApplicationKeys,
   type LoadedKeymap,
   resolveKeymap,
+  runFileTreeKeys,
   useCopyKeymap,
   useDeleteKeymap,
   useLoadedKeymaps,
@@ -226,6 +228,77 @@ describe('installApplicationKeys', () => {
     const { window, dispose } = install(command('a', run));
     dispose();
     window.dispatchEvent(press());
+
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFileTreeKeys', () => {
+  const SELECTION = {
+    workspace: {
+      id: { daemon: 'local', project: 'p', workspace: 'w' },
+      name: 'w',
+      state: 'ok' as const,
+      main: false,
+      absolutePath: '/p/w',
+    },
+    paths: ['src/'],
+  };
+
+  // Returns commands with a file tree command bound to Ctrl-k that runs `run`.
+  function bound(run: FileTreeCommand['run']) {
+    const commands = builtInCommands();
+    commands.add([
+      {
+        id: 'a',
+        label: 'a',
+        scope: 'fileTree',
+        group: DEFAULT_COMMAND_GROUPS.fileTree.id,
+        defaultKeys: ['Ctrl-k'],
+        run,
+      },
+    ]);
+    return commands;
+  }
+
+  test('runs bound command on selection', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+    const event = press();
+
+    runFileTreeKeys(bound(run), SELECTION, event);
+    runFileTreeKeys(bound(run), SELECTION, press({ key: 'j', keyCode: 74 }));
+
+    expect(run).toHaveBeenCalledOnce();
+    expect(run.mock.lastCall?.[1]).toBe(SELECTION);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test('skips handled key', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+    const event = press();
+    event.preventDefault();
+
+    runFileTreeKeys(bound(run), SELECTION, event);
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test('skips empty selection', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+
+    runFileTreeKeys(bound(run), { ...SELECTION, paths: [] }, press());
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test('skips key typed into input', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+
+    runFileTreeKeys(
+      bound(run),
+      SELECTION,
+      press({ composedPath: () => [Object.assign(new EventTarget(), { tagName: 'INPUT' })] }),
+    );
 
     expect(run).not.toHaveBeenCalled();
   });

@@ -1,6 +1,7 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
 import type { Terminal } from '@xterm/xterm';
+import type { FileTreeSelection } from './file-tree';
 import type { Key, Keys } from './keymap';
 import type { Application } from './plugin';
 import type { Project } from './projects/projects';
@@ -19,6 +20,7 @@ export const DEFAULT_COMMAND_GROUPS = {
     diff: 'elsewise.editor.diff',
   },
   terminal: { id: 'elsewise.terminal' },
+  fileTree: { id: 'elsewise.fileTree' },
   project: { id: 'elsewise.project' },
   workspace: { id: 'elsewise.workspace' },
 } as const;
@@ -157,6 +159,11 @@ export const DEFAULT_COMMANDS = {
     },
     buffer: {
       clear: 'elsewise.terminal.buffer.clear',
+    },
+  },
+  fileTree: {
+    open: {
+      fileManager: 'elsewise.fileTree.open.fileManager',
     },
   },
 } as const;
@@ -300,6 +307,11 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       clear: [{ mac: 'Mod-k' }],
     },
   },
+  fileTree: {
+    open: {
+      fileManager: [],
+    },
+  },
 };
 
 type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<T[K]> };
@@ -307,7 +319,13 @@ type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<
 /**
  * An action that a user can invoke.
  */
-export type Command = ApplicationCommand | ProjectCommand | WorkspaceCommand | EditorCommand | TerminalCommand;
+export type Command =
+  | ApplicationCommand
+  | ProjectCommand
+  | WorkspaceCommand
+  | EditorCommand
+  | TerminalCommand
+  | FileTreeCommand;
 
 /**
  * The commands.
@@ -340,14 +358,14 @@ export interface Commands {
 
   /**
    * Runs the command with `id` against an optional `target` of the command's scope, e.g. an editor for an editor
-   * command. Without `target`, it runs against the active workspace, editor or terminal, and a project command does
-   * nothing.
+   * command. Without `target`, it runs against the active workspace, editor or terminal, and a project or file tree
+   * command does nothing.
    *
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
    *
    * Returns whether the command ran and applied.
    */
-  run(id: string, target?: Project | Workspace | EditorView | Terminal): boolean;
+  run(id: string, target?: Project | Workspace | EditorView | Terminal | FileTreeSelection): boolean;
 }
 
 /**
@@ -397,7 +415,7 @@ export interface BaseCommand {
   /**
    * The surface the command runs in.
    */
-  readonly scope: 'application' | 'project' | 'workspace' | 'editor' | 'terminal';
+  readonly scope: 'application' | 'project' | 'workspace' | 'editor' | 'terminal' | 'fileTree';
 
   /**
    * The command's id, namespaced by the plugin's, e.g. `io.example.rename`.
@@ -589,4 +607,36 @@ export interface TerminalCommand extends BaseCommand {
    * shell.
    */
   run(application: Application, terminal: Terminal): boolean;
+}
+
+/**
+ * A command that runs on files and folders in a file tree, e.g. from its context menu.
+ */
+export interface FileTreeCommand extends BaseCommand {
+  readonly scope: 'fileTree';
+
+  /**
+   * Returns whether the command can run. Defaults to true.
+   *
+   * A disabled command is greyed out in menus.
+   */
+  enabled?(application: Application, selection: FileTreeSelection): boolean;
+
+  /**
+   * Returns whether the command is shown in menus. Defaults to true.
+   */
+  shown?(application: Application, selection: FileTreeSelection): boolean;
+
+  /**
+   * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
+   * a command that is neither.
+   */
+  active?(application: Application, selection: FileTreeSelection): boolean;
+
+  /**
+   * Runs the command on `selection`.
+   *
+   * Returns whether the command applied.
+   */
+  run(application: Application, selection: FileTreeSelection): boolean;
 }

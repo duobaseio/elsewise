@@ -2,6 +2,7 @@ import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command';
 import type { Editor } from './editor/editor';
+import type { FileTree } from './file-tree';
 import type { FrontendSettings } from './frontend-settings';
 import type { Platform } from './platform';
 import type { Projects } from './projects/projects';
@@ -146,6 +147,11 @@ export interface Application {
    * The terminal.
    */
   readonly terminal: Terminal;
+
+  /**
+   * The file tree.
+   */
+  readonly fileTree: FileTree;
 }
 
 /**

@@ -216,16 +216,14 @@ brights lift lightness only (+0.08 L / +0.07 L).
 ---
 
 ## Typography
-* Display: [**Fraunces**](https://fonts.google.com/specimen/Fraunces).
-  * Work Sans's self-description is "a revival of early grotesques, simplified and optimized for screens." Fraunces's
-    design brief is the same sentence with the nouns changed: a revival of early-1900s soft display serifs (the
-    Windsor/Cooper lineage), rebuilt as a thoroughly modern variable font.
-* UI Chrome: [**Work Sans**](https://fonts.google.com/specimen/Work+Sans). Work Sans's roots are in early-1900s
-  grotesques, so its forms have a slight irregularity.
+* Display: [**Fraunces**](https://fonts.google.com/specimen/Fraunces). A revival of early-1900s soft display serifs
+  (the Windsor/Cooper lineage), rebuilt as a thoroughly modern variable font.
+* UI Chrome: [**Public Sans**](https://fonts.google.com/specimen/Public+Sans). A strong, neutral typeface, plain and
+  strict like the mono, and the second most common companion to JetBrains Mono.
     * Inter is the UI chrome for IntelliJ, Conductor & Superset. There's nothing inherently wrong with the font, but it
-      feels overused since it is the default font for shad/cn and most ai/vibe-coded slop. Work Sans is less used and
-      fits our design system better.
-    * Both Work Sans and Inter were [recommended by the designer of JetBrains
+      feels overused since it is the default font for shad/cn and most ai/vibe-coded slop. It is bundled as an
+      alternative, from rsms's own build with `ss02` (disambiguation) on, since Google Fonts strips its stylistic sets.
+    * Inter was [recommended by the designer of JetBrains
       Mono](https://youtrack.jetbrains.com/issue/WRS-2431/Question-JetBrains-Sans-Font#focus=Comments-27-10061987.0-0).
     * Typically ~13px
 * Monospaced: [**JetBrains Mono**](https://www.jetbrains.com/lp/mono/). It was explicitly designed to aid code
@@ -234,7 +232,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
 * Family, size (12–24px) and ligatures are settings, held separately for the interface, the editor and the terminal.
   The editor and the terminal also set their line height.
   The system font and any installed family can be chosen. [**Atkinson Hyperlegible
-  Next**](https://www.brailleinstitute.org/freefont/) is the interface's one bundled alternative, for low vision.
+  Next**](https://www.brailleinstitute.org/freefont/) is the interface's bundled alternative for low vision.
 
 ### Principles
 
@@ -242,15 +240,15 @@ brights lift lightness only (+0.08 L / +0.07 L).
   moves the anchor and rescales rhythm with it.
     - px, not rem: root font-size stays untouched so rem spacing and radii keep their proportions. Page zoom scales
       uniformly; platform text scaling is mobile's.
-- **Fraunces floor: 20px.** Below that, headings are Work Sans 500.
-- **Below 13px, compensate:** letter-spacing `+0.01–0.02em`, consider weight 450–500 — Work Sans is designed for 14px+.
+- **Fraunces floor: 20px.** Below that, headings are Public Sans 500.
+- **Below 13px, compensate:** letter-spacing `+0.01–0.02em`, consider weight 450–500.
 - **Code sits on a fixed line grid:** the line height setting × the size, rounded; ×1.54 by default (18px at 12). Font
   swaps never reflow gutters, diffs or the code popups, whose rows are the grid + 6px.
 - **No off-scale sizes.** If a component needs a size not listed, the scale changes or the component does.
 
 ### Desktop scale
 
-#### Chrome & prose — Work Sans
+#### Chrome & prose — Public Sans
 
 | Token        | Size / line | Weight             | Usage                                                         |
 |--------------|-------------|--------------------|---------------------------------------------------------------|
@@ -260,7 +258,7 @@ brights lift lightness only (+0.08 L / +0.07 L).
 | `text-base`  | **13 / 20** | 400                | **Default chrome:** buttons, inputs, tabs, tree items, labels, dialog body |
 | `text-prose` | 15 / 24     | 400                | Agent conversation, settings descriptions, docs               |
 
-#### Headings — Work Sans below the Fraunces floor
+#### Headings — Public Sans below the Fraunces floor
 
 | Token        | Size / line | Weight       | Usage                                       |
 |--------------|-------------|--------------|---------------------------------------------|

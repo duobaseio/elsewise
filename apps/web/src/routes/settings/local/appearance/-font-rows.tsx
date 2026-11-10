@@ -99,7 +99,11 @@ export function FontRows<F extends Font>({
                     {group.label !== null && <ComboboxLabel>{group.label}</ComboboxLabel>}
                     <ComboboxCollection>
                       {(item: FontChoice) => (
-                        <ComboboxItem key={item.value ?? ''} style={{ fontFamily: stack(item.value) }} value={item}>
+                        <ComboboxItem
+                          key={item.value ?? ''}
+                          style={{ fontFamily: stack(item.value), fontFeatureSettings: item.features }}
+                          value={item}
+                        >
                           {item.label}
                         </ComboboxItem>
                       )}

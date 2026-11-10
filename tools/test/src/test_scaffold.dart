@@ -7,7 +7,7 @@ final relativePath = Directory('assets/file-icons').existsSync() ? '.' : '${Dire
 
 final components = '$relativePath/../packages/components';
 
-const sans = 'Work Sans';
+const sans = 'Public Sans';
 const mono = 'JetBrains Mono';
 
 /// packages/components/src/elsewise.css, :root and the dark variant. `surface` is `--surface-2`, the hardest surface
