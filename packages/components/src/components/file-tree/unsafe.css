@@ -49,10 +49,10 @@
   outline: none;
 }
 
-/* Don't tint icons with the git status colour. */
+/* Don't tint icons with the git status or selected colour. */
 /* noinspection CssUnresolvedCustomProperty */
-[data-item-git-status] > [data-item-section="icon"],
-[data-item-git-status] > [data-item-section="icon"] > * {
+[data-type="item"] > [data-item-section="icon"],
+[data-type="item"] > [data-item-section="icon"] > * {
   color: var(--trees-fg-muted);
   opacity: 1;
 }

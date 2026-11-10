@@ -69,11 +69,15 @@ const BADGES_GIT_STATUS: readonly FileTreeGitStatus[] = [
   { path: 'ignored-folder/', status: 'ignored' },
 ];
 
+const SELECTED_PATHS = ['expanded/', 'expanded/child.rs', 'collapsed/', 'collapsed/hidden.rs'] as const;
+
 const PSEUDO_PATHS = ['src/', 'src/hover.rs', 'src/focus.rs', 'src/selected-hover.rs', 'src/rest.rs'] as const;
 
 // Each box must clear every row: row count at 24px plus the tree's padding.
 const STRUCTURE_ROWS = 25;
 const STRUCTURE_BOX = 'h-152 w-56';
+const SELECTED_ROWS = 3;
+const SELECTED_BOX = 'h-20 w-56';
 const PSEUDO_ROWS = 5;
 const PSEUDO_BOX = 'h-32 w-56';
 const BADGES_ROWS = 8;
@@ -110,6 +114,24 @@ test.each(THEMES)('file tree structure (%s)', async (theme) => {
   await settleTree(STRUCTURE_ROWS);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-${theme}`);
+});
+
+test.each(THEMES)('file tree selected folders (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <Tree
+        box={SELECTED_BOX}
+        initialExpandedPaths={['expanded/']}
+        initialPaths={SELECTED_PATHS}
+        initialSelectedPaths={['expanded/', 'collapsed/']}
+        label="Selected folders"
+      />
+    </Sheet>,
+  );
+
+  await settleTree(SELECTED_ROWS);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-selected-${theme}`);
 });
 
 test.each(THEMES)('file tree pseudo states (%s)', async (theme) => {
