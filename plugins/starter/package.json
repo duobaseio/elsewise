@@ -9,14 +9,19 @@
     }
   },
   "description": "An Elsewise plugin template with a frontend part and a daemon part",
+  "topics": [
+    "starter",
+    "template"
+  ],
   "scripts": {
-    "build": "pnpm -r build && node -e \"fs.copyFileSync('manifest.json', 'dist/manifest.json')\"",
+    "build": "pnpm -r build && elsewise-plugin manifest",
     "typecheck": "pnpm -r typecheck",
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14"
+    "@biomejs/biome": "^2.5.14",
+    "@elsewise/plugin": "link:../../packages/plugin"
   }
 }

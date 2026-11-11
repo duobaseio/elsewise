@@ -20,7 +20,7 @@ Run pnpm from the repo root, filtered to the package:
 pnpm --filter @elsewise/plugin-example-language-server build      # also: serve, typecheck, check
 ```
 
-`build` bundles the plugin into `dist/frontend/main.js`, and copies `manifest.json` into `dist/`.
+`build` bundles the plugin into `dist/frontend/main.js`, and writes `manifest.json` into `dist/`.
 
 ## Trying it
 

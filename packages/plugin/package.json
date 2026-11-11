@@ -1,5 +1,6 @@
 {
   "name": "@elsewise/plugin",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
   "devEngines": {
@@ -13,7 +14,25 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "bin": {
+    "elsewise-plugin": "./bin/elsewise-plugin.mjs"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    },
+    "bin": {
+      "elsewise-plugin": "./dist/elsewise-plugin.js"
+    }
+  },
   "scripts": {
+    "build": "tsdown && pnpm pack",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "format": "biome format",
@@ -21,12 +40,13 @@
     "check": "biome check"
   },
   "dependencies": {
+    "semver": "^7.8.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@types/semver": "^7.8.0",
-    "semver": "^7.8.5",
+    "tsdown": "^0.23.7",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2"
   }

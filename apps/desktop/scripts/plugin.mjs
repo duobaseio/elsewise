@@ -33,8 +33,8 @@ const sides = {
 };
 
 if (command === 'add') {
-  if (manifest.frontend === undefined && manifest.daemon === undefined) {
-    console.error('[plugin] manifest.json has neither a frontend nor a daemon part');
+  if (manifest.frontend === undefined) {
+    console.error('[plugin] manifest.json has no frontend part');
     process.exit(1);
   }
 

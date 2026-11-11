@@ -91,6 +91,8 @@ function browserProject(
         '@elsewise/components > tailwind-merge',
         '@elsewise/core > dependency-graph',
         '@elsewise/core > semver',
+        '@elsewise/core > @elsewise/plugin > semver/functions/valid.js',
+        '@elsewise/core > @elsewise/plugin > semver/ranges/valid.js',
       ],
     },
     test: {

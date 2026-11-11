@@ -54,7 +54,7 @@ function withData(plugin: InstalledPlugin | InvalidPlugin): InstalledFrontendPlu
     keymaps: readJsonFolder(path.join(ROOT, manifest.id, 'frontend', 'keymaps'), Keymap).map((entry) =>
       'error' in entry ? entry : { id: entry.id, keymap: entry.content },
     ),
-    ...(manifest.frontend?.main !== undefined && {
+    ...(manifest.frontend.main !== undefined && {
       url: `app://elsewise/plugins/${manifest.id}/frontend/${manifest.frontend.main}`,
     }),
   };
