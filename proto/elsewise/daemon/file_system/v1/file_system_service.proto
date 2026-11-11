@@ -42,10 +42,16 @@ service FileSystemService {
   // An entry already at the path fails ALREADY_EXISTS.
   rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
 
-  // Renames or moves a file or directory. Creates the destination's parent directories if required.
+  // Recursively copies a file or directory, copying symbolic links as links. Creates the destination's parent
+  // directories if required.
   //
-  // An entry already at the destination fails with ALREADY_EXISTS.
-  rpc RenameEntry(RenameEntryRequest) returns (RenameEntryResponse);
+  // An entry already at the destination fails with ALREADY_EXISTS, unless `overwrite` is set.
+  rpc CopyEntry(CopyEntryRequest) returns (CopyEntryResponse);
+
+  // Moves or renames a file or directory. Creates the destination's parent directories if required.
+  //
+  // An entry already at the destination fails with ALREADY_EXISTS, unless `overwrite` is set.
+  rpc MoveEntry(MoveEntryRequest) returns (MoveEntryResponse);
 
   // Recursively deletes a file or directory.
   rpc DeleteEntry(DeleteEntryRequest) returns (DeleteEntryResponse);
@@ -258,7 +264,23 @@ message CreateDirectoryRequest {
 
 message CreateDirectoryResponse {}
 
-message RenameEntryRequest {
+message CopyEntryRequest {
+  // The root path.
+  string root = 1;
+
+  // The relative path.
+  string relative_path = 2;
+
+  // The copy's path.
+  string new_relative_path = 3;
+
+  // Whether to overwrite an entry already at the new path.
+  bool overwrite = 4;
+}
+
+message CopyEntryResponse {}
+
+message MoveEntryRequest {
   // The root path.
   string root = 1;
 
@@ -267,9 +289,12 @@ message RenameEntryRequest {
 
   // The entry's new path.
   string new_relative_path = 3;
+
+  // Whether to overwrite an entry already at the new path.
+  bool overwrite = 4;
 }
 
-message RenameEntryResponse {}
+message MoveEntryResponse {}
 
 message DeleteEntryRequest {
   // The root path.

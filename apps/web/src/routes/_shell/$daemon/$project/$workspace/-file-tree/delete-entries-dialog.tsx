@@ -29,6 +29,7 @@ export function DeleteEntriesDialog() {
 
         try {
           await daemon.fileSystem.deleteEntry({ root: workspace.absolutePath, relativePath: path.replace(/\/$/, '') });
+          fileTree.deleteClipboardPaths(workspace.id, path);
         } catch (error) {
           toast.add({
             type: 'error',

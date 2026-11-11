@@ -4,7 +4,7 @@ import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
-import { refuseDestination, refuseOccupiedPath } from '../fs/directory';
+import { isCaseInsensitive, isRespelling, refuseExisting, refuseMove } from '../fs/directory';
 import { isBinary } from '../fs/file';
 import { toNativePath, toNativeRoot } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
@@ -180,21 +180,23 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
       const git = await this.#open(request.absolutePath);
       const absoluteNativePath = toNativePath(request.absolutePath, request.relativePath);
       const newAbsoluteNativePath = toNativePath(request.absolutePath, request.newRelativePath);
-      await refuseDestination(absoluteNativePath, newAbsoluteNativePath);
+      await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
 
       const relativePath = filePath(request.relativePath);
       const newRelativePath = filePath(request.newRelativePath);
-      const ignoreCase = (await git.text(['config', '--bool', 'core.ignorecase']).catch(() => '')).trim() === 'true';
+      const ignoreCase = await isCaseInsensitive(absoluteNativePath);
       const pathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${relativePath}`];
       if ((await git.text(withPathspecs(['ls-files', '--unmerged', '-z'], pathSpecs))) !== '') {
         throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" has conflicts`);
       }
 
       const [tracked] = (await git.text(withPathspecs(['ls-files', '-z'], pathSpecs))).split('\0');
-      const respelled = await fs.lstat(newAbsoluteNativePath).then(
-        () => true,
-        () => false,
-      );
+      const respelled = await isRespelling(absoluteNativePath, newAbsoluteNativePath);
+      if (request.overwrite && !respelled) {
+        const newPathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${newRelativePath}`];
+        await git.run(withPathspecs(['rm', '-r', '-q', '-f', '--ignore-unmatch'], newPathSpecs));
+        await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+      }
       await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
 
       if (!tracked) {
@@ -462,7 +464,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       const newPath = toNativeRoot(request.newAbsolutePath);
-      await refuseOccupiedPath(newPath, 'empty');
+      await refuseExisting(newPath, 'empty');
       const args = ['worktree', 'add'];
       if (request.branch === '') {
         args.push('--detach', newPath, revisionOrHead(request.revision));
@@ -488,7 +490,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
       const newPath = toNativeRoot(request.newAbsolutePath);
       const worktree = toNativeRoot(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktree);
-      await refuseOccupiedPath(newPath, 'missing');
+      await refuseExisting(newPath, 'missing');
       await git.run(['worktree', 'move', worktree, newPath]);
       return { worktree: await readWorktree(git, newPath) };
     });

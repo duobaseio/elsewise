@@ -12,9 +12,8 @@ function bridge(overrides: Partial<WindowBridge>) {
       cut() {},
       copy() {},
       paste() {},
-      openFolder: async () => {},
-      pickFolder: async () => null,
-      pickFile: async () => null,
+      showPath: async () => {},
+      pickPaths: async () => [],
       setBrightness() {},
       setBackground() {},
       onClose() {},
@@ -23,35 +22,42 @@ function bridge(overrides: Partial<WindowBridge>) {
   };
 }
 
-describe('openFolder', () => {
+describe('showPath', () => {
   test('opens path through bridge', async () => {
-    const openFolder = vi.fn(async () => {});
-    bridge({ openFolder });
+    const showPath = vi.fn(async () => {});
+    bridge({ showPath });
 
-    await new PlatformManager().openFolder('/elsewise');
+    await new PlatformManager().showPath('/elsewise');
 
-    expect(openFolder).toHaveBeenCalledExactlyOnceWith('/elsewise');
+    expect(showPath).toHaveBeenCalledExactlyOnceWith('/elsewise');
   });
 
   test('throws outside desktop app', async () => {
-    await expect(new PlatformManager().openFolder('/elsewise')).rejects.toThrow();
+    await expect(new PlatformManager().showPath('/elsewise')).rejects.toThrow();
   });
 });
 
-describe('pickFolder', () => {
-  test('returns picked path', async () => {
-    bridge({ pickFolder: async () => '/elsewise' });
+describe('pickPaths', () => {
+  test('returns picked paths', async () => {
+    bridge({ pickPaths: async () => ['/elsewise'] });
 
-    expect(await new PlatformManager().pickFolder()).toBe('/elsewise');
+    expect(await new PlatformManager().pickPaths()).toEqual(['/elsewise']);
   });
 
-  test('returns null on cancel', async () => {
-    bridge({});
+  test('forwards options', async () => {
+    const pickPaths = vi.fn(async () => []);
+    bridge({ pickPaths });
 
-    expect(await new PlatformManager().pickFolder()).toBeNull();
+    await new PlatformManager().pickPaths({ kind: 'folder', defaultPath: '/elsewise', createFolder: true });
+
+    expect(pickPaths).toHaveBeenCalledExactlyOnceWith({
+      kind: 'folder',
+      defaultPath: '/elsewise',
+      createFolder: true,
+    });
   });
 
   test('throws outside desktop app', async () => {
-    await expect(new PlatformManager().pickFolder()).rejects.toThrow();
+    await expect(new PlatformManager().pickPaths()).rejects.toThrow();
   });
 });

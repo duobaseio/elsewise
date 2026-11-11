@@ -69,6 +69,23 @@ const BADGES_GIT_STATUS: readonly FileTreeGitStatus[] = [
   { path: 'ignored-folder/', status: 'ignored' },
 ];
 
+const CUT_PATHS = [
+  'src/',
+  'src/cut.rs',
+  'src/modified-cut.rs',
+  'src/modified.rs',
+  'src/rest.rs',
+  'cut-folder/',
+  'cut-folder/child.rs',
+] as const;
+
+const CUT_GIT_STATUS: readonly FileTreeGitStatus[] = [
+  { path: 'src/modified-cut.rs', status: 'modified' },
+  { path: 'src/modified.rs', status: 'modified' },
+];
+
+const CUT = ['src/cut.rs', 'src/modified-cut.rs', 'cut-folder/'] as const;
+
 const SELECTED_PATHS = ['expanded/', 'expanded/child.rs', 'collapsed/', 'collapsed/hidden.rs'] as const;
 
 const PSEUDO_PATHS = ['src/', 'src/hover.rs', 'src/focus.rs', 'src/selected-hover.rs', 'src/rest.rs'] as const;
@@ -82,18 +99,33 @@ const PSEUDO_ROWS = 5;
 const PSEUDO_BOX = 'h-32 w-56';
 const BADGES_ROWS = 8;
 const BADGES_BOX = 'h-50 w-56';
+const CUT_ROWS = 7;
+const CUT_BOX = 'h-44 w-56';
 
 function Tree({
   box,
   label,
+  cutPaths,
   gitStatusBadges,
   indentGuides,
   ...options
-}: FileTreeOptions & { box: string; label: string; gitStatusBadges?: boolean; indentGuides?: boolean }) {
+}: FileTreeOptions & {
+  box: string;
+  label: string;
+  cutPaths?: readonly string[];
+  gitStatusBadges?: boolean;
+  indentGuides?: boolean;
+}) {
   const model = useFileTree(options);
   return (
     <div className={box}>
-      <FileTree aria-label={label} gitStatusBadges={gitStatusBadges} indentGuides={indentGuides} model={model} />
+      <FileTree
+        aria-label={label}
+        cutPaths={cutPaths}
+        gitStatusBadges={gitStatusBadges}
+        indentGuides={indentGuides}
+        model={model}
+      />
     </div>
   );
 }
@@ -195,4 +227,23 @@ test.each(THEMES)('file tree without indent guides (%s)', async (theme) => {
   await settleTree(STRUCTURE_ROWS);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-no-indent-guides-${theme}`);
+});
+
+test.each(THEMES)('file tree cut paths (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <Tree
+        box={CUT_BOX}
+        cutPaths={CUT}
+        initialExpandedPaths={['src/', 'cut-folder/']}
+        initialGitStatus={CUT_GIT_STATUS}
+        initialPaths={CUT_PATHS}
+        label="Cut paths"
+      />
+    </Sheet>,
+  );
+
+  await settleTree(CUT_ROWS);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-cut-${theme}`);
 });

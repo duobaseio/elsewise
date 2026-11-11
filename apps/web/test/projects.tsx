@@ -211,7 +211,8 @@ function fakeDaemon(
     readFile: unused,
     writeFile: unused,
     createDirectory: unused,
-    renameEntry: unused,
+    copyEntry: unused,
+    moveEntry: unused,
     deleteEntry: unused,
   } satisfies Daemon['fileSystem'];
   const git = {

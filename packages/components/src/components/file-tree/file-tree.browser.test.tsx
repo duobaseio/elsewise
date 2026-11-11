@@ -31,10 +31,15 @@ const ROWS = 8;
 const ICON_LANE = 16;
 const ROW_GAP = 6;
 
-async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: boolean, indentGuides?: boolean) {
+async function mount(
+  options: Partial<FileTreeOptions> = {},
+  gitStatusBadges?: boolean,
+  indentGuides?: boolean,
+  cutPaths?: readonly string[],
+) {
   const model: { current: FileTreeModel | null } = { current: null };
 
-  function Harness() {
+  function Harness({ cutPaths }: { cutPaths?: readonly string[] }) {
     model.current = useFileTree({
       initialExpandedPaths: ['daemon/', 'daemon/src/'],
       initialGitStatus: GIT_STATUS,
@@ -44,6 +49,7 @@ async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: b
     return (
       <FileTree
         aria-label="Geometry"
+        cutPaths={cutPaths}
         gitStatusBadges={gitStatusBadges}
         indentGuides={indentGuides}
         model={model.current}
@@ -51,9 +57,9 @@ async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: b
     );
   }
 
-  await render(
+  const screen = await render(
     <div className="h-64 w-72">
-      <Harness />
+      <Harness cutPaths={cutPaths} />
     </div>,
   );
   await settleTree(ROWS);
@@ -61,7 +67,13 @@ async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: b
   if (shadowRoot == null) {
     throw new Error('no shadow root');
   }
-  return { model, shadowRoot };
+  const cut = (paths?: readonly string[]) =>
+    screen.rerender(
+      <div className="h-64 w-72">
+        <Harness cutPaths={paths} />
+      </div>,
+    );
+  return { model, shadowRoot, cut };
 }
 
 function isExpanded(model: FileTreeModel | null, path: string): boolean {
@@ -226,6 +238,31 @@ test('git status colours the name, never the icon', async () => {
   );
   expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'icon')).color).toBe(
     rgb(token('--trees-fg-muted')),
+  );
+});
+
+test('cut paths take disabled ink on the name only', async () => {
+  const { shadowRoot } = await mount({}, undefined, undefined, ['daemon/src/main.rs', 'daemon/']);
+  const disabled = rgb(token('--disabled'));
+
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'content')).color).toBe(disabled);
+  expect(getComputedStyle(section(shadowRoot, 'daemon/', 'content')).color).toBe(disabled);
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'icon')).color).toBe(
+    rgb(token('--trees-fg-muted')),
+  );
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'git')).color).toBe(
+    rgb(token('--trees-status-modified')),
+  );
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/', 'content')).color).not.toBe(disabled);
+});
+
+test('cleared cut paths restore names', async () => {
+  const { shadowRoot, cut } = await mount({}, undefined, undefined, ['daemon/src/main.rs']);
+
+  await cut(undefined);
+
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'content')).color).toBe(
+    rgb(token('--trees-status-modified')),
   );
 });
 

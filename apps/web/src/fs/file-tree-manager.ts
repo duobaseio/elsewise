@@ -1,18 +1,45 @@
 import { createDialogHandle } from '@elsewise/components/components/dialog';
-import type { ContextMenuGroup, Disposable, FileTree, FileTreeSelection, WorkspaceId } from '@elsewise/frontend-plugin';
+import type {
+  ContextMenuGroup,
+  Disposable,
+  FileTree,
+  FileTreeSelection,
+  Workspace,
+  WorkspaceId,
+} from '@elsewise/frontend-plugin';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/fs/default-context-menu';
+import type { PasteEntry } from '@/fs/paste';
+import { sameWorkspace } from '@/projects/workspace-manager';
+
+export interface FileTreeClipboard {
+  readonly cut: boolean;
+  readonly workspace: WorkspaceId;
+  readonly paths: readonly string[];
+}
 
 /**
  * The file tree as plugins see it.
  */
 export class FileTreeManager implements FileTree {
   readonly deleteDialog = createDialogHandle<FileTreeSelection>();
+  readonly pasteDialog = createDialogHandle<{
+    readonly workspace: Workspace;
+    readonly folder: string;
+    readonly clipboard: FileTreeClipboard;
+  }>();
+  readonly overwriteDialog = createDialogHandle<{
+    readonly workspace: Workspace;
+    readonly folder: string;
+    readonly cut: boolean;
+    readonly entries: readonly PasteEntry[];
+  }>();
 
   private readonly listeners = new Set<() => void>();
   private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
+  private currentClipboard: FileTreeClipboard | null = null;
   private currentRenaming: { readonly workspace: WorkspaceId; readonly path: string } | null = null;
 
   /**
@@ -24,6 +51,48 @@ export class FileTreeManager implements FileTree {
 
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
     return this.contextMenus.add(groups);
+  }
+
+  /**
+   * The paths that were cut or copied, which a paste moves or copies.
+   */
+  get clipboard(): FileTreeClipboard | null {
+    return this.currentClipboard;
+  }
+
+  set clipboard(clipboard: FileTreeClipboard | null) {
+    this.currentClipboard = clipboard;
+    this.notify();
+  }
+
+  /**
+   * Points the clipboard's paths at or under `source` in `workspace` to `destination`.
+   */
+  moveClipboardPaths(workspace: WorkspaceId, source: string, destination: string) {
+    const clipboard = this.currentClipboard;
+    if (clipboard === null || !sameWorkspace(clipboard.workspace, workspace)) {
+      return;
+    }
+
+    const paths = clipboard.paths.map((path) =>
+      path === source || (source.endsWith('/') && path.startsWith(source))
+        ? destination + path.slice(source.length)
+        : path,
+    );
+    this.clipboard = { ...clipboard, paths };
+  }
+
+  /**
+   * Deletes the clipboard's paths at or under `path` in `workspace`, and clears it once none are left.
+   */
+  deleteClipboardPaths(workspace: WorkspaceId, path: string) {
+    const clipboard = this.currentClipboard;
+    if (clipboard === null || !sameWorkspace(clipboard.workspace, workspace)) {
+      return;
+    }
+
+    const paths = clipboard.paths.filter((other) => other !== path && !(path.endsWith('/') && other.startsWith(path)));
+    this.clipboard = paths.length === 0 ? null : { ...clipboard, paths };
   }
 
   /**

@@ -86,11 +86,11 @@ export const PROJECT_OPEN_FILE_MANAGER: ProjectCommand = {
   shown: (_, project) =>
     project.id.daemon === LOCAL_DAEMON_ID &&
     project.state !== 'missing' &&
-    window.bridge?.window?.openFolder !== undefined,
+    window.bridge?.window?.showPath !== undefined,
   enabled: (_, project) => project.state !== 'missing',
   run: ({ platform }, project) => {
     void platform
-      .openFolder(project.absolutePath)
+      .showPath(project.absolutePath)
       .catch((error: Error) =>
         toast.add({ type: 'error', title: `Opening ${FILE_MANAGER} failed`, description: error.message }),
       );
@@ -159,11 +159,11 @@ export const WORKSPACE_OPEN_FILE_MANAGER: WorkspaceCommand = {
   shown: (_, workspace) =>
     workspace.id.daemon === LOCAL_DAEMON_ID &&
     workspace.state !== 'missing' &&
-    window.bridge?.window?.openFolder !== undefined,
+    window.bridge?.window?.showPath !== undefined,
   enabled: (_, workspace) => workspace.state !== 'missing',
   run: ({ platform }, workspace) => {
     void platform
-      .openFolder(workspace.absolutePath)
+      .showPath(workspace.absolutePath)
       .catch((error: Error) =>
         toast.add({ type: 'error', title: `Opening ${FILE_MANAGER} failed`, description: error.message }),
       );

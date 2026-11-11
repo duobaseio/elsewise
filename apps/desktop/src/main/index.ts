@@ -1,8 +1,7 @@
-import { stat } from 'node:fs/promises';
+import { realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
-import type { FileFilter } from '@elsewise/bridge';
 import { dataLocalDir } from '@elsewise/core/node';
-import type { Brightness } from '@elsewise/frontend-plugin';
+import type { Brightness, PickPathsOptions } from '@elsewise/frontend-plugin';
 import { app, BrowserWindow, dialog, nativeTheme, protocol, shell } from 'electron';
 import { handleDaemon } from './daemon';
 import { installMenu } from './menu';
@@ -120,10 +119,10 @@ function createWindow(background: boolean) {
   main.webContents.ipc.on('window:cut', (event) => event.sender.cut());
   main.webContents.ipc.on('window:copy', (event) => event.sender.copy());
   main.webContents.ipc.on('window:paste', (event) => event.sender.paste());
-  main.webContents.ipc.handle('window:open-folder', async (_event, absolutePath: string) => {
-    // Opening a file would run it.
+  main.webContents.ipc.handle('window:show-path', async (_event, absolutePath: string) => {
     if (!(await stat(absolutePath)).isDirectory()) {
-      throw new Error(`${absolutePath} is not a folder.`);
+      shell.showItemInFolder(absolutePath);
+      return;
     }
 
     const error = await shell.openPath(absolutePath);
@@ -131,13 +130,46 @@ function createWindow(background: boolean) {
       throw new Error(error);
     }
   });
-  main.webContents.ipc.handle('window:pick-folder', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(main, { properties: ['openDirectory'] });
-    return canceled ? null : (filePaths[0] ?? null);
-  });
-  main.webContents.ipc.handle('window:pick-file', async (_event, filters?: FileFilter[]) => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(main, { properties: ['openFile'], filters });
-    return canceled ? null : (filePaths[0] ?? null);
+  main.webContents.ipc.handle('window:pick-paths', async (_event, options: PickPathsOptions = {}) => {
+    const { kind = 'file', resolveAliases = true, addToRecent = true } = options;
+    const { canceled, filePaths } = await dialog.showOpenDialog(main, {
+      title: options.title,
+      defaultPath: options.defaultPath,
+      buttonLabel: options.buttonLabel,
+      filters: options.filters,
+      message: options.message,
+      properties: (
+        [
+          kind !== 'folder' && 'openFile',
+          kind !== 'file' && 'openDirectory',
+          options.multiple && 'multiSelections',
+          options.showHidden && 'showHiddenFiles',
+          options.createFolder && 'createDirectory',
+          options.promptToCreate && 'promptToCreate',
+          !resolveAliases && 'noResolveAliases',
+          options.openPackages && 'treatPackageAsDirectory',
+          !addToRecent && 'dontAddToRecent',
+        ] as const
+      ).filter((property) => typeof property === 'string'),
+    });
+    if (canceled) {
+      return [];
+    }
+    if (!resolveAliases) {
+      return filePaths;
+    }
+
+    return Promise.all(
+      filePaths.map((filePath) =>
+        realpath(filePath).catch((error: NodeJS.ErrnoException) => {
+          if (error.code === 'ENOENT') {
+            return filePath;
+          }
+
+          throw error;
+        }),
+      ),
+    );
   });
   main.webContents.ipc.on(
     'window:brightness',

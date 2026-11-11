@@ -64,8 +64,9 @@ Goldens are per-platform and only macOS is blessed.
   characters at 8.5px, 3 at 5.75px (`LETTER_SIZE` in `file-icon.tsx`). Each step is set by the widest mark at that
   length, `MK` and `HAM`, so a wider entry shrinks every letterform of that length. Check a new mark against those two;
   an overflow fails nothing, it just spills past the tile's border.
-- **A glyph is masked, not drawn.** `file-icon.tsx` masks the SVG's silhouette and paints the tint through it. Keep
-  `slug` assets monochrome; anything multi-color belongs under `devicon`.
+- **A glyph is drawn in its tint.** The emitter gives each `slug` asset's root `id="glyph"`, and `file-icon.tsx` draws
+  it with `<use href="…#glyph">` and `fill: currentColor`, never as a CSS mask, which Chromium re-rasterizes on every
+  repaint. Keep `slug` assets monochrome and free of `fill` attributes; anything multi-color belongs under `devicon`.
 - **Generated imports end `?no-inline`.** Without it Vite inlines the artwork into the initial JS chunk.
   `file-icons.gen.test.ts` asserts the suffix.
 - **`phosphor` names are a closed set**: whatever the map uses, plus `file`, the default for a name neither table

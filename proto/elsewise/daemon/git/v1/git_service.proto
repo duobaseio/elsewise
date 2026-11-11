@@ -26,8 +26,11 @@ service GitService {
 
   // Moves or renames an entry before staging it.
   //
-  // Creates the destination's parent directories if required. Returns ALREADY_EXISTS if an entry already exists at the
-  // destination.
+  // Creates the destination's parent directories if required.
+  //
+  // Fails with:
+  // * ALREADY_EXISTS if an entry is already at the destination, unless `overwrite` is set.
+  // * INVALID_ARGUMENT if either path is in the git directory.
   rpc Move(MoveRequest) returns (MoveResponse);
 
   // Stages changes.
@@ -242,6 +245,9 @@ message MoveRequest {
 
   // The entry's new relative path.
   string new_relative_path = 3;
+
+  // Whether to overwrite an entry already at the new path.
+  bool overwrite = 4;
 }
 
 message MoveResponse {}

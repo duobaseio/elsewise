@@ -1,18 +1,19 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
 import {
+  type CopyEntryRequest,
   type CreateDirectoryRequest,
   type DeleteEntryRequest,
   WatchDirectoriesResponse_Unavailable_Reason as DirectoryReason,
   WatchFilesResponse_Unavailable_Reason as FileReason,
   type FileSystemService,
   type ListDirectoryRequest,
+  type MoveEntryRequest,
   type ReadFileRequest,
-  type RenameEntryRequest,
   WatchRootsResponse_Root_Mode as RootMode,
   WatchRootsResponse_Root_Reason as RootReason,
   type WatchDirectoriesRequest,
@@ -22,7 +23,7 @@ import {
   type WatchRootsRequest,
   type WriteFileRequest,
 } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { listDirectory, refuseDestination } from './directory';
+import { isRespelling, listDirectory, refuseCopy, refuseMove } from './directory';
 import { attempt, errnoOf } from './error';
 import { createFile, hashContent, hashFile, isBinary, replaceFile } from './file';
 import { toNativePath, toNativePathOrRoot, toProtocolPath } from './path';
@@ -152,11 +153,35 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
     });
   }
 
-  renameEntry(request: RenameEntryRequest) {
+  copyEntry(request: CopyEntryRequest) {
     return attempt(async () => {
       const absoluteNativePath = toNativePath(request.root, request.relativePath);
       const newAbsoluteNativePath = toNativePath(request.root, request.newRelativePath);
-      await refuseDestination(absoluteNativePath, newAbsoluteNativePath);
+      await refuseCopy(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+      await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+
+      const copyAbsoluteNativePath = `${newAbsoluteNativePath}.${randomUUID()}`;
+      try {
+        await fs.cp(absoluteNativePath, copyAbsoluteNativePath, { recursive: true, verbatimSymlinks: true });
+        if (request.overwrite) {
+          await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+        }
+        await fs.rename(copyAbsoluteNativePath, newAbsoluteNativePath);
+      } finally {
+        await fs.rm(copyAbsoluteNativePath, { recursive: true, force: true });
+      }
+      return {};
+    });
+  }
+
+  moveEntry(request: MoveEntryRequest) {
+    return attempt(async () => {
+      const absoluteNativePath = toNativePath(request.root, request.relativePath);
+      const newAbsoluteNativePath = toNativePath(request.root, request.newRelativePath);
+      await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+      if (request.overwrite && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
+        await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+      }
       await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
       await fs.rename(absoluteNativePath, newAbsoluteNativePath);
       return {};

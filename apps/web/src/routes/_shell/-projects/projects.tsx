@@ -78,7 +78,7 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
   const projects = useQuery(projectsQuery(daemonId));
   const layout = useProjectLayout(daemonId);
   const { moveProject, moveWorkspace } = useUpdateProjectLayout(daemonId);
-  const pickFolder = window.bridge?.window?.pickFolder;
+  const pickPaths = window.bridge?.window?.pickPaths;
 
   const importProject = useMutation({
     mutationFn: async (absolutePath: string) => {
@@ -101,7 +101,7 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
   return (
     <SidebarGroup>
       <SidebarGroupLabel>My workspaces</SidebarGroupLabel>
-      {pickFolder && projects.isSuccess && (
+      {pickPaths && projects.isSuccess && (
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger
@@ -127,8 +127,8 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
             <DropdownMenuItem
               disabled={importProject.isPending}
               onClick={async () => {
-                const absolutePath = await platform.pickFolder();
-                if (absolutePath !== null) {
+                const [absolutePath] = await platform.pickPaths({ kind: 'folder' });
+                if (absolutePath !== undefined) {
                   importProject.mutate(absolutePath);
                 }
               }}
