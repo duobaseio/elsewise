@@ -83,6 +83,8 @@ strong line at 30%, 50% under a hovered select or combobox trigger; and a focuse
     - Solid madder (`#B3362B` white text / `#E08A7E` ink text) is reserved for irreversible confirms inside dialogs —
       undecided
 - **Link — iron gall:** `#334A6B` → hover `#293B56` / `#9FB2C8` → hover `#B9C8DA`
+    - Underlined at rest inside a sentence, where color alone does not set it apart from the prose; standalone, as
+      after a `·`, it underlines on hover only
 - **Disabled:** the control's own colors at 50% opacity, one rule for every control. Disabling is the only state allowed
   to use opacity: it is the only one that makes a control *less* present
     - Style it off the attribute the element carries: `disabled:` on a native control (button, input, select trigger,

@@ -23,6 +23,7 @@ import { useSettings } from '@/settings/settings';
 import { Terminal } from '@/terminal/terminal';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
 import { FileTreePanel } from './-file-tree/file-tree-panel';
+import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
 // TODO: Back this with the daemon.
@@ -66,6 +67,7 @@ function WorkspaceRoute() {
   return (
     <>
       <WorkspaceDock key={JSON.stringify([daemon, project, workspace])} layout={dock} onLayoutChange={onLayoutChange} />
+      <NewEntryDialog />
       <DeleteEntriesDialog />
       <PasteEntriesDialog />
       <OverwriteEntriesDialog />

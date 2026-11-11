@@ -103,6 +103,23 @@ export const DEFAULT_TERMINAL_CONTEXT_MENU = {
  * The file tree context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_FILE_TREE_CONTEXT_MENU = {
+  new: {
+    id: 'io.duobase.elsewise.fileTree.contextMenu.new',
+    order: 10,
+    items: {
+      new: {
+        id: 'io.duobase.elsewise.fileTree.contextMenu.new.new',
+        order: 10,
+        groups: {
+          entries: {
+            id: 'io.duobase.elsewise.fileTree.contextMenu.new.new.entries',
+            order: 10,
+            items: { file: 10, folder: 20 },
+          },
+        },
+      },
+    },
+  },
   clipboard: {
     id: 'io.duobase.elsewise.fileTree.contextMenu.clipboard',
     order: 20,

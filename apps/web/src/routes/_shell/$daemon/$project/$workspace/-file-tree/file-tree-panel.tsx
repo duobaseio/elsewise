@@ -106,27 +106,29 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
           .composedPath()
           .find((node) => node instanceof HTMLElement && node.dataset.itemPath !== undefined);
         const path = row instanceof HTMLElement ? row.dataset.itemPath : undefined;
-        if (path === undefined || workspace === undefined) {
+        if (workspace === undefined) {
           return false;
         }
 
         const selected = model.getSelectedPaths();
-        const paths = selected.includes(path) ? selected : [path];
+        const paths = path === undefined ? [] : selected.includes(path) ? selected : [path];
         if (paths !== selected) {
           for (const other of selected) {
             model.getItem(other)?.deselect();
           }
-          model.getItem(path)?.select();
+          if (path !== undefined) {
+            model.getItem(path)?.select();
+          }
         }
-        clicked.current = path;
+        clicked.current = path ?? null;
         target.current = { workspace, paths: [...paths] };
         return true;
       }}
       onClosed={() => {
         if (clicked.current !== null) {
           model.focusPath(clicked.current);
-          model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>('[role="tree"]')?.focus();
         }
+        model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>('[role="tree"]')?.focus();
       }}
       render={
         // biome-ignore lint/a11y/noStaticElementInteractions: the keys run commands on the tree's selection inside.

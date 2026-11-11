@@ -162,6 +162,10 @@ export const DEFAULT_COMMANDS = {
     },
   },
   fileTree: {
+    new: {
+      file: 'elsewise.fileTree.new.file',
+      folder: 'elsewise.fileTree.new.folder',
+    },
     clipboard: {
       cut: 'elsewise.fileTree.clipboard.cut',
       copy: 'elsewise.fileTree.clipboard.copy',
@@ -320,6 +324,10 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
   },
   fileTree: {
+    new: {
+      file: [{ key: 'Alt-Insert', mac: 'Mod-n' }],
+      folder: [],
+    },
     clipboard: {
       cut: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
       copy: ['Mod-c', { windows: 'Ctrl-Insert', linux: 'Ctrl-Insert' }],

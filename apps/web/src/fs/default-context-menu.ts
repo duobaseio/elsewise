@@ -1,9 +1,31 @@
 import { type ContextMenuGroup, DEFAULT_COMMANDS, DEFAULT_FILE_TREE_CONTEXT_MENU } from '@elsewise/frontend-plugin';
 import { FILE_MANAGER } from '@/projects/commands';
 
-const { clipboard, edit, open } = DEFAULT_FILE_TREE_CONTEXT_MENU;
+const { new: create, clipboard, edit, open } = DEFAULT_FILE_TREE_CONTEXT_MENU;
 
 export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
+  {
+    id: create.id,
+    order: create.order,
+    items: [{ order: create.items.new.order, label: 'New', submenu: create.items.new.id }],
+  },
+  {
+    id: create.items.new.groups.entries.id,
+    order: create.items.new.groups.entries.order,
+    in: create.items.new.id,
+    items: [
+      {
+        order: create.items.new.groups.entries.items.file,
+        label: 'File…',
+        command: DEFAULT_COMMANDS.fileTree.new.file,
+      },
+      {
+        order: create.items.new.groups.entries.items.folder,
+        label: 'Folder…',
+        command: DEFAULT_COMMANDS.fileTree.new.folder,
+      },
+    ],
+  },
   {
     id: clipboard.id,
     order: clipboard.order,
