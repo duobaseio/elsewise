@@ -24,6 +24,12 @@ export interface FileTreeClipboard {
  * The file tree as plugins see it.
  */
 export class FileTreeManager implements FileTree {
+  readonly newDialog = createDialogHandle<{
+    readonly workspace: Workspace;
+    readonly folder: string;
+    readonly kind: 'file' | 'folder';
+    readonly name?: string;
+  }>();
   readonly deleteDialog = createDialogHandle<FileTreeSelection>();
   readonly pasteDialog = createDialogHandle<{
     readonly workspace: Workspace;

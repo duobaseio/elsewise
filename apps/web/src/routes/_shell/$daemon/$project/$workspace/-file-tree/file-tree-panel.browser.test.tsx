@@ -165,6 +165,23 @@ describe('FileTreePanel', () => {
       .toBe('b.ts');
   });
 
+  test('targets root from empty space', async () => {
+    const application = await mount();
+    const open = vi.spyOn(application.fileTree.newDialog, 'openWithPayload');
+    const row = page.getByRole('treeitem', { name: 'a.ts' });
+    await userEvent.click(row);
+
+    await userEvent.click(page.getByRole('tree'), { button: 'right', position: { x: 150, y: 380 } });
+
+    await expect.element(page.getByRole('menuitem', { name: /Paste/ })).toBeVisible();
+    await expect.element(page.getByRole('menuitem', { name: /Cut/ })).not.toBeInTheDocument();
+    await expect.element(page.getByRole('menuitem', { name: /Open in/ })).not.toBeInTheDocument();
+    await userEvent.click(page.getByRole('menuitem', { name: 'New' }));
+    await userEvent.click(page.getByRole('menuitem', { name: /File/ }));
+    expect(open).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ folder: '', kind: 'file' }));
+    await expect.element(row).toHaveAttribute('aria-selected', 'false');
+  });
+
   test('cancels cut on Escape', async () => {
     const application = await mount();
     application.fileTree.clipboard = { cut: true, workspace: WORKSPACE, paths: ['a.ts'] };
