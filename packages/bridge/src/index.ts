@@ -9,7 +9,7 @@ export { type DaemonBridge, DaemonConnection } from './daemon';
 export { InstalledFrontendPlugin, type PluginsBridge } from './plugins';
 export { DEFAULT_PROJECT_LAYOUT, ProjectLayout, type ProjectsBridge } from './projects';
 export type { Json, SettingsBridge } from './settings';
-export { FileFilter, type WindowBridge } from './window';
+export type { WindowBridge } from './window';
 export { DEFAULT_WORKSPACE_STATE, WorkspaceState, type WorkspacesBridge } from './workspaces';
 
 declare global {

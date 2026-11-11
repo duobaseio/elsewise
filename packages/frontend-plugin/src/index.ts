@@ -89,7 +89,7 @@ export {
   ThemeId,
 } from './frontend-settings';
 export { Key, Keymap, Keys, PlatformKey } from './keymap';
-export type { Platform } from './platform';
+export type { FileFilter, PickPathsOptions, Platform } from './platform';
 export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin';
 export type {
   CloneProgress,

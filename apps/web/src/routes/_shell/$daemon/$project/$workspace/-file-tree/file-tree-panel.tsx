@@ -14,7 +14,7 @@ import { daemonQuery } from '@/daemon';
 import { DirectoryWatcher } from '@/fs/directory-watcher';
 import { useFileTreeManager } from '@/fs/file-tree-manager';
 import { watchGitStatus } from '@/git/status';
-import { useWorkspace } from '@/projects/workspace-manager';
+import { sameWorkspace, useWorkspace } from '@/projects/workspace-manager';
 import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
 
@@ -31,6 +31,11 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const commands = useCommandManager();
   const { fileTree } = useApplicationManager();
   const menu = useFileTreeManager((manager) => manager.contextMenu);
+  const clipboard = useFileTreeManager((manager) => manager.clipboard);
+  const cutPaths =
+    clipboard?.cut && sameWorkspace(clipboard.workspace, { daemon, project, workspace: workspaceId })
+      ? clipboard.paths
+      : undefined;
   const clicked = useRef<string | null>(null);
   const target = useRef<FileTreeSelection | null>(null);
 
@@ -46,14 +51,17 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       const relativePath = sourcePath.replace(/\/$/, '');
       const newRelativePath = destinationPath.replace(/\/$/, '');
       const renamed: Promise<unknown> =
-        workspace?.state === 'ok'
+        workspace?.state === 'ok' || workspace?.state === 'detached'
           ? client.git.move({ absolutePath: root, relativePath, newRelativePath })
-          : client.fileSystem.renameEntry({ root, relativePath, newRelativePath });
+          : client.fileSystem.moveEntry({ root, relativePath, newRelativePath });
 
-      renamed.catch((error: Error) => {
-        model.move(destinationPath, sourcePath);
-        toast.add({ type: 'error', title: 'Renaming failed', description: error.message });
-      });
+      renamed.then(
+        () => fileTree.moveClipboardPaths({ daemon, project, workspace: workspaceId }, sourcePath, destinationPath),
+        (error: Error) => {
+          model.move(destinationPath, sourcePath);
+          toast.add({ type: 'error', title: 'Renaming failed', description: error.message });
+        },
+      );
     },
     onRenameError: (error) => toast.add({ type: 'error', title: 'Renaming failed', description: error }),
     // TODO: Move through GitService.Move, as a move is a rename across folders.
@@ -83,12 +91,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
 
   const renaming = useFileTreeManager((manager) => manager.renaming);
   useEffect(() => {
-    if (
-      renaming !== null &&
-      renaming.workspace.daemon === daemon &&
-      renaming.workspace.project === project &&
-      renaming.workspace.workspace === workspaceId
-    ) {
+    if (renaming !== null && sameWorkspace(renaming.workspace, { daemon, project, workspace: workspaceId })) {
       fileTree.renaming = null;
       model.startRenaming(renaming.path);
     }
@@ -137,7 +140,13 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       }
       className="h-full"
     >
-      <FileTree model={model} gitStatusBadges={gitStatusBadges} indentGuides={indentGuides} aria-label="Files" />
+      <FileTree
+        model={model}
+        cutPaths={cutPaths}
+        gitStatusBadges={gitStatusBadges}
+        indentGuides={indentGuides}
+        aria-label="Files"
+      />
     </CommandContextMenu>
   );
 }

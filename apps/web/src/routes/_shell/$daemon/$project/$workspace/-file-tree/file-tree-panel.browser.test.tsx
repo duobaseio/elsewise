@@ -13,6 +13,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import {
   DirectoryListing_Entry_Type,
@@ -30,6 +31,7 @@ import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { FileTreePanel } from './file-tree-panel';
 
+const WORKSPACE = { daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' };
 const NAMES = ['a.ts', 'b.ts', 'c.ts'];
 
 afterEach(() => {
@@ -91,16 +93,16 @@ function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
   };
 }
 
-// Renders the panel of Singapore, with the bridge to open a folder so the context menu has an item.
-async function mount(git: Partial<Daemon['git']> = {}) {
+// Renders the panel of Singapore, with the bridge to open a folder so the context menu has an item, and returns the
+// application it runs in.
+async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManager> {
   window.bridge = {
     window: {
       cut() {},
       copy() {},
       paste() {},
-      openFolder: async () => {},
-      pickFolder: async () => null,
-      pickFile: async () => null,
+      showPath: async () => {},
+      pickPaths: async () => [],
       setBrightness() {},
       setBackground() {},
       onClose() {},
@@ -124,15 +126,24 @@ async function mount(git: Partial<Daemon['git']> = {}) {
     routeTree: root.addChildren([shell.addChildren([workspace])]),
     history: createMemoryHistory({ initialEntries: ['/local/elsewise/singapore'] }),
   });
+  const application = builtInApplication({ router });
   await render(
     <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={builtInApplication({ router })}>
+      <ApplicationManagerContext value={application}>
         <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
           <RouterProvider router={router} />
         </WorkspaceStateStoreContext>
       </ApplicationManagerContext>
     </QueryClientProvider>,
   );
+  return application;
+}
+
+function nameColor(path: string): string | undefined {
+  const name = document
+    .querySelector('file-tree-container')
+    ?.shadowRoot?.querySelector(`[data-item-path="${path}"] > [data-item-section="content"]`);
+  return name ? getComputedStyle(name).color : undefined;
 }
 
 describe('FileTreePanel', () => {
@@ -154,6 +165,17 @@ describe('FileTreePanel', () => {
       .toBe('b.ts');
   });
 
+  test('cancels cut on Escape', async () => {
+    const application = await mount();
+    application.fileTree.clipboard = { cut: true, workspace: WORKSPACE, paths: ['a.ts'] };
+    const row = page.getByRole('treeitem', { name: 'a.ts' });
+    await userEvent.click(row);
+
+    await userEvent.keyboard('{Escape}');
+
+    await expect.poll(() => application.fileTree.clipboard).toBeNull();
+  });
+
   test('renames through git', async () => {
     const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
     await mount({ move });
@@ -170,11 +192,26 @@ describe('FileTreePanel', () => {
       .toEqual([[{ absolutePath: '/elsewise', relativePath: 'a.ts', newRelativePath: 'z.ts' }]]);
   });
 
+  test('moves clipboard path on rename', async () => {
+    const application = await mount({ move: async () => create(MoveResponseSchema) });
+    application.fileTree.clipboard = { cut: false, workspace: WORKSPACE, paths: ['a.ts', 'b.ts'] };
+    const row = page.getByRole('treeitem', { name: 'a.ts' });
+    await expect.element(row).toBeVisible();
+
+    await userEvent.click(row, { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem', { name: /Rename/ }));
+    await userEvent.fill(page.getByRole('textbox'), 'z.ts');
+    await userEvent.keyboard('{Enter}');
+
+    await expect.poll(() => application.fileTree.clipboard?.paths).toEqual(['z.ts', 'b.ts']);
+  });
+
   test('restores row when rename fails', async () => {
     const move = vi.fn<Daemon['git']['move']>(async () => {
       throw new Error('denied');
     });
-    await mount({ move });
+    const application = await mount({ move });
+    application.fileTree.clipboard = { cut: false, workspace: WORKSPACE, paths: ['a.ts'] };
     const row = page.getByRole('treeitem', { name: 'a.ts' });
     await expect.element(row).toBeVisible();
 
@@ -185,5 +222,25 @@ describe('FileTreePanel', () => {
 
     await expect.element(page.getByRole('treeitem', { name: 'a.ts' })).toBeVisible();
     await expect.element(page.getByRole('treeitem', { name: 'z.ts' })).not.toBeInTheDocument();
+    expect(application.fileTree.clipboard?.paths).toEqual(['a.ts']);
+  });
+
+  test('dims cut row', async () => {
+    const application = await mount();
+    await expect.element(page.getByRole('treeitem', { name: 'a.ts' })).toBeVisible();
+
+    application.fileTree.clipboard = { cut: true, workspace: WORKSPACE, paths: ['a.ts'] };
+
+    await expect.poll(() => nameColor('a.ts')).not.toBe(nameColor('b.ts'));
+  });
+
+  test('keeps copied row', async () => {
+    const application = await mount();
+    await expect.element(page.getByRole('treeitem', { name: 'a.ts' })).toBeVisible();
+
+    application.fileTree.clipboard = { cut: false, workspace: WORKSPACE, paths: ['a.ts'] };
+    await new Promise(requestAnimationFrame);
+
+    expect(nameColor('a.ts')).toBe(nameColor('b.ts'));
   });
 });

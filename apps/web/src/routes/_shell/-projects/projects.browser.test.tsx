@@ -17,9 +17,8 @@ function pickFolder(absolutePath: string | null) {
       cut() {},
       copy() {},
       paste() {},
-      openFolder: async () => {},
-      pickFolder: async () => absolutePath,
-      pickFile: async () => null,
+      showPath: async () => {},
+      pickPaths: async () => (absolutePath === null ? [] : [absolutePath]),
       setBrightness() {},
       setBackground() {},
       onClose() {},
@@ -788,15 +787,14 @@ describe('Projects', () => {
 
   test('opens workspace in file manager', async () => {
     await mount('/local/elsewise/singapore');
-    const openFolder = vi.fn(async () => {});
+    const showPath = vi.fn(async () => {});
     window.bridge = {
       window: {
         cut() {},
         copy() {},
         paste() {},
-        openFolder,
-        pickFolder: async () => null,
-        pickFile: async () => null,
+        showPath,
+        pickPaths: async () => [],
         setBrightness() {},
         setBackground() {},
         onClose() {},
@@ -807,7 +805,7 @@ describe('Projects', () => {
     await page.getByRole('menuitem', { name: 'Open in' }).click();
     await page.getByRole('menuitem', { name: FILE_MANAGER }).click();
 
-    await expect.poll(() => openFolder.mock.lastCall).toEqual(['/elsewise/dhaka']);
+    await expect.poll(() => showPath.mock.lastCall).toEqual(['/elsewise/dhaka']);
   });
 
   test('deletes workspace from context menu', async () => {

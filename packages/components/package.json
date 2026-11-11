@@ -11,6 +11,7 @@
   "description": "Elsewise's design system.",
   "exports": {
     "./components/accordion": "./src/components/accordion.tsx",
+    "./components/autocomplete": "./src/components/autocomplete.tsx",
     "./components/button": "./src/components/button.tsx",
     "./components/checkbox": "./src/components/checkbox.tsx",
     "./components/collapsible": "./src/components/collapsible.tsx",

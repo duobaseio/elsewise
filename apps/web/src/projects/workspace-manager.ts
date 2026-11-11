@@ -336,6 +336,10 @@ export class WorkspaceManager implements Workspaces {
   }
 }
 
+export function sameWorkspace(a: WorkspaceId, b: WorkspaceId): boolean {
+  return a.daemon === b.daemon && a.project === b.project && a.workspace === b.workspace;
+}
+
 // Returns the workspace in the URL.
 function routed(router: AnyRouter): WorkspaceId | null {
   const params: Record<string, unknown> = router.state.matches.at(-1)?.params ?? {};

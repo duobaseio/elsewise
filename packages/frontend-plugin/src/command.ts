@@ -162,6 +162,14 @@ export const DEFAULT_COMMANDS = {
     },
   },
   fileTree: {
+    clipboard: {
+      cut: 'elsewise.fileTree.clipboard.cut',
+      copy: 'elsewise.fileTree.clipboard.copy',
+      copyPath: 'elsewise.fileTree.clipboard.copyPath',
+      copyRelativePath: 'elsewise.fileTree.clipboard.copyRelativePath',
+      paste: 'elsewise.fileTree.clipboard.paste',
+      cancelCut: 'elsewise.fileTree.clipboard.cancelCut',
+    },
     edit: {
       rename: 'elsewise.fileTree.edit.rename',
       delete: 'elsewise.fileTree.edit.delete',
@@ -312,6 +320,14 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
   },
   fileTree: {
+    clipboard: {
+      cut: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
+      copy: ['Mod-c', { windows: 'Ctrl-Insert', linux: 'Ctrl-Insert' }],
+      copyPath: ['Mod-Shift-c'],
+      copyRelativePath: ['Mod-Shift-Alt-c'],
+      paste: ['Mod-v', { windows: 'Shift-Insert', linux: 'Shift-Insert' }],
+      cancelCut: ['Escape'],
+    },
     edit: {
       rename: ['Shift-F6'],
       delete: ['Delete', 'Backspace'],

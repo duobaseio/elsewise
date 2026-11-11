@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { CodeDirectory } from '../directories';
-import { refuseOccupiedPath } from '../fs/directory';
+import { refuseExisting } from '../fs/directory';
 import { errnoOf } from '../fs/error';
 import { toNativeRoot, toProtocolPath } from '../fs/path';
 import type {
@@ -287,7 +287,7 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     const branch = source.branch === '' ? workspaceFolder : guardOperand(source.branch, 'branch name');
     const workspaceNativePath = await canonicalPath(path.join(this.#code.workspaces, project.folder, workspaceFolder));
     await this.#refuseStoredWorkspace(workspaceNativePath);
-    await refuseOccupiedPath(workspaceNativePath, 'empty');
+    await refuseExisting(workspaceNativePath, 'empty');
 
     const args = ['worktree', 'add'];
     if (await hasBranch(repository.git, branch)) {
@@ -368,7 +368,7 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
         : toNativeRoot(mainWorkspaceProtocolPath),
     );
     await this.#refuseStoredWorkspace(mainWorkspaceNativePath);
-    await refuseOccupiedPath(mainWorkspaceNativePath, 'empty');
+    await refuseExisting(mainWorkspaceNativePath, 'empty');
     return { folder, mainWorkspaceNativePath };
   }
 

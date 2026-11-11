@@ -80,21 +80,14 @@ export function FileIcon({ name, className }: { name: string; className?: string
   switch (data.kind) {
     case 'glyph':
       return (
-        <span
+        <svg
           aria-hidden
           data-slot="file-icon"
-          style={
-            {
-              '--icon-tint-light': data.tint.light,
-              '--icon-tint-dark': data.tint.dark,
-              maskImage: `url("${data.src}")`,
-              maskSize: 'contain',
-              maskRepeat: 'no-repeat',
-              maskPosition: 'center',
-            } as CSSProperties
-          }
-          className={cn(ICON_CLASS, 'bg-current', TINT_CLASS, className)}
-        />
+          style={{ '--icon-tint-light': data.tint.light, '--icon-tint-dark': data.tint.dark } as CSSProperties}
+          className={cn(ICON_CLASS, 'fill-current', TINT_CLASS, className)}
+        >
+          <use href={`${data.src}#glyph`} />
+        </svg>
       );
     case 'brand':
       return <img aria-hidden alt="" data-slot="file-icon" src={data.src} className={cn(ICON_CLASS, className)} />;

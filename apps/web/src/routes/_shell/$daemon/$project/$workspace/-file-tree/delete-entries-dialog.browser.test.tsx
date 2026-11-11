@@ -94,4 +94,21 @@ describe('DeleteEntriesDialog', () => {
       expect.objectContaining({ type: 'error', title: 'Deleting “src” failed', description: 'denied' }),
     );
   });
+
+  test('drops deleted paths from clipboard', async () => {
+    const application = await mount(async ({ relativePath }) => {
+      if (relativePath === 'README.md') {
+        throw new Error('denied');
+      }
+      return create(DeleteEntryResponseSchema);
+    });
+    const workspace = SELECTION.workspace.id;
+    application.fileTree.clipboard = { cut: false, workspace, paths: ['src/main.ts', 'README.md', 'docs/a.md'] };
+    application.fileTree.deleteDialog.openWithPayload(SELECTION);
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(application.fileTree.clipboard?.paths).toEqual(['README.md', 'docs/a.md']);
+  });
 });

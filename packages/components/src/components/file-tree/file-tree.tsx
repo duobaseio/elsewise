@@ -21,6 +21,7 @@ const UNSAFE_CSS = `${themeCss}\n${unsafeCss}`;
 export interface FileTreeProps {
   model: FileTreeModel;
   className?: string;
+  cutPaths?: readonly string[];
   gitStatusBadges?: boolean;
   indentGuides?: boolean;
   'aria-label'?: string;
@@ -29,6 +30,7 @@ export interface FileTreeProps {
 export function FileTree({
   model,
   className,
+  cutPaths,
   gitStatusBadges = true,
   indentGuides = true,
   'aria-label': ariaLabel,
@@ -38,21 +40,42 @@ export function FileTree({
     (listener) => model.subscribe(listener),
     () => model.getVisibleRows(0, 0)[0]?.kind !== 'directory',
   );
+
+  const wrapper = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const shadowRoot = wrapper.current?.firstElementChild?.shadowRoot;
+    if (shadowRoot == null || cutPaths === undefined || cutPaths.length === 0) {
+      return undefined;
+    }
+
+    // TODO: Mark cut rows through the tree once it can style a row by its path.
+    // Unlayered, so it wins over the library's layered git status colour.
+    const cut = document.createElement('style');
+    cut.textContent = `${cutPaths
+      .map((path) => `[data-item-path="${CSS.escape(path)}"] > [data-item-section="content"]`)
+      .join(',\n')} { color: var(--disabled); }`;
+    shadowRoot.append(cut);
+    return () => cut.remove();
+  }, [cutPaths]);
+
   const style = {
     '--ew-folder-icon': `url("${iconUrl(icons.folder)}")`,
     '--ew-folder-open-icon': `url("${iconUrl(icons['folder-open'])}")`,
   } as CSSProperties;
 
+  // TODO: Read the host from the model once `getFileTreeContainer` is set on mount, and drop the wrapper.
   return (
-    <PierreFileTree
-      aria-label={ariaLabel}
-      model={model}
-      className={cn('h-full scheme-light dark:scheme-dark', className)}
-      style={style}
-      data-git-status-badges={gitStatusBadges}
-      data-indent-guides={indentGuides}
-      data-flat={flat || undefined}
-    />
+    <div ref={wrapper} className="contents">
+      <PierreFileTree
+        aria-label={ariaLabel}
+        model={model}
+        className={cn('h-full scheme-light dark:scheme-dark', className)}
+        style={style}
+        data-git-status-badges={gitStatusBadges}
+        data-indent-guides={indentGuides}
+        data-flat={flat || undefined}
+      />
+    </div>
   );
 }
 
