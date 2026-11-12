@@ -13,7 +13,10 @@ import {
   CopyEntriesResponseSchema,
   CopyEntriesResponse_Failure_Reason as CopyReason,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
+import {
+  MoveResponse_Failure_Reason as MoveReason,
+  MoveResponseSchema,
+} from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { OverwriteEntriesDialog } from './overwrite-entries-dialog';
 
@@ -188,6 +191,31 @@ describe('OverwriteEntriesDialog', () => {
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
 
     expect(application.fileTree.clipboard).toBe(escaped);
+  });
+
+  test('moves clipboard paths of overwritten entries', async () => {
+    const application = await mount({
+      move: async () =>
+        create(MoveResponseSchema, {
+          failures: [{ relativePath: 'b.ts', reason: MoveReason.OTHER, message: 'denied' }],
+        }),
+    });
+    application.fileTree.overwriteDialog.openWithPayload({
+      workspace: WORKSPACE,
+      folder: 'src',
+      cut: true,
+      entries: ENTRIES,
+    });
+    application.fileTree.clipboard = {
+      cut: false,
+      workspace: WORKSPACE.id,
+      paths: ['a.ts', 'b.ts', 'docs/', 'other.ts'],
+    };
+
+    await userEvent.click(page.getByRole('button', { name: 'Overwrite' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(application.fileTree.clipboard?.paths).toEqual(['src/a.ts', 'b.ts', 'src/docs/', 'other.ts']);
   });
 
   test('reports failed entry', async () => {

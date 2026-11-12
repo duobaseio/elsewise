@@ -127,3 +127,18 @@
 [data-file-tree-drag-preview="true"][data-item-type="folder"] [data-item-section="icon"] > svg {
   visibility: hidden;
 }
+
+/* The whole tree is the drop target for the root. An overlay, as the layer colours are translucent and the rows paint
+   the tree's background again. */
+:host([data-drop-target]) {
+  position: relative;
+}
+
+/* noinspection CssUnresolvedCustomProperty */
+:host([data-drop-target])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--layer-selected);
+  pointer-events: none;
+}

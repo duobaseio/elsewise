@@ -38,6 +38,14 @@ export function OverwriteEntriesDialog() {
     mutationFn: async ({ workspace, cut, entries }: Overwrite) => {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
       const { failures } = await pasteEntries(daemon, workspace, cut, entries, true);
+
+      for (const entry of cut ? entries : []) {
+        if (!failures.some((failure) => failure.entry === entry)) {
+          const suffix = entry.folder ? '/' : '';
+          fileTree.moveClipboardPaths(workspace.id, entry.source + suffix, entry.destination + suffix);
+        }
+      }
+
       for (const { entry, error } of failures) {
         toast.add({
           type: 'error',
