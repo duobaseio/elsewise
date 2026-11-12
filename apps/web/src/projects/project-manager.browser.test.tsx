@@ -1,8 +1,8 @@
 import { create } from '@bufbuild/protobuf';
-import type { WorkspaceId } from '@elsewise/frontend-plugin';
+import { DEFAULT_PROJECT_SOURCE_GROUPS, type ProjectSource, type WorkspaceId } from '@elsewise/frontend-plugin';
 import { QueryClient } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { type Daemon, daemonQuery } from '@/daemon';
 import { Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import {
@@ -313,5 +313,115 @@ describe('searchRepositories', () => {
     dispose();
 
     expect(await projects.searchRepositories('', SIGNAL)).toEqual([]);
+  });
+});
+
+describe('addSources', () => {
+  const { add } = DEFAULT_PROJECT_SOURCE_GROUPS;
+
+  // Returns a source with `id` that adds no project.
+  function source(id: string, order?: number, label = id): ProjectSource {
+    return { id, order, label, add: async () => null };
+  }
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  test('starts with built-in sources', () => {
+    const { projects } = setup();
+
+    expect(projects.sourceGroups.map(({ id }) => id)).toEqual([add.id]);
+    expect(projects.sources.map(({ id }) => id)).toEqual([add.sources.new.id, add.sources.import.id]);
+  });
+
+  test('adds groups until disposed, notifying', () => {
+    const { projects } = setup();
+    const notify = vi.fn();
+    projects.subscribe(notify);
+    const a = source('test.a');
+    const dispose = projects.addSources([{ id: 'test', sources: [a] }]);
+
+    expect(projects.sourceGroups.at(-1)).toEqual({ id: 'test', sources: [a] });
+
+    dispose();
+
+    expect(projects.sourceGroups.map(({ id }) => id)).toEqual([add.id]);
+    expect(notify).toHaveBeenCalledTimes(2);
+  });
+
+  test('merges groups by id', () => {
+    const { projects } = setup();
+    const template = source('test.template', 30);
+    projects.addSources([{ id: add.id, sources: [template] }]);
+
+    expect(projects.sourceGroups).toHaveLength(1);
+    expect(projects.sources.map(({ id }) => id)).toEqual([add.sources.new.id, add.sources.import.id, template.id]);
+  });
+
+  test('keeps first order, warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { projects } = setup();
+    projects.addSources([{ id: add.id, order: 20, sources: [] }]);
+
+    expect(projects.sourceGroups.map(({ order }) => order)).toEqual([add.order]);
+    expect(warn).toHaveBeenCalledWith(`Project source group ${add.id} already has order 10, ignoring 20`);
+  });
+
+  test('sorts groups by order, then id', () => {
+    const { projects } = setup();
+    projects.addSources([
+      { id: 'test.none', sources: [source('test.d')] },
+      { id: 'test.b', order: 20, sources: [source('test.c')] },
+      { id: 'test.a', order: 20, sources: [source('test.b')] },
+      { id: 'test.first', order: 5, sources: [source('test.a')] },
+    ]);
+
+    expect(projects.sourceGroups.map(({ id }) => id)).toEqual(['test.first', add.id, 'test.a', 'test.b', 'test.none']);
+  });
+
+  test('sorts sources by order, then label', () => {
+    const { projects } = setup();
+    projects.addSources([
+      {
+        id: 'test',
+        sources: [
+          source('test.none', undefined, 'None'),
+          source('test.c', 10, 'C'),
+          source('test.b', 10, 'B'),
+          source('test.a', 5, 'A'),
+        ],
+      },
+    ]);
+
+    expect(projects.sourceGroups.at(-1)?.sources.map(({ id }) => id)).toEqual([
+      'test.a',
+      'test.b',
+      'test.c',
+      'test.none',
+    ]);
+  });
+
+  test('keeps first of duplicate id across groups, warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { projects } = setup();
+    const first = source('test.a', undefined, 'first');
+    projects.addSources([{ id: 'test', sources: [first] }]);
+    projects.addSources([{ id: 'other', sources: [source('test.a', undefined, 'second')] }]);
+
+    expect(projects.sources.filter(({ id }) => id === 'test.a')).toEqual([first]);
+    expect(warn).toHaveBeenCalledWith('Project source test.a was already added');
+  });
+
+  test('restores duplicate once first is disposed', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { projects } = setup();
+    const dispose = projects.addSources([{ id: 'test', sources: [source('test.a', undefined, 'first')] }]);
+    const second = source('test.a', undefined, 'second');
+    projects.addSources([{ id: 'other', sources: [second] }]);
+
+    dispose();
+
+    expect(projects.sources.filter(({ id }) => id === 'test.a')).toEqual([second]);
   });
 });

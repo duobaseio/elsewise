@@ -299,6 +299,8 @@ describe('Projects', () => {
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAttribute('tabindex', '0');
 
     await userEvent.tab();
+    await expect.element(page.getByRole('button', { name: 'Add project' })).toHaveFocus();
+    await userEvent.tab();
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
     await userEvent.tab();
 
@@ -313,6 +315,7 @@ describe('Projects', () => {
     page.getByRole('treeitem', { name: 'Tokyo' }).element().focus();
     before.focus();
 
+    await userEvent.tab();
     await userEvent.tab();
 
     await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toHaveFocus();
@@ -876,6 +879,130 @@ describe('Projects', () => {
     await expect
       .element(page.getByRole('treeitem', { name: 'Singapore' }))
       .toHaveAccessibleDescription('Not a worktree Main workspace');
+  });
+
+  test('lists built-in sources', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Import project…' })).toBeVisible();
+    expect(
+      page
+        .getByRole('menuitem')
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(['New project…', 'Import project…']);
+  });
+
+  test('hides import without folder picker', async () => {
+    await mount('/local/elsewise/singapore');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'New project…' })).toBeVisible();
+    expect(page.getByRole('menuitem', { name: 'Import project…' }).query()).toBeNull();
+  });
+
+  test('separates source groups', async () => {
+    pickFolder(null);
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      { id: 'test', order: 20, sources: [{ id: 'test.clone', label: 'Clone…', add: async () => null }] },
+      {
+        id: 'test.hidden',
+        order: 30,
+        sources: [{ id: 'test.hidden', label: 'Hidden', shown: () => false, add: async () => null }],
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toBeVisible();
+    expect(
+      [...document.querySelectorAll('[role="menuitem"], [role="separator"]')].map(
+        (element) => element.textContent || element.getAttribute('role'),
+      ),
+    ).toEqual(['New project…', 'Import project…', 'separator', 'Clone…']);
+  });
+
+  test('disables source', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      { id: 'test', sources: [{ id: 'test.clone', label: 'Clone…', enabled: () => false, add: async () => null }] },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('disables source while it adds', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const { promise, resolve } = Promise.withResolvers<null>();
+    projects.addSources([{ id: 'test', sources: [{ id: 'test.clone', label: 'Clone…', add: () => promise }] }]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Clone…' }).click();
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toHaveAttribute('aria-disabled', 'true');
+
+    resolve(null);
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  test('disables each source while it adds', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const clone = Promise.withResolvers<null>();
+    const template = Promise.withResolvers<null>();
+    projects.addSources([
+      {
+        id: 'test',
+        sources: [
+          { id: 'test.clone', label: 'Clone…', add: () => clone.promise },
+          { id: 'test.template', label: 'Template…', add: () => template.promise },
+        ],
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Clone…' }).click();
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Template…' }).click();
+    template.resolve(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Template…' })).not.toHaveAttribute('aria-disabled');
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toHaveAttribute('aria-disabled', 'true');
+
+    clone.resolve(null);
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  test('logs rejecting source', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      {
+        id: 'test',
+        sources: [
+          { id: 'test.clone', label: 'Clone…', add: () => Promise.reject(new Error('authentication required')) },
+        ],
+      },
+    ]);
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Clone…' }).click();
+
+    await expect
+      .poll(() => error.mock.lastCall)
+      .toEqual(['Project source test.clone failed', new Error('authentication required')]);
+    expect(added).not.toHaveBeenCalled();
   });
 
   test('imports picked folder and opens it', async () => {

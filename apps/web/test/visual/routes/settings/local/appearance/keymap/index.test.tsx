@@ -7,6 +7,7 @@ import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { userKeymapsQuery } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { Keymap } from '@/routes/settings/local/appearance/keymap';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../../../../commands';
@@ -57,7 +58,9 @@ async function mount(theme: (typeof THEMES)[number], settings = DEFAULT_FRONTEND
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <RouterProvider router={router} />
+        <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+          <RouterProvider router={router} />
+        </WorkspaceStateStoreContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
@@ -94,7 +97,7 @@ test.each(THEMES)('keymap search (%s)', async (theme) => {
 
   await userEvent.fill(search(), 'fold');
   await expect.element(page.getByRole('button', { name: 'Clear search' })).toBeVisible();
-  await expect.poll(() => page.getByRole('option').elements().length).toBe(4);
+  await expect.poll(() => page.getByRole('option').elements().length).toBe(5);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`keymap-search-${theme}`);
 });

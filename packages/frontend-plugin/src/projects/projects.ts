@@ -2,6 +2,7 @@ import type { Disposable } from '@elsewise/plugin';
 import type { ContextMenuGroup } from '../context-menu';
 import type { RepositorySource } from './repositories';
 import type { ProjectIcon, ProjectSidebarItem } from './sidebar';
+import type { ProjectSourceGroup } from './sources';
 import type { Workspaces } from './workspaces';
 
 /**
@@ -75,6 +76,26 @@ export interface Projects {
    * Returns a disposable that removes the `groups`.
    */
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
+
+  /**
+   * Adds `groups`, and their sources from which a project can be added to a daemon.
+   *
+   * ```ts
+   * projects.addSources([
+   *   // Sources in a built-in group
+   *   {
+   *     id: DEFAULT_PROJECT_SOURCE_GROUPS.add.id,
+   *     sources: [{ id: 'example.template', order: 30, label: 'New from template…', add: template }],
+   *   },
+   *
+   *   // After the built-in groups
+   *   { id: 'example.github', order: 20, sources: [{ id: 'example.github.clone', label: 'Clone…', add: clone }] },
+   * ]);
+   * ```
+   *
+   * Returns a disposable that removes the `groups`.
+   */
+  addSources(groups: readonly ProjectSourceGroup[]): Disposable;
 
   /**
    * Adds `sources` from which the 'New project' dialog finds cloneable git repositories.

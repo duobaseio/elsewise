@@ -5,7 +5,9 @@ import { DragDropProvider } from '@dnd-kit/react';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@elsewise/components/components/dropdown-menu';
 import { Icon } from '@elsewise/components/components/icon';
@@ -16,14 +18,14 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from '@elsewise/components/components/sidebar';
-import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import { DEFAULT_ROUTES } from '@elsewise/frontend-plugin';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { DEFAULT_ROUTES, type ProjectSource } from '@elsewise/frontend-plugin';
+import { useMutation, useMutationState, useQuery } from '@tanstack/react-query';
+import { Fragment } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { LOCAL_DAEMON_ID } from '@/daemon';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
-import { projectsQuery } from '@/projects/project-manager';
+import { projectsQuery, useProjectSourceGroups } from '@/projects/project-manager';
 import { DeleteProjectDialog } from './delete-project-dialog';
 import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
 import { ImportWorkspaceDialog } from './import-workspace-dialog';
@@ -74,34 +76,46 @@ export function Projects() {
 }
 
 function DaemonGroup({ daemonId }: { daemonId: string }) {
-  const { platform, projects: manager, router, sidebar } = useApplicationManager();
+  const application = useApplicationManager();
   const projects = useQuery(projectsQuery(daemonId));
   const layout = useProjectLayout(daemonId);
   const { moveProject, moveWorkspace } = useUpdateProjectLayout(daemonId);
-  const pickPaths = window.bridge?.window?.pickPaths;
 
-  const importProject = useMutation({
-    mutationFn: async (absolutePath: string) => {
-      const project = await manager.add(daemonId, { type: 'existing', absolutePath });
-      return (await manager.workspaces.list(project.id)).find((workspace) => workspace.main);
+  const sourceGroups = useProjectSourceGroups();
+  const addKey = ['daemons', daemonId, 'projects', 'add'];
+  const add = useMutation({
+    mutationKey: addKey,
+    mutationFn: async (source: ProjectSource) => {
+      const project = await source.add(application, daemonId);
+      return project === null
+        ? undefined
+        : (await application.projects.workspaces.list(project.id)).find((workspace) => workspace.main);
     },
     onSuccess: (main) => {
-      if (main) {
-        void router.navigate({ href: DEFAULT_ROUTES.workspace(main.id.daemon, main.id.project, main.id.workspace) });
+      if (main !== undefined) {
+        void application.router.navigate({
+          href: DEFAULT_ROUTES.workspace(main.id.daemon, main.id.project, main.id.workspace),
+        });
       }
     },
-    onError: (error, absolutePath) =>
-      toast.add({
-        type: 'error',
-        title: `Could not import “${absolutePath.split('/').at(-1) ?? absolutePath}”`,
-        description: error.message,
-      }),
+    onError: (error, source) => console.error(`Project source ${source.id} failed`, error),
   });
+  const adding = useMutationState({
+    filters: { mutationKey: addKey, status: 'pending' },
+    select: (mutation) => mutation.state.variables,
+  });
+
+  const groups = sourceGroups
+    .map((group) => ({
+      ...group,
+      sources: group.sources.filter((source) => source.shown?.(application, daemonId) !== false),
+    }))
+    .filter((group) => group.sources.length > 0);
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>My workspaces</SidebarGroupLabel>
-      {pickPaths && projects.isSuccess && (
+      {projects.isSuccess && groups.length > 0 && (
         <DropdownMenu>
           <Tooltip>
             <TooltipTrigger
@@ -121,20 +135,22 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
             <TooltipContent>Add project</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => sidebar.newProjectDialog.openWithPayload({ daemon: daemonId })}>
-              New project…
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={importProject.isPending}
-              onClick={async () => {
-                const [absolutePath] = await platform.pickPaths({ kind: 'folder' });
-                if (absolutePath !== undefined) {
-                  importProject.mutate(absolutePath);
-                }
-              }}
-            >
-              Import project…
-            </DropdownMenuItem>
+            {groups.map((group, i) => (
+              <Fragment key={group.id}>
+                {i > 0 && <DropdownMenuSeparator />}
+                <DropdownMenuGroup>
+                  {group.sources.map((source) => (
+                    <DropdownMenuItem
+                      key={source.id}
+                      disabled={adding.includes(source) || source.enabled?.(application, daemonId) === false}
+                      onClick={() => add.mutate(source)}
+                    >
+                      {source.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuGroup>
+              </Fragment>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       )}
