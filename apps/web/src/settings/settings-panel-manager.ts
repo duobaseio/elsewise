@@ -1,6 +1,5 @@
 import {
   DEFAULT_FRONTEND_SETTINGS,
-  DEFAULT_SETTINGS_GROUPS,
   type Disposable,
   type FrontendSettings,
   type LocalSettingsPanel,
@@ -11,8 +10,6 @@ import {
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { LANGUAGES } from '@/settings/languages';
-
-const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
 
 /**
  * The settings as plugins see them.
@@ -103,20 +100,22 @@ export class SettingsPanelManager implements Settings {
         return false;
       }
 
-      const parent = GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
-      if (!GROUPS.includes(panel.in) && parent === undefined) {
-        console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
-        return false;
-      }
+      if (panel.in !== undefined) {
+        const parent = known.get(panel.in);
+        if (parent === undefined) {
+          console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
+          return false;
+        }
 
-      if (parent !== undefined && !GROUPS.includes(parent.in)) {
-        console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
-        return false;
-      }
+        if (parent.in !== undefined) {
+          console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
+          return false;
+        }
 
-      if (parent !== undefined && parent.scope !== panel.scope) {
-        console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
-        return false;
+        if (parent.scope !== panel.scope) {
+          console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
+          return false;
+        }
       }
 
       known.set(panel.id, panel);
@@ -128,7 +127,7 @@ export class SettingsPanelManager implements Settings {
       const removed = new Set(added.map((panel) => panel.id));
       this.addedPanels = this.addedPanels
         .filter((other) => other !== added)
-        .map((other) => other.filter((panel) => !removed.has(panel.in)));
+        .map((other) => other.filter((panel) => panel.in === undefined || !removed.has(panel.in)));
       this.updatePanels();
     };
   }

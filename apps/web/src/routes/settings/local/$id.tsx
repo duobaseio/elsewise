@@ -10,7 +10,7 @@ function LocalPanel() {
   const { id } = Route.useParams();
   const panel = useSettingsPanels((settings) => settings.localPanels.find((panel) => panel.id === id));
   if (panel === undefined) {
-    return <Navigate replace to={DEFAULT_ROUTES.settings.general} />;
+    return <Navigate replace to={DEFAULT_ROUTES.settings.appearance} />;
   }
 
   return (

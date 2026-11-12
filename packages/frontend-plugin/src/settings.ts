@@ -3,20 +3,6 @@ import type { ComponentType } from 'react';
 import type { FrontendSettings } from './frontend-settings';
 
 /**
- * The ids of the settings sidebar's built-in groups.
- *
- * See {@link SettingsPanel.in}.
- */
-export const DEFAULT_SETTINGS_GROUPS = {
-  appearance: 'appearance',
-} as const;
-
-/**
- * The id of a settings sidebar group.
- */
-export type SettingsGroup = (typeof DEFAULT_SETTINGS_GROUPS)[keyof typeof DEFAULT_SETTINGS_GROUPS];
-
-/**
  * The settings.
  */
 export interface Settings {
@@ -34,7 +20,6 @@ export interface Settings {
    *     scope: 'local',
    *     id: 'io.example.words',
    *     label: 'Words',
-   *     in: 'appearance',
    *     terms: { dictionary: { label: 'Dictionary', keywords: ['spelling', 'language'] } },
    *     component: Words,
    *   },
@@ -95,11 +80,10 @@ export interface SettingsPanel {
   readonly id: string;
 
   /**
-   * The id of the group or panel it is listed in. Omitted if the panel does not exist or is itself in a panel.
-   *
-   * See {@link DEFAULT_SETTINGS_GROUPS} for the groups.
+   * The id of the panel it is listed in, or `undefined` to list it at the top level. Omitted if the panel does not
+   * exist or is itself in a panel.
    */
-  readonly in: SettingsGroup | (string & {});
+  readonly in?: string;
 
   /**
    * The panel's label in the sidebar.

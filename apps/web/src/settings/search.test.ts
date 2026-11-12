@@ -9,7 +9,7 @@ vi.mock('@/terminal/terminal', () => ({ Terminal: () => null }));
 
 // Returns a panel with `id` and `terms`.
 function panel(id: string, terms: Record<string, SettingsSearchTerm>): LocalSettingsPanel {
-  return { scope: 'local', id, label: id, in: 'appearance', terms, component: () => null };
+  return { scope: 'local', id, label: id, terms, component: () => null };
 }
 
 const PANELS = [

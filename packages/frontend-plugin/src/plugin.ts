@@ -29,13 +29,13 @@ export const DEFAULT_ROUTES = {
     `/${encodeURIComponent(daemonId)}/${encodeURIComponent(projectId)}/${encodeURIComponent(workspaceId)}` as const,
   settings: {
     /**
-     * The settings page last open, or General otherwise.
+     * The settings page last open, or Appearance otherwise.
      */
     last: '/settings',
-    general: '/settings/local/appearance/general',
-    keymap: '/settings/local/appearance/keymap',
-    editor: '/settings/local/appearance/editor',
-    terminal: '/settings/local/appearance/terminal',
+    appearance: '/settings/local/appearance',
+    keymap: '/settings/local/keymap',
+    editor: '/settings/local/editor',
+    terminal: '/settings/local/terminal',
   },
 } as const;
 

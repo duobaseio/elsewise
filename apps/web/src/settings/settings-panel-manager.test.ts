@@ -7,11 +7,11 @@ import {
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 
-function localPanel(id: string, inside = 'appearance'): LocalSettingsPanel {
+function localPanel(id: string, inside?: string): LocalSettingsPanel {
   return { scope: 'local', id, label: id, in: inside, terms: {}, component: () => null };
 }
 
-function remotePanel(id: string, inside = 'appearance'): RemoteSettingsPanel {
+function remotePanel(id: string, inside?: string): RemoteSettingsPanel {
   return { scope: 'remote', id, label: id, in: inside, terms: {}, component: () => null };
 }
 
@@ -66,8 +66,8 @@ describe('add', () => {
     expect(settings.localPanels).toEqual([again]);
   });
 
-  test('accepts panel in group or earlier panel', () => {
-    const settings = new SettingsPanelManager([localPanel('a', 'appearance')]);
+  test('accepts top-level panel or panel in earlier panel', () => {
+    const settings = new SettingsPanelManager([localPanel('a')]);
     settings.add([localPanel('b'), localPanel('c', 'a'), localPanel('d', 'b')]);
 
     expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'b', 'c', 'd']);
