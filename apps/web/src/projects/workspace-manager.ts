@@ -2,12 +2,13 @@ import {
   type ContextMenuGroup,
   DEFAULT_ROUTES,
   type Disposable,
+  type ExistingWorkspace,
+  type NewWorkspace,
   type ProjectId,
   type Workspace,
   type WorkspaceAggregateStatus,
   type WorkspaceId,
   type WorkspaceSidebarItem,
-  type WorkspaceSource,
   type WorkspaceStatus,
   type WorkspaceStatusHandle,
   type Workspaces,
@@ -19,7 +20,7 @@ import { useApplicationManager } from '@/application-context';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { OrderedItems } from '@/plugins/ordered-items';
+import { SortedSet } from '@/plugins/sorted-set';
 import { DEFAULT_WORKSPACE_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceStateStore } from '@/projects/workspace-state-store';
@@ -52,7 +53,7 @@ export class WorkspaceManager implements Workspaces {
   private readonly listeners = new Set<() => void>();
   private readonly activeListeners = new Set<(workspace: Workspace | null) => void>();
   private readonly statuses = new Set<StatusEntry>();
-  private readonly addedSidebarItems = new OrderedItems<WorkspaceSidebarItem>('Workspace sidebar item', () =>
+  private readonly addedSidebarItems = new SortedSet<WorkspaceSidebarItem>('Workspace sidebar item', () =>
     this.notify(),
   );
   private readonly contextMenus = new ContextMenuManager(DEFAULT_WORKSPACE_MENU, () => this.notify());
@@ -121,18 +122,18 @@ export class WorkspaceManager implements Workspaces {
     return workspaces.map((workspace) => mapWorkspace(project.daemon, workspace));
   }
 
-  async add(project: ProjectId, source: WorkspaceSource): Promise<Workspace> {
+  async add(project: ProjectId, workspace: NewWorkspace | ExistingWorkspace): Promise<Workspace> {
     const daemon = await this.client.query(daemonQuery(project.daemon));
-    const { workspace } = await daemon.projects.createWorkspace({
+    const { workspace: added } = await daemon.projects.createWorkspace({
       projectId: project.project,
       source:
-        source.type === 'new'
-          ? { case: 'new', value: { name: source.name, branch: source.branch, base: source.base } }
-          : { case: 'existing', value: { name: source.name, absolutePath: source.absolutePath } },
+        workspace.type === 'new'
+          ? { case: 'new', value: { name: workspace.name, branch: workspace.branch, base: workspace.base } }
+          : { case: 'existing', value: { name: workspace.name, absolutePath: workspace.absolutePath } },
     });
 
     await this.client.invalidateQueries(workspacesQuery(project.daemon, project.project));
-    return mapWorkspace(project.daemon, workspace);
+    return mapWorkspace(project.daemon, added);
   }
 
   async rename(workspace: WorkspaceId, name: string): Promise<Workspace> {

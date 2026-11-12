@@ -24,7 +24,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { Kbd } from '@elsewise/components/components/kbd';
 import { Label } from '@elsewise/components/components/label';
-import { DEFAULT_ROUTES, type NewWorkspaceSource, type ProjectId } from '@elsewise/frontend-plugin';
+import { DEFAULT_ROUTES, type NewWorkspace, type ProjectId } from '@elsewise/frontend-plugin';
 import { Code, TransportError } from '@elsewise/transport';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Fragment, useId, useState } from 'react';
@@ -62,7 +62,7 @@ export function NewWorkspaceDialog() {
   const [failure, setFailure] = useState<{ error: Error; name: string } | null>(null);
 
   const add = useMutation({
-    mutationFn: ({ project, source }: { project: ProjectId; source: NewWorkspaceSource }) =>
+    mutationFn: ({ project, source }: { project: ProjectId; source: NewWorkspace }) =>
       projects.workspaces.add(project, source),
     onError: (error, { source }) => setFailure({ error, name: source.name ?? '' }),
     onSuccess: ({ id }) => {
@@ -117,7 +117,7 @@ function NewWorkspaceForm({
   pending: boolean;
   error: Error | null;
   failedName: string;
-  onAdd: (source: NewWorkspaceSource) => void;
+  onAdd: (source: NewWorkspace) => void;
 }) {
   const { sidebar } = useApplicationManager();
   const nameId = useId();

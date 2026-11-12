@@ -2,14 +2,20 @@ import type { EditorView } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
 
 /**
- * The ids of the built-in diff sources.
+ * The built-in diff groups and sources.
  *
- * See {@link EditorDiffSource}.
+ * See {@link EditorDiffSourceGroup}.
  */
-export const DEFAULT_DIFF_SOURCES = {
-  unstaged: 'elsewise.diff.unstaged',
-  uncommitted: 'elsewise.diff.uncommitted',
-  branch: 'elsewise.diff.branch',
+export const DEFAULT_DIFF_SOURCE_GROUPS = {
+  git: {
+    id: 'io.duobase.elsewise.diff.git',
+    order: 10,
+    sources: {
+      unstaged: { id: 'elsewise.diff.unstaged', order: 10 },
+      uncommitted: { id: 'elsewise.diff.uncommitted', order: 20 },
+      branch: { id: 'elsewise.diff.branch', order: 30 },
+    },
+  },
 } as const;
 
 /**
@@ -17,19 +23,24 @@ export const DEFAULT_DIFF_SOURCES = {
  */
 export interface EditorDiffs {
   /**
-   * Adds `sources` against which a document can be diffed.
+   * Adds `groups`, and their sources against which a document can be diffed.
    *
    * ```ts
    * editor.diffs.add([
-   *   { id: 'example.turn', label: 'This Turn', base: async () => ({ label: 'Turn 3', code: await snapshot.read() }) },
+   *   // Sources in a built-in group
+   *   {
+   *     id: DEFAULT_DIFF_SOURCE_GROUPS.git.id,
+   *     sources: [{ id: 'example.stash', order: 40, label: 'Stash', base: stash }],
+   *   },
+   *
+   *   // After the built-in groups
+   *   { id: 'example.agent', order: 20, sources: [{ id: 'example.turn', label: 'This Turn', base: turn }] },
    * ]);
    * ```
    *
-   * A source with an already existing id is rejected.
-   *
-   * Returns a disposable that removes the `sources`. The documents diffed against them stop being diffed.
+   * Returns a disposable that removes the `groups`. The documents diffed against their sources stop being diffed.
    */
-  add(sources: readonly EditorDiffSource[]): Disposable;
+  add(groups: readonly EditorDiffSourceGroup[]): Disposable;
 
   /**
    * Returns the id of the source which `view` is diffed against.
@@ -45,6 +56,32 @@ export interface EditorDiffs {
 }
 
 /**
+ * A group of sources, separated from other groups in menus.
+ *
+ * Groups with the same id are merged. `order` uses the first defined value.
+ */
+export interface EditorDiffSourceGroup {
+  /**
+   * The id of this group, e.g. `DEFAULT_DIFF_SOURCE_GROUPS.git.id`.
+   *
+   * See {@link DEFAULT_DIFF_SOURCE_GROUPS} for the built-in groups.
+   */
+  readonly id: string;
+
+  /**
+   * The order of this group in menus, shown lowest first and by id when equal. Groups without one are shown last.
+   *
+   * A differing order added later is ignored.
+   */
+  readonly order?: number;
+
+  /**
+   * The sources in this group. A source whose id already exists in any group is ignored.
+   */
+  readonly sources: readonly EditorDiffSource[];
+}
+
+/**
  * A source against which a document can be diffed, e.g. the index or `HEAD`.
  */
 export interface EditorDiffSource {
@@ -52,6 +89,12 @@ export interface EditorDiffSource {
    * The source's id, namespaced by the plugin's, e.g. `io.example.turn`.
    */
   readonly id: string;
+
+  /**
+   * The order of this source in its group, shown lowest first and by label when equal. Sources without one are shown
+   * last.
+   */
+  readonly order?: number;
 
   /**
    * The label of the comparison, shown in menus, e.g. `Uncommitted`.

@@ -19,7 +19,7 @@ import {
 } from '@elsewise/components/components/dialog';
 import { Input } from '@elsewise/components/components/input';
 import { Label } from '@elsewise/components/components/label';
-import { DEFAULT_ROUTES, type ExistingWorkspaceSource, type ProjectId } from '@elsewise/frontend-plugin';
+import { DEFAULT_ROUTES, type ExistingWorkspace, type ProjectId } from '@elsewise/frontend-plugin';
 import { Code, TransportError } from '@elsewise/transport';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
@@ -44,7 +44,7 @@ export function ImportWorkspaceDialog() {
   const [opening, setOpening] = useState(0);
 
   const add = useMutation({
-    mutationFn: ({ project, source }: { project: ProjectId; source: ExistingWorkspaceSource }) =>
+    mutationFn: ({ project, source }: { project: ProjectId; source: ExistingWorkspace }) =>
       projects.workspaces.add(project, source),
     onSuccess: ({ id }) => {
       sidebar.importWorkspaceDialog.close();
@@ -95,7 +95,7 @@ function ImportWorkspaceForm({
   failedName: string;
   pending: boolean;
   error: Error | null;
-  onImport: (source: ExistingWorkspaceSource) => void;
+  onImport: (source: ExistingWorkspace) => void;
 }) {
   const { sidebar } = useApplicationManager();
   const { project: id } = draft;

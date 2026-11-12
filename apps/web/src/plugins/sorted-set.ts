@@ -4,13 +4,10 @@ import type { Disposable } from '@elsewise/frontend-plugin';
  * The items that plugins added, one per id, in order: lowest `order` first and by id when equal, those without an order
  * last.
  */
-export class OrderedItems<T extends { readonly id: string; readonly order?: number }> {
+export class SortedSet<T extends { readonly id: string; readonly order?: number }> {
   private added: readonly (readonly T[])[] = [];
   private current: readonly T[] = [];
 
-  /**
-   * Calls `onChange` when items are added or removed, and names them `kind` in warnings, e.g. `Project icon`.
-   */
   constructor(
     private readonly kind: string,
     private readonly onChange: () => void,

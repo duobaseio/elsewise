@@ -31,9 +31,10 @@ export {
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
 export {
-  DEFAULT_DIFF_SOURCES,
+  DEFAULT_DIFF_SOURCE_GROUPS,
   type EditorDiffContent,
   type EditorDiffSource,
+  type EditorDiffSourceGroup,
   type EditorDiffs,
 } from './editor/diff';
 export {
@@ -93,8 +94,8 @@ export type { FileFilter, PickPathsOptions, Platform } from './platform';
 export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin';
 export type {
   CloneProgress,
-  ExistingProjectSource,
-  NewProjectSource,
+  ExistingProject,
+  NewProject,
   Project,
   ProjectClone,
   ProjectId,
@@ -110,12 +111,11 @@ export type {
   WorkspaceSidebarItemProps,
 } from './projects/sidebar';
 export type {
-  ExistingWorkspaceSource,
-  NewWorkspaceSource,
+  ExistingWorkspace,
+  NewWorkspace,
   Workspace,
   WorkspaceAggregateStatus,
   WorkspaceId,
-  WorkspaceSource,
   WorkspaceStatus,
   WorkspaceStatusHandle,
   Workspaces,

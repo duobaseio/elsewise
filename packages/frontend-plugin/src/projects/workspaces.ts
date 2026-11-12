@@ -30,7 +30,7 @@ export interface Workspaces {
   /**
    * Adds a workspace to `project`.
    */
-  add(project: ProjectId, source: WorkspaceSource): Promise<Workspace>;
+  add(project: ProjectId, workspace: NewWorkspace | ExistingWorkspace): Promise<Workspace>;
 
   /**
    * Renames `workspace`.
@@ -127,14 +127,9 @@ export interface Workspace {
 }
 
 /**
- * Where a workspace's worktree comes from.
- */
-export type WorkspaceSource = NewWorkspaceSource | ExistingWorkspaceSource;
-
-/**
  * A new worktree the daemon adds to the repository.
  */
-export interface NewWorkspaceSource {
+export interface NewWorkspace {
   readonly type: 'new';
 
   /**
@@ -156,7 +151,7 @@ export interface NewWorkspaceSource {
 /**
  * A linked worktree of the repository already on the daemon's machine, which no workspace has yet.
  */
-export interface ExistingWorkspaceSource {
+export interface ExistingWorkspace {
   readonly type: 'existing';
 
   /**

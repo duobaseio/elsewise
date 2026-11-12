@@ -7,7 +7,7 @@ import { useActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
 import { ApplicationManager } from '@/application-manager';
 import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
-import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
+import { FAKE_GIT } from '@/editor/diff/fake-diff';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { FileTreeManager } from '@/fs/file-tree-manager';
@@ -65,7 +65,7 @@ function RootComponent() {
     );
 
     // TODO: Replace with actual diffs once git daemon is ready
-    application.editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
+    application.editor.diffs.add([FAKE_GIT]);
 
     return {
       application,

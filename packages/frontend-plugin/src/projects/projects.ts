@@ -21,7 +21,7 @@ export interface Projects {
   /**
    * Adds a project on the daemon with `daemonId`.
    */
-  add(daemonId: string, source: NewProjectSource | ExistingProjectSource): Promise<Project>;
+  add(daemonId: string, project: NewProject | ExistingProject): Promise<Project>;
 
   /**
    * Clones a new project from `clone.url` on the daemon with `daemonId`.
@@ -122,7 +122,7 @@ export interface Project {
 /**
  * A new, empty project the daemon creates.
  */
-export interface NewProjectSource {
+export interface NewProject {
   readonly type: 'new';
   readonly name: string;
 
@@ -135,7 +135,7 @@ export interface NewProjectSource {
 /**
  * A folder on the daemon's machine, which no project has yet.
  */
-export interface ExistingProjectSource {
+export interface ExistingProject {
   readonly type: 'existing';
 
   /**

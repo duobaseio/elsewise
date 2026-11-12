@@ -35,7 +35,7 @@ export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
       { order: navigate.items.definition, command: lsp.goToDefinition },
     ],
   },
-  { id: diff.id, order: diff.order, items: [{ order: compare.order, label: 'Compare with…', submenu: compare.id }] },
+  { id: diff.id, order: diff.order, items: [{ order: compare.order, label: 'Compare with', submenu: compare.id }] },
   {
     id: compare.groups.changes.id,
     order: compare.groups.changes.order,

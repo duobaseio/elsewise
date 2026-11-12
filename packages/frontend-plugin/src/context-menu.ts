@@ -223,7 +223,7 @@ export interface ContextMenuItem {
   readonly order?: number;
 
   /**
-   * The label shown instead of the command's, where the menu gives it context, e.g. `None` in `Compare with…`.
+   * The label shown instead of the command's, where the menu gives it context, e.g. `None` in `Compare with`.
    */
   readonly label?: string;
 

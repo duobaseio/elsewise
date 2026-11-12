@@ -3,8 +3,8 @@ import {
   type ContextMenuGroup,
   DEFAULT_ROUTES,
   type Disposable,
-  type ExistingProjectSource,
-  type NewProjectSource,
+  type ExistingProject,
+  type NewProject,
   type Project,
   type ProjectClone,
   type ProjectIcon,
@@ -22,7 +22,7 @@ import { ContextMenuManager } from '@/command/context-menu/context-menu-manager'
 import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { OrderedItems } from '@/plugins/ordered-items';
+import { SortedSet } from '@/plugins/sorted-set';
 import { DEFAULT_PROJECT_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
@@ -47,10 +47,8 @@ export function projectsQuery(daemonId: string) {
 export class ProjectManager implements Projects {
   readonly workspaces: WorkspaceManager;
   private readonly listeners = new Set<() => void>();
-  private readonly addedIcons = new OrderedItems<ProjectIcon>('Project icon', () => this.notify());
-  private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>
-    this.notify(),
-  );
+  private readonly addedIcons = new SortedSet<ProjectIcon>('Project icon', () => this.notify());
+  private readonly addedSidebarItems = new SortedSet<ProjectSidebarItem>('Project sidebar item', () => this.notify());
   private readonly contextMenus = new ContextMenuManager(DEFAULT_PROJECT_MENU, () => this.notify());
   private repositorySources: readonly (readonly RepositorySource[])[] = [];
 
@@ -67,16 +65,16 @@ export class ProjectManager implements Projects {
     return projects.map((project) => mapProject(daemonId, project));
   }
 
-  async add(daemonId: string, source: NewProjectSource | ExistingProjectSource): Promise<Project> {
+  async add(daemonId: string, project: NewProject | ExistingProject): Promise<Project> {
     const daemon = await this.client.query(daemonQuery(daemonId));
-    const { project } = await daemon.projects.createProject({
+    const { project: added } = await daemon.projects.createProject({
       source:
-        source.type === 'new'
-          ? { case: 'new', value: { name: source.name, absolutePath: source.absolutePath } }
-          : { case: 'existing', value: { name: source.name, absolutePath: source.absolutePath } },
+        project.type === 'new'
+          ? { case: 'new', value: { name: project.name, absolutePath: project.absolutePath } }
+          : { case: 'existing', value: { name: project.name, absolutePath: project.absolutePath } },
     });
     await this.client.invalidateQueries({ queryKey: projectsQuery(daemonId).queryKey, exact: true });
-    return mapProject(daemonId, project);
+    return mapProject(daemonId, added);
   }
 
   async clone(

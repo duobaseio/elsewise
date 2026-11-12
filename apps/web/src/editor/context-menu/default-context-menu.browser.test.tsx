@@ -83,7 +83,7 @@ describe('DEFAULT_CONTEXT_MENU', () => {
       'Find usages',
       'Go to definition',
       '-',
-      'Compare with…',
+      'Compare with',
       '-',
       'Rename…',
     ]);
