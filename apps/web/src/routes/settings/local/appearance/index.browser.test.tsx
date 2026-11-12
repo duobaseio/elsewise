@@ -58,14 +58,12 @@ async function mount(settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS, hig
   return save;
 }
 
-function withGeneral(changes: Partial<FrontendSettings['appearance']['general']>): FrontendSettings {
-  return {
-    ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, ...changes },
-    },
-  };
+function withAppearance(changes: Partial<FrontendSettings['appearance']>): FrontendSettings {
+  return { ...DEFAULT_FRONTEND_SETTINGS, appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, ...changes } };
+}
+
+function withFileTree(changes: Partial<FrontendSettings['fileTree']>): FrontendSettings {
+  return { ...DEFAULT_FRONTEND_SETTINGS, fileTree: { ...DEFAULT_FRONTEND_SETTINGS.fileTree, ...changes } };
 }
 
 describe('Appearance', () => {
@@ -75,7 +73,7 @@ describe('Appearance', () => {
     await userEvent.click(page.getByRole('option', { name: 'Dark' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withGeneral({ brightness: 'dark' }));
+    expect(save).toHaveBeenCalledWith(withAppearance({ brightness: 'dark' }));
   });
 
   test('saves theme', async () => {
@@ -84,11 +82,11 @@ describe('Appearance', () => {
     await userEvent.click(page.getByRole('option', { name: 'Dracula' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withGeneral({ theme: { source: 'elsewise', id: 'dracula' } }));
+    expect(save).toHaveBeenCalledWith(withAppearance({ theme: { source: 'elsewise', id: 'dracula' } }));
   });
 
   test.each([true, false])('reflects ligatures (%s)', async (ligatures) => {
-    await mount(withGeneral({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general.font, ligatures } }));
+    await mount(withAppearance({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.font, ligatures } }));
     const toggle = page.getByRole('switch', { name: 'Ligatures' });
     await (ligatures ? expect.element(toggle).toBeChecked() : expect.element(toggle).not.toBeChecked());
   });
@@ -103,7 +101,7 @@ describe('Appearance', () => {
     await expect.element(toggle).not.toBeChecked();
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withGeneral({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general.font, ligatures: false } }),
+      withAppearance({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.font, ligatures: false } }),
     );
   });
 
@@ -114,7 +112,7 @@ describe('Appearance', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withGeneral({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general.font, size: 16 } }),
+      withAppearance({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.font, size: 16 } }),
     );
   });
 
@@ -127,7 +125,7 @@ describe('Appearance', () => {
 
     await expect.element(toggle).not.toBeChecked();
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withGeneral({ gitStatusBadges: false }));
+    expect(save).toHaveBeenCalledWith(withFileTree({ gitStatusBadges: false }));
   });
 
   test('saves only indent guides leaf', async () => {
@@ -139,11 +137,11 @@ describe('Appearance', () => {
 
     await expect.element(toggle).not.toBeChecked();
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withGeneral({ indentGuides: false }));
+    expect(save).toHaveBeenCalledWith(withFileTree({ indentGuides: false }));
   });
 
   test.each([true, false])('help follows indent guides (%s)', async (indentGuides) => {
-    await mount(withGeneral({ indentGuides }));
+    await mount(withFileTree({ indentGuides }));
 
     await userEvent.hover(document.querySelector('#indentGuides [data-slot="row-help"]') as Element);
 

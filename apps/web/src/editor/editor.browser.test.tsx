@@ -52,11 +52,8 @@ vi.mock('@/appearance/themes', async (original) => {
 
 const SETTINGS: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
-    editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, visualGuides: [] },
-  },
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
+  editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, visualGuides: [] },
 };
 
 function shell(children: ReactNode) {
@@ -265,8 +262,8 @@ describe('Editor', () => {
     editor.addExtensions([EditorState.tabSize.of(2), indentUnit.of('\t')]);
     const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
-    expect(view.state.tabSize).toBe(SETTINGS.appearance.editor.tabSize);
-    expect(view.state.facet(indentUnit)).toBe(SETTINGS.appearance.editor.indentUnit);
+    expect(view.state.tabSize).toBe(SETTINGS.editor.tabSize);
+    expect(view.state.facet(indentUnit)).toBe(SETTINGS.editor.indentUnit);
   });
 
   test('prefers file line separator over plugin facet', async () => {

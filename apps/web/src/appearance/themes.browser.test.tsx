@@ -17,12 +17,9 @@ describe('useActiveTheme', () => {
     client.setQueryData(userThemesQuery.queryKey, []);
     client.setQueryData(settingsQuery.queryKey, {
       ...DEFAULT_FRONTEND_SETTINGS,
-      appearance: {
-        ...DEFAULT_FRONTEND_SETTINGS.appearance,
-        general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'dark', theme: DRACULA },
-        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, theme: MISSING },
-        terminal: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal, theme: MISSING },
-      },
+      appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'dark', theme: DRACULA },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, theme: MISSING },
+      terminal: { ...DEFAULT_FRONTEND_SETTINGS.terminal, theme: MISSING },
     });
     let active: ActiveTheme | undefined;
     function Probe() {

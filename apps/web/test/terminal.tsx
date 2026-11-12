@@ -14,10 +14,7 @@ import { builtInApplication } from './commands';
 
 export const SETTINGS: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
-  },
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
 };
 
 export function session() {

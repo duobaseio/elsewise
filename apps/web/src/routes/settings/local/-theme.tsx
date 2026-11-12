@@ -45,7 +45,7 @@ export function ThemeSelect(
   );
   const selected = useMemo(() => {
     const items = groups.flatMap((group) => group.items);
-    const fallback = props.inheritable ? null : DEFAULT_FRONTEND_SETTINGS.appearance.general.theme;
+    const fallback = props.inheritable ? null : DEFAULT_FRONTEND_SETTINGS.appearance.theme;
     return (
       items.find((item) => sameThemeOrNone(item.value, props.theme)) ??
       items.find((item) => sameThemeOrNone(item.value, fallback)) ??

@@ -62,114 +62,114 @@ export const FrontendSettings = z.lazy(() =>
     appearance: z.preprocess(
       (section) => section ?? {},
       z.object({
-        general: z.preprocess(
-          (section) => section ?? {},
-          z.object({
-            brightness: Brightness.catch('system'),
-            /**
-             * The interface's theme.
-             */
-            theme: ThemeId.catch({ source: 'elsewise', id: 'elsewise' }),
-            font: font(13),
-            /**
-             * Whether the file tree shows a git status's letter, e.g. `M`.
-             */
-            gitStatusBadges: z.boolean().catch(true),
-            /**
-             * Whether the file tree draws a vertical line for each folder level.
-             */
-            indentGuides: z.boolean().catch(true),
-          }),
-        ),
-        editor: z.preprocess(
-          (section) => section ?? {},
-          z.object({
-            tabSize: EditorLanguageSettings.shape.tabSize.catch(4),
-            indentUnit: EditorLanguageSettings.shape.indentUnit.catch('  '),
-            lineSeparator: EditorLanguageSettings.shape.lineSeparator.catch(null),
-            visualGuides: EditorLanguageSettings.shape.visualGuides.catch([120]),
-            /**
-             * The editor's theme, or `null` to follow the interface's.
-             */
-            theme: ThemeId.nullable().catch(null),
-            font: font(12, 1.54),
-            lineNumbers: z.boolean().catch(true),
-            lineWrapping: z.boolean().catch(false),
-            /**
-             * Whether completions show the selected item's documentation beside the list.
-             */
-            completionDocumentation: z.boolean().catch(true),
-            /**
-             * Whether resting the caret on a symbol highlights its usages in the file.
-             */
-            highlightUsages: z.boolean().catch(true),
-            /**
-             * Whether to show markers over the scrollbar.
-             */
-            scrollbarMarkers: z.boolean().catch(true),
-            /**
-             * The default layout when viewing a diff.
-             */
-            diffLayout: DiffLayout.catch('split'),
-            /**
-             * Overrides by language, keyed by CodeMirror's name for it, e.g. `TypeScript`.
-             *
-             * An override keeps the leaves it got right and drops the rest, rather than falling back to a default.
-             */
-            languages: z
-              .record(
-                z.string(),
-                z
-                  .object({
-                    tabSize: EditorLanguageSettings.shape.tabSize.optional().catch(undefined),
-                    indentUnit: EditorLanguageSettings.shape.indentUnit.optional().catch(undefined),
-                    lineSeparator: EditorLanguageSettings.shape.lineSeparator.optional().catch(undefined),
-                    visualGuides: EditorLanguageSettings.shape.visualGuides.optional().catch(undefined),
-                  })
-                  // A caught leaf is left behind as `undefined`, which would override the editor's own value when spread.
-                  .transform(
-                    (override) =>
-                      Object.fromEntries(
-                        Object.entries(override).filter(([, value]) => value !== undefined),
-                      ) as Partial<EditorLanguageSettings>,
-                  )
-                  .catch({}),
-              )
-              .catch(Object.fromEntries(DEFAULT_LANGUAGES.map((language) => [language, {}]))),
-          }),
-        ),
-        terminal: z.preprocess(
-          (section) => section ?? {},
-          z.object({
-            /**
-             * The terminal's theme, or `null` to follow the interface's.
-             */
-            theme: ThemeId.nullable().catch(null),
-            font: font(12, 1.0625),
-            cursorStyle: CursorStyle.catch('block'),
-            cursorBlink: z.boolean().catch(true),
-            copyOnSelect: z.boolean().catch(false),
-            /**
-             * Whether Option-click selects text on macOS while a program tracks the mouse, e.g. tmux, instead of sending
-             * the click to it.
-             */
-            macOptionClickForcesSelection: z.boolean().catch(false),
-            /**
-             * Whether Option represents Meta on macOS instead of typing special characters.
-             */
-            macOptionIsMeta: z.boolean().catch(false),
-            /**
-             * The number of lines kept above the screen.
-             */
-            scrollback: z.int().min(1000).max(100000).catch(10000),
-          }),
-        ),
+        brightness: Brightness.catch('system'),
+        /**
+         * The interface's theme.
+         */
+        theme: ThemeId.catch({ source: 'elsewise', id: 'elsewise' }),
+        font: font(13),
       }),
     ),
     /**
      * The current keymap.
      */
     keymap: KeymapId.catch({ source: 'elsewise', id: 'elsewise' }),
+    editor: z.preprocess(
+      (section) => section ?? {},
+      z.object({
+        tabSize: EditorLanguageSettings.shape.tabSize.catch(4),
+        indentUnit: EditorLanguageSettings.shape.indentUnit.catch('  '),
+        lineSeparator: EditorLanguageSettings.shape.lineSeparator.catch(null),
+        visualGuides: EditorLanguageSettings.shape.visualGuides.catch([120]),
+        /**
+         * The editor's theme, or `null` to follow the interface's.
+         */
+        theme: ThemeId.nullable().catch(null),
+        font: font(12, 1.54),
+        lineNumbers: z.boolean().catch(true),
+        lineWrapping: z.boolean().catch(false),
+        /**
+         * Whether completions show the selected item's documentation beside the list.
+         */
+        completionDocumentation: z.boolean().catch(true),
+        /**
+         * Whether resting the caret on a symbol highlights its usages in the file.
+         */
+        highlightUsages: z.boolean().catch(true),
+        /**
+         * Whether to show markers over the scrollbar.
+         */
+        scrollbarMarkers: z.boolean().catch(true),
+        /**
+         * The default layout when viewing a diff.
+         */
+        diffLayout: DiffLayout.catch('split'),
+        /**
+         * Overrides by language, keyed by CodeMirror's name for it, e.g. `TypeScript`.
+         *
+         * An override keeps the leaves it got right and drops the rest, rather than falling back to a default.
+         */
+        languages: z
+          .record(
+            z.string(),
+            z
+              .object({
+                tabSize: EditorLanguageSettings.shape.tabSize.optional().catch(undefined),
+                indentUnit: EditorLanguageSettings.shape.indentUnit.optional().catch(undefined),
+                lineSeparator: EditorLanguageSettings.shape.lineSeparator.optional().catch(undefined),
+                visualGuides: EditorLanguageSettings.shape.visualGuides.optional().catch(undefined),
+              })
+              // A caught leaf is left behind as `undefined`, which would override the editor's own value when spread.
+              .transform(
+                (override) =>
+                  Object.fromEntries(
+                    Object.entries(override).filter(([, value]) => value !== undefined),
+                  ) as Partial<EditorLanguageSettings>,
+              )
+              .catch({}),
+          )
+          .catch(Object.fromEntries(DEFAULT_LANGUAGES.map((language) => [language, {}]))),
+      }),
+    ),
+    fileTree: z.preprocess(
+      (section) => section ?? {},
+      z.object({
+        /**
+         * Whether the file tree shows a git status's letter, e.g. `M`.
+         */
+        gitStatusBadges: z.boolean().catch(true),
+        /**
+         * Whether the file tree draws a vertical line for each folder level.
+         */
+        indentGuides: z.boolean().catch(true),
+      }),
+    ),
+    terminal: z.preprocess(
+      (section) => section ?? {},
+      z.object({
+        /**
+         * The terminal's theme, or `null` to follow the interface's.
+         */
+        theme: ThemeId.nullable().catch(null),
+        font: font(12, 1.0625),
+        cursorStyle: CursorStyle.catch('block'),
+        cursorBlink: z.boolean().catch(true),
+        copyOnSelect: z.boolean().catch(false),
+        /**
+         * Whether Option-click selects text on macOS while a program tracks the mouse, e.g. tmux, instead of sending
+         * the click to it.
+         */
+        macOptionClickForcesSelection: z.boolean().catch(false),
+        /**
+         * Whether Option represents Meta on macOS instead of typing special characters.
+         */
+        macOptionIsMeta: z.boolean().catch(false),
+        /**
+         * The number of lines kept above the screen.
+         */
+        scrollback: z.int().min(1000).max(100000).catch(10000),
+      }),
+    ),
   }),
 );
 

@@ -152,18 +152,15 @@ async function mount(
   };
 }
 
-// Returns the settings with `general` and `editor` over the defaults, in light brightness.
+// Returns the settings with `appearance` and `editor` over the defaults, in light brightness.
 function withSettings(
-  general: Partial<FrontendSettings['appearance']['general']> = {},
-  editor: Partial<FrontendSettings['appearance']['editor']> = {},
+  appearance: Partial<FrontendSettings['appearance']> = {},
+  editor: Partial<FrontendSettings['editor']> = {},
 ): FrontendSettings {
   return {
     ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light', ...general },
-      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, visualGuides: [], ...editor },
-    },
+    appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light', ...appearance },
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, visualGuides: [], ...editor },
   };
 }
 
@@ -251,14 +248,8 @@ describe('useEditorExtensions', () => {
       // Keeps the lines' height, as the app's theme does, so that a change of font does not resize the lines.
       document.documentElement.style.setProperty('--text-code--line-height', '20px');
       document.documentElement.style.setProperty('--font-mono', 'monospace');
-      const monospace = withSettings(
-        {},
-        { font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, family: 'monospace' } },
-      );
-      const serif = withSettings(
-        {},
-        { font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, family: 'serif' } },
-      );
+      const monospace = withSettings({}, { font: { ...DEFAULT_FRONTEND_SETTINGS.editor.font, family: 'monospace' } });
+      const serif = withSettings({}, { font: { ...DEFAULT_FRONTEND_SETTINGS.editor.font, family: 'serif' } });
       const { view, settings, code } = await mount('workingTree', {
         code: 'fn main() {}',
         settings: monospace,
@@ -288,7 +279,7 @@ describe('useEditorExtensions', () => {
       // Changes the CSS variable that the editor's theme reads the line height from along with the settings, as the
       // app does.
       document.documentElement.style.setProperty('--text-code--line-height', '30px');
-      settings(withSettings({}, { font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor.font, lineHeight: 2.5 } }));
+      settings(withSettings({}, { font: { ...DEFAULT_FRONTEND_SETTINGS.editor.font, lineHeight: 2.5 } }));
 
       await expect.poll(() => view().defaultLineHeight).toBe(30);
     });

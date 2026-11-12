@@ -92,7 +92,7 @@ describe('Terminal', () => {
       const { client, xterm } = await mount(session());
       client.setQueryData(settingsQuery.queryKey, {
         ...SETTINGS,
-        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, cursorStyle: 'bar' } },
+        terminal: { ...SETTINGS.terminal, cursorStyle: 'bar' },
       } satisfies FrontendSettings);
       await expect.poll(() => xterm.options.cursorStyle).toBe('bar');
 
@@ -166,7 +166,7 @@ describe('Terminal', () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
-        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+        terminal: { ...SETTINGS.terminal, copyOnSelect: true },
       });
       await new Promise<void>((resolve) => xterm.write('hello world', resolve));
 
@@ -190,7 +190,7 @@ describe('Terminal', () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
-        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+        terminal: { ...SETTINGS.terminal, copyOnSelect: true },
       });
       await new Promise<void>((resolve) => xterm.write('hello world', resolve));
 
@@ -208,7 +208,7 @@ describe('Terminal', () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
-        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+        terminal: { ...SETTINGS.terminal, copyOnSelect: true },
       });
       await new Promise<void>((resolve) => xterm.write('hello world', resolve));
       xterm.select(0, 0, 5);
@@ -226,7 +226,7 @@ describe('Terminal', () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
-        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+        terminal: { ...SETTINGS.terminal, copyOnSelect: true },
       });
       const field = await find(xterm, 'hello world');
       await userEvent.fill(field, 'world');
@@ -241,7 +241,7 @@ describe('Terminal', () => {
       const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
       const { xterm } = await mount(session(), {
         ...SETTINGS,
-        appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+        terminal: { ...SETTINGS.terminal, copyOnSelect: true },
       });
       const field = await find(xterm, 'hello');
 
@@ -266,18 +266,15 @@ describe('Terminal', () => {
 
     client.setQueryData(settingsQuery.queryKey, {
       ...SETTINGS,
-      appearance: {
-        ...SETTINGS.appearance,
-        terminal: {
-          theme: { source: 'elsewise', id: 'dracula' },
-          font: { family: null, size: 16, lineHeight: 1.2, ligatures: false },
-          cursorStyle: 'bar',
-          cursorBlink: false,
-          copyOnSelect: false,
-          macOptionClickForcesSelection: true,
-          macOptionIsMeta: true,
-          scrollback: 2000,
-        },
+      terminal: {
+        theme: { source: 'elsewise', id: 'dracula' },
+        font: { family: null, size: 16, lineHeight: 1.2, ligatures: false },
+        cursorStyle: 'bar',
+        cursorBlink: false,
+        copyOnSelect: false,
+        macOptionClickForcesSelection: true,
+        macOptionIsMeta: true,
+        scrollback: 2000,
       },
     } satisfies FrontendSettings);
 

@@ -33,7 +33,7 @@ export const TERMINAL_TERMS = {
   }),
   scrollback: { label: 'Scrollback', keywords: ['history', 'lines', 'buffer', 'scroll'] },
 } as const satisfies Partial<
-  Record<keyof FrontendSettings['appearance']['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>
+  Record<keyof FrontendSettings['terminal'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>
 >;
 
 const CURSOR_STYLES: Record<CursorStyle, string> = { block: 'Block', underline: 'Underline', bar: 'Bar' };
@@ -66,12 +66,12 @@ const PREVIEW: ITerminalAddon = {
 };
 
 export function Terminal() {
-  const terminal = useSettings((settings) => settings.appearance.terminal);
+  const terminal = useSettings((settings) => settings.terminal);
   const update = useUpdateSettings();
   const set = (changes: Partial<typeof terminal>) =>
     update((settings) => ({
       ...settings,
-      appearance: { ...settings.appearance, terminal: { ...settings.appearance.terminal, ...changes } },
+      terminal: { ...settings.terminal, ...changes },
     }));
 
   return (

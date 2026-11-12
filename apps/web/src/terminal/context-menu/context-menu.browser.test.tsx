@@ -76,10 +76,7 @@ describe('TerminalContextMenu', () => {
   test('opens with override key while program tracks mouse', async () => {
     const { xterm } = await mount(session(), {
       ...SETTINGS,
-      appearance: {
-        ...SETTINGS.appearance,
-        terminal: { ...SETTINGS.appearance.terminal, macOptionClickForcesSelection: true },
-      },
+      terminal: { ...SETTINGS.terminal, macOptionClickForcesSelection: true },
     });
     await new Promise<void>((resolve) => xterm.write('\x1b[?1000h', resolve));
 

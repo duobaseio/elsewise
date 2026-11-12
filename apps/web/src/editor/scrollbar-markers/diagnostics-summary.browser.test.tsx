@@ -184,10 +184,7 @@ describe('DiagnosticsSummary', () => {
   test('hides with scrollbar markers off', async () => {
     await mount({
       ...DEFAULT_FRONTEND_SETTINGS,
-      appearance: {
-        ...DEFAULT_FRONTEND_SETTINGS.appearance,
-        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, scrollbarMarkers: false },
-      },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, scrollbarMarkers: false },
     });
 
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
@@ -204,10 +201,7 @@ describe('DiagnosticsSummary', () => {
   test('recounts when shown again', async () => {
     const hidden = {
       ...DEFAULT_FRONTEND_SETTINGS,
-      appearance: {
-        ...DEFAULT_FRONTEND_SETTINGS.appearance,
-        editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, scrollbarMarkers: false },
-      },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, scrollbarMarkers: false },
     };
     const client = new QueryClient();
     const view = await mount(hidden, [], client);

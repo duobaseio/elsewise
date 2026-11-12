@@ -24,8 +24,8 @@ const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const { daemon, project, workspace: workspaceId } = route.useParams();
   const client = useQuery(daemonQuery(daemon)).data;
-  const gitStatusBadges = useSettings((settings) => settings.appearance.general.gitStatusBadges);
-  const indentGuides = useSettings((settings) => settings.appearance.general.indentGuides);
+  const gitStatusBadges = useSettings((settings) => settings.fileTree.gitStatusBadges);
+  const indentGuides = useSettings((settings) => settings.fileTree.indentGuides);
   const workspace = useWorkspace({ daemon, project, workspace: workspaceId });
   const root = workspace?.absolutePath;
 

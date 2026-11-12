@@ -318,10 +318,7 @@ async function mount(
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
     ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
-    },
+    appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: theme },
   });
   const editor = new EditorManager();
   if (hovered) {

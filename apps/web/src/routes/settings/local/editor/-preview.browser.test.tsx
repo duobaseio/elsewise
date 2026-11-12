@@ -17,10 +17,7 @@ afterEach(() => {
 async function mount({ lineWrapping = false, guides = [] as number[], viewport = 1850 } = {}) {
   const settings: FrontendSettings = {
     ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, lineWrapping, visualGuides: guides },
-    },
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, lineWrapping, visualGuides: guides },
   };
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);

@@ -56,7 +56,7 @@ export function useEditorSettings<K extends keyof EditorLanguageSettings>(
   key: K,
 ): EditorLanguageSettings[K] {
   const name = language === undefined ? undefined : (LANGUAGES[language]?.name ?? language);
-  return useSettings(({ appearance: { editor } }) => {
+  return useSettings(({ editor }) => {
     const defaults: EditorLanguageSettings = editor;
     const overrides: Partial<EditorLanguageSettings> | undefined =
       name === undefined ? undefined : editor.languages[name];
@@ -90,7 +90,7 @@ const SYSTEM_DARK = '(prefers-color-scheme: dark)';
  * Returns the brightness.
  */
 export function useBrightness(): 'light' | 'dark' {
-  const brightness = useSettings((settings) => settings.appearance.general.brightness);
+  const brightness = useSettings((settings) => settings.appearance.brightness);
   const systemDark = useSyncExternalStore(
     (onChange) => {
       const query = matchMedia(SYSTEM_DARK);

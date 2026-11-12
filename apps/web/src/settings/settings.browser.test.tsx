@@ -13,13 +13,10 @@ describe('useEditorSettings', () => {
     const client = new QueryClient();
     client.setQueryData(settingsQuery.queryKey, {
       ...DEFAULT_FRONTEND_SETTINGS,
-      appearance: {
-        ...DEFAULT_FRONTEND_SETTINGS.appearance,
-        editor: {
-          ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
-          tabSize: 4,
-          languages: { JavaScript: { tabSize: 2 } },
-        },
+      editor: {
+        ...DEFAULT_FRONTEND_SETTINGS.editor,
+        tabSize: 4,
+        languages: { JavaScript: { tabSize: 2 } },
       },
     });
     function Setting() {

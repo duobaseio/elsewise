@@ -11,16 +11,13 @@ import { settingsQuery } from '@/settings/settings';
 
 const SETTINGS: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    editor: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
-      tabSize: 4,
-      indentUnit: '  ',
-      lineSeparator: null,
-      visualGuides: [120],
-      languages: { Markdown: { lineSeparator: '\n' }, Elm: {} },
-    },
+  editor: {
+    ...DEFAULT_FRONTEND_SETTINGS.editor,
+    tabSize: 4,
+    indentUnit: '  ',
+    lineSeparator: null,
+    visualGuides: [120],
+    languages: { Markdown: { lineSeparator: '\n' }, Elm: {} },
   },
 };
 
@@ -65,8 +62,8 @@ async function mount(settings = SETTINGS) {
   return { save, router };
 }
 
-function withEditor(changes: Partial<FrontendSettings['appearance']['editor']>): FrontendSettings {
-  return { ...SETTINGS, appearance: { ...SETTINGS.appearance, editor: { ...SETTINGS.appearance.editor, ...changes } } };
+function withEditor(changes: Partial<FrontendSettings['editor']>): FrontendSettings {
+  return { ...SETTINGS, editor: { ...SETTINGS.editor, ...changes } };
 }
 
 describe('Editor', () => {
@@ -91,7 +88,7 @@ describe('Editor', () => {
     await userEvent.click(page.getByRole('switch', { name: label }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withEditor({ [key]: !SETTINGS.appearance.editor[key] }));
+    expect(save).toHaveBeenCalledWith(withEditor({ [key]: !SETTINGS.editor[key] }));
   });
 
   test.each([true, false])('help follows completion documentation (%s)', async (completionDocumentation) => {
@@ -125,7 +122,7 @@ describe('Editor', () => {
     await userEvent.click(page.getByRole('option', { name: '14' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withEditor({ font: { ...SETTINGS.appearance.editor.font, size: 14 } }));
+    expect(save).toHaveBeenCalledWith(withEditor({ font: { ...SETTINGS.editor.font, size: 14 } }));
   });
 
   test('saves line height', async () => {
@@ -134,7 +131,7 @@ describe('Editor', () => {
     await userEvent.fill(page.getByRole('textbox', { name: 'Line height' }), '1.8');
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withEditor({ font: { ...SETTINGS.appearance.editor.font, lineHeight: 1.8 } }));
+    expect(save).toHaveBeenCalledWith(withEditor({ font: { ...SETTINGS.editor.font, lineHeight: 1.8 } }));
   });
 
   test('saves tab width', async () => {

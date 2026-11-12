@@ -63,7 +63,7 @@ function Settings() {
   const navigate = Route.useNavigate();
   const { remote } = useParams({ strict: false });
   const panels = useSettingsPanels((settings) => (remote === undefined ? settings.localPanels : settings.remotePanels));
-  const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
+  const languages = useSettings((settings) => Object.keys(settings.editor.languages));
   const { highlight } = Route.useSearch();
   const pathname = useLocation({ select: (location) => location.pathname });
 
@@ -257,12 +257,9 @@ function AddLanguage({ languages }: { languages: readonly string[] }) {
           }
           update((settings) => ({
             ...settings,
-            appearance: {
-              ...settings.appearance,
-              editor: {
-                ...settings.appearance.editor,
-                languages: { ...settings.appearance.editor.languages, [language]: {} },
-              },
+            editor: {
+              ...settings.editor,
+              languages: { ...settings.editor.languages, [language]: {} },
             },
           }));
           void navigate({ ...linkTo(DEFAULT_PANELS.editor, { language }), replace: true });

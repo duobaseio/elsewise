@@ -18,13 +18,12 @@ import { useEditorSettings, useSettings } from '@/settings/settings';
 export function useSettingsExtension(language: string | undefined, layout: EditorDocumentLayout): Extension {
   const tabSize = useEditorSettings(language, 'tabSize');
   const indent = useEditorSettings(language, 'indentUnit');
-  const showLineNumbers = useSettings((settings) => settings.appearance.editor.lineNumbers);
-  const lineWrapping = useSettings((settings) => settings.appearance.editor.lineWrapping);
+  const showLineNumbers = useSettings((settings) => settings.editor.lineNumbers);
+  const lineWrapping = useSettings((settings) => settings.editor.lineWrapping);
   const guides = useEditorSettings(language, 'visualGuides');
-  const documentation = useSettings((settings) => settings.appearance.editor.completionDocumentation);
-  const usages = useSettings((settings) => settings.appearance.editor.highlightUsages);
-  const showScrollbarMarkers =
-    useSettings((settings) => settings.appearance.editor.scrollbarMarkers) && layout.type !== 'preview';
+  const documentation = useSettings((settings) => settings.editor.completionDocumentation);
+  const usages = useSettings((settings) => settings.editor.highlightUsages);
+  const showScrollbarMarkers = useSettings((settings) => settings.editor.scrollbarMarkers) && layout.type !== 'preview';
 
   return useMemo(
     () => [

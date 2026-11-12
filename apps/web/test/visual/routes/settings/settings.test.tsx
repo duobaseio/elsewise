@@ -43,9 +43,9 @@ const WORDS: InstalledFrontendPlugin = {
 };
 
 // A few languages under the editor, for the sidebar to fit.
-const LANGUAGES: FrontendSettings['appearance']['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
+const LANGUAGES: FrontendSettings['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
 
-async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTINGS.appearance.editor.languages) {
+async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTINGS.editor.languages) {
   // The app sets the page's brightness from the settings, which the search results, portalled to the body, take.
   onTestFinished(() => {
     delete document.documentElement.dataset.brightness;
@@ -53,11 +53,8 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTI
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
     ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
-      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, languages },
-    },
+    appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: theme },
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, languages },
   });
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ['/settings'] }) });
   const store = await pluginStore([WORDS]);
