@@ -25,7 +25,7 @@ const WORDS: InstalledFrontendPlugin = {
         onEnable(app) {
           return [
             app.settings.add([
-              { scope: 'local', id: 'io.example.words', label: 'Words', in: 'appearance', terms: {}, component: () => null },
+              { scope: 'local', id: 'io.example.words', label: 'Words', terms: {}, component: () => null },
               {
                 scope: 'local',
                 id: 'io.example.words.spelling',
@@ -75,7 +75,7 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTI
 
   await expect.element(page.getByRole('treeitem', { name: 'Words' })).toBeVisible();
   await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.words' } });
-  await expect.element(page.getByRole('heading', { name: 'General' })).not.toBeInTheDocument();
+  await expect.element(page.getByRole('heading', { name: 'Appearance' })).not.toBeInTheDocument();
   await userEvent.hover(page.getByRole('main'));
 }
 

@@ -121,15 +121,13 @@ export type {
   WorkspaceStatusHandle,
   Workspaces,
 } from './projects/workspaces';
-export {
-  DEFAULT_SETTINGS_GROUPS,
-  type LocalSettingsPanel,
-  type RemoteSettingsPanel,
-  type Settings,
-  type SettingsGroup,
-  type SettingsLanguagePreview,
-  type SettingsPanel,
-  type SettingsSearchTerm,
+export type {
+  LocalSettingsPanel,
+  RemoteSettingsPanel,
+  Settings,
+  SettingsLanguagePreview,
+  SettingsPanel,
+  SettingsSearchTerm,
 } from './settings';
 export type { Terminal } from './terminal';
 export { Color, TextStyle, Theme, ThemeVariant } from './theme';
