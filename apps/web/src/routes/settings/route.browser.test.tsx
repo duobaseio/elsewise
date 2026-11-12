@@ -59,10 +59,7 @@ const PANELS: InstalledFrontendPlugin = {
 // Settings with overrides for a language listed under another, and one that is unknown.
 const LANGUAGES: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
-  },
+  editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
 };
 
 afterEach(() => {
@@ -98,7 +95,7 @@ async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [],
 }
 
 describe('/settings/', () => {
-  test('opens general', async () => {
+  test('opens appearance', async () => {
     const router = await mount(['/settings']);
     await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
     expect(router.state.location.pathname).toBe('/settings/local/appearance');
@@ -124,7 +121,7 @@ describe('/settings/', () => {
     expect(router.state.location.pathname).toBe('/settings/local/terminal');
   });
 
-  test('redirects last page gone to general', async () => {
+  test('redirects last page gone to appearance', async () => {
     localStorage.setItem('elsewise.settings.page', '/settings/local/io.example.missing');
     const router = await mount(['/settings']);
 
@@ -132,7 +129,7 @@ describe('/settings/', () => {
     expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 
-  test('redirects last page outside scopes to general', async () => {
+  test('redirects last page outside scopes to appearance', async () => {
     localStorage.setItem('elsewise.settings.page', '/settings/appearance/terminal');
     const router = await mount(['/settings']);
 
@@ -322,10 +319,7 @@ describe('AddLanguage', () => {
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith({
       ...LANGUAGES,
-      appearance: {
-        ...LANGUAGES.appearance,
-        editor: { ...LANGUAGES.appearance.editor, languages: { ...LANGUAGES.appearance.editor.languages, Java: {} } },
-      },
+      editor: { ...LANGUAGES.editor, languages: { ...LANGUAGES.editor.languages, Java: {} } },
     });
   });
 });
@@ -456,13 +450,13 @@ describe('LocalPanel', () => {
     await expect.element(sidebar().getByRole('treeitem', { name: 'Shell' })).not.toBeInTheDocument();
   });
 
-  test('redirects unknown panel to general', async () => {
+  test('redirects unknown panel to appearance', async () => {
     const router = await mount(['/settings/local/io.example.missing']);
     await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
     expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 
-  test('redirects remote panel to general', async () => {
+  test('redirects remote panel to appearance', async () => {
     const router = await mount(['/settings/local/terminal'], [PANELS]);
     await expect.element(sidebar().getByRole('treeitem', { name: 'Words' })).toBeVisible();
     await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.shell' } });
@@ -485,7 +479,7 @@ describe('RemotePanel', () => {
     await expect.element(sidebar().getByRole('treeitem', { name: 'Appearance' })).not.toBeInTheDocument();
   });
 
-  test('redirects local panel to general', async () => {
+  test('redirects local panel to appearance', async () => {
     const router = await mount(['/settings/local/terminal'], [PANELS]);
     await expect.element(sidebar().getByRole('treeitem', { name: 'Words' })).toBeVisible();
     await router.navigate({

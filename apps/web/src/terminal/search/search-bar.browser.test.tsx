@@ -17,10 +17,7 @@ import { builtInApplication } from '../../../test/commands';
 
 const SETTINGS: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
-  },
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
 };
 
 // Renders a bare terminal with the commands' keymap and its search. Returns the settings' client and the terminal.
@@ -181,10 +178,7 @@ describe('TerminalSearch', () => {
 
     client.setQueryData(settingsQuery.queryKey, {
       ...SETTINGS,
-      appearance: {
-        ...SETTINGS.appearance,
-        general: { ...SETTINGS.appearance.general, brightness: 'dark' },
-      },
+      appearance: { ...SETTINGS.appearance, brightness: 'dark' },
     } satisfies FrontendSettings);
 
     await expect.poll(current).toBe('rgb(217, 179, 106)');

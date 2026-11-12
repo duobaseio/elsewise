@@ -51,13 +51,10 @@ async function mount() {
   return save;
 }
 
-function withTerminal(changes: Partial<FrontendSettings['appearance']['terminal']>): FrontendSettings {
+function withTerminal(changes: Partial<FrontendSettings['terminal']>): FrontendSettings {
   return {
     ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      terminal: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal, ...changes },
-    },
+    terminal: { ...DEFAULT_FRONTEND_SETTINGS.terminal, ...changes },
   };
 }
 
@@ -107,7 +104,7 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal.font, ligatures: false } }),
+      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.terminal.font, ligatures: false } }),
     );
   });
 
@@ -125,7 +122,7 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith(
-      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal.font, lineHeight: 1.2 } }),
+      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.terminal.font, lineHeight: 1.2 } }),
     );
     await expect.element(input).toHaveValue('1.20');
   });
@@ -140,7 +137,7 @@ describe('Terminal', () => {
 
     await expect.poll(() => save.mock.calls.length).toBe(2);
     expect(save).toHaveBeenLastCalledWith(
-      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.terminal.font, lineHeight: 1 } }),
+      withTerminal({ font: { ...DEFAULT_FRONTEND_SETTINGS.terminal.font, lineHeight: 1 } }),
     );
     await expect.element(input).toHaveValue('1.0');
   });

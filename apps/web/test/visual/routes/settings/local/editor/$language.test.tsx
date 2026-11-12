@@ -23,7 +23,7 @@ async function mount(
   theme: 'light' | 'dark',
   language: string,
   label: string,
-  languages: FrontendSettings['appearance']['editor']['languages'],
+  languages: FrontendSettings['editor']['languages'],
   width: number,
 ) {
   await page.viewport(width, 640);
@@ -31,11 +31,8 @@ async function mount(
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
     ...DEFAULT_FRONTEND_SETTINGS,
-    appearance: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance,
-      general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: theme },
-      editor: { ...DEFAULT_FRONTEND_SETTINGS.appearance.editor, languages },
-    },
+    appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: theme },
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, languages },
   });
   const editor = new EditorManager();
   const settings = new SettingsPanelManager();

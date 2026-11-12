@@ -61,10 +61,7 @@ vi.mock('@/appearance/themes', async (original) => {
 
 const SETTINGS: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    general: { ...DEFAULT_FRONTEND_SETTINGS.appearance.general, brightness: 'light' },
-  },
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
 };
 
 // A probe mounts an editor with whatever `useThemeExtension` resolves.

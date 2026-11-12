@@ -109,7 +109,7 @@ function RootComponent() {
  * Applies the brightness and the interface's theme.
  */
 function useCurrentTheme(appearance: AppearanceManager) {
-  const brightnessSetting = useSettings((settings) => settings.appearance.general.brightness);
+  const brightnessSetting = useSettings((settings) => settings.appearance.brightness);
   const brightness = useBrightness();
   const theme = useActiveTheme();
 
@@ -134,13 +134,13 @@ function useCurrentTheme(appearance: AppearanceManager) {
  * Applies the interface's and editor's fonts.
  */
 function useCurrentFonts() {
-  const general = useSettings((settings) => settings.appearance.general.font);
-  const editor = useSettings((settings) => settings.appearance.editor.font);
+  const appearance = useSettings((settings) => settings.appearance.font);
+  const editor = useSettings((settings) => settings.editor.font);
 
   useLayoutEffect(() => {
     const style = document.documentElement.style;
     const fonts = [
-      { font: general, name: 'sans', text: 'base', fallback: "'Public Sans Variable', system-ui, sans-serif" },
+      { font: appearance, name: 'sans', text: 'base', fallback: "'Public Sans Variable', system-ui, sans-serif" },
       { font: editor, name: 'mono', text: 'code', fallback: "'JetBrains Mono Variable', monospace" },
     ];
     for (const { font, name, text, fallback } of fonts) {
@@ -162,11 +162,11 @@ function useCurrentFonts() {
       style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
     }
 
-    const features = DEFAULT_FONTS.find((choice) => choice.value === general.family)?.features;
+    const features = DEFAULT_FONTS.find((choice) => choice.value === appearance.family)?.features;
     if (features) {
       style.setProperty('--font-sans-features', features);
     } else {
       style.removeProperty('--font-sans-features');
     }
-  }, [general, editor]);
+  }, [appearance, editor]);
 }

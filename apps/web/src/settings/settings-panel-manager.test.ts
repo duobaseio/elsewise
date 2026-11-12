@@ -187,7 +187,7 @@ describe('frontend', () => {
 
     expect(settings.frontend).not.toBe(MINE);
     expect(settings.frontend).toEqual(MINE);
-    expect(Object.isFrozen(settings.frontend.appearance.editor.visualGuides)).toBe(true);
+    expect(Object.isFrozen(settings.frontend.editor.visualGuides)).toBe(true);
     expect(Object.isFrozen(MINE)).toBe(false);
   });
 });

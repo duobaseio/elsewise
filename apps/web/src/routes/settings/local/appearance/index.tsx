@@ -27,18 +27,21 @@ export const APPEARANCE_TERMS = {
     keywords: ['file tree', 'letters', 'markers', 'decorations', 'modified', 'changed files', 'git'],
   },
   indentGuides: { label: 'Indent guides', keywords: ['file tree', 'indentation', 'lines', 'nesting', 'levels'] },
-} as const satisfies Record<keyof FrontendSettings['appearance']['general'] | 'ligatures', SettingsSearchTerm>;
+} as const satisfies Record<
+  keyof FrontendSettings['appearance'] | keyof FrontendSettings['fileTree'] | 'ligatures',
+  SettingsSearchTerm
+>;
 
 const BRIGHTNESS: Record<Brightness, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 
 export function Appearance() {
-  const general = useSettings((settings) => settings.appearance.general);
+  const appearance = useSettings((settings) => settings.appearance);
+  const fileTree = useSettings((settings) => settings.fileTree);
   const update = useUpdateSettings();
-  const set = (changes: Partial<typeof general>) =>
-    update((settings) => ({
-      ...settings,
-      appearance: { ...settings.appearance, general: { ...settings.appearance.general, ...changes } },
-    }));
+  const set = (changes: Partial<typeof appearance>) =>
+    update((settings) => ({ ...settings, appearance: { ...settings.appearance, ...changes } }));
+  const setFileTree = (changes: Partial<typeof fileTree>) =>
+    update((settings) => ({ ...settings, fileTree: { ...settings.fileTree, ...changes } }));
 
   return (
     <Page title="Appearance">
@@ -54,7 +57,7 @@ export function Appearance() {
               set({ brightness });
             }
           }}
-          value={general.brightness}
+          value={appearance.brightness}
         >
           <SelectTrigger aria-label={APPEARANCE_TERMS.brightness.label} autoWidth size="sm">
             <SelectValue />
@@ -70,7 +73,11 @@ export function Appearance() {
       </Row>
 
       <Row id="theme" label={APPEARANCE_TERMS.theme.label} description="The interface's colors.">
-        <ThemeSelect label={APPEARANCE_TERMS.theme.label} theme={general.theme} onChange={(theme) => set({ theme })} />
+        <ThemeSelect
+          label={APPEARANCE_TERMS.theme.label}
+          theme={appearance.theme}
+          onChange={(theme) => set({ theme })}
+        />
       </Row>
 
       <Separator />
@@ -98,7 +105,7 @@ export function Appearance() {
             fonts are set separately.
           </>
         }
-        font={general.font}
+        font={appearance.font}
         onChange={(font) => set({ font })}
         stack={fontStack}
         terms={APPEARANCE_TERMS}
@@ -110,12 +117,12 @@ export function Appearance() {
         id="gitStatusBadges"
         label={APPEARANCE_TERMS.gitStatusBadges.label}
         description="Indicate changed files in the file tree with a badge."
-        help={<GitStatusBadgesHelp enabled={general.gitStatusBadges}>Requires a git repository.</GitStatusBadgesHelp>}
+        help={<GitStatusBadgesHelp enabled={fileTree.gitStatusBadges}>Requires a git repository.</GitStatusBadgesHelp>}
       >
         <Switch
           aria-label={APPEARANCE_TERMS.gitStatusBadges.label}
-          checked={general.gitStatusBadges}
-          onCheckedChange={(gitStatusBadges) => set({ gitStatusBadges })}
+          checked={fileTree.gitStatusBadges}
+          onCheckedChange={(gitStatusBadges) => setFileTree({ gitStatusBadges })}
         />
       </Row>
 
@@ -123,12 +130,12 @@ export function Appearance() {
         id="indentGuides"
         label={APPEARANCE_TERMS.indentGuides.label}
         description="Show a vertical line for each folder level in the file tree."
-        help={<IndentGuidesHelp enabled={general.indentGuides} />}
+        help={<IndentGuidesHelp enabled={fileTree.indentGuides} />}
       >
         <Switch
           aria-label={APPEARANCE_TERMS.indentGuides.label}
-          checked={general.indentGuides}
-          onCheckedChange={(indentGuides) => set({ indentGuides })}
+          checked={fileTree.indentGuides}
+          onCheckedChange={(indentGuides) => setFileTree({ indentGuides })}
         />
       </Row>
     </Page>

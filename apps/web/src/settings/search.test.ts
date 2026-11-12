@@ -13,7 +13,7 @@ function panel(id: string, terms: Record<string, SettingsSearchTerm>): LocalSett
 }
 
 const PANELS = [
-  panel('general', {
+  panel('appearance', {
     brightness: { label: 'Brightness', keywords: ['theme', 'dark mode', 'light', 'dark'] },
     font: { label: 'Font', keywords: ['font family', 'typeface', 'ligatures'] },
   }),
@@ -43,7 +43,7 @@ describe('search', () => {
   });
 
   test('ignores case', () => {
-    expect(ids(search('FONT', PANELS))).toEqual(['general.font', `${DEFAULT_PANELS.editor.id}.font`]);
+    expect(ids(search('FONT', PANELS))).toEqual(['appearance.font', `${DEFAULT_PANELS.editor.id}.font`]);
     expect(search('FONT', PANELS)).toEqual(search('font', PANELS));
   });
 
@@ -62,7 +62,7 @@ describe('search', () => {
   });
 
   test('ranks label over keyword', () => {
-    expect(ids(search('the', PANELS))).toEqual([`${DEFAULT_PANELS.editor.id}.theme`, 'general.brightness']);
+    expect(ids(search('the', PANELS))).toEqual([`${DEFAULT_PANELS.editor.id}.theme`, 'appearance.brightness']);
   });
 
   test('keeps panel then term order on ties', () => {
@@ -71,7 +71,7 @@ describe('search', () => {
       `${DEFAULT_PANELS.editor.id}.tabSize`,
       `${DEFAULT_PANELS.editor.id}.indentUnit`,
     ]);
-    expect(ids(search('font', PANELS))).toEqual(['general.font', `${DEFAULT_PANELS.editor.id}.font`]);
+    expect(ids(search('font', PANELS))).toEqual(['appearance.font', `${DEFAULT_PANELS.editor.id}.font`]);
   });
 
   test('returns term and panel of hit', () => {

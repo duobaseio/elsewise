@@ -13,16 +13,13 @@ import { pluginStore } from '../../../../../test/plugins';
 
 const SETTINGS: FrontendSettings = {
   ...DEFAULT_FRONTEND_SETTINGS,
-  appearance: {
-    ...DEFAULT_FRONTEND_SETTINGS.appearance,
-    editor: {
-      ...DEFAULT_FRONTEND_SETTINGS.appearance.editor,
-      tabSize: 4,
-      indentUnit: '  ',
-      lineSeparator: null,
-      visualGuides: [120],
-      languages: { Markdown: { lineSeparator: '\n' }, Elm: {} },
-    },
+  editor: {
+    ...DEFAULT_FRONTEND_SETTINGS.editor,
+    tabSize: 4,
+    indentUnit: '  ',
+    lineSeparator: null,
+    visualGuides: [120],
+    languages: { Markdown: { lineSeparator: '\n' }, Elm: {} },
   },
 };
 
@@ -92,8 +89,8 @@ async function mount(language: string, settings = SETTINGS, label = language, pl
   return { save, router };
 }
 
-function withLanguages(languages: FrontendSettings['appearance']['editor']['languages']): FrontendSettings {
-  return { ...SETTINGS, appearance: { ...SETTINGS.appearance, editor: { ...SETTINGS.appearance.editor, languages } } };
+function withLanguages(languages: FrontendSettings['editor']['languages']): FrontendSettings {
+  return { ...SETTINGS, editor: { ...SETTINGS.editor, languages } };
 }
 
 describe('Language', () => {

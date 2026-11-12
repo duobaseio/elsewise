@@ -32,20 +32,17 @@ export const EDITOR_TERMS = {
   scrollbarMarkers: { label: 'Scrollbar markers', keywords: ['overview', 'marks', 'diagnostics', 'matches'] },
   diffLayout: { label: 'Diff layout', keywords: ['compare', 'split', 'unified', 'side by side', 'inline'] },
   languages: { label: 'Languages', keywords: ['overrides', 'per language'] },
-} as const satisfies Record<
-  keyof FrontendSettings['appearance']['editor'] | 'lineHeight' | 'ligatures',
-  SettingsSearchTerm
->;
+} as const satisfies Record<keyof FrontendSettings['editor'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
 
 const DIFF_LAYOUTS: Record<DiffLayout, string> = { split: 'Split', unified: 'Unified' };
 
 export function Editor() {
-  const editor = useSettings((settings) => settings.appearance.editor);
+  const editor = useSettings((settings) => settings.editor);
   const update = useUpdateSettings();
   const set = (changes: Partial<typeof editor>) =>
     update((settings) => ({
       ...settings,
-      appearance: { ...settings.appearance, editor: { ...settings.appearance.editor, ...changes } },
+      editor: { ...settings.editor, ...changes },
     }));
 
   return (

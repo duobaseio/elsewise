@@ -26,7 +26,7 @@ function LanguageRoute() {
 }
 
 export function Language({ language }: { language: string }) {
-  const editor = useSettings((settings) => settings.appearance.editor);
+  const editor = useSettings((settings) => settings.editor);
   const update = useUpdateSettings();
   const navigate = useNavigate();
 
@@ -40,15 +40,12 @@ export function Language({ language }: { language: string }) {
 
   const setOverrides = (next: Partial<EditorLanguageSettings> | undefined) => {
     update((settings) => {
-      const { [language]: _, ...rest } = settings.appearance.editor.languages;
+      const { [language]: _, ...rest } = settings.editor.languages;
       return {
         ...settings,
-        appearance: {
-          ...settings.appearance,
-          editor: {
-            ...settings.appearance.editor,
-            languages: next === undefined ? rest : { ...rest, [language]: next },
-          },
+        editor: {
+          ...settings.editor,
+          languages: next === undefined ? rest : { ...rest, [language]: next },
         },
       };
     });

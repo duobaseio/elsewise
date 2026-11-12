@@ -350,7 +350,7 @@ function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
 function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | null; layout?: DiffLayout }>) {
   // TODO: Back this with the daemon.
   const root = new URL(import.meta.env.ELSEWISE_REPOSITORY);
-  const defaultLayout = useSettings((settings) => settings.appearance.editor.diffLayout);
+  const defaultLayout = useSettings((settings) => settings.editor.diffLayout);
   const [diff] = useState(() => new DiffState(props.params.diff ?? null, props.params.layout ?? defaultLayout));
 
   // Keeps the comparison in the panel's parameters, so that it is restored with the dock.
