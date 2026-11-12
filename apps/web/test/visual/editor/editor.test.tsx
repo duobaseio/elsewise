@@ -329,8 +329,13 @@ async function mount(
   }
   editor.addExtensions(extensions);
   editor.diffs.add([
-    { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
-    { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
+    {
+      id: 'test',
+      sources: [
+        { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
+        { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
+      ],
+    },
   ]);
   const application = builtInApplication({
     appearance: new AppearanceManager(theme, resolveActiveTheme(undefined, theme)),
@@ -497,7 +502,7 @@ test.each(THEMES)('editor compare menu (%s)', async (theme) => {
     delete document.documentElement.dataset.brightness;
   });
   await mount(theme);
-  await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
+  await userEvent.click(page.getByRole('button', { name: 'Compare with' }));
   await expect.element(page.getByRole('menuitemradio', { name: 'Branch main' })).toBeVisible();
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-compare-menu-${theme}`);

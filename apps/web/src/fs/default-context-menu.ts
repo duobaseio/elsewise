@@ -43,12 +43,12 @@ export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
     items: [
       {
         order: clipboard.items.copyPath.groups.paths.items.absolute,
-        label: 'Absolute path',
+        label: 'Absolute',
         command: DEFAULT_COMMANDS.fileTree.clipboard.copyPath,
       },
       {
         order: clipboard.items.copyPath.groups.paths.items.relative,
-        label: 'Path from root',
+        label: 'From workspace',
         command: DEFAULT_COMMANDS.fileTree.clipboard.copyRelativePath,
       },
     ],

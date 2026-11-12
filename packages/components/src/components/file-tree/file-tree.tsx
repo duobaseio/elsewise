@@ -174,6 +174,7 @@ export function useFileTree(options: FileTreeOptions): FileTreeModel {
       canDrop: (context) => latest.current.canDrop?.(context) ?? true,
       onDropComplete: (event) => latest.current.onDropComplete?.(event),
       onDropError: (error, context) => latest.current.onDropError?.(error, context),
+      openOnDropDelay: 0,
     },
     unsafeCSS: UNSAFE_CSS,
   });

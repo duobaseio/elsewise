@@ -37,8 +37,8 @@ export class ContextMenuManager {
     };
   }
 
-  // Returns `groups` with those of an id as one: their items in order of addition, and the first defined `order` and
-  // `in`.
+  // Merges the groups that share an id. Their items stay in order of addition, and `order` and `in` come from the first
+  // group that sets them.
   private merge(groups: readonly ContextMenuGroup[]): ContextMenuGroup[] {
     const merged = new Map<
       string,
@@ -74,6 +74,6 @@ export class ContextMenuManager {
       existing.items.push(...group.items);
     }
 
-    return [...merged].map(([id, group]) => ({ id, ...group }));
+    return Array.from(merged, ([id, group]) => ({ id, ...group }));
   }
 }

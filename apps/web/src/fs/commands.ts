@@ -83,7 +83,7 @@ export const FILE_TREE_COPY_RELATIVE_PATH: FileTreeCommand = {
   scope: 'fileTree',
   id: DEFAULT_COMMANDS.fileTree.clipboard.copyRelativePath,
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
-  label: 'Copy path from root',
+  label: 'Copy path from workspace',
   defaultKeys: DEFAULT_KEYS.fileTree.clipboard.copyRelativePath,
   shown: (_, { paths }) => paths.length > 0,
   enabled: (_, { paths }) => paths.length > 0,

@@ -2,7 +2,7 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import {
   DEFAULT_COMMANDS,
-  DEFAULT_DIFF_SOURCES,
+  DEFAULT_DIFF_SOURCE_GROUPS,
   type DiffLayout,
   EDITOR_DOCUMENT,
   type EditorDocumentLayout,
@@ -112,7 +112,7 @@ describe('EDITOR_PREVIOUS_CHUNK', () => {
 
 describe('EDITOR_UNSTAGED_DIFF', () => {
   test('is active while comparing with unstaged', () => {
-    const { view, application } = open(DEFAULT_DIFF_SOURCES.unstaged);
+    const { view, application } = open(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id);
 
     expect(EDITOR_UNSTAGED_DIFF.active?.(application, view)).toBe(true);
     expect(EDITOR_UNCOMMITTED_DIFF.active?.(application, view)).toBe(false);

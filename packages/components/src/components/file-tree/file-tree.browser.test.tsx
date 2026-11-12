@@ -89,6 +89,20 @@ function row(shadowRoot: ShadowRoot, path: string): HTMLElement {
   return element;
 }
 
+function drag(type: 'dragstart' | 'dragover' | 'drop', element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  element.dispatchEvent(
+    new DragEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      dataTransfer: new DataTransfer(),
+      clientX: rect.left + 40,
+      clientY: rect.top + rect.height / 2,
+    }),
+  );
+}
+
 function section(shadowRoot: ShadowRoot, path: string, name: string): HTMLElement {
   const element = row(shadowRoot, path).querySelector<HTMLElement>(`[data-item-section="${name}"]`);
   if (element == null) {
@@ -334,6 +348,36 @@ test('conflict shows "!" and still carries the wrong title', async () => {
   expect(getComputedStyle(lane, '::after').content).toBe('"!"');
   // Conflict rides their unused `deleted` slot and CSS cannot reach a `title`. Fails the day upstream grows one.
   expect(lane.getAttribute('title')).toBe('Git status: deleted');
+});
+
+test('dragging over a closed folder keeps it closed', async () => {
+  const { model, shadowRoot } = await mount();
+
+  drag('dragstart', row(shadowRoot, 'README.md'));
+  drag('dragover', row(shadowRoot, 'vendor/'));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  expect(isExpanded(model.current, 'vendor/')).toBe(false);
+});
+
+test('dropping onto a closed folder moves into it and keeps it closed', async () => {
+  const onDropComplete = vi.fn();
+  const { model, shadowRoot } = await mount({ onDropComplete });
+
+  drag('dragstart', row(shadowRoot, 'README.md'));
+  drag('dragover', row(shadowRoot, 'vendor/'));
+  drag('drop', row(shadowRoot, 'vendor/'));
+
+  expect(onDropComplete).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      draggedPaths: ['README.md'],
+      target: expect.objectContaining({ directoryPath: 'vendor/' }),
+    }),
+  );
+  expect([model.current?.getItem('vendor/README.md') != null, isExpanded(model.current, 'vendor/')]).toEqual([
+    true,
+    false,
+  ]);
 });
 
 test('clicking a folder toggles its expansion in the model', async () => {

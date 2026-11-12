@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { OrderedItems } from '@/plugins/ordered-items';
+import { SortedSet } from '@/plugins/sorted-set';
 
 interface Item {
   readonly id: string;
@@ -14,7 +14,7 @@ afterEach(() => {
 describe('add', () => {
   test('adds items until disposed, notifying', () => {
     const notify = vi.fn();
-    const items = new OrderedItems<Item>('Item', notify);
+    const items = new SortedSet<Item>('Item', notify);
     const dispose = items.add([{ id: 'a' }]);
 
     expect(items.items).toEqual([{ id: 'a' }]);
@@ -26,7 +26,7 @@ describe('add', () => {
   });
 
   test('sorts by order, then id', () => {
-    const items = new OrderedItems<Item>('Item', () => {});
+    const items = new SortedSet<Item>('Item', () => {});
     items.add([
       { id: 'c', order: 20 },
       { id: 'b', order: 10 },
@@ -37,7 +37,7 @@ describe('add', () => {
   });
 
   test('puts unordered last, by id', () => {
-    const items = new OrderedItems<Item>('Item', () => {});
+    const items = new SortedSet<Item>('Item', () => {});
     items.add([{ id: 'b' }, { id: 'a' }, { id: 'c', order: 30 }]);
 
     expect(items.items.map(({ id }) => id)).toEqual(['c', 'a', 'b']);
@@ -45,7 +45,7 @@ describe('add', () => {
 
   test('keeps first of duplicate id, warning', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const items = new OrderedItems<Item>('Item', () => {});
+    const items = new SortedSet<Item>('Item', () => {});
     items.add([{ id: 'a', label: 'first' }]);
     items.add([{ id: 'a', label: 'second' }]);
 
@@ -55,7 +55,7 @@ describe('add', () => {
 
   test('restores duplicate once first is disposed', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const items = new OrderedItems<Item>('Item', () => {});
+    const items = new SortedSet<Item>('Item', () => {});
     const dispose = items.add([{ id: 'a', label: 'first' }]);
     items.add([{ id: 'a', label: 'second' }]);
 
@@ -66,7 +66,7 @@ describe('add', () => {
 
   test('removes only disposed addition when added twice', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const items = new OrderedItems<Item>('Item', () => {});
+    const items = new SortedSet<Item>('Item', () => {});
     const added = [{ id: 'a' }];
     const dispose = items.add(added);
     items.add(added);
