@@ -11,6 +11,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { Editor } from '@/routes/settings/local/appearance/editor';
 import { settingsQuery } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
@@ -59,7 +60,9 @@ test.each(THEMES)('editor (%s)', async (theme) => {
       <PluginStoreContext value={new PluginStore()}>
         <ApplicationManagerContext value={application}>
           <LanguageServersContext value={new LanguageServers(editor)}>
-            <RouterProvider router={router} />
+            <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+              <RouterProvider router={router} />
+            </WorkspaceStateStoreContext>
           </LanguageServersContext>
         </ApplicationManagerContext>
       </PluginStoreContext>

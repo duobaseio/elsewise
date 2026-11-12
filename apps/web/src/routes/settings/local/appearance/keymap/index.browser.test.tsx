@@ -7,6 +7,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 import { pluginStore } from '../../../../../../test/plugins';
@@ -99,7 +100,9 @@ async function mount(
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={store}>
-        <RouterProvider router={router} />
+        <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+          <RouterProvider router={router} />
+        </WorkspaceStateStoreContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
@@ -162,6 +165,7 @@ describe('Keymap', () => {
       ['Editor', 'Navigate'],
       ['Editor', 'Extras'],
       ['Terminal'],
+      ['File tree'],
       ['Project'],
       ['Workspace'],
       ['Example'],

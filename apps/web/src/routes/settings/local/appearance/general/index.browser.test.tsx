@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { General } from '@/routes/settings/local/appearance/general';
 import { settingsQuery } from '@/settings/settings';
 
@@ -47,7 +48,9 @@ async function mount(settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS, hig
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <RouterProvider router={router} />
+        <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+          <RouterProvider router={router} />
+        </WorkspaceStateStoreContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );

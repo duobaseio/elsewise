@@ -5,6 +5,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 
@@ -31,7 +32,9 @@ async function mount({ lineWrapping = false, guides = [] as number[], viewport =
     <div className="h-dvh" style={{ width: viewport }}>
       <QueryClientProvider client={client}>
         <PluginStoreContext value={new PluginStore()}>
-          <RouterProvider router={router} />
+          <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+            <RouterProvider router={router} />
+          </WorkspaceStateStoreContext>
         </PluginStoreContext>
       </QueryClientProvider>
     </div>,
