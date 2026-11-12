@@ -328,6 +328,27 @@ describe('FileTreePanel', () => {
       .toEqual([false, true]);
   });
 
+  test('tints tree while dragging over empty space', async () => {
+    await mount();
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+    const host = document.querySelector('file-tree-container');
+    const shadow = host?.shadowRoot;
+    const dataTransfer = new DataTransfer();
+    const fire = (type: string, element: Element | null | undefined) =>
+      element?.dispatchEvent(new DragEvent(type, { bubbles: true, composed: true, cancelable: true, dataTransfer }));
+    const tinted = () => host?.hasAttribute('data-drop-target');
+
+    fire('dragstart', shadow?.querySelector('[data-item-path="src/d.ts"]'));
+    fire('dragover', shadow?.elementFromPoint(150, 380));
+    await expect.poll(tinted).toBe(true);
+    fire('dragover', shadow?.querySelector('[data-item-path="a.ts"]'));
+    await expect.poll(tinted).toBe(false);
+    fire('dragover', shadow?.elementFromPoint(150, 380));
+    await expect.poll(tinted).toBe(true);
+    fire('dragend', shadow?.querySelector('[data-item-path="src/d.ts"]'));
+    await expect.poll(tinted).toBe(false);
+  });
+
   test('moves to root onto root file', async () => {
     const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
     await mount({ move });

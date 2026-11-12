@@ -47,8 +47,6 @@
     "@elsewise/core": "workspace:*",
     "@elsewise/frontend-plugin": "workspace:*",
     "@elsewise/transport": "workspace:*",
-    "@headless-tree/core": "^1.8.0",
-    "@headless-tree/react": "^1.8.0",
     "@lezer/common": "^1.5.3",
     "@lezer/highlight": "^1.2.5",
     "@tanstack/react-query": "^5.104.0",

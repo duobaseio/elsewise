@@ -24,6 +24,7 @@ export interface FileTreeProps {
   cutPaths?: readonly string[];
   gitStatusBadges?: boolean;
   indentGuides?: boolean;
+  dropTarget?: boolean;
   'aria-label'?: string;
 }
 
@@ -33,6 +34,7 @@ export function FileTree({
   cutPaths,
   gitStatusBadges = true,
   indentGuides = true,
+  dropTarget = false,
   'aria-label': ariaLabel,
 }: FileTreeProps) {
   const icons = useIcons();
@@ -73,6 +75,7 @@ export function FileTree({
         style={style}
         data-git-status-badges={gitStatusBadges}
         data-indent-guides={indentGuides}
+        data-drop-target={dropTarget || undefined}
         data-flat={flat || undefined}
       />
     </div>

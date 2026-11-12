@@ -181,6 +181,24 @@ test('theme.css reaches the host, and density keeps the inline style to itself',
   expect(host.style.getPropertyValue('--trees-item-height')).toBe('24px');
 });
 
+test('drop target tints the tree', async () => {
+  function Harness() {
+    return <FileTree aria-label="Drop" dropTarget model={useFileTree({ initialPaths: PATHS })} />;
+  }
+  await render(<Harness />);
+  const host = document.querySelector<HTMLElement>('file-tree-container');
+  if (host == null) {
+    throw new Error('no host');
+  }
+
+  const tint = getComputedStyle(host, '::after');
+  expect([tint.backgroundColor, tint.pointerEvents]).toEqual([
+    getComputedStyle(host).getPropertyValue('--layer-selected').trim(),
+    'none',
+  ]);
+  expect(getComputedStyle(host).getPropertyValue('--trees-bg').trim()).toBe('#ffffff');
+});
+
 test("a file's icon aligns with a sibling folder's icon", async () => {
   const { shadowRoot } = await mount();
   expect(fileIconCentre(shadowRoot, 'daemon/sibling.rs')).toBeCloseTo(folderIconCentre(shadowRoot, 'daemon/src/'), 1);
@@ -270,6 +288,14 @@ test('selection never colours the icon', async () => {
   const { shadowRoot } = await mount({ initialSelectedPaths: ['daemon/'] });
   expect(row(shadowRoot, 'daemon/').dataset.itemSelected).toBe('true');
   expect(getComputedStyle(section(shadowRoot, 'daemon/', 'icon')).color).toBe(rgb(token('--trees-fg-muted')));
+});
+
+test('rows keep the default cursor', async () => {
+  const { shadowRoot } = await mount();
+  expect([
+    getComputedStyle(row(shadowRoot, 'daemon/')).cursor,
+    getComputedStyle(row(shadowRoot, 'README.md')).cursor,
+  ]).toEqual(['default', 'default']);
 });
 
 test('each status carries its letter', async () => {

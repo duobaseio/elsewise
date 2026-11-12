@@ -5,7 +5,7 @@ import type { FileTreeSelection } from '@elsewise/frontend-plugin';
 import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
@@ -40,6 +40,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const clicked = useRef<string | null>(null);
   const target = useRef<FileTreeSelection | null>(null);
   const dragged = useRef<readonly string[] | null>(null);
+  const [rootTarget, setRootTarget] = useState(false);
 
   const store = useWorkspaceStateStore();
   const drop = (paths: readonly string[], folder: string, moved: boolean) => {
@@ -229,11 +230,19 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
           }}
           onDragEnd={() => {
             dragged.current = null;
+            setRootTarget(false);
           }}
           onDragOver={(event) => {
-            if (dragged.current !== null && !overRow(event.nativeEvent)) {
+            const root = dragged.current !== null && !overRow(event.nativeEvent);
+            setRootTarget(root);
+            if (root) {
               event.preventDefault();
               event.dataTransfer.dropEffect = 'move';
+            }
+          }}
+          onDragLeave={(event) => {
+            if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
+              setRootTarget(false);
             }
           }}
           onDrop={(event) => {
@@ -242,6 +251,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
               drop(dragged.current, '', false);
             }
             dragged.current = null;
+            setRootTarget(false);
           }}
         />
       }
@@ -252,6 +262,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
         cutPaths={cutPaths}
         gitStatusBadges={gitStatusBadges}
         indentGuides={indentGuides}
+        dropTarget={rootTarget}
         aria-label="Files"
       />
     </CommandContextMenu>
