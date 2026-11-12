@@ -1,6 +1,7 @@
 {
   "id": "io.duobase.elsewise.examples.appearance",
   "name": "Appearance example",
+  "description": "An example plugin that adds a theme and a keymap.",
   "version": "1.0.0",
   "elsewise": "^1.0.0",
   "frontend": {}

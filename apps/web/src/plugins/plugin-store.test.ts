@@ -23,7 +23,7 @@ function setUp() {
   return { appearance, editor, commands: application.commands, store, enable };
 }
 
-// Returns the enabled plugin `id` whose main module is at `url`, or whose frontend part is absent when `undefined`.
+// Returns the enabled plugin `id` whose main module is at `url`, or whose frontend part has none when `undefined`.
 function installed(id: string, url: string | undefined): InstalledFrontendPlugin {
   return {
     manifest: {
@@ -31,7 +31,7 @@ function installed(id: string, url: string | undefined): InstalledFrontendPlugin
       name: id,
       version: '1.0.0',
       elsewise: '^1.0.0',
-      ...(url !== undefined && { frontend: { main: 'main.js' } }),
+      frontend: url === undefined ? {} : { main: 'main.js' },
     },
     enabled: true,
     themes: [],

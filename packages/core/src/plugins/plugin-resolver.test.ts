@@ -50,7 +50,7 @@ async function loaded(plugins: readonly (InstalledPlugin | InvalidPlugin)[], ver
   return resolver;
 }
 
-// Returns the enabled plugin `id` whose main module is at `url`, or whose frontend part is absent when `undefined`.
+// Returns the enabled plugin `id` whose main module is at `url`, or whose frontend part has none when `undefined`.
 function installed(id: string, url: string | undefined): InstalledPlugin {
   return {
     manifest: {
@@ -58,7 +58,7 @@ function installed(id: string, url: string | undefined): InstalledPlugin {
       name: id,
       version: '1.0.0',
       elsewise: '^1.0.0',
-      ...(url !== undefined && { frontend: { main: 'main.js' } }),
+      frontend: url === undefined ? {} : { main: 'main.js' },
     },
     enabled: true,
     ...(url !== undefined && { url }),
@@ -239,7 +239,7 @@ describe('enable', () => {
     expect(events).toEqual(['enable a']);
   });
 
-  test('enables plugin without part without importing', async () => {
+  test('enables plugin without main module without importing', async () => {
     const { resolver, enable } = setUp();
     await expect(enable('a', undefined)).resolves.toBe('enabled');
     await resolver.disable('a');

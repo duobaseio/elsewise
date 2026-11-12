@@ -127,16 +127,12 @@ describe('plugins:load', () => {
     ]);
   });
 
-  test('returns plugin without frontend part without url', () => {
+  test('returns plugin with daemon part with its manifest', () => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));
-    install('hello', { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', daemon: {} });
+    install('hello', { ...MANIFEST, daemon: {} });
 
     expect(handler('plugins:load')()).toEqual([
-      {
-        manifest: { id: 'hello', name: 'Hello', version: '1.0.0', elsewise: '^1.0.0', daemon: { main: 'main.js' } },
-        ...NOTHING,
-        enabled: true,
-      },
+      { manifest: { ...MANIFEST, daemon: { main: 'main.js' } }, ...NOTHING, url: URL, enabled: true },
     ]);
   });
 
@@ -179,6 +175,7 @@ describe('plugins:load', () => {
   test.each([
     ['is not JSON', '{', /manifest\.json is not JSON/],
     ['is malformed', { ...MANIFEST, version: '1.0' }, /manifest\.json is malformed/],
+    ['has no frontend part', { ...MANIFEST, frontend: undefined, daemon: {} }, /manifest\.json is malformed/],
     ['declares another id', { ...MANIFEST, id: 'goodbye' }, /declares the id goodbye, not its folder's name/],
   ])('fails plugin whose manifest %s', (_, manifest, error) => {
     fs.writeFileSync(ENTRIES_FILE, JSON.stringify([ENTRY]));

@@ -11,7 +11,7 @@ Run pnpm from the repo root, filtered to the package:
 pnpm --filter @elsewise/plugin-example-editor build      # also: typecheck, check
 ```
 
-`build` bundles the plugin into `dist/frontend/main.js`, and copies `manifest.json` into `dist/`. The modules that
+`build` bundles the plugin into `dist/frontend/main.js`, and writes `manifest.json` into `dist/`. The modules that
 Elsewise shares with its plugins, e.g. CodeMirror, are left out of the bundle.
 
 ## Trying it

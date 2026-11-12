@@ -7,13 +7,29 @@ servers.
 | Path            |                                                               |
 |-----------------|---------------------------------------------------------------|
 | `manifest.json` | The plugin's metadata. See [Manifest](#manifest).             |
+| `package.json`  | The scripts, and the plugin's listing in the marketplace.     |
 | `frontend/`     | The frontend part, built against `@elsewise/frontend-plugin`. |
 | `daemon/`       | The daemon part, built against `@elsewise/daemon-plugin`.     |
 
 ## Manifest
 
-`manifest.json` describes the plugin and its parts. A plugin has a frontend part, a daemon part, or both. The parts
+`manifest.json` describes the plugin and its parts. A plugin has a frontend part, and may have a daemon part. The parts
 share the plugin's id and version.
+
+The marketplace lists a plugin with six fields. It needs `description` to publish a plugin; the rest are optional:
+
+| Field         |                                                                        |
+|---------------|------------------------------------------------------------------------|
+| `description` | A one-line summary of the plugin.                                      |
+| `homepage`    | The URL of the plugin's homepage.                                      |
+| `repository`  | The URL of the plugin's source repository.                             |
+| `issues`      | The URL of the plugin's issue tracker.                                 |
+| `license`     | The plugin's license as an SPDX expression, e.g. `MIT`.                |
+| `topics`      | The topics to find the plugin by: lowercase letters, digits, hyphens.  |
+
+Write them once, in the root `package.json`: `build` adds the ones it finds there to `dist/manifest.json`. A field
+written in `manifest.json` wins over `package.json`'s. The URLs are plain `http` or `https` URLs, so npm's object form
+of `repository` is not accepted: `build` fails on a malformed manifest.
 
 See [`Manifest`](../../packages/plugin/src/manifest.ts) in `@elsewise/plugin` for a detailed description.
 
@@ -50,6 +66,7 @@ pnpm build          # also: typecheck, check
 | Source                     | Output                   |
 |----------------------------|--------------------------|
 | `manifest.json`            | `dist/manifest.json`     |
+| `package.json`             | `dist/manifest.json`     |
 | `frontend/src/main.ts`     | `dist/frontend/main.js`  |
 | `frontend/public/themes/`  | `dist/frontend/themes/`  |
 | `frontend/public/keymaps/` | `dist/frontend/keymaps/` |

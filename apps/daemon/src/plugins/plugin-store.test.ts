@@ -40,8 +40,7 @@ afterEach(async () => {
   await fs.rm(data.root, { recursive: true, force: true, maxRetries: 10 });
 });
 
-// Installs the plugin `id` with a daemon part whose main module is `code`, or only a data-only frontend part when
-// `null`.
+// Installs the plugin `id` with a daemon part whose main module is `code`, or without a daemon part when `null`.
 async function install(
   id: string,
   {
@@ -60,8 +59,15 @@ async function install(
 ): Promise<void> {
   const folder = path.join(data.plugins, id);
   await fs.mkdir(folder, { recursive: true });
-  const part = code === null ? { frontend: {} } : { daemon: { ...(dependencies && { dependencies }) } };
-  await fs.writeFile(path.join(folder, 'manifest.json'), JSON.stringify({ id, name: id, version, elsewise, ...part }));
+  const manifest = {
+    id,
+    name: id,
+    version,
+    elsewise,
+    frontend: {},
+    ...(code !== null && { daemon: { ...(dependencies && { dependencies }) } }),
+  };
+  await fs.writeFile(path.join(folder, 'manifest.json'), JSON.stringify(manifest));
   if (code !== null) {
     await fs.mkdir(path.join(folder, 'daemon'));
     await fs.writeFile(path.join(folder, 'daemon', 'main.js'), code);

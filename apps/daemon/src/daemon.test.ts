@@ -40,7 +40,7 @@ describe('createDaemon', () => {
     );
     await fs.writeFile(
       path.join(data.plugins, 'a', 'manifest.json'),
-      JSON.stringify({ id: 'a', name: 'a', version: '1.0.0', elsewise: '*', daemon: {} }),
+      JSON.stringify({ id: 'a', name: 'a', version: '1.0.0', elsewise: '*', frontend: {}, daemon: {} }),
     );
     await fs.writeFile(
       path.join(folder, 'main.js'),
