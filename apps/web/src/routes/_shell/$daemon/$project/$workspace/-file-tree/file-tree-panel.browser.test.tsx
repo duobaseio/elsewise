@@ -311,6 +311,23 @@ describe('FileTreePanel', () => {
     ]).toEqual([false, true]);
   });
 
+  test('moves row to root before daemon replies', async () => {
+    await mount({ move: () => new Promise(() => {}) });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(page.getByRole('treeitem', { name: 'd.ts' }), page.getByRole('tree'), {
+      targetPosition: { x: 150, y: 380 },
+    });
+
+    const shadow = document.querySelector('file-tree-container')?.shadowRoot;
+    await expect
+      .poll(() => [
+        shadow?.querySelector('[data-item-path="src/d.ts"]') !== null,
+        shadow?.querySelector('[data-item-path="d.ts"]') !== null,
+      ])
+      .toEqual([false, true]);
+  });
+
   test('moves to root onto root file', async () => {
     const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
     await mount({ move });
