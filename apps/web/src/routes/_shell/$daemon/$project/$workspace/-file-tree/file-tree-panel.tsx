@@ -58,12 +58,23 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       return;
     }
 
+    const updated = moved ? entries : [];
+    if (!moved) {
+      for (const entry of entries) {
+        const suffix = entry.folder ? '/' : '';
+        try {
+          model.move(entry.source + suffix, entry.destination + suffix);
+          updated.push(entry);
+        } catch {}
+      }
+    }
     const restore = (failed: readonly PasteEntry[]) => {
-      for (const entry of moved ? failed : []) {
+      for (const entry of updated.filter((other) => failed.includes(other))) {
         const suffix = entry.folder ? '/' : '';
         model.move(entry.destination + suffix, entry.source + suffix);
       }
     };
+
     pasteEntries(client, workspace, true, entries, false).then(
       ({ conflicting, failures }) => {
         restore([...conflicting, ...failures.map((failure) => failure.entry)]);
@@ -199,6 +210,8 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
         model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>('[role="tree"]')?.focus();
       }}
       render={
+        // The file tree treats only rows as drop targets. We use the HTML drag and drop event handlers to allow the
+        // empty space below a tree to be treated as a drop target.
         // biome-ignore lint/a11y/noStaticElementInteractions: the keys run commands on the tree's selection inside.
         <div
           onKeyDown={(event) => {
