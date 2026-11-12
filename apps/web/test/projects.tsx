@@ -211,9 +211,9 @@ function fakeDaemon(
     readFile: unused,
     writeFile: unused,
     createDirectory: unused,
-    copyEntry: unused,
-    moveEntry: unused,
-    deleteEntry: unused,
+    copyEntries: unused,
+    moveEntries: unused,
+    deleteEntries: unused,
   } satisfies Daemon['fileSystem'];
   const git = {
     ...(Object.fromEntries(GitService.methods.map((method) => [method.localName, unused])) as unknown as Daemon['git']),

@@ -17,7 +17,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
-import { type PasteEntry, pasteEntry } from '@/fs/paste';
+import { type PasteEntry, pasteEntries } from '@/fs/paste';
 
 interface Overwrite {
   readonly workspace: Workspace;
@@ -37,16 +37,13 @@ export function OverwriteEntriesDialog() {
   const overwrite = useMutation({
     mutationFn: async ({ workspace, cut, entries }: Overwrite) => {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
-      for (const entry of entries) {
-        try {
-          await pasteEntry(daemon, workspace, cut, entry, true);
-        } catch (error) {
-          toast.add({
-            type: 'error',
-            title: `${cut ? 'Moving' : 'Copying'} “${name(entry.destination)}” failed`,
-            description: error instanceof Error ? error.message : String(error),
-          });
-        }
+      const { failures } = await pasteEntries(daemon, workspace, cut, entries, true);
+      for (const { entry, error } of failures) {
+        toast.add({
+          type: 'error',
+          title: `${cut ? 'Moving' : 'Copying'} “${name(entry.destination)}” failed`,
+          description: error.message,
+        });
       }
     },
     onSuccess: () => fileTree.overwriteDialog.close(),

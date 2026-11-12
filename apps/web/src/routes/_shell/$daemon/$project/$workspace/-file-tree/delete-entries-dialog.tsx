@@ -22,20 +22,17 @@ export function DeleteEntriesDialog() {
     mutationFn: async ({ workspace, paths }: FileTreeSelection) => {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
       const folders = paths.filter((path) => path.endsWith('/'));
-      for (const path of paths) {
-        if (folders.some((folder) => folder !== path && path.startsWith(folder))) {
-          continue;
-        }
-
-        try {
-          await daemon.fileSystem.deleteEntry({ root: workspace.absolutePath, relativePath: path.replace(/\/$/, '') });
+      const outermost = paths.filter((path) => !folders.some((folder) => folder !== path && path.startsWith(folder)));
+      const { failures } = await daemon.fileSystem.deleteEntries({
+        root: workspace.absolutePath,
+        relativePaths: outermost.map((path) => path.replace(/\/$/, '')),
+      });
+      for (const path of outermost) {
+        const failure = failures.find((other) => other.relativePath === path.replace(/\/$/, ''));
+        if (failure === undefined) {
           fileTree.deleteClipboardPaths(workspace.id, path);
-        } catch (error) {
-          toast.add({
-            type: 'error',
-            title: `Deleting “${name(path)}” failed`,
-            description: error instanceof Error ? error.message : String(error),
-          });
+        } else {
+          toast.add({ type: 'error', title: `Deleting “${name(path)}” failed`, description: failure.message });
         }
       }
     },

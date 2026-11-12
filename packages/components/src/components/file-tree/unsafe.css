@@ -31,6 +31,10 @@
   margin-left: calc(var(--trees-icon-width) + var(--trees-item-row-gap));
 }
 
+[data-type="item"] {
+  cursor: default;
+}
+
 /* Hover is a background-image so it shows on top of the selected colour. */
 /* noinspection CssUnresolvedCustomProperty */
 [data-type="item"]:hover,
@@ -106,4 +110,20 @@
 
 [data-item-rename-input]:focus-visible {
   border-color: var(--foreground);
+}
+
+/* The drag image is only the icon and name, over the library's inline styles, so the rows under it stay visible. */
+[data-file-tree-drag-preview="true"] {
+  width: fit-content !important;
+  background: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
+[data-file-tree-drag-preview="true"] [data-item-section="spacing-item"] {
+  border-left-color: transparent;
+}
+
+[data-file-tree-drag-preview="true"][data-item-type="folder"] [data-item-section="icon"] > svg {
+  visibility: hidden;
 }

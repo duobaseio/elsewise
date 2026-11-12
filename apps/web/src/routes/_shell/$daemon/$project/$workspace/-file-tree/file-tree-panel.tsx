@@ -13,6 +13,7 @@ import { runFileTreeKeys } from '@/command/keymap/keymap';
 import { daemonQuery } from '@/daemon';
 import { DirectoryWatcher } from '@/fs/directory-watcher';
 import { useFileTreeManager } from '@/fs/file-tree-manager';
+import { type PasteEntry, pasteEntries } from '@/fs/paste';
 import { watchGitStatus } from '@/git/status';
 import { sameWorkspace, useWorkspace } from '@/projects/workspace-manager';
 import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
@@ -38,34 +39,98 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       : undefined;
   const clicked = useRef<string | null>(null);
   const target = useRef<FileTreeSelection | null>(null);
+  const dragged = useRef<readonly string[] | null>(null);
 
   const store = useWorkspaceStateStore();
+  const drop = (paths: readonly string[], folder: string, moved: boolean) => {
+    if (client === undefined || workspace === undefined) {
+      return;
+    }
+
+    const entries = paths
+      .map((path) => {
+        const source = path.replace(/\/$/, '');
+        const destination = `${folder}${source.slice(source.lastIndexOf('/') + 1)}`;
+        return { source, destination, folder: path.endsWith('/') };
+      })
+      .filter((entry) => entry.source !== entry.destination);
+    if (entries.length === 0) {
+      return;
+    }
+
+    const restore = (failed: readonly PasteEntry[]) => {
+      for (const entry of moved ? failed : []) {
+        const suffix = entry.folder ? '/' : '';
+        model.move(entry.destination + suffix, entry.source + suffix);
+      }
+    };
+    pasteEntries(client, workspace, true, entries, false).then(
+      ({ conflicting, failures }) => {
+        restore([...conflicting, ...failures.map((failure) => failure.entry)]);
+        for (const entry of entries) {
+          if (!conflicting.includes(entry) && !failures.some((failure) => failure.entry === entry)) {
+            const suffix = entry.folder ? '/' : '';
+            fileTree.moveClipboardPaths(workspace.id, entry.source + suffix, entry.destination + suffix);
+          }
+        }
+
+        for (const { entry, error } of failures) {
+          toast.add({
+            type: 'error',
+            title: `Moving “${entry.source.slice(entry.source.lastIndexOf('/') + 1)}” failed`,
+            description: error.message,
+          });
+        }
+
+        if (conflicting.length > 0) {
+          fileTree.overwriteDialog.openWithPayload({
+            workspace,
+            folder: folder === '' ? workspace.name : folder.replace(/\/$/, ''),
+            cut: true,
+            entries: conflicting,
+          });
+        }
+      },
+      (error: Error) => {
+        restore(entries);
+        toast.add({ type: 'error', title: 'Moving failed', description: error.message });
+      },
+    );
+  };
   const model = useFileTree({
     initialPaths: [],
     canRename: () => true,
     onRename: ({ sourcePath, destinationPath }) => {
-      if (client === undefined || root === undefined) {
+      if (client === undefined || workspace === undefined) {
         return;
       }
 
-      const relativePath = sourcePath.replace(/\/$/, '');
-      const newRelativePath = destinationPath.replace(/\/$/, '');
-      const renamed: Promise<unknown> =
-        workspace?.state === 'ok' || workspace?.state === 'detached'
-          ? client.git.move({ absolutePath: root, relativePath, newRelativePath })
-          : client.fileSystem.moveEntry({ root, relativePath, newRelativePath });
+      const entry = {
+        source: sourcePath.replace(/\/$/, ''),
+        destination: destinationPath.replace(/\/$/, ''),
+        folder: sourcePath.endsWith('/'),
+      };
+      const restore = (description: string) => {
+        model.move(destinationPath, sourcePath);
+        toast.add({ type: 'error', title: 'Renaming failed', description });
+      };
 
-      renamed.then(
-        () => fileTree.moveClipboardPaths({ daemon, project, workspace: workspaceId }, sourcePath, destinationPath),
-        (error: Error) => {
-          model.move(destinationPath, sourcePath);
-          toast.add({ type: 'error', title: 'Renaming failed', description: error.message });
+      pasteEntries(client, workspace, true, [entry], false).then(
+        ({ conflicting, failures: [failure] }) => {
+          if (conflicting.length > 0) {
+            restore(`“${entry.destination.split('/').at(-1)}” already exists.`);
+          } else if (failure !== undefined) {
+            restore(failure.error.message);
+          } else {
+            fileTree.moveClipboardPaths(workspace.id, sourcePath, destinationPath);
+          }
         },
+        (error: Error) => restore(error.message),
       );
     },
     onRenameError: (error) => toast.add({ type: 'error', title: 'Renaming failed', description: error }),
-    // TODO: Move through GitService.Move, as a move is a rename across folders.
-    canDrag: () => false,
+    onDropComplete: ({ draggedPaths, target }) => drop(draggedPaths, target.directoryPath ?? '', true),
+    onDropError: (_, { draggedPaths, target }) => drop(draggedPaths, target.directoryPath ?? '', false),
   });
 
   useEffect(() => {
@@ -96,6 +161,9 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       model.startRenaming(renaming.path);
     }
   }, [renaming, fileTree, model, daemon, project, workspaceId]);
+
+  const overRow = (event: Event) =>
+    event.composedPath().some((node) => node instanceof HTMLElement && node.dataset.itemPath !== undefined);
 
   return (
     <CommandContextMenu
@@ -137,6 +205,30 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
             if (workspace !== undefined) {
               runFileTreeKeys(commands, { workspace, paths: [...model.getSelectedPaths()] }, event.nativeEvent);
             }
+          }}
+          onDragStart={(event) => {
+            const paths = model.getSelectedPaths();
+            dragged.current = event.nativeEvent.defaultPrevented
+              ? null
+              : paths.filter(
+                  (path) => !paths.some((other) => other !== path && other.endsWith('/') && path.startsWith(other)),
+                );
+          }}
+          onDragEnd={() => {
+            dragged.current = null;
+          }}
+          onDragOver={(event) => {
+            if (dragged.current !== null && !overRow(event.nativeEvent)) {
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+            }
+          }}
+          onDrop={(event) => {
+            if (dragged.current !== null && !overRow(event.nativeEvent)) {
+              event.preventDefault();
+              drop(dragged.current, '', false);
+            }
+            dragged.current = null;
           }}
         />
       }

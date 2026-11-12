@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf';
+import { toast } from '@elsewise/components/components/toast';
 import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
@@ -20,7 +21,11 @@ import {
   FileSystemService,
   WatchDirectoriesResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { GitService, MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
+import {
+  GitService,
+  MoveResponse_Failure_Reason as MoveReason,
+  MoveResponseSchema,
+} from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import {
   GetWorkspacesResponseSchema,
   ProjectService,
@@ -33,9 +38,11 @@ import { FileTreePanel } from './file-tree-panel';
 
 const WORKSPACE = { daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' };
 const NAMES = ['a.ts', 'b.ts', 'c.ts'];
+const SOURCES = ['c.ts', 'd.ts'];
 
 afterEach(() => {
   window.bridge = undefined;
+  vi.restoreAllMocks();
 });
 
 function unused(service: { methods: readonly { localName: string }[] }) {
@@ -49,7 +56,8 @@ function unused(service: { methods: readonly { localName: string }[] }) {
   );
 }
 
-// A daemon with the workspace Singapore at /elsewise, which holds `NAMES` and no git changes.
+// A daemon with the workspace Singapore at /elsewise, which holds the folder src with `SOURCES`, `NAMES`, and no git
+// changes.
 function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
   return {
     projects: {
@@ -78,7 +86,19 @@ function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
             relativePath: '',
             state: {
               case: 'listing',
-              value: { entries: NAMES.map((name) => ({ name, type: DirectoryListing_Entry_Type.FILE })) },
+              value: {
+                entries: [
+                  { name: 'src', type: DirectoryListing_Entry_Type.DIRECTORY },
+                  ...NAMES.map((name) => ({ name, type: DirectoryListing_Entry_Type.FILE })),
+                ],
+              },
+            },
+          });
+          yield create(WatchDirectoriesResponseSchema, {
+            relativePath: 'src',
+            state: {
+              case: 'listing',
+              value: { entries: SOURCES.map((name) => ({ name, type: DirectoryListing_Entry_Type.FILE })) },
             },
           });
           await new Promise(() => {});
@@ -93,7 +113,7 @@ function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
   };
 }
 
-// Renders the panel of Singapore, with the bridge to open a folder so the context menu has an item, and returns the
+// Renders the panel of Singapore with src open, with the bridge to open a folder so the context menu has an item, and returns the
 // application it runs in.
 async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManager> {
   window.bridge = {
@@ -127,10 +147,12 @@ async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManag
     history: createMemoryHistory({ initialEntries: ['/local/elsewise/singapore'] }),
   });
   const application = builtInApplication({ router });
+  const store = new WorkspaceStateStore(undefined);
+  store.update(WORKSPACE, { fileTree: { expanded: ['src/'], selected: [] } });
   await render(
     <QueryClientProvider client={client}>
       <ApplicationManagerContext value={application}>
-        <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+        <WorkspaceStateStoreContext value={store}>
           <RouterProvider router={router} />
         </WorkspaceStateStoreContext>
       </ApplicationManagerContext>
@@ -206,7 +228,9 @@ describe('FileTreePanel', () => {
 
     await expect
       .poll(() => move.mock.calls)
-      .toEqual([[{ absolutePath: '/elsewise', relativePath: 'a.ts', newRelativePath: 'z.ts' }]]);
+      .toEqual([
+        [{ absolutePath: '/elsewise', entries: [{ relativePath: 'a.ts', newRelativePath: 'z.ts' }], overwrite: false }],
+      ]);
   });
 
   test('moves clipboard path on rename', async () => {
@@ -224,10 +248,13 @@ describe('FileTreePanel', () => {
   });
 
   test('restores row when rename fails', async () => {
-    const move = vi.fn<Daemon['git']['move']>(async () => {
-      throw new Error('denied');
+    const add = vi.spyOn(toast, 'add');
+    const application = await mount({
+      move: async () =>
+        create(MoveResponseSchema, {
+          failures: [{ relativePath: 'a.ts', reason: MoveReason.OTHER, message: 'denied' }],
+        }),
     });
-    const application = await mount({ move });
     application.fileTree.clipboard = { cut: false, workspace: WORKSPACE, paths: ['a.ts'] };
     const row = page.getByRole('treeitem', { name: 'a.ts' });
     await expect.element(row).toBeVisible();
@@ -240,6 +267,217 @@ describe('FileTreePanel', () => {
     await expect.element(page.getByRole('treeitem', { name: 'a.ts' })).toBeVisible();
     await expect.element(page.getByRole('treeitem', { name: 'z.ts' })).not.toBeInTheDocument();
     expect(application.fileTree.clipboard?.paths).toEqual(['a.ts']);
+    expect(add).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ type: 'error', title: 'Renaming failed', description: 'denied' }),
+    );
+  });
+
+  test('moves into folder through git', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect
+      .poll(() => move.mock.calls)
+      .toEqual([
+        [
+          {
+            absolutePath: '/elsewise',
+            entries: [{ relativePath: 'a.ts', newRelativePath: 'src/a.ts' }],
+            overwrite: false,
+          },
+        ],
+      ]);
+  });
+
+  test('moves row before daemon replies', async () => {
+    await mount({ move: () => new Promise(() => {}) });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    const shadow = document.querySelector('file-tree-container')?.shadowRoot;
+    expect([
+      shadow?.querySelector('[data-item-path="a.ts"]') !== null,
+      shadow?.querySelector('[data-item-path="src/a.ts"]') !== null,
+    ]).toEqual([false, true]);
+  });
+
+  test('moves to root onto root file', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'd.ts' }),
+      page.getByRole('treeitem', { name: 'a.ts' }),
+    );
+
+    await expect
+      .poll(() => move.mock.calls.map(([request]) => request.entries))
+      .toEqual([[{ relativePath: 'src/d.ts', newRelativePath: 'd.ts' }]]);
+  });
+
+  test('moves to root from empty space', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(page.getByRole('treeitem', { name: 'd.ts' }), page.getByRole('tree'), {
+      targetPosition: { x: 150, y: 380 },
+    });
+
+    await expect
+      .poll(() => move.mock.calls.map(([request]) => request.entries))
+      .toEqual([[{ relativePath: 'src/d.ts', newRelativePath: 'd.ts' }]]);
+  });
+
+  test('keeps root entry in root', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(page.getByRole('treeitem', { name: 'a.ts' }), page.getByRole('tree'), {
+      targetPosition: { x: 150, y: 380 },
+    });
+    await userEvent.dragAndDrop(page.getByRole('treeitem', { name: 'd.ts' }), page.getByRole('tree'), {
+      targetPosition: { x: 150, y: 380 },
+    });
+
+    await expect
+      .poll(() => move.mock.calls.map(([request]) => request.entries))
+      .toEqual([[{ relativePath: 'src/d.ts', newRelativePath: 'd.ts' }]]);
+  });
+
+  test('ignores drop into itself', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'src' }),
+      page.getByRole('treeitem', { name: 'd.ts' }),
+    );
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect
+      .poll(() => move.mock.calls.map(([request]) => request.entries))
+      .toEqual([[{ relativePath: 'a.ts', newRelativePath: 'src/a.ts' }]]);
+  });
+
+  test('moves selection in one request', async () => {
+    const move = vi.fn<Daemon['git']['move']>(async () => create(MoveResponseSchema));
+    await mount({ move });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+    await userEvent.click(page.getByRole('treeitem', { name: 'a.ts' }));
+    await userEvent.click(page.getByRole('treeitem', { name: 'b.ts' }), { modifiers: ['Shift'] });
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect
+      .poll(() => move.mock.calls.map(([request]) => request.entries))
+      .toEqual([
+        [
+          { relativePath: 'a.ts', newRelativePath: 'src/a.ts' },
+          { relativePath: 'b.ts', newRelativePath: 'src/b.ts' },
+        ],
+      ]);
+  });
+
+  test('moves clipboard path on drop', async () => {
+    const application = await mount({ move: async () => create(MoveResponseSchema) });
+    application.fileTree.clipboard = { cut: false, workspace: WORKSPACE, paths: ['a.ts', 'b.ts'] };
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect.poll(() => application.fileTree.clipboard?.paths).toEqual(['src/a.ts', 'b.ts']);
+  });
+
+  test('reports failed drop', async () => {
+    const add = vi.spyOn(toast, 'add');
+    await mount({
+      move: async () =>
+        create(MoveResponseSchema, {
+          failures: [{ relativePath: 'a.ts', reason: MoveReason.OTHER, message: 'denied' }],
+        }),
+    });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect
+      .poll(() => add.mock.calls)
+      .toEqual([[expect.objectContaining({ type: 'error', title: 'Moving “a.ts” failed', description: 'denied' })]]);
+    const shadow = document.querySelector('file-tree-container')?.shadowRoot;
+    expect([
+      shadow?.querySelector('[data-item-path="a.ts"]') !== null,
+      shadow?.querySelector('[data-item-path="src/a.ts"]') !== null,
+    ]).toEqual([true, false]);
+  });
+
+  test('confirms overwrite of existing entry', async () => {
+    const application = await mount({
+      move: async () =>
+        create(MoveResponseSchema, { failures: [{ relativePath: 'a.ts', reason: MoveReason.ALREADY_EXISTS }] }),
+    });
+    const open = vi.spyOn(application.fileTree.overwriteDialog, 'openWithPayload');
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect
+      .poll(() => open.mock.calls)
+      .toEqual([
+        [
+          expect.objectContaining({
+            folder: 'src',
+            cut: true,
+            entries: [{ source: 'a.ts', destination: 'src/a.ts', folder: false }],
+          }),
+        ],
+      ]);
+  });
+
+  test('confirms overwrite of listed entry', async () => {
+    const application = await mount({
+      move: async () =>
+        create(MoveResponseSchema, { failures: [{ relativePath: 'c.ts', reason: MoveReason.ALREADY_EXISTS }] }),
+    });
+    const open = vi.spyOn(application.fileTree.overwriteDialog, 'openWithPayload');
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'c.ts' }).last(),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect
+      .poll(() => open.mock.calls)
+      .toEqual([[expect.objectContaining({ entries: [{ source: 'c.ts', destination: 'src/c.ts', folder: false }] })]]);
   });
 
   test('dims cut row', async () => {

@@ -42,19 +42,21 @@ service FileSystemService {
   // An entry already at the path fails ALREADY_EXISTS.
   rpc CreateDirectory(CreateDirectoryRequest) returns (CreateDirectoryResponse);
 
-  // Recursively copies a file or directory, copying symbolic links as links. Creates the destination's parent
-  // directories if required.
+  // Recursively copies files and directories in order, copying symbolic links as links. Creates each destination's
+  // parent directories if required.
   //
-  // An entry already at the destination fails with ALREADY_EXISTS, unless `overwrite` is set.
-  rpc CopyEntry(CopyEntryRequest) returns (CopyEntryResponse);
+  // Each entry that fails is reported in the response, and the others are still copied.
+  rpc CopyEntries(CopyEntriesRequest) returns (CopyEntriesResponse);
 
-  // Moves or renames a file or directory. Creates the destination's parent directories if required.
+  // Moves or renames files and directories in order. Creates each destination's parent directories if required.
   //
-  // An entry already at the destination fails with ALREADY_EXISTS, unless `overwrite` is set.
-  rpc MoveEntry(MoveEntryRequest) returns (MoveEntryResponse);
+  // Each entry that fails is reported in the response, and the others are still moved.
+  rpc MoveEntries(MoveEntriesRequest) returns (MoveEntriesResponse);
 
-  // Recursively deletes a file or directory.
-  rpc DeleteEntry(DeleteEntryRequest) returns (DeleteEntryResponse);
+  // Recursively deletes files and directories in order.
+  //
+  // Each entry that fails is reported in the response, and the others are still deleted.
+  rpc DeleteEntries(DeleteEntriesRequest) returns (DeleteEntriesResponse);
 }
 
 message WatchDirectoriesRequest {
@@ -264,44 +266,105 @@ message CreateDirectoryRequest {
 
 message CreateDirectoryResponse {}
 
-message CopyEntryRequest {
+message CopyEntriesRequest {
   // The root path.
   string root = 1;
 
-  // The relative path.
-  string relative_path = 2;
+  // Every entry to copy, in order.
+  repeated Entry entries = 2;
 
-  // The copy's path.
-  string new_relative_path = 3;
+  // Whether to overwrite an entry already at a new path.
+  bool overwrite = 3;
 
-  // Whether to overwrite an entry already at the new path.
-  bool overwrite = 4;
+  message Entry {
+    // The relative path.
+    string relative_path = 1;
+
+    // The copy's path.
+    string new_relative_path = 2;
+  }
 }
 
-message CopyEntryResponse {}
+message CopyEntriesResponse {
+  // The entries that failed, in order.
+  repeated Failure failures = 1;
 
-message MoveEntryRequest {
+  message Failure {
+    // The entry's relative path.
+    string relative_path = 1;
+
+    // Why the entry failed.
+    Reason reason = 2;
+
+    // What failed.
+    string message = 3;
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Never sent.
+      REASON_OTHER = 1;
+      REASON_ALREADY_EXISTS = 2; // An entry is already at the new path, and `overwrite` is not set.
+    }
+  }
+}
+
+message MoveEntriesRequest {
   // The root path.
   string root = 1;
 
-  // The relative path.
-  string relative_path = 2;
+  // Every entry to move, in order.
+  repeated Entry entries = 2;
 
-  // The entry's new path.
-  string new_relative_path = 3;
+  // Whether to overwrite an entry already at a new path.
+  bool overwrite = 3;
 
-  // Whether to overwrite an entry already at the new path.
-  bool overwrite = 4;
+  message Entry {
+    // The relative path.
+    string relative_path = 1;
+
+    // The entry's new path.
+    string new_relative_path = 2;
+  }
 }
 
-message MoveEntryResponse {}
+message MoveEntriesResponse {
+  // The entries that failed, in order.
+  repeated Failure failures = 1;
 
-message DeleteEntryRequest {
+  message Failure {
+    // The entry's relative path.
+    string relative_path = 1;
+
+    // Why the entry failed.
+    Reason reason = 2;
+
+    // What failed.
+    string message = 3;
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Never sent.
+      REASON_OTHER = 1;
+      REASON_ALREADY_EXISTS = 2; // An entry is already at the new path, and `overwrite` is not set.
+    }
+  }
+}
+
+message DeleteEntriesRequest {
   // The root path.
   string root = 1;
 
-  // The relative path.
-  string relative_path = 2;
+  // Every entry to delete, in order.
+  repeated string relative_paths = 2;
 }
 
-message DeleteEntryResponse {}
+message DeleteEntriesResponse {
+  // The entries that failed, in order.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The entry's relative path.
+    string relative_path = 1;
+
+    // What failed.
+    string message = 2;
+  }
+}
