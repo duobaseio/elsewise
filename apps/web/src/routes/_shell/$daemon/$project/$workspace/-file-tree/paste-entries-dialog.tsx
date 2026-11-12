@@ -19,14 +19,13 @@ import { Input } from '@elsewise/components/components/input';
 import { Label } from '@elsewise/components/components/label';
 import { toast } from '@elsewise/components/components/toast';
 import type { Workspace } from '@elsewise/frontend-plugin';
-import { Code, TransportError } from '@elsewise/transport';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import { absolutePath } from '@/fs/commands';
 import type { FileTreeClipboard } from '@/fs/file-tree-manager';
-import { type PasteEntry, pasteEntry } from '@/fs/paste';
+import { type PasteEntry, pasteEntries } from '@/fs/paste';
 import { DirectoryListing_Entry_Type } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 
 interface Paste {
@@ -46,20 +45,7 @@ export function PasteEntriesDialog() {
   const paste = useMutation({
     mutationFn: async ({ workspace, cut, entries }: Paste) => {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
-      const conflicting: PasteEntry[] = [];
-      const failures: { entry: PasteEntry; error: Error }[] = [];
-      for (const entry of entries) {
-        try {
-          await pasteEntry(daemon, workspace, cut, entry, false);
-        } catch (error) {
-          if (error instanceof TransportError && error.code === Code.ALREADY_EXISTS) {
-            conflicting.push(entry);
-          } else {
-            failures.push({ entry, error: error instanceof Error ? error : new Error(String(error)) });
-          }
-        }
-      }
-      return { conflicting, failures };
+      return pasteEntries(daemon, workspace, cut, entries, false);
     },
     onSuccess: ({ conflicting, failures }, { workspace, folder, cut, single }) => {
       const [failed] = failures;

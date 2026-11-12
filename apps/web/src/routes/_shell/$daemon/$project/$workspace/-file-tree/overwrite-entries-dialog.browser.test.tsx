@@ -9,7 +9,10 @@ import { ApplicationManagerContext } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import type { PasteEntry } from '@/fs/paste';
-import { CopyEntryResponseSchema } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
+import {
+  CopyEntriesResponseSchema,
+  CopyEntriesResponse_Failure_Reason as CopyReason,
+} from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { OverwriteEntriesDialog } from './overwrite-entries-dialog';
@@ -28,17 +31,17 @@ const ENTRIES: readonly PasteEntry[] = [
   { source: 'docs', destination: 'src/docs', folder: true },
 ];
 
-// Renders the dialog over a daemon whose copyEntry and move are given, and returns the application to open it with.
+// Renders the dialog over a daemon whose copyEntries and move are given, and returns the application to open it with.
 async function mount({
-  copyEntry = async () => create(CopyEntryResponseSchema),
+  copyEntries = async () => create(CopyEntriesResponseSchema),
   move = async () => create(MoveResponseSchema),
 }: {
-  copyEntry?: Daemon['fileSystem']['copyEntry'];
+  copyEntries?: Daemon['fileSystem']['copyEntries'];
   move?: Daemon['git']['move'];
 } = {}): Promise<ApplicationManager> {
   const client = new QueryClient();
   client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, {
-    fileSystem: { copyEntry },
+    fileSystem: { copyEntries },
     git: { move },
   } as unknown as Daemon);
   const application = builtInApplication();
@@ -59,8 +62,8 @@ function open(application: ApplicationManager, cut: boolean, entries: readonly P
 
 describe('OverwriteEntriesDialog', () => {
   test('overwrites single entry', async () => {
-    const copyEntry = vi.fn<Daemon['fileSystem']['copyEntry']>(async () => create(CopyEntryResponseSchema));
-    const application = await mount({ copyEntry });
+    const copyEntries = vi.fn<Daemon['fileSystem']['copyEntries']>(async () => create(CopyEntriesResponseSchema));
+    const application = await mount({ copyEntries });
     open(application, false, ENTRIES.slice(0, 1));
 
     await expect.element(page.getByRole('heading', { name: 'Overwrite “a.ts” file?' })).toBeVisible();
@@ -69,8 +72,8 @@ describe('OverwriteEntriesDialog', () => {
     await userEvent.click(page.getByRole('button', { name: 'Overwrite' }));
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-    expect(copyEntry.mock.calls).toEqual([
-      [{ root: '/elsewise', relativePath: 'a.ts', newRelativePath: 'src/a.ts', overwrite: true }],
+    expect(copyEntries.mock.calls).toEqual([
+      [{ root: '/elsewise', entries: [{ relativePath: 'a.ts', newRelativePath: 'src/a.ts' }], overwrite: true }],
     ]);
   });
 
@@ -125,9 +128,17 @@ describe('OverwriteEntriesDialog', () => {
     await userEvent.click(page.getByRole('button', { name: 'Overwrite' }));
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-    expect(move.mock.calls.map(([request]) => [request.relativePath, request.overwrite])).toEqual([
-      ['a.ts', true],
-      ['docs', true],
+    expect(move.mock.calls).toEqual([
+      [
+        {
+          absolutePath: '/elsewise',
+          entries: [
+            { relativePath: 'a.ts', newRelativePath: 'src/a.ts' },
+            { relativePath: 'docs', newRelativePath: 'src/docs' },
+          ],
+          overwrite: true,
+        },
+      ],
     ]);
   });
 
@@ -182,12 +193,10 @@ describe('OverwriteEntriesDialog', () => {
   test('reports failed entry', async () => {
     const add = vi.spyOn(toast, 'add');
     const application = await mount({
-      copyEntry: async ({ relativePath }) => {
-        if (relativePath === 'a.ts') {
-          throw new Error('denied');
-        }
-        return create(CopyEntryResponseSchema);
-      },
+      copyEntries: async () =>
+        create(CopyEntriesResponseSchema, {
+          failures: [{ relativePath: 'a.ts', reason: CopyReason.OTHER, message: 'denied' }],
+        }),
     });
     open(application, false, ENTRIES.slice(0, 2));
 

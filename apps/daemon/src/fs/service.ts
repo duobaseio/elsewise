@@ -5,14 +5,16 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
 import {
-  type CopyEntryRequest,
+  type CopyEntriesRequest,
+  CopyEntriesResponse_Failure_Reason as CopyReason,
   type CreateDirectoryRequest,
-  type DeleteEntryRequest,
+  type DeleteEntriesRequest,
   WatchDirectoriesResponse_Unavailable_Reason as DirectoryReason,
   WatchFilesResponse_Unavailable_Reason as FileReason,
   type FileSystemService,
   type ListDirectoryRequest,
-  type MoveEntryRequest,
+  type MoveEntriesRequest,
+  MoveEntriesResponse_Failure_Reason as MoveReason,
   type ReadFileRequest,
   WatchRootsResponse_Root_Mode as RootMode,
   WatchRootsResponse_Root_Reason as RootReason,
@@ -24,7 +26,7 @@ import {
   type WriteFileRequest,
 } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { isRespelling, listDirectory, refuseCopy, refuseMove } from './directory';
-import { attempt, errnoOf } from './error';
+import { attempt, attemptEach, errnoOf } from './error';
 import { createFile, hashContent, hashFile, isBinary, replaceFile } from './file';
 import { toNativePath, toNativePathOrRoot, toProtocolPath } from './path';
 import { type Snapshot, watchPaths } from './watch';
@@ -153,45 +155,75 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
     });
   }
 
-  copyEntry(request: CopyEntryRequest) {
+  copyEntries(request: CopyEntriesRequest) {
     return attempt(async () => {
-      const absoluteNativePath = toNativePath(request.root, request.relativePath);
-      const newAbsoluteNativePath = toNativePath(request.root, request.newRelativePath);
-      await refuseCopy(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
-      await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+      const entries = request.entries.map((entry) => ({
+        relativePath: entry.relativePath,
+        absoluteNativePath: toNativePath(request.root, entry.relativePath),
+        newAbsoluteNativePath: toNativePath(request.root, entry.newRelativePath),
+      }));
+      const failures = await attemptEach(entries, async ({ absoluteNativePath, newAbsoluteNativePath }) => {
+        await refuseCopy(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+        await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
 
-      const copyAbsoluteNativePath = `${newAbsoluteNativePath}.${randomUUID()}`;
-      try {
-        await fs.cp(absoluteNativePath, copyAbsoluteNativePath, { recursive: true, verbatimSymlinks: true });
-        if (request.overwrite) {
+        const copyAbsoluteNativePath = `${newAbsoluteNativePath}.${randomUUID()}`;
+        try {
+          await fs.cp(absoluteNativePath, copyAbsoluteNativePath, { recursive: true, verbatimSymlinks: true });
+          if (request.overwrite) {
+            await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+          }
+          await fs.rename(copyAbsoluteNativePath, newAbsoluteNativePath);
+        } finally {
+          await fs.rm(copyAbsoluteNativePath, { recursive: true, force: true });
+        }
+      });
+      return {
+        failures: failures.map(({ item, error }) => ({
+          relativePath: item.relativePath,
+          reason: error.code === Code.ALREADY_EXISTS ? CopyReason.ALREADY_EXISTS : CopyReason.OTHER,
+          message: error.message,
+        })),
+      };
+    });
+  }
+
+  moveEntries(request: MoveEntriesRequest) {
+    return attempt(async () => {
+      const entries = request.entries.map((entry) => ({
+        relativePath: entry.relativePath,
+        absoluteNativePath: toNativePath(request.root, entry.relativePath),
+        newAbsoluteNativePath: toNativePath(request.root, entry.newRelativePath),
+      }));
+      const failures = await attemptEach(entries, async ({ absoluteNativePath, newAbsoluteNativePath }) => {
+        await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+        if (request.overwrite && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
           await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
         }
-        await fs.rename(copyAbsoluteNativePath, newAbsoluteNativePath);
-      } finally {
-        await fs.rm(copyAbsoluteNativePath, { recursive: true, force: true });
-      }
-      return {};
+        await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+        await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+      });
+      return {
+        failures: failures.map(({ item, error }) => ({
+          relativePath: item.relativePath,
+          reason: error.code === Code.ALREADY_EXISTS ? MoveReason.ALREADY_EXISTS : MoveReason.OTHER,
+          message: error.message,
+        })),
+      };
     });
   }
 
-  moveEntry(request: MoveEntryRequest) {
+  deleteEntries(request: DeleteEntriesRequest) {
     return attempt(async () => {
-      const absoluteNativePath = toNativePath(request.root, request.relativePath);
-      const newAbsoluteNativePath = toNativePath(request.root, request.newRelativePath);
-      await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
-      if (request.overwrite && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
-        await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
-      }
-      await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
-      await fs.rename(absoluteNativePath, newAbsoluteNativePath);
-      return {};
-    });
-  }
-
-  deleteEntry(request: DeleteEntryRequest) {
-    return attempt(async () => {
-      await fs.rm(toNativePath(request.root, request.relativePath), { recursive: true });
-      return {};
+      const entries = request.relativePaths.map((relativePath) => ({
+        relativePath,
+        absoluteNativePath: toNativePath(request.root, relativePath),
+      }));
+      const failures = await attemptEach(entries, async ({ absoluteNativePath }) => {
+        await fs.rm(absoluteNativePath, { recursive: true });
+      });
+      return {
+        failures: failures.map(({ item, error }) => ({ relativePath: item.relativePath, message: error.message })),
+      };
     });
   }
 

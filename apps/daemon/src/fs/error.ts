@@ -35,3 +35,23 @@ export async function attempt<T>(operation: () => Promise<T>): Promise<T> {
     throw fsToTransportError(error);
   }
 }
+
+/**
+ * Attempts `operation` on each item in order, and returns the items it failed on with their transport errors. A
+ * failure does not stop the items after it.
+ */
+export async function attemptEach<T>(
+  items: readonly T[],
+  operation: (item: T) => Promise<void>,
+  toTransportError: (error: unknown) => TransportError = fsToTransportError,
+): Promise<{ item: T; error: TransportError }[]> {
+  const failures: { item: T; error: TransportError }[] = [];
+  for (const item of items) {
+    try {
+      await operation(item);
+    } catch (error) {
+      failures.push({ item, error: toTransportError(error) });
+    }
+  }
+  return failures;
+}

@@ -11,12 +11,16 @@ import type { ApplicationManager } from '@/application-manager';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import type { FileTreeClipboard } from '@/fs/file-tree-manager';
 import {
-  CopyEntryResponseSchema,
+  CopyEntriesResponseSchema,
+  CopyEntriesResponse_Failure_Reason as CopyReason,
   DirectoryListing_Entry_Type,
   ListDirectoryResponseSchema,
-  MoveEntryResponseSchema,
+  MoveEntriesResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
+import {
+  MoveResponse_Failure_Reason as MoveReason,
+  MoveResponseSchema,
+} from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { PasteEntriesDialog } from './paste-entries-dialog';
 
@@ -35,15 +39,15 @@ afterEach(() => {
 });
 
 interface Fake {
-  copyEntry?: Daemon['fileSystem']['copyEntry'];
-  moveEntry?: Daemon['fileSystem']['moveEntry'];
+  copyEntries?: Daemon['fileSystem']['copyEntries'];
+  moveEntries?: Daemon['fileSystem']['moveEntries'];
   move?: Daemon['git']['move'];
 }
 
 // Renders the dialog over a daemon listing `FOLDERS`, and returns the application to open it with.
 async function mount({
-  copyEntry = async () => create(CopyEntryResponseSchema),
-  moveEntry = async () => create(MoveEntryResponseSchema),
+  copyEntries = async () => create(CopyEntriesResponseSchema),
+  moveEntries = async () => create(MoveEntriesResponseSchema),
   move = async () => create(MoveResponseSchema),
 }: Fake = {}): Promise<ApplicationManager> {
   const client = new QueryClient();
@@ -62,7 +66,7 @@ async function mount({
     });
   };
   client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, {
-    fileSystem: { copyEntry, moveEntry, listDirectory },
+    fileSystem: { copyEntries, moveEntries, listDirectory },
     git: { move },
   } as unknown as Daemon);
   const application = builtInApplication();
@@ -82,14 +86,10 @@ function open(application: ApplicationManager, folder: string, clipboard: Omit<F
   application.fileTree.pasteDialog.openWithPayload({ workspace: WORKSPACE, folder, clipboard: full });
 }
 
-function conflict(): never {
-  throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the new path');
-}
-
 describe('PasteEntriesDialog', () => {
   test('copies entry under new name, keeping clipboard', async () => {
-    const copyEntry = vi.fn<Daemon['fileSystem']['copyEntry']>(async () => create(CopyEntryResponseSchema));
-    const application = await mount({ copyEntry });
+    const copyEntries = vi.fn<Daemon['fileSystem']['copyEntries']>(async () => create(CopyEntriesResponseSchema));
+    const application = await mount({ copyEntries });
     open(application, 'src/', { cut: false, paths: ['README.md'] });
 
     await expect.element(page.getByRole('heading', { name: 'Copy “README.md” file' })).toBeVisible();
@@ -99,8 +99,14 @@ describe('PasteEntriesDialog', () => {
     await userEvent.click(page.getByRole('button', { name: 'Copy' }));
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-    expect(copyEntry.mock.calls).toEqual([
-      [{ root: '/elsewise', relativePath: 'README.md', newRelativePath: 'src/NOTES.md', overwrite: false }],
+    expect(copyEntries.mock.calls).toEqual([
+      [
+        {
+          root: '/elsewise',
+          entries: [{ relativePath: 'README.md', newRelativePath: 'src/NOTES.md' }],
+          overwrite: false,
+        },
+      ],
     ]);
     expect(application.fileTree.clipboard).not.toBeNull();
   });
@@ -137,12 +143,13 @@ describe('PasteEntriesDialog', () => {
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
     expect(move.mock.calls).toEqual([
-      [{ absolutePath: '/elsewise', relativePath: 'docs', newRelativePath: 'src/lib/docs', overwrite: false }],
       [
         {
           absolutePath: '/elsewise',
-          relativePath: 'README.md',
-          newRelativePath: 'src/lib/README.md',
+          entries: [
+            { relativePath: 'docs', newRelativePath: 'src/lib/docs' },
+            { relativePath: 'README.md', newRelativePath: 'src/lib/README.md' },
+          ],
           overwrite: false,
         },
       ],
@@ -151,8 +158,8 @@ describe('PasteEntriesDialog', () => {
   });
 
   test('moves through file system outside git', async () => {
-    const moveEntry = vi.fn<Daemon['fileSystem']['moveEntry']>(async () => create(MoveEntryResponseSchema));
-    const application = await mount({ moveEntry });
+    const moveEntries = vi.fn<Daemon['fileSystem']['moveEntries']>(async () => create(MoveEntriesResponseSchema));
+    const application = await mount({ moveEntries });
     const workspace = { ...WORKSPACE, state: 'broken' as const };
     const clipboard = { cut: true, workspace: WORKSPACE.id, paths: ['README.md'] };
     application.fileTree.pasteDialog.openWithPayload({ workspace, folder: 'src/', clipboard });
@@ -160,20 +167,26 @@ describe('PasteEntriesDialog', () => {
     await userEvent.click(page.getByRole('button', { name: 'Move' }));
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
-    expect(moveEntry.mock.calls).toEqual([
-      [{ root: '/elsewise', relativePath: 'README.md', newRelativePath: 'src/README.md', overwrite: false }],
+    expect(moveEntries.mock.calls).toEqual([
+      [
+        {
+          root: '/elsewise',
+          entries: [{ relativePath: 'README.md', newRelativePath: 'src/README.md' }],
+          overwrite: false,
+        },
+      ],
     ]);
   });
 
   test('refuses copy onto itself', async () => {
-    const copyEntry = vi.fn<Daemon['fileSystem']['copyEntry']>(async () => create(CopyEntryResponseSchema));
-    const application = await mount({ copyEntry });
+    const copyEntries = vi.fn<Daemon['fileSystem']['copyEntries']>(async () => create(CopyEntriesResponseSchema));
+    const application = await mount({ copyEntries });
     open(application, '', { cut: false, paths: ['README.md'] });
 
     await userEvent.click(page.getByRole('button', { name: 'Copy' }));
 
     await expect.element(page.getByRole('alert')).toHaveTextContent('“README.md” already exists in “Singapore”.');
-    expect(copyEntry).not.toHaveBeenCalled();
+    expect(copyEntries).not.toHaveBeenCalled();
   });
 
   test('refuses move into own folder', async () => {
@@ -198,8 +211,13 @@ describe('PasteEntriesDialog', () => {
   });
 
   test('hands conflicts to overwrite dialog', async () => {
-    const move = vi.fn<Daemon['git']['move']>(async ({ relativePath }) =>
-      relativePath === 'c.ts' ? create(MoveResponseSchema) : conflict(),
+    const move = vi.fn<Daemon['git']['move']>(async () =>
+      create(MoveResponseSchema, {
+        failures: [
+          { relativePath: 'a.ts', reason: MoveReason.ALREADY_EXISTS },
+          { relativePath: 'docs', reason: MoveReason.ALREADY_EXISTS },
+        ],
+      }),
     );
     const application = await mount({ move });
     const overwrite = vi.spyOn(application.fileTree.overwriteDialog, 'openWithPayload');
@@ -226,7 +244,15 @@ describe('PasteEntriesDialog', () => {
   });
 
   test('keeps clipboard when handing copy conflicts', async () => {
-    const application = await mount({ copyEntry: async () => conflict() });
+    const application = await mount({
+      copyEntries: async () =>
+        create(CopyEntriesResponseSchema, {
+          failures: [
+            { relativePath: 'a.ts', reason: CopyReason.ALREADY_EXISTS },
+            { relativePath: 'b.ts', reason: CopyReason.ALREADY_EXISTS },
+          ],
+        }),
+    });
     const overwrite = vi.spyOn(application.fileTree.overwriteDialog, 'openWithPayload');
     open(application, 'src/', { cut: false, paths: ['a.ts', 'b.ts'] });
 
@@ -239,12 +265,10 @@ describe('PasteEntriesDialog', () => {
   test('reports failed entries', async () => {
     const add = vi.spyOn(toast, 'add');
     const application = await mount({
-      copyEntry: async ({ relativePath }) => {
-        if (relativePath === 'a.ts') {
-          throw new Error('denied');
-        }
-        return create(CopyEntryResponseSchema);
-      },
+      copyEntries: async () =>
+        create(CopyEntriesResponseSchema, {
+          failures: [{ relativePath: 'a.ts', reason: CopyReason.OTHER, message: 'denied' }],
+        }),
     });
     open(application, 'src/', { cut: false, paths: ['a.ts', 'b.ts'] });
 
@@ -258,9 +282,12 @@ describe('PasteEntriesDialog', () => {
 
   test('reports failed entry in dialog', async () => {
     const application = await mount({
-      copyEntry: async () => {
-        throw new TransportError(Code.INVALID_ARGUMENT, 'an entry cannot be moved into itself');
-      },
+      copyEntries: async () =>
+        create(CopyEntriesResponseSchema, {
+          failures: [
+            { relativePath: 'README.md', reason: CopyReason.OTHER, message: 'an entry cannot be moved into itself' },
+          ],
+        }),
     });
     open(application, 'src/', { cut: false, paths: ['README.md'] });
 

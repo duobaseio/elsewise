@@ -5,6 +5,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
 import { isCaseInsensitive, isRespelling, refuseExisting, refuseMove } from '../fs/directory';
+import { attemptEach } from '../fs/error';
 import { isBinary } from '../fs/file';
 import { toNativePath, toNativeRoot } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
@@ -40,6 +41,7 @@ import {
   type GitService,
   type LockWorktreeRequest,
   type MergeRequest,
+  MoveResponse_Failure_Reason as MoveReason,
   type MoveRequest,
   type MoveWorktreeRequest,
   type PruneWorktreesRequest,
@@ -171,52 +173,69 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
 
   move(request: MoveRequest) {
     return attempt(async () => {
-      for (const relativePath of [request.relativePath, request.newRelativePath]) {
-        if (relativePath.split('/').some((segment) => segment.toLowerCase() === '.git')) {
-          throw new TransportError(Code.INVALID_ARGUMENT, `"${relativePath}" is in a git directory`);
+      const entries = request.entries.map((entry) => {
+        for (const relativePath of [entry.relativePath, entry.newRelativePath]) {
+          if (relativePath.split('/').some((segment) => segment.toLowerCase() === '.git')) {
+            throw new TransportError(Code.INVALID_ARGUMENT, `"${relativePath}" is in a git directory`);
+          }
         }
-      }
+
+        return {
+          relativePath: filePath(entry.relativePath),
+          newRelativePath: filePath(entry.newRelativePath),
+          absoluteNativePath: toNativePath(request.absolutePath, entry.relativePath),
+          newAbsoluteNativePath: toNativePath(request.absolutePath, entry.newRelativePath),
+        };
+      });
 
       const git = await this.#open(request.absolutePath);
-      const absoluteNativePath = toNativePath(request.absolutePath, request.relativePath);
-      const newAbsoluteNativePath = toNativePath(request.absolutePath, request.newRelativePath);
-      await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+      const failures = await attemptEach(
+        entries,
+        async ({ relativePath, newRelativePath, absoluteNativePath, newAbsoluteNativePath }) => {
+          await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
 
-      const relativePath = filePath(request.relativePath);
-      const newRelativePath = filePath(request.newRelativePath);
-      const ignoreCase = await isCaseInsensitive(absoluteNativePath);
-      const pathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${relativePath}`];
-      if ((await git.text(withPathspecs(['ls-files', '--unmerged', '-z'], pathSpecs))) !== '') {
-        throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" has conflicts`);
-      }
+          const ignoreCase = await isCaseInsensitive(absoluteNativePath);
+          const pathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${relativePath}`];
+          if ((await git.text(withPathspecs(['ls-files', '--unmerged', '-z'], pathSpecs))) !== '') {
+            throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" has conflicts`);
+          }
 
-      const [tracked] = (await git.text(withPathspecs(['ls-files', '-z'], pathSpecs))).split('\0');
-      const respelled = await isRespelling(absoluteNativePath, newAbsoluteNativePath);
-      if (request.overwrite && !respelled) {
-        const newPathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${newRelativePath}`];
-        await git.run(withPathspecs(['rm', '-r', '-q', '-f', '--ignore-unmatch'], newPathSpecs));
-        await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
-      }
-      await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+          const [tracked] = (await git.text(withPathspecs(['ls-files', '-z'], pathSpecs))).split('\0');
+          const respelled = await isRespelling(absoluteNativePath, newAbsoluteNativePath);
+          if (request.overwrite && !respelled) {
+            const newPathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${newRelativePath}`];
+            await git.run(withPathspecs(['rm', '-r', '-q', '-f', '--ignore-unmatch'], newPathSpecs));
+            await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+          }
+          await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
 
-      if (!tracked) {
-        await fs.rename(absoluteNativePath, newAbsoluteNativePath);
-        return {};
-      }
+          if (!tracked) {
+            await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+            return;
+          }
 
-      // The git index path & fs path may have different casing. We do this to get the index's path. Tracked is always
-      // a file.
-      const segments = relativePath.split('/');
-      const indexedRelativePath = tracked.split('/').slice(0, segments.length).join('/');
+          // The git index path & fs path may have different casing. We do this to get the index's path. Tracked is
+          // always a file.
+          const segments = relativePath.split('/');
+          const indexedRelativePath = tracked.split('/').slice(0, segments.length).join('/');
 
-      if (respelled) {
-        const temporaryRelativePath = `${newRelativePath}.${randomUUID()}`;
-        await this.#gitMove(git, request.absolutePath, indexedRelativePath, temporaryRelativePath);
-        await this.#gitMove(git, request.absolutePath, temporaryRelativePath, newRelativePath);
-      } else {
-        await this.#gitMove(git, request.absolutePath, indexedRelativePath, newRelativePath);
-      }
-      return {};
+          if (respelled) {
+            const temporaryRelativePath = `${newRelativePath}.${randomUUID()}`;
+            await this.#gitMove(git, request.absolutePath, indexedRelativePath, temporaryRelativePath);
+            await this.#gitMove(git, request.absolutePath, temporaryRelativePath, newRelativePath);
+          } else {
+            await this.#gitMove(git, request.absolutePath, indexedRelativePath, newRelativePath);
+          }
+        },
+        gitToTransportError,
+      );
+      return {
+        failures: failures.map(({ item, error }) => ({
+          relativePath: item.relativePath,
+          reason: error.code === Code.ALREADY_EXISTS ? MoveReason.ALREADY_EXISTS : MoveReason.OTHER,
+          message: error.message,
+        })),
+      };
     });
   }
 

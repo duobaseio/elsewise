@@ -3,9 +3,11 @@ import fs from 'node:fs/promises';
 import { Code } from '@elsewise/transport';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
+  CopyEntriesResponse_Failure_Reason as CopyReason,
   WatchDirectoriesResponse_Unavailable_Reason as DirectoryReason,
   WatchFilesResponse_Unavailable_Reason as FileReason,
   WatchRootsResponse_Root_Mode as Mode,
+  MoveEntriesResponse_Failure_Reason as MoveReason,
   WatchRootsResponse_Root_Reason as Reason,
   DirectoryListing_Entry_Type as Type,
   type WatchDirectoriesResponse,
@@ -77,9 +79,9 @@ describe('paths', () => {
     const calls = [
       harness.client.writeFile({ root, relativePath: '', content }),
       harness.client.createDirectory({ root, relativePath: '' }),
-      harness.client.copyEntry({ root, relativePath: '', newRelativePath: 'copied' }),
-      harness.client.moveEntry({ root, relativePath: '', newRelativePath: 'moved' }),
-      harness.client.deleteEntry({ root, relativePath: '' }),
+      harness.client.copyEntries({ root, entries: [{ relativePath: '', newRelativePath: 'copied' }] }),
+      harness.client.moveEntries({ root, entries: [{ relativePath: '', newRelativePath: 'moved' }] }),
+      harness.client.deleteEntries({ root, relativePaths: [''] }),
     ];
 
     for (const call of calls) {
@@ -327,12 +329,16 @@ describe('CreateDirectory', () => {
   });
 });
 
-describe('CopyEntry', () => {
+describe('CopyEntries', () => {
   test('copies file into new folder', async () => {
     await fs.writeFile(harness.nativeAt('a.txt'), 'a');
 
-    await harness.client.copyEntry({ root, relativePath: 'a.txt', newRelativePath: 'dir/b.txt' });
+    const response = await harness.client.copyEntries({
+      root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'dir/b.txt' }],
+    });
 
+    expect(response.failures).toEqual([]);
     await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('a');
     await expect(fs.readFile(harness.nativeAt('dir', 'b.txt'), 'utf8')).resolves.toBe('a');
   });
@@ -341,7 +347,7 @@ describe('CopyEntry', () => {
     await fs.mkdir(harness.nativeAt('dir', 'nested'), { recursive: true });
     await fs.writeFile(harness.nativeAt('dir', 'nested', 'a.txt'), 'a');
 
-    await harness.client.copyEntry({ root, relativePath: 'dir', newRelativePath: 'copy' });
+    await harness.client.copyEntries({ root, entries: [{ relativePath: 'dir', newRelativePath: 'copy' }] });
 
     await expect(fs.readFile(harness.nativeAt('copy', 'nested', 'a.txt'), 'utf8')).resolves.toBe('a');
     await expect(fs.readFile(harness.nativeAt('dir', 'nested', 'a.txt'), 'utf8')).resolves.toBe('a');
@@ -351,18 +357,47 @@ describe('CopyEntry', () => {
     await fs.mkdir(harness.nativeAt('dir'));
     await fs.symlink('../target', harness.nativeAt('dir', 'link'));
 
-    await harness.client.copyEntry({ root, relativePath: 'dir', newRelativePath: 'copy' });
+    await harness.client.copyEntries({ root, entries: [{ relativePath: 'dir', newRelativePath: 'copy' }] });
 
     await expect(fs.readlink(harness.nativeAt('copy', 'link'))).resolves.toBe('../target');
   });
 
-  test('refuses entry at new path', async () => {
+  test('copies entries in order', async () => {
+    await fs.writeFile(harness.nativeAt('a.txt'), 'a');
+
+    const response = await harness.client.copyEntries({
+      root,
+      entries: [
+        { relativePath: 'a.txt', newRelativePath: 'b.txt' },
+        { relativePath: 'b.txt', newRelativePath: 'c.txt' },
+      ],
+    });
+
+    expect(response.failures).toEqual([]);
+    await expect(fs.readFile(harness.nativeAt('c.txt'), 'utf8')).resolves.toBe('a');
+  });
+
+  test('reports failed entries and copies others', async () => {
     await fs.writeFile(harness.nativeAt('a.txt'), 'a');
     await fs.writeFile(harness.nativeAt('b.txt'), 'b');
+    await fs.mkdir(harness.nativeAt('dir'));
+    await fs.writeFile(harness.nativeAt('dir', 'a.txt'), 'old');
 
-    const call = harness.client.copyEntry({ root, relativePath: 'a.txt', newRelativePath: 'b.txt' });
-    await expect(call).rejects.toMatchObject({ code: Code.ALREADY_EXISTS });
-    await expect(fs.readFile(harness.nativeAt('b.txt'), 'utf8')).resolves.toBe('b');
+    const response = await harness.client.copyEntries({
+      root,
+      entries: [
+        { relativePath: 'a.txt', newRelativePath: 'dir/a.txt' },
+        { relativePath: 'missing.txt', newRelativePath: 'dir/missing.txt' },
+        { relativePath: 'b.txt', newRelativePath: 'dir/b.txt' },
+      ],
+    });
+
+    expect(response.failures).toMatchObject([
+      { relativePath: 'a.txt', reason: CopyReason.ALREADY_EXISTS },
+      { relativePath: 'missing.txt', reason: CopyReason.OTHER, message: expect.stringContaining('ENOENT') },
+    ]);
+    await expect(fs.readFile(harness.nativeAt('dir', 'a.txt'), 'utf8')).resolves.toBe('old');
+    await expect(fs.readFile(harness.nativeAt('dir', 'b.txt'), 'utf8')).resolves.toBe('b');
   });
 
   test('refuses folder at new path, without merging', async () => {
@@ -370,8 +405,9 @@ describe('CopyEntry', () => {
     await fs.writeFile(harness.nativeAt('a', 'new.txt'), '');
     await fs.mkdir(harness.nativeAt('b'));
 
-    const call = harness.client.copyEntry({ root, relativePath: 'a', newRelativePath: 'b' });
-    await expect(call).rejects.toMatchObject({ code: Code.ALREADY_EXISTS });
+    const response = await harness.client.copyEntries({ root, entries: [{ relativePath: 'a', newRelativePath: 'b' }] });
+
+    expect(response.failures).toMatchObject([{ relativePath: 'a', reason: CopyReason.ALREADY_EXISTS }]);
     await expect(fs.readdir(harness.nativeAt('b'))).resolves.toEqual([]);
   });
 
@@ -379,13 +415,16 @@ describe('CopyEntry', () => {
     await fs.writeFile(harness.nativeAt('readme.md'), 'a');
 
     for (const overwrite of [false, true]) {
-      const call = harness.client.copyEntry({
+      const response = await harness.client.copyEntries({
         root,
-        relativePath: 'readme.md',
-        newRelativePath: 'readme.md',
+        entries: [{ relativePath: 'readme.md', newRelativePath: 'readme.md' }],
         overwrite,
       });
-      await expect(call).rejects.toMatchObject({ code: overwrite ? Code.INVALID_ARGUMENT : Code.ALREADY_EXISTS });
+      expect(response.failures).toMatchObject([
+        overwrite
+          ? { reason: CopyReason.OTHER, message: 'an entry cannot overwrite itself' }
+          : { reason: CopyReason.ALREADY_EXISTS },
+      ]);
     }
     await expect(fs.readFile(harness.nativeAt('readme.md'), 'utf8')).resolves.toBe('a');
   });
@@ -397,13 +436,16 @@ describe('CopyEntry', () => {
     }
 
     for (const overwrite of [false, true]) {
-      const call = harness.client.copyEntry({
+      const response = await harness.client.copyEntries({
         root,
-        relativePath: 'readme.md',
-        newRelativePath: 'README.md',
+        entries: [{ relativePath: 'readme.md', newRelativePath: 'README.md' }],
         overwrite,
       });
-      await expect(call).rejects.toMatchObject({ code: overwrite ? Code.INVALID_ARGUMENT : Code.ALREADY_EXISTS });
+      expect(response.failures).toMatchObject([
+        overwrite
+          ? { reason: CopyReason.OTHER, message: 'an entry cannot overwrite itself' }
+          : { reason: CopyReason.ALREADY_EXISTS },
+      ]);
     }
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['readme.md']);
   });
@@ -412,7 +454,11 @@ describe('CopyEntry', () => {
     await fs.writeFile(harness.nativeAt('a.txt'), 'a');
     await fs.writeFile(harness.nativeAt('b.txt'), 'b');
 
-    await harness.client.copyEntry({ root, relativePath: 'a.txt', newRelativePath: 'b.txt', overwrite: true });
+    await harness.client.copyEntries({
+      root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'b.txt' }],
+      overwrite: true,
+    });
 
     await expect(fs.readFile(harness.nativeAt('b.txt'), 'utf8')).resolves.toBe('a');
   });
@@ -423,7 +469,7 @@ describe('CopyEntry', () => {
     await fs.mkdir(harness.nativeAt('b'));
     await fs.writeFile(harness.nativeAt('b', 'old.txt'), '');
 
-    await harness.client.copyEntry({ root, relativePath: 'a', newRelativePath: 'b', overwrite: true });
+    await harness.client.copyEntries({ root, entries: [{ relativePath: 'a', newRelativePath: 'b' }], overwrite: true });
 
     await expect(fs.readdir(harness.nativeAt('b'))).resolves.toEqual(['new.txt']);
   });
@@ -431,8 +477,14 @@ describe('CopyEntry', () => {
   test('refuses folder into itself', async () => {
     await fs.mkdir(harness.nativeAt('dir'));
 
-    const call = harness.client.copyEntry({ root, relativePath: 'dir', newRelativePath: 'dir/copy' });
-    await expect(call).rejects.toMatchObject({ code: Code.INVALID_ARGUMENT });
+    const response = await harness.client.copyEntries({
+      root,
+      entries: [{ relativePath: 'dir', newRelativePath: 'dir/copy' }],
+    });
+
+    expect(response.failures).toMatchObject([
+      { relativePath: 'dir', reason: CopyReason.OTHER, message: 'an entry cannot be copied into itself' },
+    ]);
     await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual([]);
   });
 
@@ -442,8 +494,13 @@ describe('CopyEntry', () => {
     await fs.mkdir(harness.nativeAt('b'));
     await fs.writeFile(harness.nativeAt('b', 'old.txt'), '');
 
-    const call = harness.client.copyEntry({ root, relativePath: 'a', newRelativePath: 'b', overwrite: true });
-    await expect(call).rejects.toMatchObject({ code: Code.PERMISSION_DENIED });
+    const response = await harness.client.copyEntries({
+      root,
+      entries: [{ relativePath: 'a', newRelativePath: 'b' }],
+      overwrite: true,
+    });
+
+    expect(response.failures).toMatchObject([{ reason: CopyReason.OTHER, message: expect.stringContaining('EACCES') }]);
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['a', 'b']);
     await expect(fs.readdir(harness.nativeAt('b'))).resolves.toEqual(['old.txt']);
   });
@@ -452,8 +509,9 @@ describe('CopyEntry', () => {
     await fs.mkdir(harness.nativeAt('a'));
     await fs.writeFile(harness.nativeAt('a', 'secret.txt'), '', { mode: 0o000 });
 
-    const call = harness.client.copyEntry({ root, relativePath: 'a', newRelativePath: 'b' });
-    await expect(call).rejects.toMatchObject({ code: Code.PERMISSION_DENIED });
+    const response = await harness.client.copyEntries({ root, entries: [{ relativePath: 'a', newRelativePath: 'b' }] });
+
+    expect(response.failures).toMatchObject([{ reason: CopyReason.OTHER, message: expect.stringContaining('EACCES') }]);
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['a']);
   });
 
@@ -461,40 +519,75 @@ describe('CopyEntry', () => {
     await fs.mkdir(harness.nativeAt('dir'));
     await fs.writeFile(harness.nativeAt('dir', 'a.txt'), '');
 
-    const call = harness.client.copyEntry({ root, relativePath: 'dir/a.txt', newRelativePath: 'dir', overwrite: true });
-    await expect(call).rejects.toMatchObject({ code: Code.INVALID_ARGUMENT });
-    await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual(['a.txt']);
-  });
+    const response = await harness.client.copyEntries({
+      root,
+      entries: [{ relativePath: 'dir/a.txt', newRelativePath: 'dir' }],
+      overwrite: true,
+    });
 
-  test('fails for missing entry', async () => {
-    const call = harness.client.copyEntry({ root, relativePath: 'missing.txt', newRelativePath: 'b.txt' });
-    await expect(call).rejects.toMatchObject({ code: Code.NOT_FOUND });
+    expect(response.failures).toMatchObject([
+      { reason: CopyReason.OTHER, message: 'an entry cannot overwrite a folder containing it' },
+    ]);
+    await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual(['a.txt']);
   });
 });
 
-describe('MoveEntry', () => {
+describe('MoveEntries', () => {
   test('moves the entry and creates the parent directories of its new path', async () => {
     await fs.writeFile(harness.nativeAt('a.txt'), 'hello');
 
-    await harness.client.moveEntry({ root, relativePath: 'a.txt', newRelativePath: 'dir/b.txt' });
+    const response = await harness.client.moveEntries({
+      root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'dir/b.txt' }],
+    });
 
+    expect(response.failures).toEqual([]);
     await expect(fs.readFile(harness.nativeAt('dir', 'b.txt'), 'utf8')).resolves.toBe('hello');
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['dir']);
   });
 
-  test('refuses a new path that already has an entry', async () => {
+  test('moves entries in order', async () => {
+    await fs.writeFile(harness.nativeAt('a.txt'), 'a');
+
+    const response = await harness.client.moveEntries({
+      root,
+      entries: [
+        { relativePath: 'a.txt', newRelativePath: 'b.txt' },
+        { relativePath: 'b.txt', newRelativePath: 'c.txt' },
+      ],
+    });
+
+    expect(response.failures).toEqual([]);
+    await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['c.txt']);
+  });
+
+  test('reports failed entries and moves others', async () => {
     await fs.writeFile(harness.nativeAt('a.txt'), 'a');
     await fs.writeFile(harness.nativeAt('b.txt'), 'b');
+    await fs.mkdir(harness.nativeAt('dir'));
+    await fs.writeFile(harness.nativeAt('dir', 'a.txt'), 'old');
 
-    const call = harness.client.moveEntry({ root, relativePath: 'a.txt', newRelativePath: 'b.txt' });
-    await expect(call).rejects.toMatchObject({ code: Code.ALREADY_EXISTS });
-    await expect(fs.readFile(harness.nativeAt('b.txt'), 'utf8')).resolves.toBe('b');
+    const response = await harness.client.moveEntries({
+      root,
+      entries: [
+        { relativePath: 'a.txt', newRelativePath: 'dir/a.txt' },
+        { relativePath: 'missing.txt', newRelativePath: 'dir/missing.txt' },
+        { relativePath: 'b.txt', newRelativePath: 'dir/b.txt' },
+      ],
+    });
+
+    expect(response.failures).toMatchObject([
+      { relativePath: 'a.txt', reason: MoveReason.ALREADY_EXISTS },
+      { relativePath: 'missing.txt', reason: MoveReason.OTHER, message: expect.stringContaining('ENOENT') },
+    ]);
+    await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['a.txt', 'dir']);
+    await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual(['a.txt', 'b.txt']);
   });
 
   test('renames an entry to another capitalization of the same name', async () => {
     await fs.writeFile(harness.nativeAt('readme.md'), '');
 
-    await harness.client.moveEntry({ root, relativePath: 'readme.md', newRelativePath: 'README.md' });
+    await harness.client.moveEntries({ root, entries: [{ relativePath: 'readme.md', newRelativePath: 'README.md' }] });
 
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['README.md']);
   });
@@ -504,7 +597,11 @@ describe('MoveEntry', () => {
     await fs.mkdir(harness.nativeAt('b.txt'));
     await fs.writeFile(harness.nativeAt('b.txt', 'old.txt'), '');
 
-    await harness.client.moveEntry({ root, relativePath: 'a.txt', newRelativePath: 'b.txt', overwrite: true });
+    await harness.client.moveEntries({
+      root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'b.txt' }],
+      overwrite: true,
+    });
 
     await expect(fs.readFile(harness.nativeAt('b.txt'), 'utf8')).resolves.toBe('a');
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['b.txt']);
@@ -514,38 +611,40 @@ describe('MoveEntry', () => {
     await fs.mkdir(harness.nativeAt('dir'));
     await fs.writeFile(harness.nativeAt('dir', 'a.txt'), '');
 
-    const call = harness.client.moveEntry({
+    const response = await harness.client.moveEntries({
       root,
-      relativePath: 'dir/a.txt',
-      newRelativePath: 'dir',
+      entries: [{ relativePath: 'dir/a.txt', newRelativePath: 'dir' }],
       overwrite: true,
     });
-    await expect(call).rejects.toMatchObject({ code: Code.INVALID_ARGUMENT });
+
+    expect(response.failures).toMatchObject([
+      { reason: MoveReason.OTHER, message: 'an entry cannot overwrite a folder containing it' },
+    ]);
     await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual(['a.txt']);
   });
 
   test('renames case only when overwriting', async () => {
     await fs.writeFile(harness.nativeAt('readme.md'), 'a');
 
-    await harness.client.moveEntry({ root, relativePath: 'readme.md', newRelativePath: 'README.md', overwrite: true });
+    await harness.client.moveEntries({
+      root,
+      entries: [{ relativePath: 'readme.md', newRelativePath: 'README.md' }],
+      overwrite: true,
+    });
 
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual(['README.md']);
     await expect(fs.readFile(harness.nativeAt('README.md'), 'utf8')).resolves.toBe('a');
   });
-
-  test('fails for a missing entry', async () => {
-    const call = harness.client.moveEntry({ root, relativePath: 'missing.txt', newRelativePath: 'b.txt' });
-    await expect(call).rejects.toMatchObject({ code: Code.NOT_FOUND });
-  });
 });
 
-describe('DeleteEntry', () => {
+describe('DeleteEntries', () => {
   test('deletes a directory recursively', async () => {
     await fs.mkdir(harness.nativeAt('dir', 'nested'), { recursive: true });
     await fs.writeFile(harness.nativeAt('dir', 'nested', 'a.txt'), '');
 
-    await harness.client.deleteEntry({ root, relativePath: 'dir' });
+    const response = await harness.client.deleteEntries({ root, relativePaths: ['dir'] });
 
+    expect(response.failures).toEqual([]);
     await expect(fs.readdir(harness.nativeAt())).resolves.toEqual([]);
   });
 
@@ -554,14 +653,19 @@ describe('DeleteEntry', () => {
     await fs.writeFile(harness.nativeAt('dir', 'a.txt'), '');
     await fs.symlink(harness.nativeAt('dir'), harness.nativeAt('link'));
 
-    await harness.client.deleteEntry({ root, relativePath: 'link' });
+    await harness.client.deleteEntries({ root, relativePaths: ['link'] });
 
     await expect(fs.readdir(harness.nativeAt('dir'))).resolves.toEqual(['a.txt']);
   });
 
-  test('fails for a missing entry', async () => {
-    const call = harness.client.deleteEntry({ root, relativePath: 'missing' });
-    await expect(call).rejects.toMatchObject({ code: Code.NOT_FOUND });
+  test('reports failed entries and deletes others', async () => {
+    await fs.writeFile(harness.nativeAt('a.txt'), '');
+    await fs.writeFile(harness.nativeAt('b.txt'), '');
+
+    const response = await harness.client.deleteEntries({ root, relativePaths: ['a.txt', 'missing', 'b.txt'] });
+
+    expect(response.failures).toMatchObject([{ relativePath: 'missing', message: expect.stringContaining('ENOENT') }]);
+    await expect(fs.readdir(harness.nativeAt())).resolves.toEqual([]);
   });
 });
 
