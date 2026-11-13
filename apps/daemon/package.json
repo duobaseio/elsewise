@@ -25,7 +25,7 @@
     "check": "biome check"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^2.14.1",
+    "@bufbuild/protobuf": "^2.17.0",
     "@elsewise/core": "workspace:*",
     "@elsewise/daemon-plugin": "workspace:*",
     "@elsewise/transport": "workspace:*",
@@ -33,21 +33,21 @@
     "@parcel/watcher": "^2.6.0",
     "@xterm/addon-serialize": "^0.14.0",
     "@xterm/headless": "^6.0.0",
-    "execa": "^10.1.1",
-    "kysely": "^0.29.7",
+    "execa": "^10.2.1",
+    "kysely": "^0.29.8",
     "which-command": "^0.1.0",
-    "ws": "^8.21.3"
+    "ws": "^8.22.2"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
-    "@bufbuild/buf": "^1.72.0",
-    "@bufbuild/protoc-gen-es": "^2.14.1",
-    "@types/node": "^26.4.1",
-    "@types/ws": "^8.18.1",
+    "@biomejs/biome": "^2.6.7",
+    "@bufbuild/buf": "^1.75.0",
+    "@bufbuild/protoc-gen-es": "^2.17.0",
+    "@types/node": "^26.6.6",
+    "@types/ws": "^8.18.2",
     "esbuild": "^0.28.2",
     "kysely-codegen": "^0.20.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.1.0"
   }
 }

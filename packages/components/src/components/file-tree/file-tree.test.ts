@@ -17,16 +17,23 @@ const PATHS = [
 type Announcement = readonly [path: string, expanded: boolean];
 
 function modelOf(initialExpandedPaths: readonly string[]): FileTreeModel {
-  let model: FileTreeModel | null = null;
-  function Harness() {
-    model = useFileTree({ initialPaths: PATHS, initialExpandedPaths });
-    return null;
-  }
-  renderToString(createElement(Harness));
-  if (model == null) {
+  const model: { current: FileTreeModel | null } = { current: null };
+  renderToString(createElement(Harness, { model, initialExpandedPaths }));
+  if (model.current == null) {
     throw new Error('no model');
   }
-  return model;
+  return model.current;
+}
+
+function Harness({
+  model,
+  initialExpandedPaths,
+}: {
+  model: { current: FileTreeModel | null };
+  initialExpandedPaths: readonly string[];
+}) {
+  model.current = useFileTree({ initialPaths: PATHS, initialExpandedPaths });
+  return null;
 }
 
 function watched(initialExpandedPaths: readonly string[] = []) {
