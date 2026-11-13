@@ -55,6 +55,7 @@ function bridge(): string[] {
       cut: () => called.push('cut'),
       copy: () => called.push('copy'),
       paste: () => called.push('paste'),
+      absolutePathOf: () => '',
       showPath: async () => {},
       pickPaths: async () => [],
       setBrightness: () => {},

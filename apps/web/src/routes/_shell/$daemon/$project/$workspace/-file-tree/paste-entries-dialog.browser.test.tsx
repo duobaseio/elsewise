@@ -285,7 +285,11 @@ describe('PasteEntriesDialog', () => {
       copyEntries: async () =>
         create(CopyEntriesResponseSchema, {
           failures: [
-            { relativePath: 'README.md', reason: CopyReason.OTHER, message: 'an entry cannot be moved into itself' },
+            {
+              relativePath: 'README.md',
+              reason: CopyReason.OTHER,
+              message: 'an entry cannot be moved into itself',
+            },
           ],
         }),
     });

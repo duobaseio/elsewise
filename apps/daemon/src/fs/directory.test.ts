@@ -3,9 +3,17 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { Code } from '@elsewise/transport';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { DirectoryListing_Entry_Type as Type } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { isCaseInsensitive, isRespelling, listDirectory, refuseCopy, refuseExisting, refuseMove } from './directory';
+import {
+  copyAtomically,
+  isCaseInsensitive,
+  isRespelling,
+  listDirectory,
+  refuseCopy,
+  refuseExisting,
+  refuseMove,
+} from './directory';
 
 let root: string;
 
@@ -14,6 +22,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await fs.rm(root, { recursive: true, force: true });
 });
 
@@ -260,6 +269,64 @@ describe('refuseCopy', () => {
   });
 });
 
+describe('copyAtomically', () => {
+  test('copies file and creates parent directories', async () => {
+    await fs.writeFile(path.join(root, 'a.txt'), 'a');
+
+    await copyAtomically(path.join(root, 'a.txt'), path.join(root, 'nested', 'dir', 'a.txt'), false);
+
+    await expect(fs.readFile(path.join(root, 'nested', 'dir', 'a.txt'), 'utf8')).resolves.toBe('a');
+    await expect(fs.readFile(path.join(root, 'a.txt'), 'utf8')).resolves.toBe('a');
+  });
+
+  test('copies folder recursively', async () => {
+    await fs.mkdir(path.join(root, 'dir', 'nested'), { recursive: true });
+    await fs.writeFile(path.join(root, 'dir', 'nested', 'a.txt'), 'a');
+
+    await copyAtomically(path.join(root, 'dir'), path.join(root, 'copy'), false);
+
+    await expect(fs.readFile(path.join(root, 'copy', 'nested', 'a.txt'), 'utf8')).resolves.toBe('a');
+  });
+
+  test.runIf(process.platform !== 'win32')('copies symbolic link as link', async () => {
+    await fs.writeFile(path.join(root, 'a.txt'), '');
+    await fs.symlink('a.txt', path.join(root, 'link'));
+
+    await copyAtomically(path.join(root, 'link'), path.join(root, 'copy'), false);
+
+    await expect(fs.readlink(path.join(root, 'copy'))).resolves.toBe('a.txt');
+  });
+
+  test('replaces destination when overwriting', async () => {
+    await fs.writeFile(path.join(root, 'a.txt'), 'a');
+    await fs.mkdir(path.join(root, 'b'));
+    await fs.writeFile(path.join(root, 'b', 'old.txt'), '');
+
+    await copyAtomically(path.join(root, 'a.txt'), path.join(root, 'b'), true);
+
+    await expect(fs.readFile(path.join(root, 'b'), 'utf8')).resolves.toBe('a');
+    await expect(fs.readdir(root)).resolves.toEqual(['a.txt', 'b']);
+  });
+
+  test('keeps destination when rename fails', async () => {
+    await fs.mkdir(path.join(root, 'a'));
+    await fs.writeFile(path.join(root, 'a', 'new.txt'), '');
+    await fs.mkdir(path.join(root, 'b'));
+    await fs.writeFile(path.join(root, 'b', 'old.txt'), '');
+
+    await expect(copyAtomically(path.join(root, 'a'), path.join(root, 'b'), false)).rejects.toThrow();
+
+    await expect(fs.readdir(path.join(root, 'b'))).resolves.toEqual(['old.txt']);
+    await expect(fs.readdir(root)).resolves.toEqual(['a', 'b']);
+  });
+
+  test('leaves nothing for missing entry', async () => {
+    await expect(copyAtomically(path.join(root, 'missing'), path.join(root, 'copy'), false)).rejects.toThrow();
+
+    await expect(fs.readdir(root)).resolves.toEqual([]);
+  });
+});
+
 describe('refuseMove', () => {
   test('accepts missing destination', async () => {
     await fs.writeFile(path.join(root, 'a.txt'), '');
@@ -337,6 +404,22 @@ describe('refuseMove', () => {
     await fs.mkdir(path.join(root, 'dir2'));
 
     await expect(refuseMove(path.join(root, 'dir'), path.join(root, 'dir2', 'dir'), false)).resolves.toBeUndefined();
+  });
+
+  test('refuses mount point', async () => {
+    await fs.mkdir(path.join(root, 'volume'));
+    const lstat = fs.lstat;
+    vi.spyOn(fs, 'lstat').mockImplementation(async (file, options) => {
+      const stats = await lstat(file, { bigint: true });
+      return file === path.join(root, 'volume') && options?.bigint
+        ? { ...stats, dev: stats.dev + 1n }
+        : lstat(file, options);
+    });
+
+    await expect(refuseMove(path.join(root, 'volume'), path.join(root, 'moved'), false)).rejects.toMatchObject({
+      code: Code.INVALID_ARGUMENT,
+      message: 'a mount point cannot be moved',
+    });
   });
 
   test('fails for missing entry', async () => {

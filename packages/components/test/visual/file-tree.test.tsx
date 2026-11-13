@@ -172,7 +172,7 @@ function Tree({
   cutPaths?: readonly string[];
   gitStatusBadges?: boolean;
   indentGuides?: boolean;
-  dropTarget?: boolean;
+  dropTarget?: string;
 }) {
   const model = useFileTree(options);
   return (
@@ -312,7 +312,7 @@ test.each(THEMES)('file tree drop target (%s)', async (theme) => {
     <Sheet theme={theme}>
       <Tree
         box={DROP_TARGET_BOX}
-        dropTarget
+        dropTarget=""
         initialExpandedPaths={['src/']}
         initialGitStatus={[{ path: 'src/modified.rs', status: 'modified' }]}
         initialPaths={DROP_TARGET_PATHS}
@@ -325,6 +325,25 @@ test.each(THEMES)('file tree drop target (%s)', async (theme) => {
   await settleTree(DROP_TARGET_ROWS);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-drop-target-${theme}`);
+});
+
+test.each(THEMES)('file tree folder drop target (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <Tree
+        box={DROP_TARGET_BOX}
+        dropTarget="src/"
+        initialExpandedPaths={['src/']}
+        initialGitStatus={[{ path: 'src/modified.rs', status: 'modified' }]}
+        initialPaths={DROP_TARGET_PATHS}
+        label="Folder drop target"
+      />
+    </Sheet>,
+  );
+
+  await settleTree(DROP_TARGET_ROWS);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`file-tree-folder-drop-target-${theme}`);
 });
 
 test.each(THEMES)('file tree file drag image (%s)', async (theme) => {

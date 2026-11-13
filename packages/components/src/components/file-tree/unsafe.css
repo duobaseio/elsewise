@@ -41,11 +41,23 @@
 [data-type="item"][data-item-context-hover="true"] {
   background-color: var(--trees-bg);
   background-image: linear-gradient(var(--trees-bg-muted), var(--trees-bg-muted));
+  --truncate-marker-background-overlay-color: transparent;
 }
 
 /* noinspection CssUnresolvedCustomProperty */
 [data-type="item"][data-item-selected="true"] {
   background-color: var(--trees-selected-bg);
+  --truncate-marker-background-overlay-color: var(--trees-selected-bg);
+}
+
+/* The middle truncation marker paints the row's colours again, so it also needs the hover layer. */
+/* noinspection CssUnresolvedCustomProperty */
+:is([data-type="item"]:hover, [data-type="item"][data-item-context-hover="true"]) [data-truncate-marker],
+:is([data-type="item"]:hover, [data-type="item"][data-item-context-hover="true"]) [data-truncate-marker]::before,
+:is([data-type="item"]:hover, [data-type="item"][data-item-context-hover="true"]) [data-truncate-marker]::after {
+  background-image:
+    linear-gradient(var(--trees-bg-muted), var(--trees-bg-muted)),
+    linear-gradient(var(--truncate-marker-background-overlay-color), var(--truncate-marker-background-overlay-color));
 }
 
 /* Only show the focus ring for keyboard focus. */

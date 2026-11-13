@@ -1,4 +1,5 @@
 import { isUtf8 } from 'node:buffer';
+import { randomUUID } from 'node:crypto';
 import type { BigIntStats, Dirent, Stats } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -130,7 +131,8 @@ export async function refuseCopy(
  *
  * Fails with:
  * * ALREADY_EXISTS if another entry is at `newAbsoluteNativePath`, unless `overwrite`.
- * * INVALID_ARGUMENT if `newAbsoluteNativePath` is inside the entry, or overwriting would remove the entry.
+ * * INVALID_ARGUMENT if the entry is a mount point, `newAbsoluteNativePath` is inside the entry, or overwriting would
+ *   remove the entry.
  */
 export async function refuseMove(
   absoluteNativePath: string,
@@ -138,6 +140,10 @@ export async function refuseMove(
   overwrite: boolean,
 ): Promise<void> {
   const source = await fs.lstat(absoluteNativePath, { bigint: true });
+  if (source.dev !== (await fs.lstat(path.dirname(absoluteNativePath), { bigint: true })).dev) {
+    throw new TransportError(Code.INVALID_ARGUMENT, 'a mount point cannot be moved');
+  }
+
   const destination = await lstat(newAbsoluteNativePath);
   if (destination && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
     if (!overwrite) {
@@ -186,4 +192,27 @@ async function contains(entry: BigIntStats, absoluteNativePath: string): Promise
     }
   }
   return false;
+}
+
+/**
+ * Atomically copies the entry at `absoluteNativePath` to `newAbsoluteNativePath`, replacing what is there if
+ * `overwrite`. Creates the parent directories if required.
+ */
+export async function copyAtomically(
+  absoluteNativePath: string,
+  newAbsoluteNativePath: string,
+  overwrite: boolean,
+): Promise<void> {
+  await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+
+  const copyAbsoluteNativePath = `${newAbsoluteNativePath}.${randomUUID()}`;
+  try {
+    await fs.cp(absoluteNativePath, copyAbsoluteNativePath, { recursive: true, verbatimSymlinks: true });
+    if (overwrite) {
+      await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+    }
+    await fs.rename(copyAbsoluteNativePath, newAbsoluteNativePath);
+  } finally {
+    await fs.rm(copyAbsoluteNativePath, { recursive: true, force: true });
+  }
 }

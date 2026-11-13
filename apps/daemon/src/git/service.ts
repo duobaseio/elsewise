@@ -7,7 +7,7 @@ import type { DirectoryWatcher } from '../directory-watcher';
 import { isCaseInsensitive, isRespelling, refuseExisting, refuseMove } from '../fs/directory';
 import { attemptEach } from '../fs/error';
 import { isBinary } from '../fs/file';
-import { toNativePath, toNativeRoot } from '../fs/path';
+import { toNativeAbsolutePath, toNativePath } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
 import {
   type AbortOperationRequest,
@@ -482,7 +482,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   addWorktree(request: AddWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const newPath = toNativeRoot(request.newAbsolutePath);
+      const newPath = toNativeAbsolutePath(request.newAbsolutePath);
       await refuseExisting(newPath, 'empty');
       const args = ['worktree', 'add'];
       if (request.branch === '') {
@@ -506,8 +506,8 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   moveWorktree(request: MoveWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const newPath = toNativeRoot(request.newAbsolutePath);
-      const worktree = toNativeRoot(request.worktreeAbsolutePath);
+      const newPath = toNativeAbsolutePath(request.newAbsolutePath);
+      const worktree = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktree);
       await refuseExisting(newPath, 'missing');
       await git.run(['worktree', 'move', worktree, newPath]);
@@ -518,7 +518,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   lockWorktree(request: LockWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const worktreePath = toNativeRoot(request.worktreeAbsolutePath);
+      const worktreePath = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktreePath);
       const args = ['worktree', 'lock'];
       if (request.reason !== '') {
@@ -532,7 +532,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   unlockWorktree(request: UnlockWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const worktreePath = toNativeRoot(request.worktreeAbsolutePath);
+      const worktreePath = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await git.run(['worktree', 'unlock', worktreePath]);
       return { worktree: await readWorktree(git, worktreePath) };
     });
@@ -541,7 +541,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   removeWorktree(request: RemoveWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const worktree = toNativeRoot(request.worktreeAbsolutePath);
+      const worktree = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktree);
       const args = ['worktree', 'remove'];
       if (request.force) {
@@ -919,7 +919,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   }
 
   async #open(absolutePath: string): Promise<Git> {
-    const absoluteNativePath = toNativeRoot(absolutePath);
+    const absoluteNativePath = toNativeAbsolutePath(absolutePath);
     const stats = await fs.stat(absoluteNativePath);
     if (!stats.isDirectory()) {
       throw new TransportError(Code.FAILED_PRECONDITION, 'the path is not a directory');

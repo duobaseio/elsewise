@@ -8,7 +8,8 @@ package elsewise.daemon.file_system.v1;
 // - `root`: the absolute, protocol path (`/`-separated path) of the folder a request works in, typically a worktree's
 //   folder.
 // - `relative_path`: a location inside the root, protocol path (`/`-separated) with no `.` or `..` segment. Empty
-//   refers to the root itself.
+//   refers to the root itself. When the root is empty, every path in the request is an absolute protocol path
+//   instead.
 // - `hash`: the SHA-256 of a file's content.
 service FileSystemService {
   // Watches directories.

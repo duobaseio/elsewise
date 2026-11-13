@@ -24,6 +24,7 @@ async function open() {
       cut() {},
       copy() {},
       paste() {},
+      absolutePathOf: () => '',
       showPath: async () => {},
       pickPaths: async () => [],
       setBrightness() {},
