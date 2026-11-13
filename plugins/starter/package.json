@@ -21,7 +21,7 @@
     "check": "biome check"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
+    "@biomejs/biome": "^2.6.7",
     "@elsewise/plugin": "link:../../packages/plugin"
   }
 }

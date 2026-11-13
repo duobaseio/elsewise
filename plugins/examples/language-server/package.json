@@ -18,7 +18,7 @@
     "check": "biome check"
   },
   "dependencies": {
-    "prettier": "^3.9.9"
+    "prettier": "^3.10.0"
   },
   "peerDependencies": {
     "@codemirror/language": "^6.12.4",
@@ -26,13 +26,13 @@
     "vscode-languageserver-protocol": "^3.18.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.14",
+    "@biomejs/biome": "^2.6.7",
     "@elsewise/frontend-plugin": "workspace:*",
     "@elsewise/plugin": "workspace:*",
     "tsserver": "npm:typescript@^6.0.3",
     "typescript": "^7.0.2",
-    "typescript-language-server": "6.0.1",
-    "vite": "^8.3.0",
-    "ws": "^8.22.0"
+    "typescript-language-server": "6.0.3",
+    "vite": "^8.3.8",
+    "ws": "^8.22.2"
   }
 }

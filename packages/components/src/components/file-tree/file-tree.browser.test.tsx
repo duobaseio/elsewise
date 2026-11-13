@@ -38,42 +38,70 @@ async function mount(
   cutPaths?: readonly string[],
 ) {
   const model: { current: FileTreeModel | null } = { current: null };
-
-  function Harness({ cutPaths }: { cutPaths?: readonly string[] }) {
-    model.current = useFileTree({
-      initialExpandedPaths: ['daemon/', 'daemon/src/'],
-      initialGitStatus: GIT_STATUS,
-      initialPaths: PATHS,
-      ...options,
-    });
-    return (
-      <FileTree
-        aria-label="Geometry"
-        cutPaths={cutPaths}
+  const harness = (paths?: readonly string[]) => (
+    <div className="h-64 w-72">
+      <Harness
+        model={model}
+        options={options}
         gitStatusBadges={gitStatusBadges}
         indentGuides={indentGuides}
-        model={model.current}
+        cutPaths={paths}
       />
-    );
-  }
-
-  const screen = await render(
-    <div className="h-64 w-72">
-      <Harness cutPaths={cutPaths} />
-    </div>,
+    </div>
   );
+
+  const screen = await render(harness(cutPaths));
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
   if (shadowRoot == null) {
     throw new Error('no shadow root');
   }
-  const cut = (paths?: readonly string[]) =>
-    screen.rerender(
-      <div className="h-64 w-72">
-        <Harness cutPaths={paths} />
-      </div>,
-    );
+  const cut = (paths?: readonly string[]) => screen.rerender(harness(paths));
   return { model, shadowRoot, cut };
+}
+
+function Harness({
+  model,
+  options,
+  gitStatusBadges,
+  indentGuides,
+  cutPaths,
+}: {
+  model: { current: FileTreeModel | null };
+  options: Partial<FileTreeOptions>;
+  gitStatusBadges?: boolean;
+  indentGuides?: boolean;
+  cutPaths?: readonly string[];
+}) {
+  model.current = useFileTree({
+    initialExpandedPaths: ['daemon/', 'daemon/src/'],
+    initialGitStatus: GIT_STATUS,
+    initialPaths: PATHS,
+    ...options,
+  });
+  return (
+    <FileTree
+      aria-label="Geometry"
+      cutPaths={cutPaths}
+      gitStatusBadges={gitStatusBadges}
+      indentGuides={indentGuides}
+      model={model.current}
+    />
+  );
+}
+
+function DropTree() {
+  return <FileTree aria-label="Drop" dropTarget model={useFileTree({ initialPaths: PATHS })} />;
+}
+
+function FlatTree() {
+  const model = useFileTree({ initialPaths: ['a.rs', 'b.rs'] });
+  return <FileTree aria-label="Flat" model={model} />;
+}
+
+function OverridesTree() {
+  const model = useFileTree({ initialExpandedPaths: ['daemon/', 'daemon/src/'], initialPaths: PATHS });
+  return <FileTree aria-label="Overrides" model={model} />;
 }
 
 function isExpanded(model: FileTreeModel | null, path: string): boolean {
@@ -196,10 +224,7 @@ test('theme.css reaches the host, and density keeps the inline style to itself',
 });
 
 test('drop target tints the tree', async () => {
-  function Harness() {
-    return <FileTree aria-label="Drop" dropTarget model={useFileTree({ initialPaths: PATHS })} />;
-  }
-  await render(<Harness />);
+  await render(<DropTree />);
   const host = document.querySelector<HTMLElement>('file-tree-container');
   if (host == null) {
     throw new Error('no host');
@@ -219,14 +244,9 @@ test("a file's icon aligns with a sibling folder's icon", async () => {
 });
 
 test('files without sibling folders start where chevron draws', async () => {
-  function Tree() {
-    const model = useFileTree({ initialPaths: ['a.rs', 'b.rs'] });
-    return <FileTree aria-label="Flat" model={model} />;
-  }
-
   await render(
     <div className="h-64 w-72">
-      <Tree />
+      <FlatTree />
     </div>,
   );
   await settleTree(2);
@@ -504,20 +524,11 @@ test('FileIconProvider overrides reach the tree, at mount and on change', async 
     extensions: { rs: { kind: 'letters', letters: text, tint: null } },
   });
 
-  function Harness({ icons }: { icons: Partial<FileIcons> }) {
-    return (
-      <FileIconProvider icons={icons}>
-        <Tree />
-      </FileIconProvider>
-    );
-  }
-  function Tree() {
-    const model = useFileTree({ initialExpandedPaths: ['daemon/', 'daemon/src/'], initialPaths: PATHS });
-    return <FileTree aria-label="Overrides" model={model} />;
-  }
-
-  const first = letters('XA');
-  const screen = await render(<Harness icons={first} />);
+  const screen = await render(
+    <FileIconProvider icons={letters('XA')}>
+      <OverridesTree />
+    </FileIconProvider>,
+  );
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
   if (shadowRoot == null) {
@@ -525,7 +536,11 @@ test('FileIconProvider overrides reach the tree, at mount and on change', async 
   }
   expect(lettersOf(shadowRoot, 'daemon/src/main.rs')).toBe('XA');
 
-  await screen.rerender(<Harness icons={letters('XB')} />);
+  await screen.rerender(
+    <FileIconProvider icons={letters('XB')}>
+      <OverridesTree />
+    </FileIconProvider>,
+  );
   await vi.waitFor(() => expect(lettersOf(shadowRoot, 'daemon/src/main.rs')).toBe('XB'));
 });
 
@@ -538,14 +553,9 @@ test('IconProvider overrides reach the chevron and the folder icons', async () =
   );
   const icons: Partial<Icons> = { expand: mark('chevron'), folder: mark('closed'), 'folder-open': mark('open') };
 
-  function Tree() {
-    const model = useFileTree({ initialExpandedPaths: ['daemon/', 'daemon/src/'], initialPaths: PATHS });
-    return <FileTree aria-label="Overrides" model={model} />;
-  }
-
   await render(
     <IconProvider icons={icons}>
-      <Tree />
+      <OverridesTree />
     </IconProvider>,
   );
   await settleTree(ROWS);
