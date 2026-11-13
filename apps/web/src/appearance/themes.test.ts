@@ -49,19 +49,20 @@ async function themes(
   const store = await pluginStore(plugins);
   const client = new QueryClient();
   client.setQueryData(userThemesQuery.queryKey, user);
-  let result: readonly LoadedTheme[] = [];
-  function Probe() {
-    result = useLoadedThemes();
-    return null;
-  }
+  const result: { current: readonly LoadedTheme[] } = { current: [] };
   renderToString(
     createElement(
       QueryClientProvider,
       { client },
-      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+      createElement(PluginStoreContext, { value: store }, createElement(Probe, { result })),
     ),
   );
-  return result;
+  return result.current;
+}
+
+function Probe({ result }: { result: { current: readonly LoadedTheme[] } }) {
+  result.current = useLoadedThemes();
+  return null;
 }
 
 // Returns `variant` with the scrollbar markers' and diff's colors it resolves to, which it leaves to the interface's.

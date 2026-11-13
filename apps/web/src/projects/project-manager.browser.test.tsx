@@ -19,6 +19,9 @@ const ELSEWISE = { daemon: 'local', project: 'elsewise' };
 const DHAKA: WorkspaceId = { ...ELSEWISE, workspace: 'dhaka' };
 const TOKYO: WorkspaceId = { daemon: 'local', project: 'dotfiles', workspace: 'tokyo' };
 
+const First = () => null;
+const Second = () => null;
+
 function setup() {
   const elsewise = create(ProjectSchema, { id: 'elsewise', name: 'elsewise', state: { case: 'ok', value: {} } });
   const daemon = {
@@ -244,8 +247,6 @@ describe('searchRepositories', () => {
 
   test('keeps first defined icon', async () => {
     const { projects } = setup();
-    const First = () => null;
-    const Second = () => null;
     projects.addRepositorySources([
       async () => [{ id: 'github.matthias', items: [DOTFILES] }],
       async () => [{ id: 'github.matthias', icon: First, items: [NOTES] }],

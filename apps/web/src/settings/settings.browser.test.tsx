@@ -19,12 +19,9 @@ describe('useEditorSettings', () => {
         languages: { JavaScript: { tabSize: 2 } },
       },
     });
-    function Setting() {
-      return <output>{useEditorSettings(language, key)}</output>;
-    }
     await render(
       <QueryClientProvider client={client}>
-        <Setting />
+        <Setting language={language} settingKey={key} />
       </QueryClientProvider>,
     );
     return page.getByRole('status');
@@ -61,3 +58,7 @@ describe('OPEN_SETTINGS', () => {
     await expect(open('/settings/local/terminal')).resolves.toBe('/settings/local/terminal');
   });
 });
+
+function Setting({ language, settingKey }: { language: string; settingKey: 'tabSize' }) {
+  return <output>{useEditorSettings(language, settingKey)}</output>;
+}

@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { describe, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import type { CommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
@@ -29,39 +30,40 @@ async function mount() {
   const ready = new Promise<XTerm>((r) => {
     resolve = r;
   });
-  function Probe() {
-    const [keymap] = useState(() => terminalKeymap(application.commands));
-    const [terminal, setTerminal] = useState<XTerm | null>(null);
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      if (host.current === null) {
-        return;
-      }
-      // The search add-on's highlights reach proposed API.
-      const xterm = new XTerm({ allowProposedApi: true });
-      xterm.loadAddon(keymap);
-      xterm.open(host.current);
-      setTerminal(xterm);
-      resolve(xterm);
-      return () => xterm.dispose();
-    }, [keymap]);
-    return (
-      <div className="relative" style={{ height: 300, width: 600 }}>
-        <div className="h-full" ref={host} />
-        <TerminalSearch terminal={terminal} />
-      </div>
-    );
-  }
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
         <ApplicationManagerContext value={application}>
-          <Probe />
+          <Probe commands={application.commands} resolve={resolve} />
         </ApplicationManagerContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
   return { client, xterm: await ready };
+}
+
+function Probe({ commands, resolve }: { commands: CommandManager; resolve: (xterm: XTerm) => void }) {
+  const [keymap] = useState(() => terminalKeymap(commands));
+  const [terminal, setTerminal] = useState<XTerm | null>(null);
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (host.current === null) {
+      return;
+    }
+    // The search add-on's highlights reach proposed API.
+    const xterm = new XTerm({ allowProposedApi: true });
+    xterm.loadAddon(keymap);
+    xterm.open(host.current);
+    setTerminal(xterm);
+    resolve(xterm);
+    return () => xterm.dispose();
+  }, [keymap, resolve]);
+  return (
+    <div className="relative" style={{ height: 300, width: 600 }}>
+      <div className="h-full" ref={host} />
+      <TerminalSearch terminal={terminal} />
+    </div>
+  );
 }
 
 // Writes `text`, then opens the search bar with its shortcut.

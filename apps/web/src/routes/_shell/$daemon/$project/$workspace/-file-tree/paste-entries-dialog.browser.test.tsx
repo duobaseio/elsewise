@@ -347,7 +347,7 @@ describe('PasteEntriesDialog', () => {
     await expect.element(page.getByLabelText('To folder')).toHaveFocus();
   });
 
-  test('completes again after completing', async () => {
+  test('completes again after typing over folder', async () => {
     const application = await mount();
     open(application, 'src/', { cut: true, paths: ['README.md', 'a.ts'] });
     await expect.element(page.getByLabelText('To folder')).toHaveFocus();
