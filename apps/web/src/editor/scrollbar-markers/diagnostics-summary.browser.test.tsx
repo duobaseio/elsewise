@@ -31,43 +31,43 @@ function mount(
   const editor = new EditorManager();
   const application = builtInApplication({ editor });
   client.setQueryData(settingsQuery.queryKey, settings);
-  function Probe() {
-    const { toolbar, portal } = useToolbarExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const created = new EditorView({
-        state: EditorState.create({
-          doc: DOC,
-          extensions: [
-            toolbar,
+  render(
+    <QueryClientProvider client={client}>
+      <ApplicationManagerContext value={application}>
+        <Probe
+          extensions={[
             METRICS,
             diagnostics,
             hover(),
             commandsExtension(application.commands),
             EditorView.theme({ '&': { height: '200px' } }),
             extensions,
-          ],
-        }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(created);
-      return () => created.destroy();
-    }, [toolbar]);
-    return (
-      <>
-        <div ref={host} />
-        {portal}
-      </>
-    );
-  }
-  render(
-    <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <Probe />
+          ]}
+          resolve={resolve}
+        />
       </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   return ready;
+}
+
+function Probe({ extensions, resolve }: { extensions: Extension; resolve: (view: EditorView) => void }) {
+  const { toolbar, portal } = useToolbarExtension();
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const created = new EditorView({
+      state: EditorState.create({ doc: DOC, extensions: [toolbar, extensions] }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(created);
+    return () => created.destroy();
+  }, [toolbar, extensions, resolve]);
+  return (
+    <>
+      <div ref={host} />
+      {portal}
+    </>
+  );
 }
 
 // Returns a diagnostic over the `line`th line of `DOC`, from 1.

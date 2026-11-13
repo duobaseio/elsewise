@@ -63,19 +63,15 @@ async function keymaps(
   const store = await pluginStore(plugins);
   const client = new QueryClient();
   client.setQueryData(userKeymapsQuery.queryKey, user);
-  let result: readonly LoadedKeymap[] = [];
-  function Probe() {
-    result = useLoadedKeymaps();
-    return null;
-  }
+  const result: { current?: readonly LoadedKeymap[] } = {};
   renderToString(
     createElement(
       QueryClientProvider,
       { client },
-      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+      createElement(PluginStoreContext, { value: store }, createElement(Probe, { use: useLoadedKeymaps, result })),
     ),
   );
-  return result.filter(({ id }) => id.source !== 'elsewise');
+  return (result.current ?? []).filter(({ id }) => id.source !== 'elsewise');
 }
 
 // Returns what `use` returns with `selected` selected, `plugins` installed and the user's `keymaps`, and the client and
@@ -97,19 +93,20 @@ async function probe<T>(
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_FRONTEND_SETTINGS, keymap: selected });
   client.setQueryData(userKeymapsQuery.queryKey, user);
-  let result: T | undefined;
-  function Probe() {
-    result = use();
-    return null;
-  }
+  const result: { current?: T } = {};
   renderToString(
     createElement(
       QueryClientProvider,
       { client },
-      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+      createElement(PluginStoreContext, { value: store }, createElement(Probe<T>, { use, result })),
     ),
   );
-  return { result: result as T, client, bridge };
+  return { result: result.current as T, client, bridge };
+}
+
+function Probe<T>({ use, result }: { use: () => T; result: { current?: T } }) {
+  result.current = use();
+  return null;
 }
 
 // Returns a window with application keys installed for `added`, which are added in order.

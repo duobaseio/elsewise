@@ -70,27 +70,36 @@ function mount(doc: string, extensions: Extension[]): Promise<EditorView> {
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
   });
-  function Probe() {
-    const themeExtension = useThemeExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const view = new EditorView({
-        state: EditorState.create({ doc, extensions: [themeExtension, ...extensions] }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(view);
-      return () => view.destroy();
-    }, [themeExtension]);
-    return <div ref={host} />;
-  }
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
   render(
     <QueryClientProvider client={client}>
-      <Probe />
+      <Probe doc={doc} extensions={extensions} resolve={resolve} />
     </QueryClientProvider>,
   );
   return ready;
+}
+
+function Probe({
+  doc,
+  extensions,
+  resolve,
+}: {
+  doc: string;
+  extensions: Extension[];
+  resolve: (view: EditorView) => void;
+}) {
+  const themeExtension = useThemeExtension();
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const view = new EditorView({
+      state: EditorState.create({ doc, extensions: [themeExtension, ...extensions] }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(view);
+    return () => view.destroy();
+  }, [themeExtension, doc, extensions, resolve]);
+  return <div ref={host} />;
 }
 
 function style(el: Element | null): CSSStyleDeclaration {
