@@ -26,6 +26,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const client = useQuery(daemonQuery(daemon)).data;
   const gitStatusBadges = useSettings((settings) => settings.fileTree.gitStatusBadges);
   const indentGuides = useSettings((settings) => settings.fileTree.indentGuides);
+  const hidden = useSettings((settings) => settings.fileTree.hidden);
   const workspace = useWorkspace({ daemon, project, workspace: workspaceId });
   const root = workspace?.absolutePath;
 
@@ -156,6 +157,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       model,
       client.fileSystem.watchDirectories(),
       store.get(id)?.fileTree ?? DEFAULT_WORKSPACE_STATE.fileTree,
+      hidden,
     );
     const unsubscribe = watchGitStatus(client.git, root, model);
     const stopSaving = model.subscribe(() => store.update(id, { fileTree: watcher.snapshot() }));
@@ -164,7 +166,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
       unsubscribe();
       stopSaving();
     };
-  }, [client, root, model, store, daemon, project, workspaceId]);
+  }, [client, root, model, store, daemon, project, workspaceId, hidden]);
 
   const renaming = useFileTreeManager((manager) => manager.renaming);
   useEffect(() => {

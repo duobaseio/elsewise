@@ -18,6 +18,7 @@ import { Route as ShellDaemonProjectWorkspaceRouteRouteImport } from './routes/_
 import { Route as SettingsLocalAppearanceIndexRouteImport } from './routes/settings/local/appearance/index'
 import { Route as SettingsLocalEditorIndexRouteImport } from './routes/settings/local/editor/index'
 import { Route as SettingsLocalEditorLanguageRouteImport } from './routes/settings/local/editor/$language'
+import { Route as SettingsLocalFileTreeIndexRouteImport } from './routes/settings/local/file-tree/index'
 import { Route as SettingsLocalKeymapIndexRouteImport } from './routes/settings/local/keymap/index'
 import { Route as SettingsLocalTerminalIndexRouteImport } from './routes/settings/local/terminal/index'
 import { Route as SettingsRemoteRemoteIdRouteImport } from './routes/settings/remote/$remote/$id'
@@ -70,6 +71,12 @@ const SettingsLocalEditorLanguageRoute =
     path: '/local/editor/$language',
     getParentRoute: () => SettingsRouteRoute,
   } as any)
+const SettingsLocalFileTreeIndexRoute =
+  SettingsLocalFileTreeIndexRouteImport.update({
+    id: '/local/file-tree/',
+    path: '/local/file-tree/',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 const SettingsLocalKeymapIndexRoute =
   SettingsLocalKeymapIndexRouteImport.update({
     id: '/local/keymap/',
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/': typeof SettingsLocalAppearanceIndexRoute
   '/settings/local/editor/': typeof SettingsLocalEditorIndexRoute
+  '/settings/local/file-tree/': typeof SettingsLocalFileTreeIndexRoute
   '/settings/local/keymap/': typeof SettingsLocalKeymapIndexRoute
   '/settings/local/terminal/': typeof SettingsLocalTerminalIndexRoute
 }
@@ -110,6 +118,7 @@ export interface FileRoutesByTo {
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance': typeof SettingsLocalAppearanceIndexRoute
   '/settings/local/editor': typeof SettingsLocalEditorIndexRoute
+  '/settings/local/file-tree': typeof SettingsLocalFileTreeIndexRoute
   '/settings/local/keymap': typeof SettingsLocalKeymapIndexRoute
   '/settings/local/terminal': typeof SettingsLocalTerminalIndexRoute
 }
@@ -125,6 +134,7 @@ export interface FileRoutesById {
   '/settings/remote/$remote/$id': typeof SettingsRemoteRemoteIdRoute
   '/settings/local/appearance/': typeof SettingsLocalAppearanceIndexRoute
   '/settings/local/editor/': typeof SettingsLocalEditorIndexRoute
+  '/settings/local/file-tree/': typeof SettingsLocalFileTreeIndexRoute
   '/settings/local/keymap/': typeof SettingsLocalKeymapIndexRoute
   '/settings/local/terminal/': typeof SettingsLocalTerminalIndexRoute
 }
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/'
     | '/settings/local/editor/'
+    | '/settings/local/file-tree/'
     | '/settings/local/keymap/'
     | '/settings/local/terminal/'
   fileRoutesByTo: FileRoutesByTo
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance'
     | '/settings/local/editor'
+    | '/settings/local/file-tree'
     | '/settings/local/keymap'
     | '/settings/local/terminal'
   id:
@@ -166,6 +178,7 @@ export interface FileRouteTypes {
     | '/settings/remote/$remote/$id'
     | '/settings/local/appearance/'
     | '/settings/local/editor/'
+    | '/settings/local/file-tree/'
     | '/settings/local/keymap/'
     | '/settings/local/terminal/'
   fileRoutesById: FileRoutesById
@@ -240,6 +253,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsLocalEditorLanguageRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/local/file-tree/': {
+      id: '/settings/local/file-tree/'
+      path: '/local/file-tree'
+      fullPath: '/settings/local/file-tree/'
+      preLoaderRoute: typeof SettingsLocalFileTreeIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/local/keymap/': {
       id: '/settings/local/keymap/'
       path: '/local/keymap'
@@ -285,6 +305,7 @@ interface SettingsRouteRouteChildren {
   SettingsRemoteRemoteIdRoute: typeof SettingsRemoteRemoteIdRoute
   SettingsLocalAppearanceIndexRoute: typeof SettingsLocalAppearanceIndexRoute
   SettingsLocalEditorIndexRoute: typeof SettingsLocalEditorIndexRoute
+  SettingsLocalFileTreeIndexRoute: typeof SettingsLocalFileTreeIndexRoute
   SettingsLocalKeymapIndexRoute: typeof SettingsLocalKeymapIndexRoute
   SettingsLocalTerminalIndexRoute: typeof SettingsLocalTerminalIndexRoute
 }
@@ -296,6 +317,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsRemoteRemoteIdRoute: SettingsRemoteRemoteIdRoute,
   SettingsLocalAppearanceIndexRoute: SettingsLocalAppearanceIndexRoute,
   SettingsLocalEditorIndexRoute: SettingsLocalEditorIndexRoute,
+  SettingsLocalFileTreeIndexRoute: SettingsLocalFileTreeIndexRoute,
   SettingsLocalKeymapIndexRoute: SettingsLocalKeymapIndexRoute,
   SettingsLocalTerminalIndexRoute: SettingsLocalTerminalIndexRoute,
 }

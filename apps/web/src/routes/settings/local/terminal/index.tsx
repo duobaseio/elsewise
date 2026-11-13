@@ -7,7 +7,7 @@ import type { CursorStyle, FrontendSettings, SettingsSearchTerm } from '@elsewis
 import { createFileRoute } from '@tanstack/react-router';
 import type { ITerminalAddon } from '@xterm/xterm';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
-import { useSettings, useUpdateSettings } from '@/settings/settings';
+import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
 import { Terminal as TerminalView } from '@/terminal/terminal';
 import { FontRows } from '../-font-rows';
 import { LineHeightInput } from '../-line-height-input';
@@ -67,12 +67,7 @@ const PREVIEW: ITerminalAddon = {
 
 export function Terminal() {
   const terminal = useSettings((settings) => settings.terminal);
-  const update = useUpdateSettings();
-  const set = (changes: Partial<typeof terminal>) =>
-    update((settings) => ({
-      ...settings,
-      terminal: { ...settings.terminal, ...changes },
-    }));
+  const set = useUpdateSettingsSection('terminal');
 
   return (
     <SplitPage preview={<TerminalView session={PREVIEW} preview />} title="Terminal">

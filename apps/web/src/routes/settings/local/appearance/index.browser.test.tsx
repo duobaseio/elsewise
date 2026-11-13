@@ -62,10 +62,6 @@ function withAppearance(changes: Partial<FrontendSettings['appearance']>): Front
   return { ...DEFAULT_FRONTEND_SETTINGS, appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, ...changes } };
 }
 
-function withFileTree(changes: Partial<FrontendSettings['fileTree']>): FrontendSettings {
-  return { ...DEFAULT_FRONTEND_SETTINGS, fileTree: { ...DEFAULT_FRONTEND_SETTINGS.fileTree, ...changes } };
-}
-
 describe('Appearance', () => {
   test('saves brightness', async () => {
     const save = await mount();
@@ -114,42 +110,6 @@ describe('Appearance', () => {
     expect(save).toHaveBeenCalledWith(
       withAppearance({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.font, size: 16 } }),
     );
-  });
-
-  test('saves only git status badges leaf', async () => {
-    const save = await mount();
-    const toggle = page.getByRole('switch', { name: 'Git status badges' });
-    await expect.element(toggle).toBeChecked();
-
-    await userEvent.click(toggle);
-
-    await expect.element(toggle).not.toBeChecked();
-    await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withFileTree({ gitStatusBadges: false }));
-  });
-
-  test('saves only indent guides leaf', async () => {
-    const save = await mount();
-    const toggle = page.getByRole('switch', { name: 'Indent guides' });
-    await expect.element(toggle).toBeChecked();
-
-    await userEvent.click(toggle);
-
-    await expect.element(toggle).not.toBeChecked();
-    await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withFileTree({ indentGuides: false }));
-  });
-
-  test.each([true, false])('help follows indent guides (%s)', async (indentGuides) => {
-    await mount(withFileTree({ indentGuides }));
-
-    await userEvent.hover(document.querySelector('#indentGuides [data-slot="row-help"]') as Element);
-
-    await expect
-      .poll(() => document.querySelector('[data-slot="tooltip-content"] [data-indent-guides]'))
-      .not.toBeNull();
-    const tree = document.querySelector('[data-slot="tooltip-content"] [data-indent-guides]');
-    expect(tree?.getAttribute('data-indent-guides') !== 'false').toBe(indentGuides);
   });
 
   test('washes highlighted row only', async () => {

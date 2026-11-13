@@ -48,6 +48,7 @@ function browserProject(
         'dockview-react',
         'dompurify',
         'motion/react',
+        'picomatch',
         '@dnd-kit/abstract',
         '@dnd-kit/collision',
         '@dnd-kit/dom',

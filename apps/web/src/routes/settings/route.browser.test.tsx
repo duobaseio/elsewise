@@ -164,7 +164,7 @@ describe('Settings', () => {
       .getByRole('treeitem')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['Appearance', 'Keymap', 'Editor', 'Terminal', 'Words', 'Hooks', 'Broken']);
+    expect(links).toEqual(['Appearance', 'Keymap', 'Editor', 'File tree', 'Terminal', 'Words', 'Hooks', 'Broken']);
   });
 
   test('lists languages under editor, sorted by label, expanded when open', async () => {
@@ -177,7 +177,16 @@ describe('Settings', () => {
       .getByRole('treeitem')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['Appearance', 'Keymap', 'Editor', 'Elm', 'JavaScript/JSX', 'Markdown', 'Terminal']);
+    expect(links).toEqual([
+      'Appearance',
+      'Keymap',
+      'Editor',
+      'Elm',
+      'JavaScript/JSX',
+      'Markdown',
+      'File tree',
+      'Terminal',
+    ]);
 
     await userEvent.click(sidebar().getByRole('treeitem', { name: 'JavaScript/JSX' }));
     await expect.element(page.getByRole('heading', { name: 'JavaScript/JSX' })).toBeVisible();

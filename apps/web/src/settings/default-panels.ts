@@ -1,6 +1,7 @@
 import type { LocalSettingsPanel, SettingsPanel } from '@elsewise/frontend-plugin';
 import { APPEARANCE_TERMS, Appearance } from '@/routes/settings/local/appearance';
 import { EDITOR_TERMS, Editor } from '@/routes/settings/local/editor';
+import { FILE_TREE_TERMS, FileTree } from '@/routes/settings/local/file-tree';
 import { KEYMAP_TERMS, Keymap } from '@/routes/settings/local/keymap';
 import { TERMINAL_TERMS, Terminal } from '@/routes/settings/local/terminal';
 import type { FileRouteTypes } from '@/routeTree.gen';
@@ -29,6 +30,14 @@ export const DEFAULT_PANELS = {
     route: '/settings/local/editor',
     terms: EDITOR_TERMS,
     component: Editor,
+  },
+  fileTree: {
+    scope: 'local',
+    id: 'io.duobase.elsewise.settings.file-tree',
+    label: 'File tree',
+    route: '/settings/local/file-tree',
+    terms: FILE_TREE_TERMS,
+    component: FileTree,
   },
   terminal: {
     scope: 'local',

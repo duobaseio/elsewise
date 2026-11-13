@@ -84,6 +84,16 @@ export function useUpdateSettings(): (update: (settings: FrontendSettings) => Fr
   };
 }
 
+/**
+ * Returns a function that merges `changes` into the settings' `section`.
+ */
+export function useUpdateSettingsSection<S extends keyof FrontendSettings>(
+  section: S,
+): (changes: Partial<FrontendSettings[S]>) => void {
+  const update = useUpdateSettings();
+  return (changes) => update((settings) => ({ ...settings, [section]: { ...settings[section], ...changes } }));
+}
+
 const SYSTEM_DARK = '(prefers-color-scheme: dark)';
 
 /**
