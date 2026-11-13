@@ -229,6 +229,14 @@ describe('settings:load', () => {
     }
   });
 
+  test('drops repeated hidden globs', () => {
+    write({ fileTree: { hidden: ['dist', '.git', 'dist'] } });
+    expect(load()).toEqual({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      fileTree: { ...DEFAULT_FRONTEND_SETTINGS.fileTree, hidden: ['dist', '.git'] },
+    });
+  });
+
   test('keeps a valid completion documentation toggle and turns a bad or missing one on', () => {
     write({ editor: { completionDocumentation: false } });
     expect(load()).toEqual({

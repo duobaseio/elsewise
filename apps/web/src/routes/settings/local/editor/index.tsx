@@ -6,7 +6,7 @@ import type { DiffLayout, FrontendSettings, SettingsSearchTerm } from '@elsewise
 import { createFileRoute } from '@tanstack/react-router';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';
-import { useSettings, useUpdateSettings } from '@/settings/settings';
+import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
 import { FontRows } from '../-font-rows';
 import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from '../-theme';
@@ -38,12 +38,7 @@ const DIFF_LAYOUTS: Record<DiffLayout, string> = { split: 'Split', unified: 'Uni
 
 export function Editor() {
   const editor = useSettings((settings) => settings.editor);
-  const update = useUpdateSettings();
-  const set = (changes: Partial<typeof editor>) =>
-    update((settings) => ({
-      ...settings,
-      editor: { ...settings.editor, ...changes },
-    }));
+  const set = useUpdateSettingsSection('editor');
 
   return (
     <SplitPage preview={<Preview language={LANGUAGES.Rust} />} title="Editor">

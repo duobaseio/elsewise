@@ -8,8 +8,8 @@ import {
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { DirectoryWatcher, type DirectoryWatcherModel, type DirectoryWatcherSnapshot } from './directory-watcher';
 
-// A model that keeps its paths in a set, and a stream that sends what `respond` is given.
-function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] }) {
+// A model that keeps its paths in a set, and a stream that sends what `respond` is given, hiding `hidden` names.
+function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] }, hidden: readonly string[] = []) {
   const paths = new Set<string>(['stale.ts']);
   const selected = new Set<string>();
   const expanded = new Set<string>();
@@ -115,7 +115,7 @@ function fake(restored: DirectoryWatcherSnapshot = { expanded: [], selected: [] 
     })(),
   };
 
-  const watcher = new DirectoryWatcher('/repo', model, call, restored);
+  const watcher = new DirectoryWatcher('/repo', model, call, restored, hidden);
   created = watcher;
   return {
     watcher,
@@ -192,6 +192,58 @@ describe('DirectoryWatcher', () => {
     respond(listing('', ['b.ts', 'd.ts']));
 
     await expect.poll(paths).toEqual(['b.ts', 'd.ts']);
+  });
+
+  test('hides name at any depth', async () => {
+    const { respond, paths, expand } = fake(undefined, ['.git', '*.pyc', 'cache?']);
+    respond(listing('', ['.git/', '.github/', 'main.pyc', 'cache1/', 'cache12/', 'src/']));
+    await expect.poll(paths).toEqual(['.github/', 'cache12/', 'src/']);
+
+    expand('src/', true);
+    respond(listing('src', ['.git/', 'lib.pyc', 'lib.py']));
+
+    await expect.poll(paths).toEqual(['.github/', 'cache12/', 'src/', 'src/lib.py']);
+  });
+
+  test('hides path from root', async () => {
+    const { respond, paths, expand } = fake(undefined, ['src/gen', '/root.txt', 'packages/*/dist', '**/build']);
+    respond(listing('', ['packages/', 'root.txt', 'src/']));
+    await expect.poll(paths).toEqual(['packages/', 'src/']);
+
+    expand('src/', true);
+    respond(listing('src', ['gen/', 'root.txt', 'build/']));
+    expand('packages/', true);
+    respond(listing('packages', ['a/']));
+    expand('packages/a/', true);
+    respond(listing('packages/a', ['dist/', 'src/']));
+
+    await expect.poll(paths).toEqual(['packages/', 'packages/a/', 'packages/a/src/', 'src/', 'src/root.txt']);
+  });
+
+  test('hides folders only by trailing slash', async () => {
+    const { respond, paths } = fake(undefined, ['out/', '{dist,tmp}']);
+
+    respond(listing('', ['out/', 'out', 'dist', 'tmp/', 'src/']));
+
+    await expect.poll(paths).toEqual(['out', 'src/']);
+  });
+
+  test('hides leading exclamation mark literally', async () => {
+    const { respond, paths } = fake(undefined, ['/!keep', '!src']);
+
+    respond(listing('', ['!keep', '!src/', 'keep', 'src/']));
+
+    await expect.poll(paths).toEqual(['keep', 'src/']);
+  });
+
+  test('stops watching remembered folder now hidden', async () => {
+    const { respond, paths, sent } = fake({ expanded: ['node_modules/'], selected: [] }, ['node_modules']);
+
+    respond(listing('', ['node_modules/', 'src/']));
+    respond(listing('node_modules', ['react/']));
+
+    await expect.poll(paths).toEqual(['src/']);
+    expect(sent.at(-1)).toEqual({ root: '/repo', relativePaths: [''] });
   });
 
   test('watches opened folder until closed', () => {

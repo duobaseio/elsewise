@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { GitStatusBadgesHelp, IndentGuidesHelp } from '@/routes/settings/local/appearance/-help';
+import { GitStatusBadgesHelp, HiddenHelp, IndentGuidesHelp } from '@/routes/settings/local/file-tree/-help';
 
 import { THEMES } from '../../../../../sheet';
 
@@ -42,3 +42,19 @@ test.each(Object.keys(HELPS).flatMap((name) => THEMES.map((theme) => [name, them
     await expect(page.getByTestId('sheet')).toMatchScreenshot(`${name}-${theme}`);
   },
 );
+
+test.each(THEMES)('hidden-help (%s)', async (theme) => {
+  await render(
+    <div
+      className="flex w-fit flex-col gap-4 bg-background p-3 font-sans text-sm text-popover-foreground *:overflow-hidden *:rounded-md *:bg-popover *:ring-1 *:ring-foreground/10"
+      data-brightness={theme}
+      data-testid="sheet"
+    >
+      <div>
+        <HiddenHelp />
+      </div>
+    </div>,
+  );
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`hidden-help-${theme}`);
+});

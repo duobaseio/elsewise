@@ -35,6 +35,7 @@ export const DEFAULT_ROUTES = {
     appearance: '/settings/local/appearance',
     keymap: '/settings/local/keymap',
     editor: '/settings/local/editor',
+    fileTree: '/settings/local/file-tree',
     terminal: '/settings/local/terminal',
   },
 } as const;

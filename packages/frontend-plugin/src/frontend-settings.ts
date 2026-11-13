@@ -142,6 +142,17 @@ export const FrontendSettings = z.lazy(() =>
          * Whether the file tree draws a vertical line for each folder level.
          */
         indentGuides: z.boolean().catch(true),
+        /**
+         * The globs of the entries the file tree hides, matched against their paths relative to the workspace:
+         * * A glob without a leading or inner `/`, e.g. `*.pyc` or `out/`, matches at any depth.
+         * * A glob with a leading or inner `/`, e.g. `/README.md` or `src/gen`, matches from the workspace.
+         * * A glob ending in `/` matches folders only.
+         * * A leading `!` is part of the name.
+         */
+        hidden: z
+          .array(z.string().min(1))
+          .transform((globs) => [...new Set(globs)])
+          .catch(['.git', '.svn', '.hg', '.DS_Store', 'Thumbs.db']),
       }),
     ),
     terminal: z.preprocess(

@@ -2,6 +2,7 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import type { FileTreeModel } from '@elsewise/components/components/file-tree';
 import { toast } from '@elsewise/components/components/toast';
 import type { BidiCall } from '@elsewise/transport';
+import picomatch from 'picomatch';
 import {
   DirectoryListing_Entry_Type,
   type WatchDirectoriesRequestSchema,
@@ -21,7 +22,7 @@ export interface DirectoryWatcherSnapshot {
 type Watcher = BidiCall<MessageInitShape<typeof WatchDirectoriesRequestSchema>, WatchDirectoriesResponse>;
 
 /**
- * Syncs the daemon's file watcher and file tree component.
+ * Syncs the daemon's file watcher and file tree component, leaving out the entries a hidden pattern matches.
  *
  * Daemon reports the directories without trailing `/`s while file tree component requires them.
  */
@@ -30,16 +31,31 @@ export class DirectoryWatcher {
   private readonly model: DirectoryWatcherModel;
   private readonly watcher: Watcher;
   private readonly watched: Set<string>;
+  private readonly hidden: (path: string) => boolean;
   private readonly listings = new Map<string, Set<string> | null>();
   private pending: DirectoryWatcherSnapshot | undefined;
   private readonly unsubscribe: () => void;
   private disposed = false;
 
-  constructor(root: string, model: DirectoryWatcherModel, watcher: Watcher, pending: DirectoryWatcherSnapshot) {
+  constructor(
+    root: string,
+    model: DirectoryWatcherModel,
+    watcher: Watcher,
+    pending: DirectoryWatcherSnapshot,
+    hidden: readonly string[],
+  ) {
     this.root = root;
     this.model = model;
     this.watcher = watcher;
     this.watched = new Set(['', ...pending.expanded]);
+    this.hidden = picomatch(
+      hidden.flatMap((pattern) => {
+        const glob = pattern.replace(/\/$/, '');
+        const anchored = glob.includes('/') ? glob.replace(/^\//, '') : `**/${glob}`;
+        return pattern.endsWith('/') ? [`${anchored}/`] : [anchored, `${anchored}/`];
+      }),
+      { dot: true, nonegate: true },
+    );
     this.pending = pending;
     this.model.resetPaths([]);
     this.unsubscribe = model.onExpansion((path, expanded) => {
@@ -99,9 +115,11 @@ export class DirectoryWatcher {
     const children =
       response.state.case === 'listing'
         ? new Set(
-            response.state.value.entries.map(
-              ({ name, type }) => `${directory}${name}${type === DirectoryListing_Entry_Type.DIRECTORY ? '/' : ''}`,
-            ),
+            response.state.value.entries
+              .map(
+                ({ name, type }) => `${directory}${name}${type === DirectoryListing_Entry_Type.DIRECTORY ? '/' : ''}`,
+              )
+              .filter((path) => !this.hidden(path)),
           )
         : null;
 

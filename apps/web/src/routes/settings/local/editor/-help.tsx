@@ -169,9 +169,6 @@ const BELOW: readonly (readonly [top: number, marker: Marker])[] = [
   [0.88, 'searchMatch'],
 ];
 
-/**
- * Shows a completion's documentation beside the list.
- */
 export function CompletionDocumentationHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const { editor } = useActiveTheme();
   const method = editor.tokens.method?.color ?? editor.foreground;
@@ -229,9 +226,6 @@ export function CompletionDocumentationHelp({ enabled, children }: { enabled: bo
   );
 }
 
-/**
- * Shows the usages of the symbol under the caret highlighted.
- */
 export function HighlightUsagesHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   return (
     <Illustration note={children}>
@@ -242,9 +236,6 @@ export function HighlightUsagesHelp({ enabled, children }: { enabled: boolean; c
   );
 }
 
-/**
- * Shows a file's diagnostics, search matches and usages marked on its scrollbar.
- */
 export function ScrollbarMarkersHelp({ enabled, children }: { enabled: boolean; children: ReactNode }) {
   const { editor } = useActiveTheme();
   // A line's tick is its last marker's, as the editor draws search matches over usages.
