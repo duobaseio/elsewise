@@ -46,6 +46,7 @@ async function open(theme: 'light' | 'dark') {
       cut() {},
       copy() {},
       paste() {},
+      absolutePathOf: () => '',
       showPath: async () => {},
       pickPaths: async () => [],
       setBrightness() {},

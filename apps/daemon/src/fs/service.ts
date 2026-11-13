@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
@@ -25,7 +25,7 @@ import {
   type WatchRootsRequest,
   type WriteFileRequest,
 } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { isRespelling, listDirectory, refuseCopy, refuseMove } from './directory';
+import { copyAtomically, isRespelling, listDirectory, refuseCopy, refuseMove } from './directory';
 import { attempt, attemptEach, errnoOf } from './error';
 import { createFile, hashContent, hashFile, isBinary, replaceFile } from './file';
 import { toNativePath, toNativePathOrRoot, toProtocolPath } from './path';
@@ -164,18 +164,7 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
       }));
       const failures = await attemptEach(entries, async ({ absoluteNativePath, newAbsoluteNativePath }) => {
         await refuseCopy(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
-        await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
-
-        const copyAbsoluteNativePath = `${newAbsoluteNativePath}.${randomUUID()}`;
-        try {
-          await fs.cp(absoluteNativePath, copyAbsoluteNativePath, { recursive: true, verbatimSymlinks: true });
-          if (request.overwrite) {
-            await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
-          }
-          await fs.rename(copyAbsoluteNativePath, newAbsoluteNativePath);
-        } finally {
-          await fs.rm(copyAbsoluteNativePath, { recursive: true, force: true });
-        }
+        await copyAtomically(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
       });
       return {
         failures: failures.map(({ item, error }) => ({
@@ -196,12 +185,25 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
       }));
       const failures = await attemptEach(entries, async ({ absoluteNativePath, newAbsoluteNativePath }) => {
         await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+
         if (request.overwrite && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
           await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
         }
         await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
-        await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+        try {
+          await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+        } catch (error) {
+          // Renaming does not work across devices. We copy atomically and delete instead.
+          if (errnoOf(error) === 'EXDEV') {
+            await copyAtomically(absoluteNativePath, newAbsoluteNativePath, false);
+            await fs.rm(absoluteNativePath, { recursive: true });
+            return;
+          }
+
+          throw error;
+        }
       });
+
       return {
         failures: failures.map(({ item, error }) => ({
           relativePath: item.relativePath,

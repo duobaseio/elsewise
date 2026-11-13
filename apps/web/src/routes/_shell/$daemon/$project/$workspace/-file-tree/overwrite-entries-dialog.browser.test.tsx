@@ -76,7 +76,13 @@ describe('OverwriteEntriesDialog', () => {
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
     expect(copyEntries.mock.calls).toEqual([
-      [{ root: '/elsewise', entries: [{ relativePath: 'a.ts', newRelativePath: 'src/a.ts' }], overwrite: true }],
+      [
+        {
+          root: '/elsewise',
+          entries: [{ relativePath: 'a.ts', newRelativePath: 'src/a.ts' }],
+          overwrite: true,
+        },
+      ],
     ]);
   });
 

@@ -1,19 +1,19 @@
 import path from 'node:path';
 import { Code } from '@elsewise/transport';
 import { describe, expect, test } from 'vitest';
-import { parseProtocolPath, toNativePath, toNativePathOrRoot, toNativeRoot, toProtocolPath } from './path';
+import { parseProtocolPath, toNativeAbsolutePath, toNativePath, toNativePathOrRoot, toProtocolPath } from './path';
 
 const windows = path.sep === '\\';
 const root = windows ? 'C:\\work' : '/work';
 const invalid = expect.objectContaining({ code: Code.INVALID_ARGUMENT });
 
-describe('toNativeRoot', () => {
-  test('returns an absolute root as a native path', () => {
-    expect(toNativeRoot(root)).toBe(root);
+describe('toNativeAbsolutePath', () => {
+  test('returns an absolute path as a native path', () => {
+    expect(toNativeAbsolutePath(path.join(root, 'a.txt'))).toBe(path.join(root, 'a.txt'));
   });
 
-  test.each(['', 'relative/root', `${root}\0`])('refuses the root %j', (value) => {
-    expect(() => toNativeRoot(value)).toThrow(invalid);
+  test.each(['', 'relative/a.txt', `${root}\0`])('refuses the path %j', (value) => {
+    expect(() => toNativeAbsolutePath(value)).toThrow(invalid);
   });
 });
 
@@ -41,6 +41,14 @@ describe('toNativePathOrRoot', () => {
   test('joins the root and the path natively', () => {
     expect(toNativePathOrRoot(root, 'src/a.ts')).toBe(path.join(root, 'src', 'a.ts'));
     expect(toNativePathOrRoot(root, '')).toBe(root);
+  });
+
+  test('takes path as absolute without root', () => {
+    expect(toNativePathOrRoot('', path.join(root, 'a.txt'))).toBe(path.join(root, 'a.txt'));
+  });
+
+  test.each(['', 'a.txt'])('refuses %j without root', (relative) => {
+    expect(() => toNativePathOrRoot('', relative)).toThrow(invalid);
   });
 });
 

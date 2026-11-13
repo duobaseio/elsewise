@@ -6,7 +6,7 @@ import type {
   WindowBridge,
   WorkspacesBridge,
 } from '@elsewise/bridge';
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // The app's version from package.json, defined by bundle.mjs.
 declare const ELSEWISE_VERSION: string;
@@ -62,6 +62,7 @@ const window: WindowBridge = {
   cut: () => ipcRenderer.send('window:cut'),
   copy: () => ipcRenderer.send('window:copy'),
   paste: () => ipcRenderer.send('window:paste'),
+  absolutePathOf: (file) => webUtils.getPathForFile(file),
   showPath: (absolutePath) => ipcRenderer.invoke('window:show-path', absolutePath),
   pickPaths: (options) => ipcRenderer.invoke('window:pick-paths', options),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),

@@ -12,6 +12,7 @@ function bridge(overrides: Partial<WindowBridge>) {
       cut() {},
       copy() {},
       paste() {},
+      absolutePathOf: () => '',
       showPath: async () => {},
       pickPaths: async () => [],
       setBrightness() {},

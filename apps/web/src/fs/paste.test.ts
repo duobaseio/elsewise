@@ -4,6 +4,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { type Daemon, LOCAL_DAEMON_ID } from '@/daemon';
 import {
   CopyEntriesResponseSchema,
+  CopyEntriesResponse_Failure_Reason as CopyReason,
   MoveEntriesResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { MoveResponse_Failure_Reason, MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
@@ -57,8 +58,37 @@ describe('pasteEntries', () => {
 
     const result = await pasteEntries(daemon, { ...WORKSPACE, state: 'broken' }, true, ENTRIES, true);
 
-    expect(moveEntries.mock.calls).toEqual([[{ root: '/elsewise', ...REQUEST, overwrite: true }]]);
+    expect(moveEntries.mock.calls.map(([request]) => request.entries)).toEqual([
+      [
+        { relativePath: 'a.ts', newRelativePath: 'src/a.ts' },
+        { relativePath: 'b.ts', newRelativePath: 'src/b.ts' },
+        { relativePath: 'lib', newRelativePath: 'src/lib' },
+      ],
+    ]);
     expect(result).toEqual({ conflicting: [], failures: [] });
+  });
+
+  test('moves absolute source outside git', async () => {
+    const entry = {
+      source: '/Users/me/a.ts',
+      destination: 'src/a.ts',
+      folder: false,
+      absolute: true,
+    };
+    const moveEntries = vi.fn<Daemon['fileSystem']['moveEntries']>(async () => create(MoveEntriesResponseSchema));
+    const daemon = { fileSystem: { moveEntries } } as unknown as Daemon;
+
+    await pasteEntries(daemon, WORKSPACE, true, [entry], false);
+
+    expect(moveEntries.mock.calls).toEqual([
+      [
+        {
+          root: '',
+          entries: [{ relativePath: '/Users/me/a.ts', newRelativePath: '/elsewise/src/a.ts' }],
+          overwrite: false,
+        },
+      ],
+    ]);
   });
 
   test('copies', async () => {
@@ -67,6 +97,55 @@ describe('pasteEntries', () => {
 
     await pasteEntries(daemon, WORKSPACE, false, ENTRIES, false);
 
-    expect(copyEntries.mock.calls).toEqual([[{ root: '/elsewise', ...REQUEST, overwrite: false }]]);
+    expect(copyEntries.mock.calls).toEqual([
+      [
+        {
+          root: '/elsewise',
+          entries: [
+            { relativePath: 'a.ts', newRelativePath: 'src/a.ts' },
+            { relativePath: 'b.ts', newRelativePath: 'src/b.ts' },
+            { relativePath: 'lib', newRelativePath: 'src/lib' },
+          ],
+          overwrite: false,
+        },
+      ],
+    ]);
+  });
+
+  test('copies from absolute path', async () => {
+    const entry = {
+      source: '/Users/me/a.ts',
+      destination: 'src/a.ts',
+      folder: false,
+      absolute: true,
+    };
+    const copyEntries = vi.fn<Daemon['fileSystem']['copyEntries']>(async () =>
+      create(CopyEntriesResponseSchema, {
+        failures: [{ relativePath: '/Users/me/a.ts', reason: CopyReason.ALREADY_EXISTS }],
+      }),
+    );
+    const daemon = { fileSystem: { copyEntries } } as unknown as Daemon;
+
+    const result = await pasteEntries(
+      daemon,
+      WORKSPACE,
+      false,
+      [entry, { source: 'b.ts', destination: 'src/b.ts', folder: false }],
+      false,
+    );
+
+    expect(copyEntries.mock.calls).toEqual([
+      [
+        {
+          root: '',
+          entries: [
+            { relativePath: '/Users/me/a.ts', newRelativePath: '/elsewise/src/a.ts' },
+            { relativePath: '/elsewise/b.ts', newRelativePath: '/elsewise/src/b.ts' },
+          ],
+          overwrite: false,
+        },
+      ],
+    ]);
+    expect(result).toEqual({ conflicting: [entry], failures: [] });
   });
 });

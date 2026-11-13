@@ -91,7 +91,7 @@ function Harness({
 }
 
 function DropTree() {
-  return <FileTree aria-label="Drop" dropTarget model={useFileTree({ initialPaths: PATHS })} />;
+  return <FileTree aria-label="Drop" dropTarget="" model={useFileTree({ initialPaths: PATHS })} />;
 }
 
 function FlatTree() {
@@ -119,16 +119,29 @@ function row(shadowRoot: ShadowRoot, path: string): HTMLElement {
 
 function drag(type: 'dragstart' | 'dragover' | 'drop', element: HTMLElement) {
   const rect = element.getBoundingClientRect();
+  dragAt(type, element, rect.left + 40, rect.top + rect.height / 2);
+}
+
+function dragAt(type: 'dragstart' | 'dragover' | 'drop', element: Element, clientX: number, clientY: number) {
   element.dispatchEvent(
     new DragEvent(type, {
       bubbles: true,
       cancelable: true,
       composed: true,
       dataTransfer: new DataTransfer(),
-      clientX: rect.left + 40,
-      clientY: rect.top + rect.height / 2,
+      clientX,
+      clientY,
     }),
   );
+}
+
+function dragOntoEmptySpace(type: 'dragover' | 'drop', shadowRoot: ShadowRoot) {
+  const { left, bottom } = shadowRoot.host.getBoundingClientRect();
+  const element = shadowRoot.elementFromPoint(left + 40, bottom - 8);
+  if (element == null || element.closest('[data-type="item"]') != null) {
+    throw new Error('no empty space');
+  }
+  dragAt(type, element, left + 40, bottom - 8);
 }
 
 function section(shadowRoot: ShadowRoot, path: string, name: string): HTMLElement {
@@ -393,11 +406,76 @@ test('dropping onto a closed folder moves into it and keeps it closed', async ()
       draggedPaths: ['README.md'],
       target: expect.objectContaining({ directoryPath: 'vendor/' }),
     }),
+    model.current,
   );
   expect([model.current?.getItem('vendor/README.md') != null, isExpanded(model.current, 'vendor/')]).toEqual([
     true,
     false,
   ]);
+});
+
+test('drops onto empty space into root', async () => {
+  const onDropComplete = vi.fn();
+  const { model, shadowRoot } = await mount({ onDropComplete });
+
+  drag('dragstart', row(shadowRoot, 'daemon/sibling.rs'));
+  dragOntoEmptySpace('dragover', shadowRoot);
+  dragOntoEmptySpace('drop', shadowRoot);
+
+  expect(onDropComplete).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ draggedPaths: ['daemon/sibling.rs'], target: expect.objectContaining({ kind: 'root' }) }),
+    model.current,
+  );
+  expect([model.current?.getItem('sibling.rs') != null, model.current?.getItem('daemon/sibling.rs') != null]).toEqual([
+    true,
+    false,
+  ]);
+});
+
+test('tints tree while dragging over empty space', async () => {
+  const { shadowRoot } = await mount();
+  const host = shadowRoot.host;
+
+  drag('dragstart', row(shadowRoot, 'daemon/sibling.rs'));
+  dragOntoEmptySpace('dragover', shadowRoot);
+  await vi.waitFor(() => expect(host.hasAttribute('data-drop-target')).toBe(true));
+  drag('dragover', row(shadowRoot, 'README.md'));
+  await vi.waitFor(() => expect(host.hasAttribute('data-drop-target')).toBe(false));
+});
+
+test('reports clash on drop onto empty space', async () => {
+  const onDropError = vi.fn();
+  const { model, shadowRoot } = await mount({
+    initialExpandedPaths: ['daemon/'],
+    initialPaths: [...PATHS, 'daemon/README.md', 'daemon/LICENSE'],
+    onDropError,
+  });
+
+  drag('dragstart', row(shadowRoot, 'daemon/README.md'));
+  dragOntoEmptySpace('dragover', shadowRoot);
+  dragOntoEmptySpace('drop', shadowRoot);
+
+  expect(onDropError).toHaveBeenCalledExactlyOnceWith(
+    expect.any(String),
+    expect.objectContaining({ draggedPaths: ['daemon/README.md'] }),
+    model.current,
+  );
+  expect(model.current?.getItem('daemon/README.md')).not.toBeNull();
+});
+
+test('passes model on drop error', async () => {
+  const onDropError = vi.fn();
+  const { model, shadowRoot } = await mount({ initialPaths: [...PATHS, 'vendor/README.md'], onDropError });
+
+  drag('dragstart', row(shadowRoot, 'README.md'));
+  drag('dragover', row(shadowRoot, 'vendor/'));
+  drag('drop', row(shadowRoot, 'vendor/'));
+
+  expect(onDropError).toHaveBeenCalledExactlyOnceWith(
+    expect.any(String),
+    expect.objectContaining({ draggedPaths: ['README.md'] }),
+    model.current,
+  );
 });
 
 test('clicking a folder toggles its expansion in the model', async () => {
@@ -502,6 +580,47 @@ test('F2 opens an inline rename input', async () => {
     return found;
   });
   expect(input.getAttribute('aria-label')).toBe('Rename README.md');
+});
+
+test('passes model on rename', async () => {
+  const onRename = vi.fn();
+  const { model, shadowRoot } = await mount({ onRename });
+  await userEvent.click(row(shadowRoot, 'README.md'));
+  await userEvent.keyboard('{F2}');
+  const input = await vi.waitFor(() => {
+    const found = shadowRoot.querySelector<HTMLInputElement>('input[data-item-rename-input="true"]');
+    if (found == null) {
+      throw new Error('no rename input');
+    }
+    return found;
+  });
+
+  await userEvent.fill(input, 'NOTES.md');
+  await userEvent.keyboard('{Enter}');
+
+  expect(onRename).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ sourcePath: 'README.md', destinationPath: 'NOTES.md' }),
+    model.current,
+  );
+});
+
+test('passes model on rename error', async () => {
+  const onRenameError = vi.fn();
+  const { model, shadowRoot } = await mount({ onRenameError });
+  await userEvent.click(row(shadowRoot, 'daemon/sibling.rs'));
+  await userEvent.keyboard('{F2}');
+  const input = await vi.waitFor(() => {
+    const found = shadowRoot.querySelector<HTMLInputElement>('input[data-item-rename-input="true"]');
+    if (found == null) {
+      throw new Error('no rename input');
+    }
+    return found;
+  });
+
+  await userEvent.fill(input, 'Cargo.toml');
+  await userEvent.keyboard('{Enter}');
+
+  expect(onRenameError).toHaveBeenCalledExactlyOnceWith(expect.any(String), model.current);
 });
 
 test('search stays disabled', async () => {

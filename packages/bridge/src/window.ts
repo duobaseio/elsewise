@@ -20,6 +20,12 @@ export interface WindowBridge {
   paste(): void;
 
   /**
+   * Returns the absolute path of a file from the platform, e.g. one dropped onto the page, or `''` if it is not on
+   * disk.
+   */
+  absolutePathOf(file: File): string;
+
+  /**
    * Shows `absolutePath` in the platform's file manager.
    *
    * Throws if `absolutePath` does not exist or cannot be opened, e.g. without permission.

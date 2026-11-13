@@ -1,13 +1,15 @@
 import path from 'node:path';
 import { Code, TransportError } from '@elsewise/transport';
 
-/** Converts a `/`-separated absolute root into its native form. */
-export function toNativeRoot(protocolRoot: string): string {
+/**
+ * Converts a `/`-separated absolute path into its native form.
+ */
+export function toNativeAbsolutePath(absoluteProtocolPath: string): string {
   // \0 checks for the NUL characters.
-  if (protocolRoot.includes('\0') || !path.isAbsolute(protocolRoot)) {
-    throw new TransportError(Code.INVALID_ARGUMENT, 'the root must be an absolute path');
+  if (absoluteProtocolPath.includes('\0') || !path.isAbsolute(absoluteProtocolPath)) {
+    throw new TransportError(Code.INVALID_ARGUMENT, `"${absoluteProtocolPath}" is not an absolute path`);
   }
-  return path.resolve(protocolRoot);
+  return path.resolve(absoluteProtocolPath);
 }
 
 /** Splits a `/`-separated path into its segments. */
@@ -27,9 +29,15 @@ export function parseProtocolPath(relativeProtocolPath: string): string[] {
   return segments;
 }
 
-/** Converts a protocol's root and path into a native absolute path. */
+/**
+ * Converts a protocol's root and path into a native absolute path. An empty root takes the path as absolute.
+ */
 export function toNativePathOrRoot(protocolRoot: string, relativeProtocolPath: string): string {
-  return path.join(toNativeRoot(protocolRoot), ...parseProtocolPath(relativeProtocolPath));
+  if (protocolRoot === '') {
+    return toNativeAbsolutePath(relativeProtocolPath);
+  }
+
+  return path.join(toNativeAbsolutePath(protocolRoot), ...parseProtocolPath(relativeProtocolPath));
 }
 
 /** Converts a protocol's root and path into the native absolute path. The `relativeProtocolPath` must be non-empty. */

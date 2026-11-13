@@ -17,8 +17,11 @@ import { ApplicationManagerContext } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import {
+  CopyEntriesResponseSchema,
   DirectoryListing_Entry_Type,
   FileSystemService,
+  MoveEntriesResponse_Failure_Reason as MoveEntriesReason,
+  MoveEntriesResponseSchema,
   WatchDirectoriesResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import {
@@ -58,7 +61,7 @@ function unused(service: { methods: readonly { localName: string }[] }) {
 
 // A daemon with the workspace Singapore at /elsewise, which holds the folder src with `SOURCES`, `NAMES`, and no git
 // changes.
-function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
+function fakeDaemon(git: Partial<Daemon['git']>, fileSystem: Partial<Daemon['fileSystem']>): Daemon {
   return {
     projects: {
       ...(unused(ProjectService) as unknown as Daemon['projects']),
@@ -77,6 +80,7 @@ function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
     },
     fileSystem: {
       ...(unused(FileSystemService) as unknown as Daemon['fileSystem']),
+      ...fileSystem,
       watchDirectories: () => ({
         send: async () => {},
         close() {},
@@ -113,14 +117,19 @@ function fakeDaemon(git: Partial<Daemon['git']>): Daemon {
   };
 }
 
-// Renders the panel of Singapore with src open, with the bridge to open a folder so the context menu has an item, and returns the
-// application it runs in.
-async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManager> {
+// Renders the panel of Singapore with src open, with the bridge to open a folder so the context menu has an item and to
+// find dropped files in /downloads, and returns the application it runs in.
+async function mount(
+  git: Partial<Daemon['git']> = {},
+  fileSystem: Partial<Daemon['fileSystem']> = {},
+  daemon = LOCAL_DAEMON_ID,
+): Promise<ApplicationManager> {
   window.bridge = {
     window: {
       cut() {},
       copy() {},
       paste() {},
+      absolutePathOf: (file) => `/downloads/${file.name}`,
       showPath: async () => {},
       pickPaths: async () => [],
       setBrightness() {},
@@ -129,7 +138,7 @@ async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManag
     },
   };
   const client = new QueryClient();
-  client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, fakeDaemon(git));
+  client.setQueryData(daemonQuery(daemon).queryKey, fakeDaemon(git, fileSystem));
   client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const root = createRootRoute();
   const shell = createRoute({ getParentRoute: () => root, id: '_shell' });
@@ -144,11 +153,11 @@ async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManag
   });
   const router = createRouter({
     routeTree: root.addChildren([shell.addChildren([workspace])]),
-    history: createMemoryHistory({ initialEntries: ['/local/elsewise/singapore'] }),
+    history: createMemoryHistory({ initialEntries: [`/${daemon}/elsewise/singapore`] }),
   });
   const application = builtInApplication({ router });
   const store = new WorkspaceStateStore(undefined);
-  store.update(WORKSPACE, { fileTree: { expanded: ['src/'], selected: [] } });
+  store.update({ ...WORKSPACE, daemon }, { fileTree: { expanded: ['src/'], selected: [] } });
   await render(
     <QueryClientProvider client={client}>
       <ApplicationManagerContext value={application}>
@@ -159,6 +168,21 @@ async function mount(git: Partial<Daemon['git']> = {}): Promise<ApplicationManag
     </QueryClientProvider>,
   );
   return application;
+}
+
+// Drags z.ts from /downloads over the element and drops it there, holding Option if `alt`.
+function dropFile(element: Element | null | undefined, { drop = true, alt = false } = {}) {
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(new File(['z'], 'z.ts'));
+  for (const type of drop ? ['dragover', 'drop'] : ['dragover']) {
+    element?.dispatchEvent(
+      new DragEvent(type, { bubbles: true, composed: true, cancelable: true, altKey: alt, dataTransfer }),
+    );
+  }
+}
+
+function shadowRow(path: string): Element | null | undefined {
+  return document.querySelector('file-tree-container')?.shadowRoot?.querySelector(`[data-item-path="${path}"]`);
 }
 
 function nameColor(path: string): string | undefined {
@@ -515,7 +539,13 @@ describe('FileTreePanel', () => {
 
     await expect
       .poll(() => open.mock.calls)
-      .toEqual([[expect.objectContaining({ entries: [{ source: 'c.ts', destination: 'src/c.ts', folder: false }] })]]);
+      .toEqual([
+        [
+          expect.objectContaining({
+            entries: [{ source: 'c.ts', destination: 'src/c.ts', folder: false }],
+          }),
+        ],
+      ]);
   });
 
   test('dims cut row', async () => {
@@ -535,5 +565,143 @@ describe('FileTreePanel', () => {
     await new Promise(requestAnimationFrame);
 
     expect(nameColor('a.ts')).toBe(nameColor('b.ts'));
+  });
+
+  test.each([
+    ['folder', 'src/', 'src/z.ts'],
+    ['file parent', 'src/d.ts', 'src/z.ts'],
+    ['root file parent', 'a.ts', 'z.ts'],
+  ])('moves dropped file into %s', async (_, path, destination) => {
+    const moveEntries = vi.fn<Daemon['fileSystem']['moveEntries']>(async () => create(MoveEntriesResponseSchema));
+    await mount({}, { moveEntries });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    dropFile(shadowRow(path));
+
+    await expect
+      .poll(() => moveEntries.mock.calls)
+      .toEqual([
+        [
+          {
+            root: '',
+            entries: [{ relativePath: '/downloads/z.ts', newRelativePath: `/elsewise/${destination}` }],
+            overwrite: false,
+          },
+        ],
+      ]);
+  });
+
+  test('moves dropped file into root from empty space', async () => {
+    const moveEntries = vi.fn<Daemon['fileSystem']['moveEntries']>(async () => create(MoveEntriesResponseSchema));
+    await mount({}, { moveEntries });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    dropFile(document.querySelector('file-tree-container')?.shadowRoot?.elementFromPoint(150, 380));
+
+    await expect
+      .poll(() => moveEntries.mock.calls.map(([request]) => request.entries))
+      .toEqual([[{ relativePath: '/downloads/z.ts', newRelativePath: '/elsewise/z.ts' }]]);
+  });
+
+  test('copies dropped file with Option', async () => {
+    const copyEntries = vi.fn<Daemon['fileSystem']['copyEntries']>(async () => create(CopyEntriesResponseSchema));
+    await mount({}, { copyEntries });
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    dropFile(shadowRow('src/'), { alt: true });
+
+    await expect
+      .poll(() => copyEntries.mock.calls.map(([request]) => request.entries))
+      .toEqual([[{ relativePath: '/downloads/z.ts', newRelativePath: '/elsewise/src/z.ts' }]]);
+  });
+
+  test('selects dropped entry', async () => {
+    await mount({}, { moveEntries: async () => create(MoveEntriesResponseSchema) });
+    await userEvent.click(page.getByRole('treeitem', { name: 'a.ts' }));
+
+    dropFile(shadowRow('src/'));
+
+    await expect.element(page.getByRole('treeitem', { name: 'z.ts' })).toHaveAttribute('aria-selected', 'true');
+    await expect.element(page.getByRole('treeitem', { name: 'a.ts' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('confirms overwrite of dropped file', async () => {
+    const application = await mount(
+      {},
+      {
+        moveEntries: async () =>
+          create(MoveEntriesResponseSchema, {
+            failures: [{ relativePath: '/downloads/z.ts', reason: MoveEntriesReason.ALREADY_EXISTS }],
+          }),
+      },
+    );
+    const open = vi.spyOn(application.fileTree.overwriteDialog, 'openWithPayload');
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    dropFile(shadowRow('src/'));
+
+    await expect
+      .poll(() => open.mock.calls)
+      .toEqual([
+        [
+          expect.objectContaining({
+            folder: 'src',
+            cut: true,
+            entries: [{ source: '/downloads/z.ts', destination: 'src/z.ts', folder: false, absolute: true }],
+          }),
+        ],
+      ]);
+  });
+
+  test('reports failed file drop', async () => {
+    const add = vi.spyOn(toast, 'add');
+    await mount(
+      {},
+      {
+        moveEntries: async () =>
+          create(MoveEntriesResponseSchema, {
+            failures: [
+              {
+                relativePath: '/downloads/z.ts',
+                reason: MoveEntriesReason.OTHER,
+                message: 'denied',
+              },
+            ],
+          }),
+      },
+    );
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    dropFile(shadowRow('src/'));
+
+    await expect
+      .poll(() => add.mock.calls)
+      .toEqual([[expect.objectContaining({ type: 'error', title: 'Moving “z.ts” failed', description: 'denied' })]]);
+  });
+
+  test('tints folder while dragging file over its child', async () => {
+    await mount();
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+    const background = (path: string) => {
+      const row = shadowRow(path);
+      return row ? getComputedStyle(row).backgroundColor : undefined;
+    };
+    const untinted = background('a.ts');
+
+    dropFile(shadowRow('src/d.ts'), { drop: false });
+
+    await expect.poll(() => background('src/')).not.toBe(untinted);
+    expect(document.querySelector('file-tree-container')?.hasAttribute('data-drop-target')).toBe(false);
+  });
+
+  test('ignores file drop on other daemon', async () => {
+    const moveEntries = vi.fn<Daemon['fileSystem']['moveEntries']>(async () => create(MoveEntriesResponseSchema));
+    await mount({}, { moveEntries }, 'remote');
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    dropFile(shadowRow('src/'));
+    await new Promise(requestAnimationFrame);
+
+    expect(moveEntries).not.toHaveBeenCalled();
   });
 });

@@ -12,6 +12,7 @@ function desktop() {
       cut() {},
       copy() {},
       paste() {},
+      absolutePathOf: () => '',
       showPath: async () => {},
       pickPaths: async () => [],
       setBrightness() {},
