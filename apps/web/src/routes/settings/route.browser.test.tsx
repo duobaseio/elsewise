@@ -1,11 +1,13 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 import { pluginStore } from '../../../test/plugins';
@@ -26,11 +28,10 @@ const PANELS: InstalledFrontendPlugin = {
                 scope: 'local',
                 id: 'io.example.words',
                 label: 'Words',
-                in: 'appearance',
                 terms: { dictionary: { label: 'Dictionary', keywords: ['spelling'] } },
                 component: () => 'Dictionary',
               },
-              { scope: 'local', id: 'io.example.hooks', label: 'Hooks', in: 'appearance', terms: {}, component: () => 'Hooks' },
+              { scope: 'local', id: 'io.example.hooks', label: 'Hooks', terms: {}, component: () => 'Hooks' },
               {
                 scope: 'local',
                 id: 'io.example.words.spelling',
@@ -39,12 +40,11 @@ const PANELS: InstalledFrontendPlugin = {
                 terms: { locale: { label: 'Locale', keywords: ['language', 'region'] } },
                 component: () => 'Spelling',
               },
-              { scope: 'local', id: 'io.example.broken', label: 'Broken', in: 'appearance', terms: {}, component: () => { throw new Error('boom'); } },
+              { scope: 'local', id: 'io.example.broken', label: 'Broken', terms: {}, component: () => { throw new Error('boom'); } },
               {
                 scope: 'remote',
                 id: 'io.example.shell',
                 label: 'Shell',
-                in: 'appearance',
                 terms: { program: { label: 'Program', keywords: ['shell'] } },
                 component: ({ id }) => 'Shell on ' + id,
               },
@@ -57,12 +57,9 @@ const PANELS: InstalledFrontendPlugin = {
 };
 
 // Settings with overrides for a language listed under another, and one that is unknown.
-const LANGUAGES: Settings = {
-  ...DEFAULT_SETTINGS,
-  appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    editor: { ...DEFAULT_SETTINGS.appearance.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
-  },
+const LANGUAGES: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
+  editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, languages: { Markdown: {}, JavaScript: {}, Elm: {} } },
 };
 
 afterEach(() => {
@@ -72,7 +69,7 @@ afterEach(() => {
 
 // The sidebar, whose links a page's own links must not be mistaken for.
 function sidebar() {
-  return page.elementLocator(document.querySelector('[data-slot="sidebar"]') as HTMLElement);
+  return page.getByRole('tree');
 }
 
 function chevron(name: string) {
@@ -80,7 +77,7 @@ function chevron(name: string) {
 }
 
 // Renders the app at the last of `entries`, with the others behind it in the history, and `plugins` installed.
-async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [], settings = DEFAULT_SETTINGS) {
+async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [], settings = DEFAULT_FRONTEND_SETTINGS) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: entries }) });
@@ -88,7 +85,9 @@ async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [],
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={store}>
-        <RouterProvider router={router} />
+        <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+          <RouterProvider router={router} />
+        </WorkspaceStateStoreContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
@@ -96,60 +95,60 @@ async function mount(entries: string[], plugins: InstalledFrontendPlugin[] = [],
 }
 
 describe('/settings/', () => {
-  test('opens general', async () => {
+  test('opens appearance', async () => {
     const router = await mount(['/settings']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 
   test('reopens last page', async () => {
-    const router = await mount(['/settings/local/appearance/terminal']);
+    const router = await mount(['/settings/local/terminal']);
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
 
     await router.navigate({ to: '/settings' });
 
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/terminal');
+    expect(router.state.location.pathname).toBe('/settings/local/terminal');
   });
 
   test('reopens last page after leaving', async () => {
-    const router = await mount(['/elsewhere', '/settings/local/appearance/terminal']);
+    const router = await mount(['/elsewhere', '/settings/local/terminal']);
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
     router.history.back();
     await expect.poll(() => router.state.location.pathname).toBe('/elsewhere');
 
     await router.navigate({ to: '/settings' });
 
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/terminal');
+    expect(router.state.location.pathname).toBe('/settings/local/terminal');
   });
 
-  test('redirects last page gone to general', async () => {
+  test('redirects last page gone to appearance', async () => {
     localStorage.setItem('elsewise.settings.page', '/settings/local/io.example.missing');
     const router = await mount(['/settings']);
 
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 
-  test('redirects last page outside scopes to general', async () => {
+  test('redirects last page outside scopes to appearance', async () => {
     localStorage.setItem('elsewise.settings.page', '/settings/appearance/terminal');
     const router = await mount(['/settings']);
 
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 });
 
 describe('Settings', () => {
   test('saves page without highlight', async () => {
-    await mount(['/settings/local/appearance/terminal?highlight=scrollback']);
+    await mount(['/settings/local/terminal?highlight=scrollback']);
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
 
-    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/local/appearance/terminal');
+    expect(localStorage.getItem('elsewise.settings.page')).toBe('/settings/local/terminal');
   });
 
   test('shows page of each link, marking it active', async () => {
     await mount(['/settings']);
-    for (const name of ['Editor', 'Terminal', 'General']) {
+    for (const name of ['Editor', 'Terminal', 'Appearance']) {
       await userEvent.click(sidebar().getByRole('treeitem', { name }));
       await expect.element(page.getByRole('heading', { name })).toBeVisible();
       await expect.element(sidebar().getByRole('treeitem', { name })).toHaveAttribute('data-active');
@@ -157,7 +156,7 @@ describe('Settings', () => {
     await expect.element(sidebar().getByRole('treeitem', { name: 'Editor' })).not.toHaveAttribute('data-active');
   });
 
-  test('lists plugins after built-in pages of group, in order added', async () => {
+  test('lists plugins after built-in pages, in order added', async () => {
     await mount(['/settings'], [PANELS]);
     await expect.element(sidebar().getByRole('treeitem', { name: 'Hooks' })).toBeVisible();
 
@@ -165,7 +164,7 @@ describe('Settings', () => {
       .getByRole('treeitem')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['General', 'Keymap', 'Editor', 'Terminal', 'Words', 'Hooks', 'Broken']);
+    expect(links).toEqual(['Appearance', 'Keymap', 'Editor', 'File tree', 'Terminal', 'Words', 'Hooks', 'Broken']);
   });
 
   test('lists languages under editor, sorted by label, expanded when open', async () => {
@@ -178,18 +177,27 @@ describe('Settings', () => {
       .getByRole('treeitem')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['General', 'Keymap', 'Editor', 'Elm', 'JavaScript/JSX', 'Markdown', 'Terminal']);
+    expect(links).toEqual([
+      'Appearance',
+      'Keymap',
+      'Editor',
+      'Elm',
+      'JavaScript/JSX',
+      'Markdown',
+      'File tree',
+      'Terminal',
+    ]);
 
     await userEvent.click(sidebar().getByRole('treeitem', { name: 'JavaScript/JSX' }));
     await expect.element(page.getByRole('heading', { name: 'JavaScript/JSX' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/JavaScript');
+    expect(router.state.location.pathname).toBe('/settings/local/editor/JavaScript');
     await expect.element(sidebar().getByRole('treeitem', { name: 'JavaScript/JSX' })).toHaveAttribute('data-active');
     await expect.element(sidebar().getByRole('treeitem', { name: 'Editor' })).not.toHaveAttribute('data-active');
   });
 
   test('keeps highlight on modifier key', async () => {
-    const router = await mount(['/settings/local/appearance/general?highlight=brightness']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    const router = await mount(['/settings/local/appearance?highlight=brightness']);
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
 
     for (const key of ['{Shift}', '{Meta}', '{Control}', '{Alt}']) {
       await userEvent.keyboard(key);
@@ -200,23 +208,23 @@ describe('Settings', () => {
   });
 
   test('clears highlight on pointer or other key', async () => {
-    const router = await mount(['/settings/local/appearance/general?highlight=brightness']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
+    const router = await mount(['/settings/local/appearance?highlight=brightness']);
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
 
     await userEvent.keyboard('{Escape}');
     await expect.poll(() => router.state.location.search).toEqual({});
 
     await router.navigate({ to: '.', search: { highlight: 'font' } });
     await expect.poll(() => router.state.location.search).toEqual({ highlight: 'font' });
-    await userEvent.click(page.getByRole('heading', { name: 'General' }));
+    await userEvent.click(page.getByRole('heading', { name: 'Appearance' }));
     await expect.poll(() => router.state.location.search).toEqual({});
   });
 
   test('returns to previous page', async () => {
-    const router = await mount(['/settings/local/appearance/terminal', '/settings/local/appearance/general']);
+    const router = await mount(['/settings/local/terminal', '/settings/local/appearance']);
     await userEvent.click(page.getByRole('button', { name: 'Back' }));
     await expect.element(page.getByRole('heading', { name: 'Terminal' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/terminal');
+    expect(router.state.location.pathname).toBe('/settings/local/terminal');
   });
 });
 
@@ -253,18 +261,18 @@ describe('Item', () => {
   });
 
   test('keeps focus on row opening split page', async () => {
-    const router = await mount(['/settings/local/appearance/keymap']);
+    const router = await mount(['/settings/local/keymap']);
     sidebar().getByRole('treeitem', { name: 'Keymap' }).element().focus();
 
     await userEvent.keyboard('{ArrowDown}');
-    await expect.poll(() => router.state.location.pathname).toBe('/settings/local/appearance/editor');
+    await expect.poll(() => router.state.location.pathname).toBe('/settings/local/editor');
     await expect.element(page.getByRole('heading', { name: 'Editor' })).toBeVisible();
 
     await expect.element(sidebar().getByRole('treeitem', { name: 'Editor' })).toHaveFocus();
   });
 
   test('moves past add language by arrows', async () => {
-    await mount(['/settings/local/appearance/editor/Markdown'], [], LANGUAGES);
+    await mount(['/settings/local/editor/Markdown'], [], LANGUAGES);
     sidebar().getByRole('treeitem', { name: 'Markdown' }).element().focus();
 
     await userEvent.keyboard('{ArrowDown}');
@@ -276,7 +284,7 @@ describe('Item', () => {
   });
 
   test('shows open language page under editor', async () => {
-    await mount(['/settings/local/appearance/editor/Markdown'], [], LANGUAGES);
+    await mount(['/settings/local/editor/Markdown'], [], LANGUAGES);
     await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
     await expect.element(sidebar().getByRole('treeitem', { name: 'Markdown' })).toHaveAttribute('data-active');
   });
@@ -300,7 +308,7 @@ describe('AddLanguage', () => {
         onChange: () => {},
       },
     };
-    const router = await mount(['/settings/local/appearance/editor'], [], LANGUAGES);
+    const router = await mount(['/settings/local/editor'], [], LANGUAGES);
     await userEvent.click(sidebar().getByRole('combobox', { name: 'Add language' }));
     await userEvent.fill(page.getByPlaceholder('Search languages'), 'J');
 
@@ -315,15 +323,12 @@ describe('AddLanguage', () => {
     await userEvent.click(page.getByRole('option', { name: 'Java', exact: true }));
 
     await expect.element(page.getByRole('heading', { name: 'Java' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/Java');
+    expect(router.state.location.pathname).toBe('/settings/local/editor/Java');
     await expect.element(sidebar().getByRole('treeitem', { name: 'Java' })).toHaveAttribute('data-active');
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith({
       ...LANGUAGES,
-      appearance: {
-        ...LANGUAGES.appearance,
-        editor: { ...LANGUAGES.appearance.editor, languages: { ...LANGUAGES.appearance.editor.languages, Java: {} } },
-      },
+      editor: { ...LANGUAGES.editor, languages: { ...LANGUAGES.editor.languages, Java: {} } },
     });
   });
 });
@@ -340,7 +345,7 @@ describe('Search', () => {
     await userEvent.click(option);
 
     await expect.element(page.getByRole('heading', { name: 'Editor' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor');
+    expect(router.state.location.pathname).toBe('/settings/local/editor');
     expect(router.state.location.search).toEqual({ highlight: 'lineSeparator' });
     await expect.element(page.getByRole('combobox', { name: 'Search' })).toHaveValue('');
   });
@@ -356,7 +361,7 @@ describe('Search', () => {
     await userEvent.click(option);
 
     await expect.element(page.getByRole('heading', { name: 'Markdown' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/editor/Markdown');
+    expect(router.state.location.pathname).toBe('/settings/local/editor/Markdown');
     expect(router.state.location.search).toEqual({ highlight: 'tabSize' });
   });
 
@@ -429,7 +434,7 @@ describe('Search', () => {
   });
 
   test('leaves find shortcut to page search', async () => {
-    await mount(['/settings/local/appearance/keymap']);
+    await mount(['/settings/local/keymap']);
     await expect.element(page.getByRole('textbox', { name: 'Search commands' })).toBeVisible();
 
     await userEvent.keyboard(PLATFORM === 'mac' ? '{Meta>}f{/Meta}' : '{Control>}f{/Control}');
@@ -454,18 +459,18 @@ describe('LocalPanel', () => {
     await expect.element(sidebar().getByRole('treeitem', { name: 'Shell' })).not.toBeInTheDocument();
   });
 
-  test('redirects unknown panel to general', async () => {
+  test('redirects unknown panel to appearance', async () => {
     const router = await mount(['/settings/local/io.example.missing']);
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 
-  test('redirects remote panel to general', async () => {
-    const router = await mount(['/settings/local/appearance/terminal'], [PANELS]);
+  test('redirects remote panel to appearance', async () => {
+    const router = await mount(['/settings/local/terminal'], [PANELS]);
     await expect.element(sidebar().getByRole('treeitem', { name: 'Words' })).toBeVisible();
     await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.shell' } });
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 });
 
@@ -480,18 +485,18 @@ describe('RemotePanel', () => {
     await expect.poll(() => page.getByRole('main').element().textContent).toContain('Shell on dev-box');
     await expect.element(sidebar().getByRole('treeitem', { name: 'Shell' })).toHaveAttribute('data-active');
     await expect.element(sidebar().getByRole('treeitem', { name: 'Words' })).not.toBeInTheDocument();
-    await expect.element(sidebar().getByRole('treeitem', { name: 'General' })).not.toBeInTheDocument();
+    await expect.element(sidebar().getByRole('treeitem', { name: 'Appearance' })).not.toBeInTheDocument();
   });
 
-  test('redirects local panel to general', async () => {
-    const router = await mount(['/settings/local/appearance/terminal'], [PANELS]);
+  test('redirects local panel to appearance', async () => {
+    const router = await mount(['/settings/local/terminal'], [PANELS]);
     await expect.element(sidebar().getByRole('treeitem', { name: 'Words' })).toBeVisible();
     await router.navigate({
       to: '/settings/remote/$remote/$id',
       params: { remote: 'dev-box', id: 'io.example.words' },
     });
-    await expect.element(page.getByRole('heading', { name: 'General' })).toBeVisible();
-    expect(router.state.location.pathname).toBe('/settings/local/appearance/general');
+    await expect.element(page.getByRole('heading', { name: 'Appearance' })).toBeVisible();
+    expect(router.state.location.pathname).toBe('/settings/local/appearance');
   });
 });
 

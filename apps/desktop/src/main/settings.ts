@@ -1,8 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DEFAULT_SETTINGS, PluginId, Settings } from '@elsewise/bridge';
 import { configLocalDir, frontendDataDir, writeJsonSync } from '@elsewise/core/node';
-import { Keymap, Theme } from '@elsewise/frontend-plugin';
+import { DEFAULT_FRONTEND_SETTINGS, FrontendSettings, Keymap, PluginId, Theme } from '@elsewise/frontend-plugin';
 import { BrowserWindow, ipcMain } from 'electron';
 import { readJsonFolder } from '../fs/json-folder';
 
@@ -28,10 +27,10 @@ export function handleSettings(): void {
       parsed = {};
     }
 
-    return Settings.catch(DEFAULT_SETTINGS).parse(parsed);
+    return FrontendSettings.safeParse(parsed).data ?? DEFAULT_FRONTEND_SETTINGS;
   });
   ipcMain.handle('settings:save', (_event, value: unknown) => {
-    writeJsonSync(path.join(configLocalDir(), 'settings.json'), Settings.parse(value));
+    writeJsonSync(path.join(configLocalDir(), 'settings.json'), FrontendSettings.parse(value));
   });
   ipcMain.handle('settings:load-plugin', (_event, plugin: unknown) => {
     try {

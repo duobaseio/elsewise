@@ -44,16 +44,14 @@ export function Terminal({
     const { selection, searchMatch, searchMatchSelected, searchMatchSelectedBorder, ...rest } = colors;
     return { ...rest, selectionBackground: selection };
   }, [colors]);
-  const font = useSettings((settings) => settings.appearance.terminal.font);
-  const cursorStyle = useSettings((settings) => settings.appearance.terminal.cursorStyle);
+  const font = useSettings((settings) => settings.terminal.font);
+  const cursorStyle = useSettings((settings) => settings.terminal.cursorStyle);
   const cursorInactiveStyle = cursorStyle === 'block' ? 'outline' : cursorStyle;
-  const cursorBlink = useSettings((settings) => settings.appearance.terminal.cursorBlink);
-  const copyOnSelect = useSettings((settings) => settings.appearance.terminal.copyOnSelect);
-  const macOptionClickForcesSelection = useSettings(
-    (settings) => settings.appearance.terminal.macOptionClickForcesSelection,
-  );
-  const macOptionIsMeta = useSettings((settings) => settings.appearance.terminal.macOptionIsMeta);
-  const scrollback = useSettings((settings) => settings.appearance.terminal.scrollback);
+  const cursorBlink = useSettings((settings) => settings.terminal.cursorBlink);
+  const copyOnSelect = useSettings((settings) => settings.terminal.copyOnSelect);
+  const macOptionClickForcesSelection = useSettings((settings) => settings.terminal.macOptionClickForcesSelection);
+  const macOptionIsMeta = useSettings((settings) => settings.terminal.macOptionIsMeta);
+  const scrollback = useSettings((settings) => settings.terminal.scrollback);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: the seeded values are deliberately not dependencies.
   useEffect(() => {

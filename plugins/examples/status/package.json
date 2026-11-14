@@ -1,0 +1,28 @@
+{
+  "name": "@elsewise/plugin-example-status",
+  "private": true,
+  "type": "module",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "onFail": "error"
+    }
+  },
+  "description": "An example plugin that adds statuses to workspaces.",
+  "scripts": {
+    "build": "vite build && node -e \"fs.copyFileSync('manifest.json', 'dist/manifest.json')\"",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format",
+    "lint": "biome lint",
+    "check": "biome check"
+  },
+  "peerDependencies": {
+    "@elsewise/frontend-plugin": "workspace:*"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.6.7",
+    "@elsewise/frontend-plugin": "workspace:*",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

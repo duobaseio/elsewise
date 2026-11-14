@@ -27,28 +27,26 @@ export async function mount(
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
   });
-  function Probe() {
-    const host = useRef<HTMLDivElement>(null);
-    const view = useRef<EditorView>(null);
-    useEffect(() => {
-      view.current = new EditorView({
-        state: EditorState.create({
-          doc: DOC,
-          extensions: [history(), foldGutter(), RIGHT_CLICK_CONTEXT_MENU, rust, extensions],
-        }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(view.current);
-      return () => view.current?.destroy();
-    }, []);
-    return (
-      <ApplicationManagerContext value={application}>
-        <EditorContextMenu render={<div ref={host} />} view={view} />
-      </ApplicationManagerContext>
-    );
-  }
-  render(<Probe />);
+  render(
+    <ApplicationManagerContext value={application}>
+      <Probe extensions={[history(), foldGutter(), RIGHT_CLICK_CONTEXT_MENU, rust, extensions]} resolve={resolve} />
+    </ApplicationManagerContext>,
+  );
   return ready;
+}
+
+function Probe({ extensions, resolve }: { extensions: Extension; resolve: (view: EditorView) => void }) {
+  const host = useRef<HTMLDivElement>(null);
+  const view = useRef<EditorView>(null);
+  useEffect(() => {
+    view.current = new EditorView({
+      state: EditorState.create({ doc: DOC, extensions }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(view.current);
+    return () => view.current?.destroy();
+  }, [extensions, resolve]);
+  return <EditorContextMenu render={<div ref={host} />} view={view} />;
 }
 
 /** Opens the context menu of `view` by right-clicking at `pos`. */

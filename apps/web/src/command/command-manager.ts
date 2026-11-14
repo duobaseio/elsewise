@@ -6,6 +6,7 @@ import type {
   CommandGroup,
   Commands,
   Disposable,
+  FileTreeSelection,
   Keymap,
   Project,
   Workspace,
@@ -21,6 +22,7 @@ import {
   EDITOR_DIFF,
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
+  FILE_TREE,
   PROJECT,
   TERMINAL,
   WORKSPACE,
@@ -84,6 +86,19 @@ import { EDITOR_FIND_USAGES } from '@/editor/lsp/references';
 import { EDITOR_RENAME } from '@/editor/lsp/rename';
 import { EDITOR_SHOW_SIGNATURE_HELP } from '@/editor/lsp/signature-help';
 import {
+  FILE_TREE_CANCEL_CUT,
+  FILE_TREE_COPY,
+  FILE_TREE_COPY_PATH,
+  FILE_TREE_COPY_RELATIVE_PATH,
+  FILE_TREE_CUT,
+  FILE_TREE_DELETE,
+  FILE_TREE_NEW_FILE,
+  FILE_TREE_NEW_FOLDER,
+  FILE_TREE_OPEN_FILE_MANAGER,
+  FILE_TREE_PASTE,
+  FILE_TREE_RENAME,
+} from '@/fs/commands';
+import {
   PROJECT_COPY_PATH,
   PROJECT_DELETE,
   PROJECT_IMPORT_WORKSPACE,
@@ -108,6 +123,7 @@ export const DEFAULT_GROUPS: readonly CommandGroup[] = [
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
   TERMINAL,
+  FILE_TREE,
   PROJECT,
   WORKSPACE,
 ];
@@ -194,6 +210,18 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   TERMINAL_FIND,
   TERMINAL_SELECT_ALL,
   TERMINAL_CLEAR,
+  // File tree
+  FILE_TREE_NEW_FILE,
+  FILE_TREE_NEW_FOLDER,
+  FILE_TREE_CUT,
+  FILE_TREE_COPY,
+  FILE_TREE_COPY_PATH,
+  FILE_TREE_COPY_RELATIVE_PATH,
+  FILE_TREE_PASTE,
+  FILE_TREE_CANCEL_CUT,
+  FILE_TREE_RENAME,
+  FILE_TREE_DELETE,
+  FILE_TREE_OPEN_FILE_MANAGER,
 ];
 
 /**
@@ -343,7 +371,7 @@ export class CommandManager implements Commands {
     this.notify();
   }
 
-  run(id: string, target?: Project | Workspace | EditorView | XTerm): boolean {
+  run(id: string, target?: Project | Workspace | EditorView | XTerm | FileTreeSelection): boolean {
     const command = this.currentCommands.get(id);
     if (command === undefined) {
       console.warn(`Unknown command ${id}`);
@@ -422,6 +450,23 @@ export class CommandManager implements Commands {
         return command.run(this.application, terminal);
       }
 
+      if (command.scope === 'fileTree') {
+        if (target === undefined) {
+          return false;
+        }
+
+        if (!isFileTreeSelection(target)) {
+          console.warn(`Command ${id} runs on a file tree selection`);
+          return false;
+        }
+
+        if (command.enabled?.(this.application, target) === false) {
+          return false;
+        }
+
+        return command.run(this.application, target);
+      }
+
       if (command.enabled?.(this.application) === false) {
         return false;
       }
@@ -451,20 +496,26 @@ export class CommandManager implements Commands {
   }
 }
 
-export function isProject(target: Project | Workspace | EditorView | XTerm): target is Project {
+export function isProject(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is Project {
   return 'absolutePath' in target && !('main' in target);
 }
 
-export function isWorkspace(target: Project | Workspace | EditorView | XTerm): target is Workspace {
+export function isWorkspace(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is Workspace {
   return 'absolutePath' in target && 'main' in target;
 }
 
-export function isEditor(target: Project | Workspace | EditorView | XTerm): target is EditorView {
-  return !('absolutePath' in target) && !('buffer' in target);
+export function isEditor(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is EditorView {
+  return !('absolutePath' in target) && !('paths' in target) && !('buffer' in target);
 }
 
-export function isTerminal(target: Project | Workspace | EditorView | XTerm): target is XTerm {
+export function isTerminal(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is XTerm {
   return 'buffer' in target;
+}
+
+export function isFileTreeSelection(
+  target: Project | Workspace | EditorView | XTerm | FileTreeSelection,
+): target is FileTreeSelection {
+  return 'paths' in target;
 }
 
 export function useCommandManager(): CommandManager;

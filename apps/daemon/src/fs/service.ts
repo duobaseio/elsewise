@@ -5,14 +5,17 @@ import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
 import {
+  type CopyEntriesRequest,
+  CopyEntriesResponse_Failure_Reason as CopyReason,
   type CreateDirectoryRequest,
-  type DeleteEntryRequest,
+  type DeleteEntriesRequest,
   WatchDirectoriesResponse_Unavailable_Reason as DirectoryReason,
   WatchFilesResponse_Unavailable_Reason as FileReason,
   type FileSystemService,
   type ListDirectoryRequest,
+  type MoveEntriesRequest,
+  MoveEntriesResponse_Failure_Reason as MoveReason,
   type ReadFileRequest,
-  type RenameEntryRequest,
   WatchRootsResponse_Root_Mode as RootMode,
   WatchRootsResponse_Root_Reason as RootReason,
   type WatchDirectoriesRequest,
@@ -22,8 +25,8 @@ import {
   type WatchRootsRequest,
   type WriteFileRequest,
 } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
-import { listDirectory } from './directory';
-import { attempt, errnoOf } from './error';
+import { copyAtomically, isRespelling, listDirectory, refuseCopy, refuseMove } from './directory';
+import { attempt, attemptEach, errnoOf } from './error';
 import { createFile, hashContent, hashFile, isBinary, replaceFile } from './file';
 import { toNativePath, toNativePathOrRoot, toProtocolPath } from './path';
 import { type Snapshot, watchPaths } from './watch';
@@ -152,34 +155,77 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
     });
   }
 
-  renameEntry(request: RenameEntryRequest) {
+  copyEntries(request: CopyEntriesRequest) {
     return attempt(async () => {
-      const absoluteNativePath = toNativePath(request.root, request.relativePath);
-      const newAbsoluteNativePath = toNativePath(request.root, request.newRelativePath);
-      const from = await fs.lstat(absoluteNativePath, { bigint: true });
-      const to = await fs.lstat(newAbsoluteNativePath, { bigint: true }).catch((error) => {
-        if (errnoOf(error) === 'ENOENT') {
-          return undefined;
-        }
-        throw error;
+      const entries = request.entries.map((entry) => ({
+        relativePath: entry.relativePath,
+        absoluteNativePath: toNativePath(request.root, entry.relativePath),
+        newAbsoluteNativePath: toNativePath(request.root, entry.newRelativePath),
+      }));
+      const failures = await attemptEach(entries, async ({ absoluteNativePath, newAbsoluteNativePath }) => {
+        await refuseCopy(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+        await copyAtomically(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
       });
-      // On a case-insensitive file system, `to` may be present even though the case is different
-      // (e.g. readme.md -> README.md).
-      const respelled =
-        to?.dev === from.dev && to.ino === from.ino && fold(absoluteNativePath) === fold(newAbsoluteNativePath);
-      if (to && !respelled) {
-        throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the new path');
-      }
-      await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
-      await fs.rename(absoluteNativePath, newAbsoluteNativePath);
-      return {};
+      return {
+        failures: failures.map(({ item, error }) => ({
+          relativePath: item.relativePath,
+          reason: error.code === Code.ALREADY_EXISTS ? CopyReason.ALREADY_EXISTS : CopyReason.OTHER,
+          message: error.message,
+        })),
+      };
     });
   }
 
-  deleteEntry(request: DeleteEntryRequest) {
+  moveEntries(request: MoveEntriesRequest) {
     return attempt(async () => {
-      await fs.rm(toNativePath(request.root, request.relativePath), { recursive: true });
-      return {};
+      const entries = request.entries.map((entry) => ({
+        relativePath: entry.relativePath,
+        absoluteNativePath: toNativePath(request.root, entry.relativePath),
+        newAbsoluteNativePath: toNativePath(request.root, entry.newRelativePath),
+      }));
+      const failures = await attemptEach(entries, async ({ absoluteNativePath, newAbsoluteNativePath }) => {
+        await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+
+        if (request.overwrite && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
+          await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+        }
+        await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+        try {
+          await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+        } catch (error) {
+          // Renaming does not work across devices. We copy atomically and delete instead.
+          if (errnoOf(error) === 'EXDEV') {
+            await copyAtomically(absoluteNativePath, newAbsoluteNativePath, false);
+            await fs.rm(absoluteNativePath, { recursive: true });
+            return;
+          }
+
+          throw error;
+        }
+      });
+
+      return {
+        failures: failures.map(({ item, error }) => ({
+          relativePath: item.relativePath,
+          reason: error.code === Code.ALREADY_EXISTS ? MoveReason.ALREADY_EXISTS : MoveReason.OTHER,
+          message: error.message,
+        })),
+      };
+    });
+  }
+
+  deleteEntries(request: DeleteEntriesRequest) {
+    return attempt(async () => {
+      const entries = request.relativePaths.map((relativePath) => ({
+        relativePath,
+        absoluteNativePath: toNativePath(request.root, relativePath),
+      }));
+      const failures = await attemptEach(entries, async ({ absoluteNativePath }) => {
+        await fs.rm(absoluteNativePath, { recursive: true });
+      });
+      return {
+        failures: failures.map(({ item, error }) => ({ relativePath: item.relativePath, message: error.message })),
+      };
     });
   }
 
@@ -254,9 +300,4 @@ function fileReason(error: unknown): FileReason {
     default:
       return FileReason.OTHER;
   }
-}
-
-/** Returns the path as a case-insensitive file system compares it. */
-function fold(absoluteNativePath: string): string {
-  return absoluteNativePath.normalize('NFC').toLowerCase();
 }

@@ -3,13 +3,16 @@ import { indentUnit, LanguageDescription, LanguageSupport, StreamLanguage } from
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type DiffLayout, type Settings } from '@elsewise/bridge';
 import {
   DEFAULT_COMMANDS,
-  DEFAULT_DIFF_SOURCES,
+  DEFAULT_DIFF_SOURCE_GROUPS,
+  DEFAULT_FRONTEND_SETTINGS,
+  type DiffLayout,
   EDITOR_DOCUMENT,
   type EditorDiffContent,
   type EditorDiffSource,
+  type EditorDiffSourceGroup,
+  type FrontendSettings,
   type LanguageServer,
 } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -47,13 +50,10 @@ vi.mock('@/appearance/themes', async (original) => {
   return { ...actual, useActiveTheme: () => theme };
 });
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
-  appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
-    editor: { ...DEFAULT_SETTINGS.appearance.editor, visualGuides: [] },
-  },
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
+  editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, visualGuides: [] },
 };
 
 function shell(children: ReactNode) {
@@ -262,8 +262,8 @@ describe('Editor', () => {
     editor.addExtensions([EditorState.tabSize.of(2), indentUnit.of('\t')]);
     const view = await mountEditor('fn main() {}\n', 'main.rs', editor);
 
-    expect(view.state.tabSize).toBe(SETTINGS.appearance.editor.tabSize);
-    expect(view.state.facet(indentUnit)).toBe(SETTINGS.appearance.editor.indentUnit);
+    expect(view.state.tabSize).toBe(SETTINGS.editor.tabSize);
+    expect(view.state.facet(indentUnit)).toBe(SETTINGS.editor.indentUnit);
   });
 
   test('prefers file line separator over plugin facet', async () => {
@@ -496,7 +496,7 @@ describe('Editor', () => {
   describe('diff', () => {
     test('shows chunks once base arrives', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE)]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE)] }]);
       const { file } = await mountDiff('test.source', 'unified', editor);
 
       await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
@@ -505,7 +505,7 @@ describe('Editor', () => {
 
     test('clears source and chunks on close', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE)]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE)] }]);
       const { diff, file, commands } = await mountDiff('test.source', 'unified', editor);
       await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
 
@@ -517,7 +517,9 @@ describe('Editor', () => {
 
     test('fetches base of changed source', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE), diffSourceOf('test.other', CODE)]);
+      editor.diffs.add([
+        { id: 'test', sources: [diffSourceOf('test.source', BASE), diffSourceOf('test.other', CODE)] },
+      ]);
       const { diff, file } = await mountDiff('test.source', 'unified', editor);
       await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
 
@@ -532,7 +534,7 @@ describe('Editor', () => {
       const late = new Promise<string>((resolve) => {
         resolveLate = resolve;
       });
-      editor.diffs.add([diffSourceOf('test.late', late), diffSourceOf('test.other', CODE)]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.late', late), diffSourceOf('test.other', CODE)] }]);
       const { diff, file } = await mountDiff('test.late', 'unified', editor);
 
       diff.source = 'test.other';
@@ -545,7 +547,7 @@ describe('Editor', () => {
 
     test('shows read-only base beside file in split', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE)]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE)] }]);
       const { file, base } = await mountDiff('test.source', 'split', editor);
 
       await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
@@ -556,7 +558,7 @@ describe('Editor', () => {
 
     test('keeps document, selection and undo history across layouts', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE)]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE)] }]);
       const { diff, file, base, commands } = await mountDiff('test.source', 'unified', editor);
       await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
       file()?.dispatch({ changes: { from: 0, insert: 'x' }, selection: { anchor: 3 }, userEvent: 'input' });
@@ -579,7 +581,9 @@ describe('Editor', () => {
 
     test('replaces base of changed source in split', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE), diffSourceOf('test.other', CODE)]);
+      editor.diffs.add([
+        { id: 'test', sources: [diffSourceOf('test.source', BASE), diffSourceOf('test.other', CODE)] },
+      ]);
       const { diff, base } = await mountDiff('test.source', 'split', editor);
       await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
 
@@ -590,7 +594,7 @@ describe('Editor', () => {
 
     test('passes side layout to plugin extension function', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([diffSourceOf('test.source', BASE)]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE)] }]);
       editor.addExtensions([
         (document) =>
           EditorView.contentAttributes.of({
@@ -609,7 +613,7 @@ describe('Editor', () => {
     test('keeps split while new base loads', async () => {
       const editor = new EditorManager();
       const other = pendingSourceOf('test.other');
-      editor.diffs.add([diffSourceOf('test.source', BASE), other.source]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE), other.source] }]);
       const { diff, file, base } = await mountDiff('test.source', 'split', editor);
       await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
       const shown = file();
@@ -627,7 +631,7 @@ describe('Editor', () => {
     test('keeps unified diff while new base loads', async () => {
       const editor = new EditorManager();
       const other = pendingSourceOf('test.other');
-      editor.diffs.add([diffSourceOf('test.source', BASE), other.source]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE), other.source] }]);
       const { diff, file } = await mountDiff('test.source', 'unified', editor);
       await expect.poll(() => file()?.dom.querySelectorAll('.cm-changedLine').length).toBe(1);
 
@@ -643,7 +647,7 @@ describe('Editor', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
       const editor = new EditorManager();
       const failing = pendingSourceOf('test.failing');
-      editor.diffs.add([diffSourceOf('test.source', BASE), failing.source]);
+      editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE), failing.source] }]);
       const { diff, file } = await mountDiff('test.source', 'split', editor);
       await expect.poll(() => file()).not.toBeNull();
 
@@ -662,7 +666,7 @@ describe('Editor', () => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
       const editor = new EditorManager();
       const failing = pendingSourceOf('test.failing');
-      editor.diffs.add([failing.source]);
+      editor.diffs.add([{ id: 'test', sources: [failing.source] }]);
       const { diff, file } = await mountDiff('test.failing', 'unified', editor);
       failing.reject(new Error('unreadable'));
       await expect.element(page.getByText('unreadable')).toBeVisible();
@@ -671,12 +675,12 @@ describe('Editor', () => {
 
       await expect.poll(() => diff.source).toBeNull();
       await expect.poll(() => file()).not.toBeNull();
-      await expect.element(page.getByRole('button', { name: 'Compare with…' })).toBeVisible();
+      await expect.element(page.getByRole('button', { name: 'Compare with' })).toBeVisible();
     });
 
     test('stops on removed source', async () => {
       const editor = new EditorManager();
-      const remove = editor.diffs.add([diffSourceOf('test.source', BASE)]);
+      const remove = editor.diffs.add([{ id: 'test', sources: [diffSourceOf('test.source', BASE)] }]);
       const { file, base } = await mountDiff('test.source', 'split', editor);
       await expect.poll(() => base()?.state.doc.toString()).toBe(BASE);
 
@@ -688,7 +692,7 @@ describe('Editor', () => {
 
     test('updates toolbar command while base loads', async () => {
       const editor = new EditorManager();
-      editor.diffs.add([pendingSourceOf('test.source').source]);
+      editor.diffs.add([{ id: 'test', sources: [pendingSourceOf('test.source').source] }]);
       editor.addToolbarItems([
         {
           type: 'command',
@@ -709,15 +713,15 @@ describe('Editor', () => {
 
     test('starts comparing from toolbar', async () => {
       const editor = new EditorManager();
-      editor.diffs.add(builtInSources());
+      editor.diffs.add(builtInGroups());
       const { diff } = await mountDiff(null, 'unified', editor);
 
-      await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
+      await userEvent.click(page.getByRole('button', { name: 'Compare with' }));
       await userEvent.click(page.getByRole('menuitemradio', { name: 'Unstaged' }));
 
-      await expect.poll(() => diff.source).toBe(DEFAULT_DIFF_SOURCES.unstaged);
+      await expect.poll(() => diff.source).toBe(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id);
       await expect.element(page.getByRole('button', { name: 'Compared with Unstaged' })).toBeVisible();
-      expect(page.getByRole('button', { name: 'Compare with…' }).query()).toBeNull();
+      expect(page.getByRole('button', { name: 'Compare with' }).query()).toBeNull();
     });
   });
 });
@@ -727,19 +731,27 @@ function header(): Element | null {
   return document.querySelector('[data-slot="diff-header"]');
 }
 
-// Returns sources with the built-in ids, whose bases are `BASE`, named after their content where `label` is given.
-function builtInSources(label?: string): EditorDiffSource[] {
+// Returns the built-in group with the unstaged and uncommitted sources, whose bases are `BASE`, named after their
+// content where `label` is given.
+function builtInGroups(label?: string): EditorDiffSourceGroup[] {
+  const { git } = DEFAULT_DIFF_SOURCE_GROUPS;
   return [
-    { id: DEFAULT_DIFF_SOURCES.unstaged, label: 'Unstaged', base: async () => ({ code: BASE, label }) },
-    { id: DEFAULT_DIFF_SOURCES.uncommitted, label: 'Uncommitted', base: async () => ({ code: BASE }) },
+    {
+      id: git.id,
+      order: git.order,
+      sources: [
+        { ...git.sources.unstaged, label: 'Unstaged', base: async () => ({ code: BASE, label }) },
+        { ...git.sources.uncommitted, label: 'Uncommitted', base: async () => ({ code: BASE }) },
+      ],
+    },
   ];
 }
 
 describe('DiffHeader', () => {
   test('names base and target', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources('HEAD (a1b2c3d)'));
-    await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add(builtInGroups('HEAD (a1b2c3d)'));
+    await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
 
     await expect.poll(() => header()?.textContent).toContain('HEAD (a1b2c3d)');
     expect(header()?.textContent).toContain('Current');
@@ -747,21 +759,21 @@ describe('DiffHeader', () => {
 
   test('switches source', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources());
-    const { diff } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add(builtInGroups());
+    const { diff } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
 
     await userEvent.click(page.getByRole('button', { name: 'Compared with Unstaged' }));
     await expect.element(page.getByRole('menuitemradio', { name: 'Unstaged' })).toHaveAttribute('aria-checked', 'true');
     await userEvent.click(page.getByRole('menuitemradio', { name: 'Uncommitted' }));
 
-    await expect.poll(() => diff.source).toBe(DEFAULT_DIFF_SOURCES.uncommitted);
+    await expect.poll(() => diff.source).toBe(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.uncommitted.id);
     await expect.element(page.getByRole('button', { name: 'Compared with Uncommitted' })).toBeVisible();
   });
 
   test('lists sources', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources());
-    await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add(builtInGroups());
+    await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
 
     await userEvent.click(page.getByRole('button', { name: 'Compared with Unstaged' }));
 
@@ -778,10 +790,13 @@ describe('DiffHeader', () => {
   test('skips hidden sources', async () => {
     const editor = new EditorManager();
     editor.diffs.add([
-      ...builtInSources(),
-      { id: 'test.hidden', label: 'Hidden', shown: () => false, base: async () => ({ code: BASE }) },
+      ...builtInGroups(),
+      {
+        id: 'test',
+        sources: [{ id: 'test.hidden', label: 'Hidden', shown: () => false, base: async () => ({ code: BASE }) }],
+      },
     ]);
-    await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
 
     await userEvent.click(page.getByRole('button', { name: 'Compared with Unstaged' }));
 
@@ -789,10 +804,31 @@ describe('DiffHeader', () => {
     expect(page.getByRole('menuitemradio', { name: 'Hidden' }).query()).toBeNull();
   });
 
+  test('separates groups', async () => {
+    const editor = new EditorManager();
+    editor.diffs.add([
+      ...builtInGroups(),
+      { id: 'test', order: 20, sources: [diffSourceOf('test.turn', BASE)] },
+      { id: 'test.empty', order: 30, sources: [{ ...diffSourceOf('test.hidden', BASE), shown: () => false }] },
+    ]);
+    await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
+
+    await userEvent.click(page.getByRole('button', { name: 'Compared with Unstaged' }));
+
+    await expect.element(page.getByRole('menuitemradio', { name: 'test.turn' })).toBeVisible();
+    expect(
+      [...document.querySelectorAll('[role="menuitemradio"], [role="separator"]')].map(
+        (element) => element.textContent || element.getAttribute('role'),
+      ),
+    ).toEqual(['Unstaged', 'Uncommitted', 'separator', 'test.turn']);
+  });
+
   test('goes to next and previous change', async () => {
     const editor = new EditorManager();
-    editor.diffs.add([diffSourceOf(DEFAULT_DIFF_SOURCES.unstaged, BASE)]);
-    const { file } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add([
+      { id: 'test', sources: [diffSourceOf(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, BASE)] },
+    ]);
+    const { file } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
     const line = () => {
       const state = file()?.state;
       return state?.doc.lineAt(state.selection.main.head).number;
@@ -809,8 +845,10 @@ describe('DiffHeader', () => {
 
   test('disables change buttons without changes', async () => {
     const editor = new EditorManager();
-    editor.diffs.add([diffSourceOf(DEFAULT_DIFF_SOURCES.unstaged, CODE)]);
-    const { file } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add([
+      { id: 'test', sources: [diffSourceOf(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, CODE)] },
+    ]);
+    const { file } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
     await expect.element(page.getByRole('button', { name: 'Next change' })).toBeDisabled();
     await expect.element(page.getByRole('button', { name: 'Previous change' })).toBeDisabled();
 
@@ -822,8 +860,10 @@ describe('DiffHeader', () => {
 
   test('enables change buttons in split', async () => {
     const editor = new EditorManager();
-    editor.diffs.add([diffSourceOf(DEFAULT_DIFF_SOURCES.unstaged, BASE)]);
-    await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'split', editor);
+    editor.diffs.add([
+      { id: 'test', sources: [diffSourceOf(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, BASE)] },
+    ]);
+    await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'split', editor);
 
     await expect.element(page.getByRole('button', { name: 'Next change' })).toBeEnabled();
     await expect.element(page.getByRole('button', { name: 'Previous change' })).toBeEnabled();
@@ -831,8 +871,8 @@ describe('DiffHeader', () => {
 
   test('switches layout', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources());
-    const { diff, base } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add(builtInGroups());
+    const { diff, base } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
     await expect.element(page.getByRole('button', { name: 'Unified' })).toHaveAttribute('aria-pressed', 'true');
 
     await userEvent.click(page.getByRole('button', { name: 'Split' }));
@@ -846,21 +886,21 @@ describe('DiffHeader', () => {
 
   test('stops comparing', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources());
-    const { diff } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'unified', editor);
+    editor.diffs.add(builtInGroups());
+    const { diff } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'unified', editor);
     await expect.poll(() => header()).not.toBeNull();
 
     await userEvent.click(page.getByRole('button', { name: 'Close comparison' }));
 
     await expect.poll(() => diff.source).toBeNull();
     await expect.poll(() => header()).toBeNull();
-    await expect.element(page.getByRole('button', { name: 'Compare with…' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Compare with' })).toBeVisible();
   });
 
   test('follows resized sides in split', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources());
-    const { base } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'split', editor);
+    editor.diffs.add(builtInGroups());
+    const { base } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'split', editor);
     await expect.poll(() => base()).not.toBeNull();
     const handle = document.querySelector('[data-slot="split-handle"]') as HTMLElement;
     const left = base()?.dom.getBoundingClientRect().left ?? 0;
@@ -877,8 +917,8 @@ describe('DiffHeader', () => {
 
   test('lines up with sides in split', async () => {
     const editor = new EditorManager();
-    editor.diffs.add(builtInSources());
-    const { file, base } = await mountDiff(DEFAULT_DIFF_SOURCES.unstaged, 'split', editor);
+    editor.diffs.add(builtInGroups());
+    const { file, base } = await mountDiff(DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id, 'split', editor);
     await expect.poll(() => base()).not.toBeNull();
 
     const picker = page.getByRole('button', { name: 'Compared with Unstaged' }).element().getBoundingClientRect();

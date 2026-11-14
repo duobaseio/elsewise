@@ -17,7 +17,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuChevron,
@@ -29,7 +28,7 @@ import {
   SidebarMenuSubItem,
   SidebarProvider,
 } from '@elsewise/components/components/sidebar';
-import { DEFAULT_ROUTES, DEFAULT_SETTINGS_GROUPS } from '@elsewise/frontend-plugin';
+import { DEFAULT_ROUTES } from '@elsewise/frontend-plugin';
 import {
   createFileRoute,
   Link,
@@ -59,14 +58,12 @@ export const Route = createFileRoute('/settings')({
 
 const MODIFIERS = ['Shift', 'Meta', 'Control', 'Alt'];
 
-const GROUPS = [{ id: DEFAULT_SETTINGS_GROUPS.appearance, label: 'Appearance & Behavior' }];
-
 function Settings() {
   const router = useRouter();
   const navigate = Route.useNavigate();
   const { remote } = useParams({ strict: false });
   const panels = useSettingsPanels((settings) => (remote === undefined ? settings.localPanels : settings.remotePanels));
-  const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
+  const languages = useSettings((settings) => Object.keys(settings.editor.languages));
   const { highlight } = Route.useSearch();
   const pathname = useLocation({ select: (location) => location.pathname });
 
@@ -118,48 +115,40 @@ function Settings() {
         <Search />
 
         <SidebarContent selectionFollowsFocus>
-          {GROUPS.map((group) => {
-            const members = panels.filter((panel) => panel.in === group.id);
-            if (members.length === 0) {
-              return null;
-            }
-
-            return (
-              <SidebarGroup key={group.id}>
-                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {members.map((panel) =>
-                      panel.id === DEFAULT_PANELS.editor.id ? (
-                        <Item
-                          entries={languages
-                            .map((language) => ({
-                              key: language,
-                              label: LANGUAGES[language]?.label ?? language,
-                              link: linkTo(panel, { language }),
-                            }))
-                            .sort((a, b) => a.label.localeCompare(b.label))}
-                          key={panel.id}
-                          label={panel.label}
-                          action={<AddLanguage languages={languages} />}
-                          link={linkTo(panel, { remote })}
-                        />
-                      ) : (
-                        <Item
-                          entries={panels
-                            .filter((other) => other.in === panel.id)
-                            .map((other) => ({ key: other.id, label: other.label, link: linkTo(other, { remote }) }))}
-                          key={panel.id}
-                          label={panel.label}
-                          link={linkTo(panel, { remote })}
-                        />
-                      ),
-                    )}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </SidebarGroup>
-            );
-          })}
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {panels
+                  .filter((panel) => panel.in === undefined)
+                  .map((panel) =>
+                    panel.id === DEFAULT_PANELS.editor.id ? (
+                      <Item
+                        entries={languages
+                          .map((language) => ({
+                            key: language,
+                            label: LANGUAGES[language]?.label ?? language,
+                            link: linkTo(panel, { language }),
+                          }))
+                          .sort((a, b) => a.label.localeCompare(b.label))}
+                        key={panel.id}
+                        label={panel.label}
+                        action={<AddLanguage languages={languages} />}
+                        link={linkTo(panel, { remote })}
+                      />
+                    ) : (
+                      <Item
+                        entries={panels
+                          .filter((other) => other.in === panel.id)
+                          .map((other) => ({ key: other.id, label: other.label, link: linkTo(other, { remote }) }))}
+                        key={panel.id}
+                        label={panel.label}
+                        link={linkTo(panel, { remote })}
+                      />
+                    ),
+                  )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         </SidebarContent>
       </Sidebar>
 
@@ -268,12 +257,9 @@ function AddLanguage({ languages }: { languages: readonly string[] }) {
           }
           update((settings) => ({
             ...settings,
-            appearance: {
-              ...settings.appearance,
-              editor: {
-                ...settings.appearance.editor,
-                languages: { ...settings.appearance.editor.languages, [language]: {} },
-              },
+            editor: {
+              ...settings.editor,
+              languages: { ...settings.editor.languages, [language]: {} },
             },
           }));
           void navigate({ ...linkTo(DEFAULT_PANELS.editor, { language }), replace: true });

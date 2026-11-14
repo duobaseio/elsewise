@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, test } from 'vitest';
@@ -12,18 +12,16 @@ describe('useEditorSettings', () => {
   async function mount(language: string, key: 'tabSize') {
     const client = new QueryClient();
     client.setQueryData(settingsQuery.queryKey, {
-      ...DEFAULT_SETTINGS,
-      appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, tabSize: 4, languages: { JavaScript: { tabSize: 2 } } },
+      ...DEFAULT_FRONTEND_SETTINGS,
+      editor: {
+        ...DEFAULT_FRONTEND_SETTINGS.editor,
+        tabSize: 4,
+        languages: { JavaScript: { tabSize: 2 } },
       },
     });
-    function Setting() {
-      return <output>{useEditorSettings(language, key)}</output>;
-    }
     await render(
       <QueryClientProvider client={client}>
-        <Setting />
+        <Setting language={language} settingKey={key} />
       </QueryClientProvider>,
     );
     return page.getByRole('status');
@@ -57,6 +55,10 @@ describe('OPEN_SETTINGS', () => {
   });
 
   test('keeps open settings page', async () => {
-    await expect(open('/settings/local/appearance/terminal')).resolves.toBe('/settings/local/appearance/terminal');
+    await expect(open('/settings/local/terminal')).resolves.toBe('/settings/local/terminal');
   });
 });
+
+function Setting({ language, settingKey }: { language: string; settingKey: 'tabSize' }) {
+  return <output>{useEditorSettings(language, settingKey)}</output>;
+}

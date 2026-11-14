@@ -35,7 +35,7 @@ describe('readStatus', () => {
       upstreamGone: false,
       ahead: 0,
       behind: 0,
-      entries: [{ relativePath: 'new.txt', kind: { case: 'untracked', value: {} } }],
+      entries: [{ relativePath: 'new.txt', kind: { case: 'untracked', value: {} }, directory: false }],
       operation: undefined,
     });
     const { entries } = await readStatus(repo.git, true);
@@ -80,11 +80,13 @@ describe('parseStatus', () => {
       '# branch.head main',
       '1 .M N... 100644 100644 100644 78981 78981 a b.txt',
       '1 A. N... 000000 100644 100644 00000 61780 added.txt',
+      '1 .M S.M. 160000 160000 160000 2a5b3 2a5b3 lib',
       '2 R. N... 100644 100644 100644 61780 61780 R100 d/c.txt',
       'd/b.txt',
       'u UU N... 100644 100644 100644 100644 00000 11111 22222 conflict.txt',
       'u DU N... 100644 100644 100644 100644 00000 11111 22222 deleted-by-us.txt',
       '? new.txt',
+      '? nested/',
       '! node_modules/',
     ].join(NUL);
     expect(parseStatus(text).entries).toEqual([
@@ -94,6 +96,7 @@ describe('parseStatus', () => {
           case: 'changed',
           value: { staged: Change.UNSPECIFIED, unstaged: Change.MODIFIED, originalRelativePath: '' },
         },
+        directory: false,
       },
       {
         relativePath: 'added.txt',
@@ -101,6 +104,15 @@ describe('parseStatus', () => {
           case: 'changed',
           value: { staged: Change.ADDED, unstaged: Change.UNSPECIFIED, originalRelativePath: '' },
         },
+        directory: false,
+      },
+      {
+        relativePath: 'lib',
+        kind: {
+          case: 'changed',
+          value: { staged: Change.UNSPECIFIED, unstaged: Change.MODIFIED, originalRelativePath: '' },
+        },
+        directory: true,
       },
       {
         relativePath: 'd/c.txt',
@@ -108,11 +120,21 @@ describe('parseStatus', () => {
           case: 'changed',
           value: { staged: Change.RENAMED, unstaged: Change.UNSPECIFIED, originalRelativePath: 'd/b.txt' },
         },
+        directory: false,
       },
-      { relativePath: 'conflict.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_MODIFIED } } },
-      { relativePath: 'deleted-by-us.txt', kind: { case: 'conflicted', value: { kind: Kind.DELETED_BY_US } } },
-      { relativePath: 'new.txt', kind: { case: 'untracked', value: {} } },
-      { relativePath: 'node_modules', kind: { case: 'ignored', value: {} } },
+      {
+        relativePath: 'conflict.txt',
+        kind: { case: 'conflicted', value: { kind: Kind.BOTH_MODIFIED } },
+        directory: false,
+      },
+      {
+        relativePath: 'deleted-by-us.txt',
+        kind: { case: 'conflicted', value: { kind: Kind.DELETED_BY_US } },
+        directory: false,
+      },
+      { relativePath: 'new.txt', kind: { case: 'untracked', value: {} }, directory: false },
+      { relativePath: 'nested', kind: { case: 'untracked', value: {} }, directory: true },
+      { relativePath: 'node_modules', kind: { case: 'ignored', value: {} }, directory: true },
     ]);
   });
 
@@ -139,6 +161,7 @@ describe('parseStatus', () => {
           case: 'changed',
           value: { staged: Change.DELETED, unstaged: Change.UNSPECIFIED, originalRelativePath: '' },
         },
+        directory: false,
       },
       {
         relativePath: 'link',
@@ -146,6 +169,7 @@ describe('parseStatus', () => {
           case: 'changed',
           value: { staged: Change.UNSPECIFIED, unstaged: Change.OTHER, originalRelativePath: '' },
         },
+        directory: false,
       },
       {
         relativePath: 'copy.txt',
@@ -153,13 +177,14 @@ describe('parseStatus', () => {
           case: 'changed',
           value: { staged: Change.COPIED, unstaged: Change.UNSPECIFIED, originalRelativePath: 'orig.txt' },
         },
+        directory: false,
       },
-      { relativePath: 'dd.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_DELETED } } },
-      { relativePath: 'au.txt', kind: { case: 'conflicted', value: { kind: Kind.ADDED_BY_US } } },
-      { relativePath: 'ud.txt', kind: { case: 'conflicted', value: { kind: Kind.DELETED_BY_THEM } } },
-      { relativePath: 'ua.txt', kind: { case: 'conflicted', value: { kind: Kind.ADDED_BY_THEM } } },
-      { relativePath: 'aa.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_ADDED } } },
-      { relativePath: 'xy.txt', kind: { case: 'conflicted', value: { kind: Kind.OTHER } } },
+      { relativePath: 'dd.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_DELETED } }, directory: false },
+      { relativePath: 'au.txt', kind: { case: 'conflicted', value: { kind: Kind.ADDED_BY_US } }, directory: false },
+      { relativePath: 'ud.txt', kind: { case: 'conflicted', value: { kind: Kind.DELETED_BY_THEM } }, directory: false },
+      { relativePath: 'ua.txt', kind: { case: 'conflicted', value: { kind: Kind.ADDED_BY_THEM } }, directory: false },
+      { relativePath: 'aa.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_ADDED } }, directory: false },
+      { relativePath: 'xy.txt', kind: { case: 'conflicted', value: { kind: Kind.OTHER } }, directory: false },
     ]);
   });
 });

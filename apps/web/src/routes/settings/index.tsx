@@ -16,6 +16,6 @@ export const Route = createFileRoute('/settings/')({
 
     throw page?.startsWith('/settings/local/') || page?.startsWith('/settings/remote/')
       ? redirect({ href: page, replace: true })
-      : redirect({ to: '/settings/local/appearance/general', replace: true });
+      : redirect({ to: '/settings/local/appearance', replace: true });
   },
 });

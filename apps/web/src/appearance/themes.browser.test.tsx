@@ -1,5 +1,4 @@
-import { DEFAULT_SETTINGS, type ThemeId } from '@elsewise/bridge';
-import { type ActiveTheme, Theme } from '@elsewise/frontend-plugin';
+import { type ActiveTheme, DEFAULT_FRONTEND_SETTINGS, Theme, type ThemeId } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test } from 'vitest';
 import { render } from 'vitest-browser-react';
@@ -17,29 +16,27 @@ describe('useActiveTheme', () => {
     const client = new QueryClient();
     client.setQueryData(userThemesQuery.queryKey, []);
     client.setQueryData(settingsQuery.queryKey, {
-      ...DEFAULT_SETTINGS,
-      appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'dark', theme: DRACULA },
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, theme: MISSING },
-        terminal: { ...DEFAULT_SETTINGS.appearance.terminal, theme: MISSING },
-      },
+      ...DEFAULT_FRONTEND_SETTINGS,
+      appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'dark', theme: DRACULA },
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, theme: MISSING },
+      terminal: { ...DEFAULT_FRONTEND_SETTINGS.terminal, theme: MISSING },
     });
-    let active: ActiveTheme | undefined;
-    function Probe() {
-      active = useActiveTheme();
-      return null;
-    }
+    const active: { current?: ActiveTheme } = {};
     await render(
       <QueryClientProvider client={client}>
         <PluginStoreContext value={new PluginStore()}>
-          <Probe />
+          <Probe active={active} />
         </PluginStoreContext>
       </QueryClientProvider>,
     );
 
     const expected = resolveActiveTheme(Theme.parse(dracula), 'dark');
-    expect(active?.editor).toEqual(expected.editor);
-    expect(active?.terminal).toEqual(expected.terminal);
+    expect(active.current?.editor).toEqual(expected.editor);
+    expect(active.current?.terminal).toEqual(expected.terminal);
   });
 });
+
+function Probe({ active }: { active: { current?: ActiveTheme } }) {
+  active.current = useActiveTheme();
+  return null;
+}

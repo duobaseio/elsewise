@@ -45,7 +45,7 @@ describe('DEFAULT_CONTEXT_MENU', () => {
     const fake = session();
     const { xterm } = await mount(fake, {
       ...SETTINGS,
-      appearance: { ...SETTINGS.appearance, terminal: { ...SETTINGS.appearance.terminal, copyOnSelect: true } },
+      terminal: { ...SETTINGS.terminal, copyOnSelect: true },
     });
     await new Promise<void>((resolve) => xterm.write('hello world', resolve));
     await rightClick(xterm, { selectsWord: true, position: { x: 4, y: 4 } });

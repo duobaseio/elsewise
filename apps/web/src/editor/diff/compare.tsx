@@ -31,7 +31,7 @@ export function CompareToolbarItem({ view, subscribe }: EditorToolbarProps) {
                 variant="ghost"
                 size="icon-xs"
                 className="size-5 text-muted-foreground hover:text-foreground"
-                aria-label="Compare with…"
+                aria-label="Compare with"
               />
             }
           >
@@ -39,7 +39,7 @@ export function CompareToolbarItem({ view, subscribe }: EditorToolbarProps) {
           </TooltipTrigger>
         }
       />
-      <TooltipContent side="bottom">Compare with…</TooltipContent>
+      <TooltipContent side="bottom">Compare with</TooltipContent>
     </Tooltip>
   );
 }

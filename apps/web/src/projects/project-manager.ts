@@ -3,13 +3,15 @@ import {
   type ContextMenuGroup,
   DEFAULT_ROUTES,
   type Disposable,
-  type ExistingProjectSource,
-  type NewProjectSource,
+  type ExistingProject,
+  type NewProject,
   type Project,
   type ProjectClone,
   type ProjectIcon,
   type ProjectId,
   type ProjectSidebarItem,
+  type ProjectSource,
+  type ProjectSourceGroup,
   type Projects,
   type RepositoryGroup,
   type RepositorySource,
@@ -22,10 +24,12 @@ import { ContextMenuManager } from '@/command/context-menu/context-menu-manager'
 import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { OrderedItems } from '@/plugins/ordered-items';
+import { SortedSet } from '@/plugins/sorted-set';
 import { DEFAULT_PROJECT_MENU } from '@/projects/default-context-menu';
+import { DEFAULT_PROJECT_SOURCES } from '@/projects/default-sources';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
+import { WorkspaceStateStore } from '@/projects/workspace-state-store';
 
 /**
  * Returns the query for every project on the daemon with `daemonId`.
@@ -46,18 +50,20 @@ export function projectsQuery(daemonId: string) {
 export class ProjectManager implements Projects {
   readonly workspaces: WorkspaceManager;
   private readonly listeners = new Set<() => void>();
-  private readonly addedIcons = new OrderedItems<ProjectIcon>('Project icon', () => this.notify());
-  private readonly addedSidebarItems = new OrderedItems<ProjectSidebarItem>('Project sidebar item', () =>
-    this.notify(),
-  );
+  private readonly addedIcons = new SortedSet<ProjectIcon>('Project icon', () => this.notify());
+  private readonly addedSidebarItems = new SortedSet<ProjectSidebarItem>('Project sidebar item', () => this.notify());
   private readonly contextMenus = new ContextMenuManager(DEFAULT_PROJECT_MENU, () => this.notify());
+  private addedSourceGroups: readonly (readonly ProjectSourceGroup[])[] = [DEFAULT_PROJECT_SOURCES];
+  private currentSourceGroups: readonly ProjectSourceGroup[] = this.mergeSources(DEFAULT_PROJECT_SOURCES);
+  private currentSources: readonly ProjectSource[] = this.currentSourceGroups.flatMap((group) => group.sources);
   private repositorySources: readonly (readonly RepositorySource[])[] = [];
 
   constructor(
     private readonly client: QueryClient,
     router: AnyRouter,
+    private readonly states = new WorkspaceStateStore(undefined),
   ) {
-    this.workspaces = new WorkspaceManager(client, router);
+    this.workspaces = new WorkspaceManager(client, router, states);
   }
 
   async list(daemonId: string): Promise<readonly Project[]> {
@@ -65,16 +71,16 @@ export class ProjectManager implements Projects {
     return projects.map((project) => mapProject(daemonId, project));
   }
 
-  async add(daemonId: string, source: NewProjectSource | ExistingProjectSource): Promise<Project> {
+  async add(daemonId: string, project: NewProject | ExistingProject): Promise<Project> {
     const daemon = await this.client.query(daemonQuery(daemonId));
-    const { project } = await daemon.projects.createProject({
+    const { project: added } = await daemon.projects.createProject({
       source:
-        source.type === 'new'
-          ? { case: 'new', value: { name: source.name, absolutePath: source.absolutePath } }
-          : { case: 'existing', value: { name: source.name, absolutePath: source.absolutePath } },
+        project.type === 'new'
+          ? { case: 'new', value: { name: project.name, absolutePath: project.absolutePath } }
+          : { case: 'existing', value: { name: project.name, absolutePath: project.absolutePath } },
     });
     await this.client.invalidateQueries({ queryKey: projectsQuery(daemonId).queryKey, exact: true });
-    return mapProject(daemonId, project);
+    return mapProject(daemonId, added);
   }
 
   async clone(
@@ -120,6 +126,7 @@ export class ProjectManager implements Projects {
     await daemon.projects.deleteProject({ projectId: project.project, deleteFiles });
 
     await this.workspaces.close(project, DEFAULT_ROUTES.home);
+    await this.states.delete(project);
 
     updateProjectLayout(this.client, project.daemon).removeProject(project.project);
 
@@ -158,6 +165,77 @@ export class ProjectManager implements Projects {
 
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
     return this.contextMenus.add(groups);
+  }
+
+  /**
+   * The source groups, one per id, sorted by order, with their sources sorted by order.
+   */
+  get sourceGroups(): readonly ProjectSourceGroup[] {
+    return this.currentSourceGroups;
+  }
+
+  /**
+   * The sources of every group, in the groups' order.
+   */
+  get sources(): readonly ProjectSource[] {
+    return this.currentSources;
+  }
+
+  addSources(groups: readonly ProjectSourceGroup[]): Disposable {
+    const added = [...groups];
+    this.addedSourceGroups = [...this.addedSourceGroups, added];
+    this.currentSourceGroups = this.mergeSources(this.addedSourceGroups.flat());
+    this.currentSources = this.currentSourceGroups.flatMap((group) => group.sources);
+    this.notify();
+    return () => {
+      this.addedSourceGroups = this.addedSourceGroups.filter((other) => other !== added);
+      this.currentSourceGroups = this.mergeSources(this.addedSourceGroups.flat());
+      this.currentSources = this.currentSourceGroups.flatMap((group) => group.sources);
+      this.notify();
+    };
+  }
+
+  // Merges the groups that share an id, sorted. `order` comes from the first group that sets it, and a source whose id
+  // came earlier is skipped.
+  private mergeSources(groups: readonly ProjectSourceGroup[]): ProjectSourceGroup[] {
+    const merged = new Map<string, { order?: number; sources: ProjectSource[] }>();
+    const ids = new Set<string>();
+    for (const group of groups) {
+      let existing = merged.get(group.id);
+      if (existing === undefined) {
+        existing = { ...(group.order === undefined ? {} : { order: group.order }), sources: [] };
+        merged.set(group.id, existing);
+      } else if (group.order !== undefined) {
+        if (existing.order === undefined) {
+          existing.order = group.order;
+        } else if (existing.order !== group.order) {
+          console.warn(`Project source group ${group.id} already has order ${existing.order}, ignoring ${group.order}`);
+        }
+      }
+
+      for (const source of group.sources) {
+        if (ids.has(source.id)) {
+          console.warn(`Project source ${source.id} was already added`);
+          continue;
+        }
+
+        ids.add(source.id);
+        existing.sources.push(source);
+      }
+    }
+
+    return Array.from(merged, ([id, group]) => ({
+      id,
+      ...group,
+      sources: group.sources.sort(
+        (a, b) =>
+          (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) ||
+          a.label.localeCompare(b.label),
+      ),
+    })).sort(
+      (a, b) =>
+        (a.order ?? Number.POSITIVE_INFINITY) - (b.order ?? Number.POSITIVE_INFINITY) || a.id.localeCompare(b.id),
+    );
   }
 
   addRepositorySources(sources: readonly RepositorySource[]): Disposable {
@@ -277,4 +355,13 @@ export function useProjectContextMenu(): readonly ContextMenuGroup[] {
   const projects = useApplicationManager().projects;
   const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
   return useSyncExternalStore(subscribe, () => projects.contextMenu);
+}
+
+/**
+ * Returns the groups of sources from which a project can be added.
+ */
+export function useProjectSourceGroups(): readonly ProjectSourceGroup[] {
+  const projects = useApplicationManager().projects;
+  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  return useSyncExternalStore(subscribe, () => projects.sourceGroups);
 }

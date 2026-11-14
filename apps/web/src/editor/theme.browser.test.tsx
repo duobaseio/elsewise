@@ -2,7 +2,7 @@ import { autocompletion, startCompletion } from '@codemirror/autocomplete';
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { Decoration, EditorView, showTooltip } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { describe, expect, onTestFinished, test, vi } from 'vitest';
@@ -59,12 +59,9 @@ vi.mock('@/appearance/themes', async (original) => {
   };
 });
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
-  appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
-  },
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
 };
 
 // A probe mounts an editor with whatever `useThemeExtension` resolves.
@@ -73,27 +70,36 @@ function mount(doc: string, extensions: Extension[]): Promise<EditorView> {
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
   });
-  function Probe() {
-    const themeExtension = useThemeExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const view = new EditorView({
-        state: EditorState.create({ doc, extensions: [themeExtension, ...extensions] }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(view);
-      return () => view.destroy();
-    }, [themeExtension]);
-    return <div ref={host} />;
-  }
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
   render(
     <QueryClientProvider client={client}>
-      <Probe />
+      <Probe doc={doc} extensions={extensions} resolve={resolve} />
     </QueryClientProvider>,
   );
   return ready;
+}
+
+function Probe({
+  doc,
+  extensions,
+  resolve,
+}: {
+  doc: string;
+  extensions: Extension[];
+  resolve: (view: EditorView) => void;
+}) {
+  const themeExtension = useThemeExtension();
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const view = new EditorView({
+      state: EditorState.create({ doc, extensions: [themeExtension, ...extensions] }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(view);
+    return () => view.destroy();
+  }, [themeExtension, doc, extensions, resolve]);
+  return <div ref={host} />;
 }
 
 function style(el: Element | null): CSSStyleDeclaration {

@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import { createRef } from 'react';
@@ -12,12 +12,9 @@ import { Terminal } from '@/terminal/terminal';
 import { TerminalManager } from '@/terminal/terminal-manager';
 import { builtInApplication } from './commands';
 
-export const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
-  appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
-  },
+export const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
 };
 
 export function session() {

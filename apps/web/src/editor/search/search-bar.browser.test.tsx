@@ -20,29 +20,34 @@ function mount(extensions: Extension[] = [], application = builtInApplication())
   const ready = new Promise<EditorView>((r) => {
     resolve = r;
   });
-  function Probe() {
-    const { search, portal } = useSearchExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const created = new EditorView({
-        state: EditorState.create({
-          doc: DOC,
-          extensions: [search, commandsExtension(application.commands), keymap.of(standardKeymap), ...extensions],
-        }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(created);
-      return () => created.destroy();
-    }, [search]);
-    return (
-      <ApplicationManagerContext value={application}>
-        <div ref={host} />
-        {portal}
-      </ApplicationManagerContext>
-    );
-  }
-  render(<Probe />);
+  render(
+    <ApplicationManagerContext value={application}>
+      <Probe
+        extensions={[commandsExtension(application.commands), keymap.of(standardKeymap), ...extensions]}
+        resolve={resolve}
+      />
+    </ApplicationManagerContext>,
+  );
   return ready;
+}
+
+function Probe({ extensions, resolve }: { extensions: Extension; resolve: (view: EditorView) => void }) {
+  const { search, portal } = useSearchExtension();
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const created = new EditorView({
+      state: EditorState.create({ doc: DOC, extensions: [search, extensions] }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(created);
+    return () => created.destroy();
+  }, [search, extensions, resolve]);
+  return (
+    <>
+      <div ref={host} />
+      {portal}
+    </>
+  );
 }
 
 const find = () => page.getByRole('textbox', { name: 'Find' });

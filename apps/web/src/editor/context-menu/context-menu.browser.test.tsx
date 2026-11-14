@@ -61,7 +61,7 @@ describe('EditorContextMenu', () => {
 
     dispose();
     await open(view, 0);
-    expect(labels()).toEqual(['Item', '-', 'Show context actions', '-', 'Paste', '-', 'Compare with…']);
+    expect(labels()).toEqual(['Item', '-', 'Show context actions', '-', 'Paste', '-', 'Compare with']);
     expect(menuitem('More').query()).toBeNull();
   });
 });

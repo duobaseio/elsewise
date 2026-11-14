@@ -122,6 +122,20 @@ describe('CommandContextMenu', () => {
   test.each([
     ['editor', { state: {} } as unknown as EditorView, 'Editor'],
     ['terminal', { buffer: {} } as unknown as XTerm, 'Terminal'],
+    [
+      'file tree',
+      {
+        workspace: {
+          id: { daemon: 'local', project: 'p', workspace: 'w' },
+          name: 'w',
+          state: 'ok' as const,
+          main: false,
+          absolutePath: '/p/w',
+        },
+        paths: ['a'],
+      },
+      'File tree',
+    ],
   ])('shows commands of %s target only', async (_, target, shown) => {
     const application = setUp([
       {
@@ -138,8 +152,17 @@ describe('CommandContextMenu', () => {
         label: 'Terminal',
         run: () => true,
       },
+      {
+        scope: 'fileTree',
+        group: DEFAULT_COMMAND_GROUPS.fileTree.id,
+        id: 'File tree',
+        label: 'File tree',
+        run: () => true,
+      },
     ]);
-    await mount([group('a', [item('Editor'), item('Terminal')])], application, { target: { current: target } });
+    await mount([group('a', [item('Editor'), item('Terminal'), item('File tree')])], application, {
+      target: { current: target },
+    });
 
     await open();
     expect(labels()).toEqual([shown]);

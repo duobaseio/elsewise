@@ -12,9 +12,9 @@ import '../src/styles.css';
 // captures match each other and the fallback gets blessed. That is a cold-start race, so it is insurance for CI rather
 // than a fix for anything observed locally — removing all of this leaves the baselines byte-identical on this machine.
 //
-// Buttons render `font-sans` (Work Sans) at `font-medium`, the grid labels at the default weight. One variable file
+// Buttons render `font-sans` (Public Sans) at `font-medium`, the grid labels at the default weight. One variable file
 // covers every weight, so a single size per weight is enough to force the fetch.
-const FACES = ['400 14px "Work Sans Variable"', '500 14px "Work Sans Variable"'];
+const FACES = ['400 14px "Public Sans Variable"', '500 14px "Public Sans Variable"'];
 
 beforeAll(async () => {
   await Promise.all(FACES.map((face) => document.fonts.load(face)));

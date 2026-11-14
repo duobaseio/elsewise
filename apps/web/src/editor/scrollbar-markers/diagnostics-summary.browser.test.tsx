@@ -1,8 +1,7 @@
 import { setDiagnostics } from '@codemirror/lint';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
-import type { EditorDiagnostic } from '@elsewise/frontend-plugin';
+import { DEFAULT_FRONTEND_SETTINGS, type EditorDiagnostic, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';
@@ -21,7 +20,7 @@ const DOC = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
 
 // Mounts `DOC` in an editor 200px high with the toolbar, under `settings` held by `client`.
 function mount(
-  settings: Settings = DEFAULT_SETTINGS,
+  settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS,
   extensions: Extension = [],
   client = new QueryClient(),
 ): Promise<EditorView> {
@@ -32,43 +31,43 @@ function mount(
   const editor = new EditorManager();
   const application = builtInApplication({ editor });
   client.setQueryData(settingsQuery.queryKey, settings);
-  function Probe() {
-    const { toolbar, portal } = useToolbarExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const created = new EditorView({
-        state: EditorState.create({
-          doc: DOC,
-          extensions: [
-            toolbar,
+  render(
+    <QueryClientProvider client={client}>
+      <ApplicationManagerContext value={application}>
+        <Probe
+          extensions={[
             METRICS,
             diagnostics,
             hover(),
             commandsExtension(application.commands),
             EditorView.theme({ '&': { height: '200px' } }),
             extensions,
-          ],
-        }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(created);
-      return () => created.destroy();
-    }, [toolbar]);
-    return (
-      <>
-        <div ref={host} />
-        {portal}
-      </>
-    );
-  }
-  render(
-    <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <Probe />
+          ]}
+          resolve={resolve}
+        />
       </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   return ready;
+}
+
+function Probe({ extensions, resolve }: { extensions: Extension; resolve: (view: EditorView) => void }) {
+  const { toolbar, portal } = useToolbarExtension();
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const created = new EditorView({
+      state: EditorState.create({ doc: DOC, extensions: [toolbar, extensions] }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(created);
+    return () => created.destroy();
+  }, [toolbar, extensions, resolve]);
+  return (
+    <>
+      <div ref={host} />
+      {portal}
+    </>
+  );
 }
 
 // Returns a diagnostic over the `line`th line of `DOC`, from 1.
@@ -184,11 +183,8 @@ describe('DiagnosticsSummary', () => {
 
   test('hides with scrollbar markers off', async () => {
     await mount({
-      ...DEFAULT_SETTINGS,
-      appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, scrollbarMarkers: false },
-      },
+      ...DEFAULT_FRONTEND_SETTINGS,
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, scrollbarMarkers: false },
     });
 
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
@@ -196,7 +192,7 @@ describe('DiagnosticsSummary', () => {
   });
 
   test('hides in read-only document', async () => {
-    await mount(DEFAULT_SETTINGS, EditorState.readOnly.of(true));
+    await mount(DEFAULT_FRONTEND_SETTINGS, EditorState.readOnly.of(true));
 
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
     expect(document.querySelector('[data-slot=diagnostics-summary]')).toBeNull();
@@ -204,18 +200,15 @@ describe('DiagnosticsSummary', () => {
 
   test('recounts when shown again', async () => {
     const hidden = {
-      ...DEFAULT_SETTINGS,
-      appearance: {
-        ...DEFAULT_SETTINGS.appearance,
-        editor: { ...DEFAULT_SETTINGS.appearance.editor, scrollbarMarkers: false },
-      },
+      ...DEFAULT_FRONTEND_SETTINGS,
+      editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, scrollbarMarkers: false },
     };
     const client = new QueryClient();
     const view = await mount(hidden, [], client);
     await vi.waitFor(() => expect(document.querySelector('[data-slot=toolbar]')).not.toBeNull());
 
     view.dispatch(setDiagnostics(view.state, [at(1), at(2, 'warning')]));
-    client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+    client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
 
     await expect.element(status()).toHaveAccessibleName('1 error, 1 warning');
   });

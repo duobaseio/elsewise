@@ -24,6 +24,11 @@ service GitService {
   // Watches the status of a worktree.
   rpc WatchStatus(WatchStatusRequest) returns (stream WatchStatusResponse);
 
+  // Moves or renames entries in order before staging them. Creates each destination's parent directories if required.
+  //
+  // Each entry that fails is reported in the response, and the others are still moved.
+  rpc Move(MoveRequest) returns (MoveResponse);
+
   // Stages changes.
   //
   // Staging a conflicted entry marks it resolved.
@@ -225,6 +230,47 @@ message WatchStatusRequest {
 message WatchStatusResponse {
   // The worktree's status.
   Status status = 1;
+}
+
+message MoveRequest {
+  // The worktree's path.
+  string absolute_path = 1;
+
+  // Every entry to move, in order.
+  repeated Entry entries = 2;
+
+  // Whether to overwrite an entry already at a new path.
+  bool overwrite = 3;
+
+  message Entry {
+    // The entry's relative path.
+    string relative_path = 1;
+
+    // The entry's new relative path.
+    string new_relative_path = 2;
+  }
+}
+
+message MoveResponse {
+  // The entries that failed, in order.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The entry's relative path.
+    string relative_path = 1;
+
+    // Why the entry failed.
+    Reason reason = 2;
+
+    // What failed.
+    string message = 3;
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Never sent.
+      REASON_OTHER = 1;
+      REASON_ALREADY_EXISTS = 2; // An entry is already at the new path, and `overwrite` is not set.
+    }
+  }
 }
 
 message StageRequest {

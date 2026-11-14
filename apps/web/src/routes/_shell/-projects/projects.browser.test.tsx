@@ -17,14 +17,31 @@ function pickFolder(absolutePath: string | null) {
       cut() {},
       copy() {},
       paste() {},
-      openFolder: async () => {},
-      pickFolder: async () => absolutePath,
-      pickFile: async () => null,
+      absolutePathOf: (file) => `/Users/me/${file.name}`,
+      showPath: async () => {},
+      pickPaths: async () => (absolutePath === null ? [] : [absolutePath]),
       setBrightness() {},
       setBackground() {},
       onClose() {},
     },
   };
+}
+
+// Drags the folders named `names` from the platform over `element`, then drops them unless `drop` is false.
+function dropFolders(element: Element | null | undefined, names: string[], { drop = true } = {}) {
+  const dataTransfer = new DataTransfer();
+  for (const name of names) {
+    dataTransfer.items.add(new File([], name));
+  }
+  return (drop ? ['dragover', 'drop'] : ['dragover']).map(
+    (type) => element?.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer })) ?? false,
+  );
+}
+
+// Returns the colour of the overlay the projects show while a drag is over them.
+function overlay() {
+  const projects = document.querySelector('[data-slot="sidebar-content"] > div');
+  return projects ? getComputedStyle(projects, '::after').backgroundColor : undefined;
 }
 
 // Returns the names of the projects and their workspaces, in the order shown.
@@ -300,6 +317,8 @@ describe('Projects', () => {
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveAttribute('tabindex', '0');
 
     await userEvent.tab();
+    await expect.element(page.getByRole('button', { name: 'Add project' })).toHaveFocus();
+    await userEvent.tab();
     await expect.element(page.getByRole('treeitem', { name: 'Dhaka' })).toHaveFocus();
     await userEvent.tab();
 
@@ -314,6 +333,7 @@ describe('Projects', () => {
     page.getByRole('treeitem', { name: 'Tokyo' }).element().focus();
     before.focus();
 
+    await userEvent.tab();
     await userEvent.tab();
 
     await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toHaveFocus();
@@ -617,9 +637,9 @@ describe('Projects', () => {
     expect(router.state.location.pathname).toBe('/local/dotfiles/lisbon');
   });
 
-  test('resets finished status from context menu', async () => {
+  test('resets complete status from context menu', async () => {
     const { projects } = await mount('/local/elsewise/singapore');
-    projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'finished');
+    projects.workspaces.addStatus({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' }, 'complete');
 
     await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
     await page.getByRole('menuitem', { name: /^Mark as read/ }).click();
@@ -627,7 +647,7 @@ describe('Projects', () => {
     expect(projects.workspaces.status({ daemon: 'local', project: 'elsewise', workspace: 'dhaka' })).toBe('idle');
   });
 
-  test('hides Mark as read unless finished', async () => {
+  test('hides Mark as read unless complete', async () => {
     await mount('/local/elsewise/singapore');
 
     await userEvent.click(page.getByRole('treeitem', { name: 'Dhaka' }), { button: 'right' });
@@ -788,15 +808,15 @@ describe('Projects', () => {
 
   test('opens workspace in file manager', async () => {
     await mount('/local/elsewise/singapore');
-    const openFolder = vi.fn(async () => {});
+    const showPath = vi.fn(async () => {});
     window.bridge = {
       window: {
         cut() {},
         copy() {},
         paste() {},
-        openFolder,
-        pickFolder: async () => null,
-        pickFile: async () => null,
+        absolutePathOf: () => '',
+        showPath,
+        pickPaths: async () => [],
         setBrightness() {},
         setBackground() {},
         onClose() {},
@@ -807,7 +827,7 @@ describe('Projects', () => {
     await page.getByRole('menuitem', { name: 'Open in' }).click();
     await page.getByRole('menuitem', { name: FILE_MANAGER }).click();
 
-    await expect.poll(() => openFolder.mock.lastCall).toEqual(['/elsewise/dhaka']);
+    await expect.poll(() => showPath.mock.lastCall).toEqual(['/elsewise/dhaka']);
   });
 
   test('deletes workspace from context menu', async () => {
@@ -880,6 +900,130 @@ describe('Projects', () => {
       .toHaveAccessibleDescription('Not a worktree Main workspace');
   });
 
+  test('lists built-in sources', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Import project…' })).toBeVisible();
+    expect(
+      page
+        .getByRole('menuitem')
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(['New project…', 'Import project…']);
+  });
+
+  test('hides import without folder picker', async () => {
+    await mount('/local/elsewise/singapore');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'New project…' })).toBeVisible();
+    expect(page.getByRole('menuitem', { name: 'Import project…' }).query()).toBeNull();
+  });
+
+  test('separates source groups', async () => {
+    pickFolder(null);
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      { id: 'test', order: 20, sources: [{ id: 'test.clone', label: 'Clone…', add: async () => null }] },
+      {
+        id: 'test.hidden',
+        order: 30,
+        sources: [{ id: 'test.hidden', label: 'Hidden', shown: () => false, add: async () => null }],
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toBeVisible();
+    expect(
+      [...document.querySelectorAll('[role="menuitem"], [role="separator"]')].map(
+        (element) => element.textContent || element.getAttribute('role'),
+      ),
+    ).toEqual(['New project…', 'Import project…', 'separator', 'Clone…']);
+  });
+
+  test('disables source', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      { id: 'test', sources: [{ id: 'test.clone', label: 'Clone…', enabled: () => false, add: async () => null }] },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  test('disables source while it adds', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const { promise, resolve } = Promise.withResolvers<null>();
+    projects.addSources([{ id: 'test', sources: [{ id: 'test.clone', label: 'Clone…', add: () => promise }] }]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Clone…' }).click();
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toHaveAttribute('aria-disabled', 'true');
+
+    resolve(null);
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  test('disables each source while it adds', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const clone = Promise.withResolvers<null>();
+    const template = Promise.withResolvers<null>();
+    projects.addSources([
+      {
+        id: 'test',
+        sources: [
+          { id: 'test.clone', label: 'Clone…', add: () => clone.promise },
+          { id: 'test.template', label: 'Template…', add: () => template.promise },
+        ],
+      },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Clone…' }).click();
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Template…' }).click();
+    template.resolve(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Template…' })).not.toHaveAttribute('aria-disabled');
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).toHaveAttribute('aria-disabled', 'true');
+
+    clone.resolve(null);
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone…' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  test('logs rejecting source', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      {
+        id: 'test',
+        sources: [
+          { id: 'test.clone', label: 'Clone…', add: () => Promise.reject(new Error('authentication required')) },
+        ],
+      },
+    ]);
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Clone…' }).click();
+
+    await expect
+      .poll(() => error.mock.lastCall)
+      .toEqual(['Project source test.clone failed', new Error('authentication required')]);
+    expect(added).not.toHaveBeenCalled();
+  });
+
   test('imports picked folder and opens it', async () => {
     pickFolder('/Users/me/notes');
     const { router } = await mount('/local/elsewise/singapore');
@@ -919,5 +1063,92 @@ describe('Projects', () => {
         title: 'Could not import “downloads”',
         description: "the folder is not a repository's main working tree",
       });
+  });
+
+  test('imports dropped folder and opens it', async () => {
+    pickFolder(null);
+    const { router } = await mount('/local/elsewise/singapore');
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes']);
+
+    await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
+    await expect.poll(() => router.state.location.pathname).toBe('/local/notes/main');
+  });
+
+  test('imports every dropped folder and opens first', async () => {
+    pickFolder(null);
+    const { router } = await mount('/local/elsewise/singapore');
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes', 'diary']);
+
+    await expect.element(page.getByRole('treeitem', { name: 'diary', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
+    await expect.poll(() => router.state.location.pathname).toBe('/local/notes/main');
+  });
+
+  test('reports failed import', async () => {
+    pickFolder(null);
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['downloads']);
+
+    await expect
+      .poll(() => added.mock.lastCall?.[0])
+      .toMatchObject({
+        type: 'error',
+        title: 'Could not import “downloads”',
+        description: "the folder is not a repository's main working tree",
+      });
+  });
+
+  test('tints projects while dragging folders', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+    const transparent = overlay();
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes'], { drop: false });
+
+    await expect.poll(overlay).not.toBe(transparent);
+  });
+
+  test('clears tint on leave', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+    const transparent = overlay();
+    const tokyo = page.getByRole('treeitem', { name: 'Tokyo' }).element();
+    dropFolders(tokyo, ['notes'], { drop: false });
+    await expect.poll(overlay).not.toBe(transparent);
+
+    tokyo.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: document.body }));
+
+    await expect.poll(overlay).toBe(transparent);
+  });
+
+  test('ignores drags without files', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+    const transparent = overlay();
+    const dataTransfer = new DataTransfer();
+    dataTransfer.setData('text/plain', 'notes');
+
+    const accepted = !page
+      .getByRole('treeitem', { name: 'Tokyo' })
+      .element()
+      .dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
+
+    expect(accepted).toBe(false);
+    expect(overlay()).toBe(transparent);
+  });
+
+  test('ignores drop without bridge', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const add = vi.spyOn(projects, 'add');
+
+    const [over] = dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes']);
+
+    expect(over).toBe(true);
+    expect(add).not.toHaveBeenCalled();
   });
 });

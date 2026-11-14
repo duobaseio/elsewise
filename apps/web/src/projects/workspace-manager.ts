@@ -2,25 +2,28 @@ import {
   type ContextMenuGroup,
   DEFAULT_ROUTES,
   type Disposable,
+  type ExistingWorkspace,
+  type NewWorkspace,
   type ProjectId,
   type Workspace,
+  type WorkspaceAggregateStatus,
   type WorkspaceId,
   type WorkspaceSidebarItem,
-  type WorkspaceSource,
   type WorkspaceStatus,
   type WorkspaceStatusHandle,
   type Workspaces,
 } from '@elsewise/frontend-plugin';
-import { type QueryClient, queryOptions } from '@tanstack/react-query';
+import { type QueryClient, queryOptions, useQuery } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { OrderedItems } from '@/plugins/ordered-items';
+import { SortedSet } from '@/plugins/sorted-set';
 import { DEFAULT_WORKSPACE_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
+import { WorkspaceStateStore } from '@/projects/workspace-state-store';
 
 /**
  * Returns the query for the workspaces of the project with `projectId` on the daemon with `daemonId`, the main one
@@ -39,7 +42,7 @@ export function workspacesQuery(daemonId: string, projectId: string) {
 // A status added to a workspace.
 interface StatusEntry {
   readonly workspace: WorkspaceId;
-  // A finish is idle once the workspace is shown.
+  // A completion is idle once the workspace is shown.
   status: WorkspaceStatus;
 }
 
@@ -50,7 +53,7 @@ export class WorkspaceManager implements Workspaces {
   private readonly listeners = new Set<() => void>();
   private readonly activeListeners = new Set<(workspace: Workspace | null) => void>();
   private readonly statuses = new Set<StatusEntry>();
-  private readonly addedSidebarItems = new OrderedItems<WorkspaceSidebarItem>('Workspace sidebar item', () =>
+  private readonly addedSidebarItems = new SortedSet<WorkspaceSidebarItem>('Workspace sidebar item', () =>
     this.notify(),
   );
   private readonly contextMenus = new ContextMenuManager(DEFAULT_WORKSPACE_MENU, () => this.notify());
@@ -61,6 +64,7 @@ export class WorkspaceManager implements Workspaces {
   constructor(
     private readonly client: QueryClient,
     private readonly router: AnyRouter,
+    private readonly states = new WorkspaceStateStore(undefined),
   ) {
     router.subscribe('onResolved', () => void this.onNavigate());
     client.getQueryCache().subscribe((event) => {
@@ -93,7 +97,7 @@ export class WorkspaceManager implements Workspaces {
 
     this.shown = id;
     for (const entry of this.statuses) {
-      if (id && contains(id, entry.workspace) && entry.status === 'finished') {
+      if (id && contains(id, entry.workspace) && entry.status === 'complete') {
         entry.status = 'idle';
       }
     }
@@ -118,18 +122,18 @@ export class WorkspaceManager implements Workspaces {
     return workspaces.map((workspace) => mapWorkspace(project.daemon, workspace));
   }
 
-  async add(project: ProjectId, source: WorkspaceSource): Promise<Workspace> {
+  async add(project: ProjectId, workspace: NewWorkspace | ExistingWorkspace): Promise<Workspace> {
     const daemon = await this.client.query(daemonQuery(project.daemon));
-    const { workspace } = await daemon.projects.createWorkspace({
+    const { workspace: added } = await daemon.projects.createWorkspace({
       projectId: project.project,
       source:
-        source.type === 'new'
-          ? { case: 'new', value: { name: source.name, branch: source.branch, base: source.base } }
-          : { case: 'existing', value: { name: source.name, absolutePath: source.absolutePath } },
+        workspace.type === 'new'
+          ? { case: 'new', value: { name: workspace.name, branch: workspace.branch, base: workspace.base } }
+          : { case: 'existing', value: { name: workspace.name, absolutePath: workspace.absolutePath } },
     });
 
     await this.client.invalidateQueries(workspacesQuery(project.daemon, project.project));
-    return mapWorkspace(project.daemon, workspace);
+    return mapWorkspace(project.daemon, added);
   }
 
   async rename(workspace: WorkspaceId, name: string): Promise<Workspace> {
@@ -181,6 +185,7 @@ export class WorkspaceManager implements Workspaces {
       workspace,
       main ? DEFAULT_ROUTES.workspace(workspace.daemon, workspace.project, main.id) : DEFAULT_ROUTES.home,
     );
+    await this.states.delete(workspace);
 
     updateProjectLayout(this.client, workspace.daemon).removeWorkspace(workspace.project, workspace.workspace);
 
@@ -206,36 +211,36 @@ export class WorkspaceManager implements Workspaces {
     }
   }
 
-  status(workspace: WorkspaceId): WorkspaceStatus {
+  status(workspace: WorkspaceId): WorkspaceAggregateStatus {
     let running = false;
-    let finished = false;
+    let complete = false;
     for (const entry of this.statuses) {
       if (!contains(workspace, entry.workspace)) {
         continue;
       }
 
-      if (entry.status === 'waiting') {
-        return 'waiting';
-      }
-
       running ||= entry.status === 'running';
-      finished ||= entry.status === 'finished';
+      complete ||= entry.status === 'complete';
     }
 
-    return running ? 'running' : finished ? 'finished' : 'idle';
+    if (complete) {
+      return running ? 'partial' : 'complete';
+    }
+
+    return running ? 'running' : 'idle';
   }
 
   addStatus(workspace: WorkspaceId, status: WorkspaceStatus): WorkspaceStatusHandle {
     const entry: StatusEntry = {
       workspace,
-      status: status === 'finished' && shown(this.shown, workspace) ? 'idle' : status,
+      status: status === 'complete' && shown(this.shown, workspace) ? 'idle' : status,
     };
     this.statuses.add(entry);
     this.notify();
 
     return {
       set: (status) => {
-        const next = status === 'finished' && shown(this.shown, workspace) ? 'idle' : status;
+        const next = status === 'complete' && shown(this.shown, workspace) ? 'idle' : status;
         if (this.statuses.has(entry) && entry.status !== next) {
           entry.status = next;
           this.notify();
@@ -252,7 +257,7 @@ export class WorkspaceManager implements Workspaces {
   resetStatus(workspace: WorkspaceId): void {
     let changed = false;
     for (const entry of this.statuses) {
-      if (contains(workspace, entry.workspace) && entry.status === 'finished') {
+      if (contains(workspace, entry.workspace) && entry.status === 'complete') {
         entry.status = 'idle';
         changed = true;
       }
@@ -332,6 +337,10 @@ export class WorkspaceManager implements Workspaces {
   }
 }
 
+export function sameWorkspace(a: WorkspaceId, b: WorkspaceId): boolean {
+  return a.daemon === b.daemon && a.project === b.project && a.workspace === b.workspace;
+}
+
 // Returns the workspace in the URL.
 function routed(router: AnyRouter): WorkspaceId | null {
   const params: Record<string, unknown> = router.state.matches.at(-1)?.params ?? {};
@@ -381,9 +390,22 @@ export function mapWorkspace(daemon: string, message: WorkspaceMessage | undefin
 }
 
 /**
+ * Returns a `workspace`, or undefined until it has loaded or when it does not exist.
+ */
+export function useWorkspace(workspace: WorkspaceId): Workspace | undefined {
+  return useQuery({
+    ...workspacesQuery(workspace.daemon, workspace.project),
+    select: (workspaces) => {
+      const found = workspaces.find((candidate) => candidate.id === workspace.workspace);
+      return found && mapWorkspace(workspace.daemon, found);
+    },
+  }).data;
+}
+
+/**
  * Returns the status of `workspace`.
  */
-export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceStatus {
+export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceAggregateStatus {
   const workspaces = useApplicationManager().projects.workspaces;
   const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.status(workspace));

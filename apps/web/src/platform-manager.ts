@@ -1,21 +1,21 @@
-import type { Platform } from '@elsewise/frontend-plugin';
+import type { PickPathsOptions, Platform } from '@elsewise/frontend-plugin';
 
 export class PlatformManager implements Platform {
-  async openFolder(absolutePath: string): Promise<void> {
-    const openFolder = window.bridge?.window?.openFolder;
-    if (openFolder === undefined) {
+  async showPath(absolutePath: string): Promise<void> {
+    const showPath = window.bridge?.window?.showPath;
+    if (showPath === undefined) {
       throw new Error('No file manager outside the desktop app.');
     }
 
-    await openFolder(absolutePath);
+    await showPath(absolutePath);
   }
 
-  async pickFolder(): Promise<string | null> {
-    const pickFolder = window.bridge?.window?.pickFolder;
-    if (pickFolder === undefined) {
-      throw new Error('No folder picker outside the desktop app.');
+  async pickPaths(options?: PickPathsOptions): Promise<string[]> {
+    const pickPaths = window.bridge?.window?.pickPaths;
+    if (pickPaths === undefined) {
+      throw new Error('No picker outside the desktop app.');
     }
 
-    return pickFolder();
+    return pickPaths(options);
   }
 }

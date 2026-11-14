@@ -21,7 +21,7 @@ export function Search() {
   const navigate = useNavigate();
   const { remote } = useParams({ strict: false });
   const panels = useSettingsPanels((settings) => (remote === undefined ? settings.localPanels : settings.remotePanels));
-  const languages = useSettings((settings) => Object.keys(settings.appearance.editor.languages));
+  const languages = useSettings((settings) => Object.keys(settings.editor.languages));
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);

@@ -4,6 +4,7 @@ import type { AnyRouter } from '@tanstack/react-router';
 import type { AppearanceManager } from '@/appearance/appearance-manager';
 import { CommandManager } from '@/command/command-manager';
 import type { EditorManager } from '@/editor/editor-manager';
+import type { FileTreeManager } from '@/fs/file-tree-manager';
 import { PlatformManager } from '@/platform-manager';
 import type { ProjectManager } from '@/projects/project-manager';
 import { SidebarStore } from '@/projects/sidebar-store';
@@ -25,6 +26,7 @@ export class ApplicationManager implements Application {
     readonly projects: ProjectManager,
     readonly editor: EditorManager,
     readonly terminal: TerminalManager,
+    readonly fileTree: FileTreeManager,
     selected: Keymap,
     platform?: Platform,
   ) {

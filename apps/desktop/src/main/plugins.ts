@@ -1,6 +1,6 @@
 import path from 'node:path';
-import type { InstalledFrontendPlugin, InvalidPlugin } from '@elsewise/bridge';
-import type { InstalledPlugin } from '@elsewise/core';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import type { InstalledPlugin, InvalidPlugin } from '@elsewise/core';
 import { frontendDataDir, parsePluginEntries, readPluginsSync, writeJsonSync } from '@elsewise/core/node';
 import { Keymap, Theme } from '@elsewise/frontend-plugin';
 import { ipcMain } from 'electron';

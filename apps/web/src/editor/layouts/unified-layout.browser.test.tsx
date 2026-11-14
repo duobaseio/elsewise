@@ -1,8 +1,7 @@
 import { LanguageDescription, LanguageSupport, StreamLanguage } from '@codemirror/language';
 import { updateOriginalDoc } from '@codemirror/merge';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import { DEFAULT_COMMANDS, EDITOR_DOCUMENT } from '@elsewise/frontend-plugin';
+import { DEFAULT_COMMANDS, DEFAULT_FRONTEND_SETTINGS, EDITOR_DOCUMENT } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
@@ -27,7 +26,7 @@ const LAYOUT_ATTRIBUTE = EditorView.contentAttributes.compute([EDITOR_DOCUMENT],
 // Renders a `UnifiedLayout` with `props` in the app's contexts, and returns its view and a way to render it again.
 async function mount(props: Partial<UnifiedLayoutProps>, editor = new EditorManager()) {
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
+  client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const application = builtInApplication({ editor });
   const commands = application.commands;
   const servers = new LanguageServers(editor);

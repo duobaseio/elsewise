@@ -1,5 +1,6 @@
 import { isUtf8 } from 'node:buffer';
-import type { Dirent, Stats } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import type { BigIntStats, Dirent, Stats } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
@@ -35,19 +36,6 @@ export async function listDirectory(
   return { entries, truncated: named.length - kept.length, skipped: children.length - named.length };
 }
 
-/** Fails with ALREADY_EXISTS unless the path is refused. */
-export async function refuseOccupiedPath(absoluteNativePath: string, acceptable: 'empty' | 'missing'): Promise<void> {
-  const entries = await fs.readdir(absoluteNativePath).catch((error: unknown) => {
-    if (errnoOf(error) === 'ENOENT') {
-      return undefined;
-    }
-    return ['?']; // Unknown error occurred.
-  });
-  if (entries !== undefined && (acceptable === 'missing' || entries.length > 0)) {
-    throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the path');
-  }
-}
-
 function compare(a: string, b: string): number {
   if (a === b) {
     return 0;
@@ -60,4 +48,171 @@ function typeOf(entry: Dirent<Buffer> | Stats): DirectoryListing_Entry_Type {
     return DirectoryListing_Entry_Type.DIRECTORY;
   }
   return entry.isFile() ? DirectoryListing_Entry_Type.FILE : DirectoryListing_Entry_Type.OTHER;
+}
+
+/**
+ * Returns whether the file system finds the entry at `absoluteNativePath` under the path with its case swapped. A path
+ * without letters has no other spelling, so it returns false.
+ */
+export async function isCaseInsensitive(absoluteNativePath: string): Promise<boolean> {
+  const swapped = [...absoluteNativePath]
+    .map((character) => (character === character.toLowerCase() ? character.toUpperCase() : character.toLowerCase()))
+    .join('');
+  if (swapped === absoluteNativePath) {
+    return false;
+  }
+
+  const entry = await fs.lstat(absoluteNativePath, { bigint: true });
+  const other = await lstat(swapped);
+  return other?.dev === entry.dev && other.ino === entry.ino;
+}
+
+/**
+ * Returns whether `newAbsoluteNativePath` is the entry at `absoluteNativePath` itself, which a case-insensitive file
+ * system finds under another spelling (e.g. readme.md -> README.md).
+ */
+export async function isRespelling(absoluteNativePath: string, newAbsoluteNativePath: string): Promise<boolean> {
+  function normalize(absoluteNativePath: string): string {
+    return absoluteNativePath.normalize('NFC').toLowerCase();
+  }
+
+  const source = await lstat(absoluteNativePath);
+  const destination = await lstat(newAbsoluteNativePath);
+  return (
+    source !== undefined &&
+    destination?.dev === source.dev &&
+    destination.ino === source.ino &&
+    normalize(absoluteNativePath) === normalize(newAbsoluteNativePath)
+  );
+}
+
+/** Fails with ALREADY_EXISTS if an entry is at the path, unless `acceptable` is `'empty'` and it is an empty folder. */
+export async function refuseExisting(absoluteNativePath: string, acceptable: 'empty' | 'missing'): Promise<void> {
+  const entries = await fs.readdir(absoluteNativePath).catch((error: unknown) => {
+    if (errnoOf(error) === 'ENOENT') {
+      return undefined;
+    }
+    return ['?']; // Unknown error occurred.
+  });
+
+  if (entries !== undefined && (acceptable === 'missing' || entries.length > 0)) {
+    throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the path');
+  }
+}
+
+/**
+ * Fails unless the entry at `absoluteNativePath` can be copied to `newAbsoluteNativePath`.
+ *
+ * Fails with:
+ * * ALREADY_EXISTS if any entry is at `newAbsoluteNativePath`, unless `overwrite`.
+ * * INVALID_ARGUMENT if `newAbsoluteNativePath` is inside the entry, or overwriting would remove the entry.
+ */
+export async function refuseCopy(
+  absoluteNativePath: string,
+  newAbsoluteNativePath: string,
+  overwrite: boolean,
+): Promise<void> {
+  const source = await fs.lstat(absoluteNativePath, { bigint: true });
+  const destination = await lstat(newAbsoluteNativePath);
+
+  if (overwrite) {
+    await refuseOverwrite(source, destination, absoluteNativePath);
+  } else if (destination) {
+    throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the new path');
+  }
+
+  if (await contains(source, newAbsoluteNativePath)) {
+    throw new TransportError(Code.INVALID_ARGUMENT, 'an entry cannot be copied into itself');
+  }
+}
+
+/**
+ * Fails unless the entry at `absoluteNativePath` can be moved to `newAbsoluteNativePath`.
+ *
+ * Fails with:
+ * * ALREADY_EXISTS if another entry is at `newAbsoluteNativePath`, unless `overwrite`.
+ * * INVALID_ARGUMENT if the entry is a mount point, `newAbsoluteNativePath` is inside the entry, or overwriting would
+ *   remove the entry.
+ */
+export async function refuseMove(
+  absoluteNativePath: string,
+  newAbsoluteNativePath: string,
+  overwrite: boolean,
+): Promise<void> {
+  const source = await fs.lstat(absoluteNativePath, { bigint: true });
+  if (source.dev !== (await fs.lstat(path.dirname(absoluteNativePath), { bigint: true })).dev) {
+    throw new TransportError(Code.INVALID_ARGUMENT, 'a mount point cannot be moved');
+  }
+
+  const destination = await lstat(newAbsoluteNativePath);
+  if (destination && !(await isRespelling(absoluteNativePath, newAbsoluteNativePath))) {
+    if (!overwrite) {
+      throw new TransportError(Code.ALREADY_EXISTS, 'an entry is already at the new path');
+    }
+    await refuseOverwrite(source, destination, absoluteNativePath);
+  }
+
+  if (await contains(source, newAbsoluteNativePath)) {
+    throw new TransportError(Code.INVALID_ARGUMENT, 'an entry cannot be moved into itself');
+  }
+}
+
+async function lstat(absoluteNativePath: string): Promise<BigIntStats | undefined> {
+  return fs.lstat(absoluteNativePath, { bigint: true }).catch((error: unknown) => {
+    if (errnoOf(error) === 'ENOENT') {
+      return undefined;
+    }
+    throw error;
+  });
+}
+
+async function refuseOverwrite(
+  source: BigIntStats,
+  destination: BigIntStats | undefined,
+  absoluteNativePath: string,
+): Promise<void> {
+  if (destination?.dev === source.dev && destination.ino === source.ino) {
+    throw new TransportError(Code.INVALID_ARGUMENT, 'an entry cannot overwrite itself');
+  }
+
+  if (destination && (await contains(destination, absoluteNativePath))) {
+    throw new TransportError(Code.INVALID_ARGUMENT, 'an entry cannot overwrite a folder containing it');
+  }
+}
+
+/**
+ * Returns whether `entry` contains `absoluteNativePath`. Paths spelled differently on a case-insensitive file system
+ * still matches.
+ */
+async function contains(entry: BigIntStats, absoluteNativePath: string): Promise<boolean> {
+  for (let folder = path.dirname(absoluteNativePath); folder !== path.dirname(folder); folder = path.dirname(folder)) {
+    const ancestor = await fs.lstat(folder, { bigint: true }).catch(() => undefined);
+    if (ancestor?.dev === entry.dev && ancestor.ino === entry.ino) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Atomically copies the entry at `absoluteNativePath` to `newAbsoluteNativePath`, replacing what is there if
+ * `overwrite`. Creates the parent directories if required.
+ */
+export async function copyAtomically(
+  absoluteNativePath: string,
+  newAbsoluteNativePath: string,
+  overwrite: boolean,
+): Promise<void> {
+  await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+
+  const copyAbsoluteNativePath = `${newAbsoluteNativePath}.${randomUUID()}`;
+  try {
+    await fs.cp(absoluteNativePath, copyAbsoluteNativePath, { recursive: true, verbatimSymlinks: true });
+    if (overwrite) {
+      await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+    }
+    await fs.rename(copyAbsoluteNativePath, newAbsoluteNativePath);
+  } finally {
+    await fs.rm(copyAbsoluteNativePath, { recursive: true, force: true });
+  }
 }

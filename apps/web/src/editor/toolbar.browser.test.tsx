@@ -1,8 +1,12 @@
 import { openSearchPanel, search } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS } from '@elsewise/bridge';
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type EditorToolbarProps } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_FRONTEND_SETTINGS,
+  type EditorCommand,
+  type EditorToolbarProps,
+} from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { type ComponentProps, useEffect, useRef, useState } from 'react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
@@ -26,6 +30,20 @@ function Dot(props: ComponentProps<'svg'>) {
   );
 }
 
+function Field() {
+  return <input aria-label="Field" />;
+}
+
+function Length({ view, subscribe }: EditorToolbarProps) {
+  const [length, setLength] = useState(view.state.doc.length);
+  useEffect(() => subscribe((update) => setLength(update.state.doc.length)), [subscribe]);
+  return <span data-slot="length">{length}</span>;
+}
+
+function Broken(): never {
+  throw new Error('broken');
+}
+
 const DOC = Array.from({ length: 200 }, (_, i) => `line ${i + 1}`).join('\n');
 
 // Mounts `DOC` in an editor 200px high with the toolbar of `editor` and `application`, and `extensions`.
@@ -39,43 +57,43 @@ function mount(
     resolve = r;
   });
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, DEFAULT_SETTINGS);
-  function Probe() {
-    const { toolbar, portal } = useToolbarExtension();
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      const created = new EditorView({
-        state: EditorState.create({
-          doc: DOC,
-          extensions: [
-            toolbar,
+  client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
+  render(
+    <QueryClientProvider client={client}>
+      <ApplicationManagerContext value={application}>
+        <Probe
+          extensions={[
             diagnostics,
             METRICS,
             commandsExtension(application.commands),
             EditorView.theme({ '&': { height: '200px' } }),
             extensions,
-          ],
-        }),
-        parent: host.current as HTMLDivElement,
-      });
-      resolve(created);
-      return () => created.destroy();
-    }, [toolbar]);
-    return (
-      <>
-        <div ref={host} />
-        {portal}
-      </>
-    );
-  }
-  render(
-    <QueryClientProvider client={client}>
-      <ApplicationManagerContext value={application}>
-        <Probe />
+          ]}
+          resolve={resolve}
+        />
       </ApplicationManagerContext>
     </QueryClientProvider>,
   );
   return ready;
+}
+
+function Probe({ extensions, resolve }: { extensions: Extension; resolve: (view: EditorView) => void }) {
+  const { toolbar, portal } = useToolbarExtension();
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const created = new EditorView({
+      state: EditorState.create({ doc: DOC, extensions: [toolbar, extensions] }),
+      parent: host.current as HTMLDivElement,
+    });
+    resolve(created);
+    return () => created.destroy();
+  }, [toolbar, extensions, resolve]);
+  return (
+    <>
+      <div ref={host} />
+      {portal}
+    </>
+  );
 }
 
 // Adds an editor command with `id` as its label, and `parts`, to `commands`.
@@ -281,9 +299,6 @@ describe('useToolbarExtension', () => {
   });
 
   test('lets component take focus', async () => {
-    function Field() {
-      return <input aria-label="Field" />;
-    }
     const editor = new EditorManager();
     editor.addToolbarItems([{ type: 'component', id: 'field', component: Field }]);
     const view = await mount(editor);
@@ -295,11 +310,6 @@ describe('useToolbarExtension', () => {
   });
 
   test('passes editor updates to component', async () => {
-    function Length({ view, subscribe }: EditorToolbarProps) {
-      const [length, setLength] = useState(view.state.doc.length);
-      useEffect(() => subscribe((update) => setLength(update.state.doc.length)), [subscribe]);
-      return <span data-slot="length">{length}</span>;
-    }
     const editor = new EditorManager();
     editor.addToolbarItems([{ type: 'component', id: 'length', component: Length }]);
     const view = await mount(editor);
@@ -312,9 +322,6 @@ describe('useToolbarExtension', () => {
 
   test('hides throwing component, keeping others', async () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
-    function Broken(): never {
-      throw new Error('broken');
-    }
     const editor = new EditorManager();
     editor.addToolbarItems([{ type: 'component', id: 'broken', component: Broken }]);
     await mount(editor);

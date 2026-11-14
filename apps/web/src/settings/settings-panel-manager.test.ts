@@ -1,12 +1,17 @@
-import type { LocalSettingsPanel, RemoteSettingsPanel } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_FRONTEND_SETTINGS,
+  type FrontendSettings,
+  type LocalSettingsPanel,
+  type RemoteSettingsPanel,
+} from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 
-function localPanel(id: string, inside = 'appearance'): LocalSettingsPanel {
+function localPanel(id: string, inside?: string): LocalSettingsPanel {
   return { scope: 'local', id, label: id, in: inside, terms: {}, component: () => null };
 }
 
-function remotePanel(id: string, inside = 'appearance'): RemoteSettingsPanel {
+function remotePanel(id: string, inside?: string): RemoteSettingsPanel {
   return { scope: 'remote', id, label: id, in: inside, terms: {}, component: () => null };
 }
 
@@ -61,8 +66,8 @@ describe('add', () => {
     expect(settings.localPanels).toEqual([again]);
   });
 
-  test('accepts panel in group or earlier panel', () => {
-    const settings = new SettingsPanelManager([localPanel('a', 'appearance')]);
+  test('accepts top-level panel or panel in earlier panel', () => {
+    const settings = new SettingsPanelManager([localPanel('a')]);
     settings.add([localPanel('b'), localPanel('c', 'a'), localPanel('d', 'b')]);
 
     expect(settings.localPanels.map((panel) => panel.id)).toEqual(['a', 'b', 'c', 'd']);
@@ -171,5 +176,63 @@ describe('addLanguagePreviews', () => {
     dispose();
 
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+const MINE: FrontendSettings = { ...DEFAULT_FRONTEND_SETTINGS, keymap: { source: 'user', id: 'mine' } };
+
+describe('frontend', () => {
+  test('holds frozen copy', () => {
+    const settings = new SettingsPanelManager([], MINE);
+
+    expect(settings.frontend).not.toBe(MINE);
+    expect(settings.frontend).toEqual(MINE);
+    expect(Object.isFrozen(settings.frontend.editor.visualGuides)).toBe(true);
+    expect(Object.isFrozen(MINE)).toBe(false);
+  });
+});
+
+describe('onFrontendChange', () => {
+  test('calls listener with each new settings', () => {
+    const settings = new SettingsPanelManager();
+    const listener = vi.fn();
+    settings.onFrontendChange(listener);
+    settings.frontend = MINE;
+    settings.frontend = DEFAULT_FRONTEND_SETTINGS;
+
+    expect(listener.mock.calls).toEqual([[MINE], [DEFAULT_FRONTEND_SETTINGS]]);
+  });
+
+  test('ignores unchanged settings', () => {
+    const settings = new SettingsPanelManager([], MINE);
+    const listener = vi.fn();
+    settings.onFrontendChange(listener);
+    settings.frontend = MINE;
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('stops once disposed', () => {
+    const settings = new SettingsPanelManager();
+    const listener = vi.fn();
+    settings.onFrontendChange(listener)();
+    settings.frontend = MINE;
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('logs throwing listener and continues', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const settings = new SettingsPanelManager();
+    const second = vi.fn();
+    settings.onFrontendChange(() => {
+      throw new Error('broken');
+    });
+    settings.onFrontendChange(second);
+
+    settings.frontend = MINE;
+
+    expect(second.mock.calls).toEqual([[MINE]]);
+    expect(error).toHaveBeenCalledOnce();
   });
 });

@@ -3,7 +3,8 @@
 @import "shadcn/tailwind.css";
 
 @import "@fontsource-variable/fraunces/full.css";
-@import "@fontsource-variable/work-sans";
+@import "@fontsource-variable/public-sans";
+@import "inter-ui/inter-variable.css";
 @import "@fontsource-variable/atkinson-hyperlegible-next";
 @import "@fontsource-variable/jetbrains-mono";
 @import "@fontsource-variable/jetbrains-mono/wght-italic.css";
@@ -128,7 +129,7 @@ body,
  * consume them.
  */
 @theme {
-  --font-sans: 'Work Sans Variable', system-ui, sans-serif;
+  --font-sans: 'Public Sans Variable', system-ui, sans-serif;
   --font-heading: var(--font-sans);
   --font-display: 'Fraunces Variable', Georgia, serif;
   --font-mono: 'JetBrains Mono Variable', monospace;
@@ -196,6 +197,7 @@ body,
   html {
     @apply font-sans;
     font-variant-ligatures: var(--font-sans-ligatures);
+    font-feature-settings: var(--font-sans-features, normal);
   }
   ::selection {
     background-color: var(--layer-selection);

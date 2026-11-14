@@ -2,6 +2,7 @@ import type { Disposable } from '@elsewise/plugin';
 import type { ContextMenuGroup } from '../context-menu';
 import type { RepositorySource } from './repositories';
 import type { ProjectIcon, ProjectSidebarItem } from './sidebar';
+import type { ProjectSourceGroup } from './sources';
 import type { Workspaces } from './workspaces';
 
 /**
@@ -21,7 +22,7 @@ export interface Projects {
   /**
    * Adds a project on the daemon with `daemonId`.
    */
-  add(daemonId: string, source: NewProjectSource | ExistingProjectSource): Promise<Project>;
+  add(daemonId: string, project: NewProject | ExistingProject): Promise<Project>;
 
   /**
    * Clones a new project from `clone.url` on the daemon with `daemonId`.
@@ -77,6 +78,26 @@ export interface Projects {
   addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
 
   /**
+   * Adds `groups`, and their sources from which a project can be added to a daemon.
+   *
+   * ```ts
+   * projects.addSources([
+   *   // Sources in a built-in group
+   *   {
+   *     id: DEFAULT_PROJECT_SOURCE_GROUPS.add.id,
+   *     sources: [{ id: 'example.template', order: 30, label: 'New from template…', add: template }],
+   *   },
+   *
+   *   // After the built-in groups
+   *   { id: 'example.github', order: 20, sources: [{ id: 'example.github.clone', label: 'Clone…', add: clone }] },
+   * ]);
+   * ```
+   *
+   * Returns a disposable that removes the `groups`.
+   */
+  addSources(groups: readonly ProjectSourceGroup[]): Disposable;
+
+  /**
    * Adds `sources` from which the 'New project' dialog finds cloneable git repositories.
    *
    * ```ts
@@ -122,7 +143,7 @@ export interface Project {
 /**
  * A new, empty project the daemon creates.
  */
-export interface NewProjectSource {
+export interface NewProject {
   readonly type: 'new';
   readonly name: string;
 
@@ -135,7 +156,7 @@ export interface NewProjectSource {
 /**
  * A folder on the daemon's machine, which no project has yet.
  */
-export interface ExistingProjectSource {
+export interface ExistingProject {
   readonly type: 'existing';
 
   /**

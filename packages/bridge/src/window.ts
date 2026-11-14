@@ -1,12 +1,4 @@
-import * as z from 'zod';
-import type { Brightness } from './settings';
-
-export type FileFilter = z.infer<typeof FileFilter>;
-
-/**
- * A kind of file a picker offers, e.g. `{ name: 'Themes', extensions: ['json'] }`. Extensions go without the dot.
- */
-export const FileFilter = z.object({ name: z.string(), extensions: z.array(z.string()) });
+import type { Brightness, PickPathsOptions } from '@elsewise/frontend-plugin';
 
 /**
  * The embedder's native window.
@@ -28,22 +20,23 @@ export interface WindowBridge {
   paste(): void;
 
   /**
-   * Opens the folder at `absolutePath` in the platform's file manager.
+   * Returns the absolute path of a file from the platform, e.g. one dropped onto the page, or `''` if it is not on
+   * disk.
+   */
+  absolutePathOf(file: File): string;
+
+  /**
+   * Shows `absolutePath` in the platform's file manager.
    *
-   * Throws if `absolutePath` is not a directory or cannot be opened, e.g. without permission.
+   * Throws if `absolutePath` does not exist or cannot be opened, e.g. without permission.
    */
-  openFolder(absolutePath: string): Promise<void>;
+  showPath(absolutePath: string): Promise<void>;
 
   /**
-   * Prompts the user to pick a folder, and returns its absolute path, or null if they cancel.
+   * Prompts the user to pick files or folders, and returns their absolute paths, or none if they cancel. Links in the
+   * paths are resolved unless `resolveAliases` is false.
    */
-  pickFolder(): Promise<string | null>;
-
-  /**
-   * Prompts the user to pick a file, of a kind in `filters` if given, and returns its absolute path, or null if they
-   * cancel.
-   */
-  pickFile(filters?: readonly FileFilter[]): Promise<string | null>;
+  pickPaths(options?: PickPathsOptions): Promise<string[]>;
 
   /**
    * Sets the brightness of the window's native parts, e.g. its buttons, menus and dialogs.

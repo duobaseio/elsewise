@@ -1,11 +1,12 @@
-import { DEFAULT_SETTINGS, type Settings } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { useEffect, useRef, useState } from 'react';
 import { describe, expect, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
+import type { CommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
@@ -15,12 +16,9 @@ import '@xterm/xterm/css/xterm.css';
 import { ApplicationManagerContext } from '@/application-context';
 import { builtInApplication } from '../../../test/commands';
 
-const SETTINGS: Settings = {
-  ...DEFAULT_SETTINGS,
-  appearance: {
-    ...DEFAULT_SETTINGS.appearance,
-    general: { ...DEFAULT_SETTINGS.appearance.general, brightness: 'light' },
-  },
+const SETTINGS: FrontendSettings = {
+  ...DEFAULT_FRONTEND_SETTINGS,
+  appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: 'light' },
 };
 
 // Renders a bare terminal with the commands' keymap and its search. Returns the settings' client and the terminal.
@@ -32,39 +30,40 @@ async function mount() {
   const ready = new Promise<XTerm>((r) => {
     resolve = r;
   });
-  function Probe() {
-    const [keymap] = useState(() => terminalKeymap(application.commands));
-    const [terminal, setTerminal] = useState<XTerm | null>(null);
-    const host = useRef<HTMLDivElement>(null);
-    useEffect(() => {
-      if (host.current === null) {
-        return;
-      }
-      // The search add-on's highlights reach proposed API.
-      const xterm = new XTerm({ allowProposedApi: true });
-      xterm.loadAddon(keymap);
-      xterm.open(host.current);
-      setTerminal(xterm);
-      resolve(xterm);
-      return () => xterm.dispose();
-    }, [keymap]);
-    return (
-      <div className="relative" style={{ height: 300, width: 600 }}>
-        <div className="h-full" ref={host} />
-        <TerminalSearch terminal={terminal} />
-      </div>
-    );
-  }
   await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
         <ApplicationManagerContext value={application}>
-          <Probe />
+          <Probe commands={application.commands} resolve={resolve} />
         </ApplicationManagerContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
   return { client, xterm: await ready };
+}
+
+function Probe({ commands, resolve }: { commands: CommandManager; resolve: (xterm: XTerm) => void }) {
+  const [keymap] = useState(() => terminalKeymap(commands));
+  const [terminal, setTerminal] = useState<XTerm | null>(null);
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (host.current === null) {
+      return;
+    }
+    // The search add-on's highlights reach proposed API.
+    const xterm = new XTerm({ allowProposedApi: true });
+    xterm.loadAddon(keymap);
+    xterm.open(host.current);
+    setTerminal(xterm);
+    resolve(xterm);
+    return () => xterm.dispose();
+  }, [keymap, resolve]);
+  return (
+    <div className="relative" style={{ height: 300, width: 600 }}>
+      <div className="h-full" ref={host} />
+      <TerminalSearch terminal={terminal} />
+    </div>
+  );
 }
 
 // Writes `text`, then opens the search bar with its shortcut.
@@ -181,11 +180,8 @@ describe('TerminalSearch', () => {
 
     client.setQueryData(settingsQuery.queryKey, {
       ...SETTINGS,
-      appearance: {
-        ...SETTINGS.appearance,
-        general: { ...SETTINGS.appearance.general, brightness: 'dark' },
-      },
-    } satisfies Settings);
+      appearance: { ...SETTINGS.appearance, brightness: 'dark' },
+    } satisfies FrontendSettings);
 
     await expect.poll(current).toBe('rgb(217, 179, 106)');
   });
