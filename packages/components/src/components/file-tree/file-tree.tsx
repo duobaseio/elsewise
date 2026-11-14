@@ -114,7 +114,6 @@ export function FileTree({
         dragged.current = null;
         setRootTarget(false);
       }}
-
       onDragLeave={(event) => {
         if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
           setRootTarget(false);
