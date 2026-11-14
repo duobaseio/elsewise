@@ -106,7 +106,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
             const folder = path?.slice(0, path.lastIndexOf('/') + 1) ?? '';
             event.preventDefault();
             // Wayland is a fucking special snowflake. event.altKey is always false because the modifier key is reported
-            // to the compositer which Chromium doesn't expose to us.
+            // to the compositor which Chromium doesn't expose to us.
             event.dataTransfer.dropEffect = event.altKey ? 'copy' : 'move';
             setDropTarget(folder);
 
