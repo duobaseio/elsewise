@@ -78,6 +78,7 @@ export function Projects() {
           }
 
           event.preventDefault();
+          // Wayland is a fucking special snowflake that doesn't support `link`.
           event.dataTransfer.dropEffect = 'link';
           setDropping(true);
         }}
