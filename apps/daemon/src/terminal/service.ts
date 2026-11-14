@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import { attempt, errnoOf } from '../fs/error';
-import { toNativeRoot } from '../fs/path';
+import { toNativeAbsolutePath } from '../fs/path';
 import type {
   AttachTerminalRequest,
   AttachTerminalResponseSchema,
@@ -66,7 +66,7 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     if (request.program === '' || request.program.includes('\0')) {
       throw new TransportError(Code.INVALID_ARGUMENT, 'the program must not be empty');
     }
-    const cwd = toNativeRoot(request.absolutePath);
+    const cwd = toNativeAbsolutePath(request.absolutePath);
     await attempt(() => refuseMissingDirectory(cwd));
     const events = exec(
       {
@@ -259,7 +259,7 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     if (!workspace) {
       throw new TransportError(Code.NOT_FOUND, 'the workspace does not exist');
     }
-    const cwd = toNativeRoot(workspace.absolute_path);
+    const cwd = toNativeAbsolutePath(workspace.absolute_path);
     await refuseMissingDirectory(cwd);
     try {
       return await this.#shells.start(terminal.id, cwd, size);
