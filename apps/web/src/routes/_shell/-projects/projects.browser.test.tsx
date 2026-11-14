@@ -17,7 +17,7 @@ function pickFolder(absolutePath: string | null) {
       cut() {},
       copy() {},
       paste() {},
-      absolutePathOf: () => '',
+      absolutePathOf: (file) => `/Users/me/${file.name}`,
       showPath: async () => {},
       pickPaths: async () => (absolutePath === null ? [] : [absolutePath]),
       setBrightness() {},
@@ -25,6 +25,23 @@ function pickFolder(absolutePath: string | null) {
       onClose() {},
     },
   };
+}
+
+// Drags the folders named `names` from the platform over `element`, then drops them unless `drop` is false.
+function dropFolders(element: Element | null | undefined, names: string[], { drop = true } = {}) {
+  const dataTransfer = new DataTransfer();
+  for (const name of names) {
+    dataTransfer.items.add(new File([], name));
+  }
+  return (drop ? ['dragover', 'drop'] : ['dragover']).map(
+    (type) => element?.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer })) ?? false,
+  );
+}
+
+// Returns the colour of the overlay the projects show while a drag is over them.
+function overlay() {
+  const projects = document.querySelector('[data-slot="sidebar-content"] > div');
+  return projects ? getComputedStyle(projects, '::after').backgroundColor : undefined;
 }
 
 // Returns the names of the projects and their workspaces, in the order shown.
@@ -1046,5 +1063,92 @@ describe('Projects', () => {
         title: 'Could not import “downloads”',
         description: "the folder is not a repository's main working tree",
       });
+  });
+
+  test('imports dropped folder and opens it', async () => {
+    pickFolder(null);
+    const { router } = await mount('/local/elsewise/singapore');
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes']);
+
+    await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
+    await expect.poll(() => router.state.location.pathname).toBe('/local/notes/main');
+  });
+
+  test('imports every dropped folder and opens first', async () => {
+    pickFolder(null);
+    const { router } = await mount('/local/elsewise/singapore');
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes', 'diary']);
+
+    await expect.element(page.getByRole('treeitem', { name: 'diary', exact: true })).toBeVisible();
+    await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
+    await expect.poll(() => router.state.location.pathname).toBe('/local/notes/main');
+  });
+
+  test('reports failed import', async () => {
+    pickFolder(null);
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['downloads']);
+
+    await expect
+      .poll(() => added.mock.lastCall?.[0])
+      .toMatchObject({
+        type: 'error',
+        title: 'Could not import “downloads”',
+        description: "the folder is not a repository's main working tree",
+      });
+  });
+
+  test('tints projects while dragging folders', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+    const transparent = overlay();
+
+    dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes'], { drop: false });
+
+    await expect.poll(overlay).not.toBe(transparent);
+  });
+
+  test('clears tint on leave', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+    const transparent = overlay();
+    const tokyo = page.getByRole('treeitem', { name: 'Tokyo' }).element();
+    dropFolders(tokyo, ['notes'], { drop: false });
+    await expect.poll(overlay).not.toBe(transparent);
+
+    tokyo.dispatchEvent(new DragEvent('dragleave', { bubbles: true, relatedTarget: document.body }));
+
+    await expect.poll(overlay).toBe(transparent);
+  });
+
+  test('ignores drags without files', async () => {
+    pickFolder(null);
+    await mount('/local/elsewise/singapore');
+    const transparent = overlay();
+    const dataTransfer = new DataTransfer();
+    dataTransfer.setData('text/plain', 'notes');
+
+    const accepted = !page
+      .getByRole('treeitem', { name: 'Tokyo' })
+      .element()
+      .dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
+
+    expect(accepted).toBe(false);
+    expect(overlay()).toBe(transparent);
+  });
+
+  test('ignores drop without bridge', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const add = vi.spyOn(projects, 'add');
+
+    const [over] = dropFolders(page.getByRole('treeitem', { name: 'Tokyo' }).element(), ['notes']);
+
+    expect(over).toBe(true);
+    expect(add).not.toHaveBeenCalled();
   });
 });
