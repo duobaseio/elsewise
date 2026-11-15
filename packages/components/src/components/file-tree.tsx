@@ -1,5 +1,7 @@
 export {
   FileTree,
+  type FileTreeDropContext,
+  type FileTreeDropResult,
   type FileTreeGitStatus,
   type FileTreeModel,
   type FileTreeOptions,

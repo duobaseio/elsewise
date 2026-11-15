@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Code, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
 import { errnoOf } from './error';
-import { parseProtocolPath, toNativeRoot } from './path';
+import { parseProtocolPath, toNativeAbsolutePath } from './path';
 
 /** A watched path's state. */
 export interface Snapshot<S> {
@@ -172,13 +172,13 @@ class Session<S> {
   #applyRequest(request: WatchRequest): void {
     let nativeRoot = this.#nativeRoot;
     if (nativeRoot === undefined) {
-      nativeRoot = toNativeRoot(request.root);
+      nativeRoot = toNativeAbsolutePath(request.root);
       this.#nativeRoot = nativeRoot;
       this.#watch = this.#options.watcher.watch(nativeRoot, (relativeProtocolPaths) =>
         this.#onNotified(relativeProtocolPaths),
       );
       this.#pollTimer = setInterval(() => this.#pollAll(), this.#options.pollIntervalMs);
-    } else if (request.root !== '' && toNativeRoot(request.root) !== nativeRoot) {
+    } else if (request.root !== '' && toNativeAbsolutePath(request.root) !== nativeRoot) {
       throw new TransportError(Code.INVALID_ARGUMENT, 'a stream cannot change its root');
     }
 

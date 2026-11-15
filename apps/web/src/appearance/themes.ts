@@ -1,5 +1,4 @@
-import { BundledTheme, type ThemeId } from '@elsewise/bridge';
-import { type ActiveTheme, Theme } from '@elsewise/frontend-plugin';
+import { type ActiveTheme, BundledTheme, Theme, type ThemeId } from '@elsewise/frontend-plugin';
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { usePluginStore } from '@/plugins/plugin-store';
@@ -66,25 +65,25 @@ export function useLoadedThemes(): readonly LoadedTheme[] {
  * The editor and terminal fallback to the interface's theme if unspecified.
  */
 export function useActiveTheme(): ActiveTheme {
-  const general = useSettings((settings) => settings.appearance.general.theme);
-  const editor = useSettings((settings) => settings.appearance.editor.theme);
-  const terminal = useSettings((settings) => settings.appearance.terminal.theme);
+  const appearance = useSettings((settings) => settings.appearance.theme);
+  const editor = useSettings((settings) => settings.editor.theme);
+  const terminal = useSettings((settings) => settings.terminal.theme);
   const brightness = useBrightness();
   const themes = useLoadedThemes();
 
   // Fuck JS/TS's lack of list structural equality
   const find = (id: ThemeId) => themes.find((other) => sameTheme(other.id, id))?.theme;
-  const generalTheme = find(general);
-  const editorTheme = (editor === null ? undefined : find(editor)) ?? generalTheme;
-  const terminalTheme = (terminal === null ? undefined : find(terminal)) ?? generalTheme;
+  const appearanceTheme = find(appearance);
+  const editorTheme = (editor === null ? undefined : find(editor)) ?? appearanceTheme;
+  const terminalTheme = (terminal === null ? undefined : find(terminal)) ?? appearanceTheme;
 
   return useMemo(
     () => ({
-      interface: resolveActiveTheme(generalTheme, brightness).interface,
+      interface: resolveActiveTheme(appearanceTheme, brightness).interface,
       editor: resolveActiveTheme(editorTheme, brightness).editor,
       terminal: resolveActiveTheme(terminalTheme, brightness).terminal,
     }),
-    [generalTheme, editorTheme, terminalTheme, brightness],
+    [appearanceTheme, editorTheme, terminalTheme, brightness],
   );
 }
 

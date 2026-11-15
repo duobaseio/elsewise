@@ -1,5 +1,6 @@
 export const DEFAULT_FONTS: readonly FontChoice[] = [
-  { label: 'Work Sans', value: null },
+  { label: 'Public Sans', value: null },
+  { label: 'Inter', value: 'InterVariable', features: '"ss02"' },
   { label: 'Atkinson Hyperlegible Next', value: 'Atkinson Hyperlegible Next Variable' },
   { label: 'System', value: 'system-ui' },
 ];
@@ -12,10 +13,11 @@ export const DEFAULT_MONO_FONTS: readonly FontChoice[] = [
 export interface FontChoice {
   readonly label: string;
   readonly value: string | null;
+  readonly features?: string;
 }
 
 export function fontStack(family: string | null): string {
-  const fallback = "'Work Sans Variable', system-ui, sans-serif";
+  const fallback = "'Public Sans Variable', system-ui, sans-serif";
   if (family === null) {
     return fallback;
   }

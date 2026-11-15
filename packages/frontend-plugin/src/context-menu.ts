@@ -100,6 +100,67 @@ export const DEFAULT_TERMINAL_CONTEXT_MENU = {
 } as const;
 
 /**
+ * The file tree context menu's built-in groups, submenus and items.
+ */
+export const DEFAULT_FILE_TREE_CONTEXT_MENU = {
+  new: {
+    id: 'io.duobase.elsewise.fileTree.contextMenu.new',
+    order: 10,
+    items: {
+      new: {
+        id: 'io.duobase.elsewise.fileTree.contextMenu.new.new',
+        order: 10,
+        groups: {
+          entries: {
+            id: 'io.duobase.elsewise.fileTree.contextMenu.new.new.entries',
+            order: 10,
+            items: { file: 10, folder: 20 },
+          },
+        },
+      },
+    },
+  },
+  clipboard: {
+    id: 'io.duobase.elsewise.fileTree.contextMenu.clipboard',
+    order: 20,
+    items: {
+      cut: 10,
+      copy: 20,
+      copyPath: {
+        id: 'io.duobase.elsewise.fileTree.contextMenu.clipboard.copyPath',
+        order: 30,
+        groups: {
+          paths: {
+            id: 'io.duobase.elsewise.fileTree.contextMenu.clipboard.copyPath.paths',
+            order: 10,
+            items: { absolute: 10, relative: 20 },
+          },
+        },
+      },
+      paste: 40,
+    },
+  },
+  edit: { id: 'io.duobase.elsewise.fileTree.contextMenu.edit', order: 30, items: { rename: 10, delete: 20 } },
+  open: {
+    id: 'io.duobase.elsewise.fileTree.contextMenu.open',
+    order: 40,
+    items: {
+      openIn: {
+        id: 'io.duobase.elsewise.fileTree.contextMenu.open.openIn',
+        order: 10,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.fileTree.contextMenu.open.openIn.apps',
+            order: 10,
+            items: { fileManager: 10 },
+          },
+        },
+      },
+    },
+  },
+} as const;
+
+/**
  * A group of items, separated from other groups in a context menu.
  *
  * Groups with the same id in a scope, e.g. the editor or the terminal, are merged. `order`, `in` and items with duplicate ids all use
@@ -162,7 +223,7 @@ export interface ContextMenuItem {
   readonly order?: number;
 
   /**
-   * The label shown instead of the command's, where the menu gives it context, e.g. `None` in `Compare with…`.
+   * The label shown instead of the command's, where the menu gives it context, e.g. `None` in `Compare with`.
    */
   readonly label?: string;
 

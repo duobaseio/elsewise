@@ -27,7 +27,7 @@ const PRESENCE = {
  * previous and next diagnostic commands. The `scrollbarMarkers` setting turns it off along with the scrollbar markers.
  */
 export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
-  const shown = useSettings((settings) => settings.appearance.editor.scrollbarMarkers) && !view.state.readOnly;
+  const shown = useSettings((settings) => settings.editor.scrollbarMarkers) && !view.state.readOnly;
   const found = useSyncExternalStore(subscribe, () => view.state.field(diagnostics));
   const counts = useMemo(() => {
     const counts: Counts = { error: 0, warning: 0, info: 0 };

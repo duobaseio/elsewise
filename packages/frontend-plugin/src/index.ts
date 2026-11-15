@@ -14,6 +14,7 @@ export type {
   CommandGroup,
   Commands,
   EditorCommand,
+  FileTreeCommand,
   ProjectCommand,
   TerminalCommand,
   WorkspaceCommand,
@@ -24,14 +25,16 @@ export {
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
   DEFAULT_EDITOR_CONTEXT_MENU,
+  DEFAULT_FILE_TREE_CONTEXT_MENU,
   DEFAULT_PROJECT_CONTEXT_MENU,
   DEFAULT_TERMINAL_CONTEXT_MENU,
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
 export {
-  DEFAULT_DIFF_SOURCES,
+  DEFAULT_DIFF_SOURCE_GROUPS,
   type EditorDiffContent,
   type EditorDiffSource,
+  type EditorDiffSourceGroup,
   type EditorDiffs,
 } from './editor/diff';
 export {
@@ -67,13 +70,32 @@ export {
   type EditorToolbarItem,
   type EditorToolbarProps,
 } from './editor/toolbar';
+export type { FileTree, FileTreeSelection } from './file-tree';
+export {
+  Brightness,
+  BundledKeymap,
+  BundledTheme,
+  CursorStyle,
+  DEFAULT_FRONTEND_SETTINGS,
+  DEFAULT_LANGUAGES,
+  DiffLayout,
+  EditorLanguageSettings,
+  FONT_SIZES,
+  Font,
+  FontSize,
+  FrontendSettings,
+  KeymapId,
+  LineHeight,
+  LineSeparator,
+  ThemeId,
+} from './frontend-settings';
 export { Key, Keymap, Keys, PlatformKey } from './keymap';
-export type { Platform } from './platform';
+export type { FileFilter, PickPathsOptions, Platform } from './platform';
 export { type ActiveTheme, type Appearance, type Application, DEFAULT_ROUTES, type Plugin } from './plugin';
 export type {
   CloneProgress,
-  ExistingProjectSource,
-  NewProjectSource,
+  ExistingProject,
+  NewProject,
   Project,
   ProjectClone,
   ProjectId,
@@ -88,25 +110,24 @@ export type {
   WorkspaceSidebarItem,
   WorkspaceSidebarItemProps,
 } from './projects/sidebar';
+export { DEFAULT_PROJECT_SOURCE_GROUPS, type ProjectSource, type ProjectSourceGroup } from './projects/sources';
 export type {
-  ExistingWorkspaceSource,
-  NewWorkspaceSource,
+  ExistingWorkspace,
+  NewWorkspace,
   Workspace,
+  WorkspaceAggregateStatus,
   WorkspaceId,
-  WorkspaceSource,
   WorkspaceStatus,
   WorkspaceStatusHandle,
   Workspaces,
 } from './projects/workspaces';
-export {
-  DEFAULT_SETTINGS_GROUPS,
-  type LocalSettingsPanel,
-  type RemoteSettingsPanel,
-  type Settings,
-  type SettingsGroup,
-  type SettingsLanguagePreview,
-  type SettingsPanel,
-  type SettingsSearchTerm,
+export type {
+  LocalSettingsPanel,
+  RemoteSettingsPanel,
+  Settings,
+  SettingsLanguagePreview,
+  SettingsPanel,
+  SettingsSearchTerm,
 } from './settings';
 export type { Terminal } from './terminal';
 export { Color, TextStyle, Theme, ThemeVariant } from './theme';

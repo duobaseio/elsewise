@@ -3,9 +3,9 @@ import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { CodeDirectory } from '../directories';
-import { refuseOccupiedPath } from '../fs/directory';
+import { refuseExisting } from '../fs/directory';
 import { errnoOf } from '../fs/error';
-import { toNativeRoot, toProtocolPath } from '../fs/path';
+import { toNativeAbsolutePath, toProtocolPath } from '../fs/path';
 import type {
   CloneProjectRequest,
   CloneProjectResponseSchema,
@@ -87,7 +87,8 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     const { name, folder, mainWorkspaceNativePath } = await attempt(async () => {
       let name = request.name;
       if (name === '') {
-        name = request.absolutePath === '' ? repositoryName(url) : path.basename(toNativeRoot(request.absolutePath));
+        name =
+          request.absolutePath === '' ? repositoryName(url) : path.basename(toNativeAbsolutePath(request.absolutePath));
         if (name === '') {
           throw new TransportError(Code.INVALID_ARGUMENT, 'the url names no repository');
         }
@@ -262,7 +263,7 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
   }
 
   async #addExistingProject(source: CreateProjectRequest_Existing): Promise<ProjectInit> {
-    const mainWorkspaceNativePath = await canonicalPath(toNativeRoot(source.absolutePath));
+    const mainWorkspaceNativePath = await canonicalPath(toNativeAbsolutePath(source.absolutePath));
     await this.#refuseStoredWorkspace(mainWorkspaceNativePath);
     await refuseNonDirectory(mainWorkspaceNativePath);
     const git = new Git(mainWorkspaceNativePath, this.#options.readLimitBytes);
@@ -287,7 +288,7 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     const branch = source.branch === '' ? workspaceFolder : guardOperand(source.branch, 'branch name');
     const workspaceNativePath = await canonicalPath(path.join(this.#code.workspaces, project.folder, workspaceFolder));
     await this.#refuseStoredWorkspace(workspaceNativePath);
-    await refuseOccupiedPath(workspaceNativePath, 'empty');
+    await refuseExisting(workspaceNativePath, 'empty');
 
     const args = ['worktree', 'add'];
     if (await hasBranch(repository.git, branch)) {
@@ -310,7 +311,7 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
   }
 
   async #addExistingWorkspace(project: ProjectRow, source: CreateWorkspaceRequest_Existing): Promise<WorkspaceInit> {
-    const workspaceNativePath = await canonicalPath(toNativeRoot(source.absolutePath));
+    const workspaceNativePath = await canonicalPath(toNativeAbsolutePath(source.absolutePath));
     await this.#refuseStoredWorkspace(workspaceNativePath);
     await refuseNonDirectory(workspaceNativePath);
     const repository = await this.#refuseUnhealthyProject(project);
@@ -365,10 +366,10 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     const mainWorkspaceNativePath = await canonicalPath(
       mainWorkspaceProtocolPath === ''
         ? path.join(this.#code.workspaces, folder, 'main')
-        : toNativeRoot(mainWorkspaceProtocolPath),
+        : toNativeAbsolutePath(mainWorkspaceProtocolPath),
     );
     await this.#refuseStoredWorkspace(mainWorkspaceNativePath);
-    await refuseOccupiedPath(mainWorkspaceNativePath, 'empty');
+    await refuseExisting(mainWorkspaceNativePath, 'empty');
     return { folder, mainWorkspaceNativePath };
   }
 

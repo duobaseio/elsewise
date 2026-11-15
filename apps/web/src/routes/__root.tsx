@@ -7,12 +7,15 @@ import { useActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
 import { ApplicationManager } from '@/application-manager';
 import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
-import { FAKE_BRANCH, FAKE_UNCOMMITTED, FAKE_UNSTAGED } from '@/editor/diff/fake-diff';
+import { FAKE_GIT } from '@/editor/diff/fake-diff';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
+import { FileTreeManager } from '@/fs/file-tree-manager';
 import { usePluginStore } from '@/plugins/plugin-store';
 import { ProjectManager } from '@/projects/project-manager';
+import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DEFAULT_PANELS } from '@/settings/default-panels';
+import { DEFAULT_FONTS } from '@/settings/fonts';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
@@ -44,29 +47,32 @@ function RootComponent() {
   const brightness = useBrightness();
   const theme = useActiveTheme();
   const { keymap } = useSelectedKeymap();
+  const frontend = useSettings();
   const router = useRouter();
   const client = useQueryClient();
+  const workspaceStates = useWorkspaceStateStore();
 
   const [{ application, languageServers }] = useState(() => {
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
       router,
-      new SettingsPanelManager(Object.values(DEFAULT_PANELS)),
-      new ProjectManager(client, router),
+      new SettingsPanelManager(Object.values(DEFAULT_PANELS), frontend),
+      new ProjectManager(client, router, workspaceStates),
       new EditorManager(),
       new TerminalManager(),
+      new FileTreeManager(),
       keymap,
     );
 
     // TODO: Replace with actual diffs once git daemon is ready
-    application.editor.diffs.add([FAKE_UNSTAGED, FAKE_UNCOMMITTED, FAKE_BRANCH]);
+    application.editor.diffs.add([FAKE_GIT]);
 
     return {
       application,
       languageServers: new LanguageServers(application.editor),
     };
   });
-  const { appearance, commands } = application;
+  const { appearance, commands, settings } = application;
 
   useCurrentTheme(appearance);
   useCurrentFonts();
@@ -74,6 +80,10 @@ function RootComponent() {
   useEffect(() => {
     commands.selected = keymap;
   }, [commands, keymap]);
+
+  useEffect(() => {
+    settings.frontend = frontend;
+  }, [settings, frontend]);
 
   useEffect(() => installApplicationKeys(window, commands), [commands]);
 
@@ -99,7 +109,7 @@ function RootComponent() {
  * Applies the brightness and the interface's theme.
  */
 function useCurrentTheme(appearance: AppearanceManager) {
-  const brightnessSetting = useSettings((settings) => settings.appearance.general.brightness);
+  const brightnessSetting = useSettings((settings) => settings.appearance.brightness);
   const brightness = useBrightness();
   const theme = useActiveTheme();
 
@@ -124,13 +134,13 @@ function useCurrentTheme(appearance: AppearanceManager) {
  * Applies the interface's and editor's fonts.
  */
 function useCurrentFonts() {
-  const general = useSettings((settings) => settings.appearance.general.font);
-  const editor = useSettings((settings) => settings.appearance.editor.font);
+  const appearance = useSettings((settings) => settings.appearance.font);
+  const editor = useSettings((settings) => settings.editor.font);
 
   useLayoutEffect(() => {
     const style = document.documentElement.style;
     const fonts = [
-      { font: general, name: 'sans', text: 'base', fallback: "'Work Sans Variable', system-ui, sans-serif" },
+      { font: appearance, name: 'sans', text: 'base', fallback: "'Public Sans Variable', system-ui, sans-serif" },
       { font: editor, name: 'mono', text: 'code', fallback: "'JetBrains Mono Variable', monospace" },
     ];
     for (const { font, name, text, fallback } of fonts) {
@@ -151,5 +161,12 @@ function useCurrentFonts() {
       }
       style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
     }
-  }, [general, editor]);
+
+    const features = DEFAULT_FONTS.find((choice) => choice.value === appearance.family)?.features;
+    if (features) {
+      style.setProperty('--font-sans-features', features);
+    } else {
+      style.removeProperty('--font-sans-features');
+    }
+  }, [appearance, editor]);
 }

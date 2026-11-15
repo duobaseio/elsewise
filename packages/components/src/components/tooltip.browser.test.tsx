@@ -23,8 +23,8 @@ const first = () => page.getByRole('button', { name: 'first' });
 const second = () => page.getByRole('button', { name: 'second' });
 const tip = (text: string) => page.getByText(text);
 
-// Base UI's default open delay is 600ms; well inside that on one side, well past it on the other.
-const INSTANT = 200;
+const INSTANT = 100;
+const DELAYED = 500;
 
 test('inside a provider, the second tooltip opens instantly and without animation', async () => {
   await render(
@@ -43,14 +43,27 @@ test('inside a provider, the second tooltip opens instantly and without animatio
   expect(getComputedStyle(tip('Second tip').element()).transitionDuration).toBe('0s');
 });
 
-test('outside a provider, every tooltip waits out the full delay', async () => {
+test('outside a provider, every tooltip waits out the delay', async () => {
   await render(<Pair />);
 
   await userEvent.hover(first());
-  await expect.element(tip('First tip'), { timeout: 2000 }).toBeVisible();
+  await expect.element(tip('First tip'), { timeout: DELAYED }).toBeVisible();
 
   await userEvent.hover(second());
   await new Promise((resolve) => setTimeout(resolve, INSTANT));
   expect(tip('Second tip').query()).toBeNull();
-  await expect.element(tip('Second tip'), { timeout: 2000 }).toBeVisible();
+  await expect.element(tip('Second tip'), { timeout: DELAYED }).toBeVisible();
+});
+
+test('inside a provider, its delay applies', async () => {
+  await render(
+    <TooltipProvider delay={1000}>
+      <Pair />
+    </TooltipProvider>,
+  );
+
+  await userEvent.hover(first());
+  await new Promise((resolve) => setTimeout(resolve, DELAYED));
+  expect(tip('First tip').query()).toBeNull();
+  await expect.element(tip('First tip'), { timeout: 2000 }).toBeVisible();
 });

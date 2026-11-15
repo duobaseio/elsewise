@@ -13,7 +13,7 @@ function RemotePanel() {
   const { remote, id } = Route.useParams();
   const panel = useSettingsPanels((settings) => settings.remotePanels.find((panel) => panel.id === id));
   if (panel === undefined) {
-    return <Navigate replace to={DEFAULT_ROUTES.settings.general} />;
+    return <Navigate replace to={DEFAULT_ROUTES.settings.appearance} />;
   }
 
   return (

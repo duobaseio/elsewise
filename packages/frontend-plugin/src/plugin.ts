@@ -2,6 +2,8 @@ import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command';
 import type { Editor } from './editor/editor';
+import type { FileTree } from './file-tree';
+import type { FrontendSettings } from './frontend-settings';
 import type { Platform } from './platform';
 import type { Projects } from './projects/projects';
 import type { Workspace } from './projects/workspaces';
@@ -27,13 +29,14 @@ export const DEFAULT_ROUTES = {
     `/${encodeURIComponent(daemonId)}/${encodeURIComponent(projectId)}/${encodeURIComponent(workspaceId)}` as const,
   settings: {
     /**
-     * The settings page last open, or General otherwise.
+     * The settings page last open, or Appearance otherwise.
      */
     last: '/settings',
-    general: '/settings/local/appearance/general',
-    keymap: '/settings/local/appearance/keymap',
-    editor: '/settings/local/appearance/editor',
-    terminal: '/settings/local/appearance/terminal',
+    appearance: '/settings/local/appearance',
+    keymap: '/settings/local/keymap',
+    editor: '/settings/local/editor',
+    fileTree: '/settings/local/file-tree',
+    terminal: '/settings/local/terminal',
   },
 } as const;
 
@@ -90,6 +93,11 @@ export interface Plugin {
   onKeymapChange?(keymap: ActiveKeymap): void;
 
   /**
+   * Called with the frontend's new settings when they change, while the plugin is enabled.
+   */
+  onFrontendSettingsChange?(settings: FrontendSettings): void;
+
+  /**
    * Called with the workspace shown when another is shown or it changes, while the plugin is enabled.
    */
   onWorkspaceChange?(workspace: Workspace | null): void;
@@ -140,6 +148,11 @@ export interface Application {
    * The terminal.
    */
   readonly terminal: Terminal;
+
+  /**
+   * The file tree.
+   */
+  readonly fileTree: FileTree;
 }
 
 /**

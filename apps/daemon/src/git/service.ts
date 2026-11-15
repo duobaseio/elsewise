@@ -1,10 +1,13 @@
+import { randomUUID } from 'node:crypto';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
-import { refuseOccupiedPath } from '../fs/directory';
+import { isCaseInsensitive, isRespelling, refuseExisting, refuseMove } from '../fs/directory';
+import { attemptEach } from '../fs/error';
 import { isBinary } from '../fs/file';
-import { toNativeRoot } from '../fs/path';
+import { toNativeAbsolutePath, toNativePath } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
 import {
   type AbortOperationRequest,
@@ -38,6 +41,8 @@ import {
   type GitService,
   type LockWorktreeRequest,
   type MergeRequest,
+  MoveResponse_Failure_Reason as MoveReason,
+  type MoveRequest,
   type MoveWorktreeRequest,
   type PruneWorktreesRequest,
   type PullRequest,
@@ -163,6 +168,86 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
       }
     } catch (error) {
       throw gitToTransportError(error);
+    }
+  }
+
+  move(request: MoveRequest) {
+    return attempt(async () => {
+      const entries = request.entries.map((entry) => {
+        for (const relativePath of [entry.relativePath, entry.newRelativePath]) {
+          if (relativePath.split('/').some((segment) => segment.toLowerCase() === '.git')) {
+            throw new TransportError(Code.INVALID_ARGUMENT, `"${relativePath}" is in a git directory`);
+          }
+        }
+
+        return {
+          relativePath: filePath(entry.relativePath),
+          newRelativePath: filePath(entry.newRelativePath),
+          absoluteNativePath: toNativePath(request.absolutePath, entry.relativePath),
+          newAbsoluteNativePath: toNativePath(request.absolutePath, entry.newRelativePath),
+        };
+      });
+
+      const git = await this.#open(request.absolutePath);
+      const failures = await attemptEach(
+        entries,
+        async ({ relativePath, newRelativePath, absoluteNativePath, newAbsoluteNativePath }) => {
+          await refuseMove(absoluteNativePath, newAbsoluteNativePath, request.overwrite);
+
+          const ignoreCase = await isCaseInsensitive(absoluteNativePath);
+          const pathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${relativePath}`];
+          if ((await git.text(withPathspecs(['ls-files', '--unmerged', '-z'], pathSpecs))) !== '') {
+            throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" has conflicts`);
+          }
+
+          const [tracked] = (await git.text(withPathspecs(['ls-files', '-z'], pathSpecs))).split('\0');
+          const respelled = await isRespelling(absoluteNativePath, newAbsoluteNativePath);
+          if (request.overwrite && !respelled) {
+            const newPathSpecs = [`:(${ignoreCase ? 'literal,icase' : 'literal'})${newRelativePath}`];
+            await git.run(withPathspecs(['rm', '-r', '-q', '-f', '--ignore-unmatch'], newPathSpecs));
+            await fs.rm(newAbsoluteNativePath, { recursive: true, force: true });
+          }
+          await fs.mkdir(path.dirname(newAbsoluteNativePath), { recursive: true });
+
+          if (!tracked) {
+            await fs.rename(absoluteNativePath, newAbsoluteNativePath);
+            return;
+          }
+
+          // The git index path & fs path may have different casing. We do this to get the index's path. Tracked is
+          // always a file.
+          const segments = relativePath.split('/');
+          const indexedRelativePath = tracked.split('/').slice(0, segments.length).join('/');
+
+          if (respelled) {
+            const temporaryRelativePath = `${newRelativePath}.${randomUUID()}`;
+            await this.#gitMove(git, request.absolutePath, indexedRelativePath, temporaryRelativePath);
+            await this.#gitMove(git, request.absolutePath, temporaryRelativePath, newRelativePath);
+          } else {
+            await this.#gitMove(git, request.absolutePath, indexedRelativePath, newRelativePath);
+          }
+        },
+        gitToTransportError,
+      );
+      return {
+        failures: failures.map(({ item, error }) => ({
+          relativePath: item.relativePath,
+          reason: error.code === Code.ALREADY_EXISTS ? MoveReason.ALREADY_EXISTS : MoveReason.OTHER,
+          message: error.message,
+        })),
+      };
+    });
+  }
+
+  async #gitMove(git: Git, absolutePath: string, relativePath: string, newRelativePath: string): Promise<void> {
+    await git.run(['mv', '-k', '--', relativePath, newRelativePath]);
+    const moved = await fs.lstat(toNativePath(absolutePath, relativePath)).then(
+      () => false,
+      () => true,
+    );
+
+    if (!moved) {
+      throw new TransportError(Code.FAILED_PRECONDITION, `"${relativePath}" could not be moved`);
     }
   }
 
@@ -397,8 +482,8 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   addWorktree(request: AddWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const newPath = toNativeRoot(request.newAbsolutePath);
-      await refuseOccupiedPath(newPath, 'empty');
+      const newPath = toNativeAbsolutePath(request.newAbsolutePath);
+      await refuseExisting(newPath, 'empty');
       const args = ['worktree', 'add'];
       if (request.branch === '') {
         args.push('--detach', newPath, revisionOrHead(request.revision));
@@ -421,10 +506,10 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   moveWorktree(request: MoveWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const newPath = toNativeRoot(request.newAbsolutePath);
-      const worktree = toNativeRoot(request.worktreeAbsolutePath);
+      const newPath = toNativeAbsolutePath(request.newAbsolutePath);
+      const worktree = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktree);
-      await refuseOccupiedPath(newPath, 'missing');
+      await refuseExisting(newPath, 'missing');
       await git.run(['worktree', 'move', worktree, newPath]);
       return { worktree: await readWorktree(git, newPath) };
     });
@@ -433,7 +518,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   lockWorktree(request: LockWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const worktreePath = toNativeRoot(request.worktreeAbsolutePath);
+      const worktreePath = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktreePath);
       const args = ['worktree', 'lock'];
       if (request.reason !== '') {
@@ -447,7 +532,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   unlockWorktree(request: UnlockWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const worktreePath = toNativeRoot(request.worktreeAbsolutePath);
+      const worktreePath = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await git.run(['worktree', 'unlock', worktreePath]);
       return { worktree: await readWorktree(git, worktreePath) };
     });
@@ -456,7 +541,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   removeWorktree(request: RemoveWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      const worktree = toNativeRoot(request.worktreeAbsolutePath);
+      const worktree = toNativeAbsolutePath(request.worktreeAbsolutePath);
       await refuseMainWorktree(git, worktree);
       const args = ['worktree', 'remove'];
       if (request.force) {
@@ -833,9 +918,8 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  /** Returns git running in the worktree. */
   async #open(absolutePath: string): Promise<Git> {
-    const absoluteNativePath = toNativeRoot(absolutePath);
+    const absoluteNativePath = toNativeAbsolutePath(absolutePath);
     const stats = await fs.stat(absoluteNativePath);
     if (!stats.isDirectory()) {
       throw new TransportError(Code.FAILED_PRECONDITION, 'the path is not a directory');

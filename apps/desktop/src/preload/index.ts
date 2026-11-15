@@ -1,5 +1,12 @@
-import type { DaemonBridge, PluginsBridge, ProjectsBridge, SettingsBridge, WindowBridge } from '@elsewise/bridge';
-import { contextBridge, ipcRenderer } from 'electron';
+import type {
+  DaemonBridge,
+  PluginsBridge,
+  ProjectsBridge,
+  SettingsBridge,
+  WindowBridge,
+  WorkspacesBridge,
+} from '@elsewise/bridge';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // The app's version from package.json, defined by bundle.mjs.
 declare const ELSEWISE_VERSION: string;
@@ -34,6 +41,12 @@ const projects: ProjectsBridge = {
   save: (layout) => ipcRenderer.invoke('projects:save', layout),
 };
 
+const workspaces: WorkspacesBridge = {
+  load: (workspace) => ipcRenderer.invoke('workspaces:load', workspace),
+  save: (workspace, state) => ipcRenderer.invoke('workspaces:save', workspace, state),
+  delete: (id) => ipcRenderer.invoke('workspaces:delete', id),
+};
+
 let close: (() => Promise<void>) | undefined;
 ipcRenderer.on('window:close', async () => {
   try {
@@ -49,9 +62,9 @@ const window: WindowBridge = {
   cut: () => ipcRenderer.send('window:cut'),
   copy: () => ipcRenderer.send('window:copy'),
   paste: () => ipcRenderer.send('window:paste'),
-  openFolder: (absolutePath) => ipcRenderer.invoke('window:open-folder', absolutePath),
-  pickFolder: () => ipcRenderer.invoke('window:pick-folder'),
-  pickFile: (filters) => ipcRenderer.invoke('window:pick-file', filters),
+  absolutePathOf: (file) => webUtils.getPathForFile(file),
+  showPath: (absolutePath) => ipcRenderer.invoke('window:show-path', absolutePath),
+  pickPaths: (options) => ipcRenderer.invoke('window:pick-paths', options),
   setBrightness: (brightness) => ipcRenderer.send('window:brightness', brightness),
   setBackground: (color) => ipcRenderer.send('window:background', color),
   onClose: (handler) => {
@@ -66,4 +79,5 @@ contextBridge.exposeInMainWorld('bridge', {
   settings,
   projects,
   window,
+  workspaces,
 });

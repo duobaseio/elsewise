@@ -4,6 +4,7 @@ import { Code } from '@elsewise/transport';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { Change, FastForward, Status_Entry_Conflicted_Kind as Kind } from '../../src/gen/elsewise/daemon/git/v1/git_pb';
 import {
+  MoveResponse_Failure_Reason as MoveReason,
   PullRequest_Mode,
   PushRequest_Force,
   PushStashRequest_Scope,
@@ -70,6 +71,10 @@ describe('common fields', () => {
     const outside = '../x';
     const wt = `${harness.protocolRoot}/wt`;
     const calls: Record<string, () => Promise<unknown>> = {
+      'move.entries.relativePath': () =>
+        client.move({ absolutePath: root, entries: [{ relativePath: outside, newRelativePath: 'x' }] }),
+      'move.entries.newRelativePath': () =>
+        client.move({ absolutePath: root, entries: [{ relativePath: 'x', newRelativePath: outside }] }),
       'stage.relativePaths': () => client.stage({ absolutePath: root, relativePaths: [outside] }),
       'unstage.relativePaths': () => client.unstage({ absolutePath: root, relativePaths: [outside] }),
       'discard.relativePaths': () => client.discard({ absolutePath: root, relativePaths: [outside] }),
@@ -162,8 +167,11 @@ describe('status', () => {
     await repo.write('a.txt', 'changed\n');
     await repo.run('mv', 'b.txt', 'c.txt');
     await repo.write('new.txt', '');
-    await repo.write('.gitignore', 'ignored.txt\n');
+    await repo.write('.gitignore', 'ignored.txt\nbuild/\n');
     await repo.write('ignored.txt', '');
+    await repo.write('build/out.js', '');
+    await repo.run('init', '--quiet', 'nested');
+    await repo.write('nested/x.txt', '');
 
     const { status } = await harness.client.getStatus({ absolutePath: root, includeIgnored: true });
 
@@ -177,9 +185,11 @@ describe('status', () => {
         relativePath: 'c.txt',
         kind: { case: 'changed', value: { staged: Change.RENAMED, originalRelativePath: 'b.txt' } },
       },
-      { relativePath: '.gitignore', kind: { case: 'untracked' } },
-      { relativePath: 'new.txt', kind: { case: 'untracked' } },
-      { relativePath: 'ignored.txt', kind: { case: 'ignored' } },
+      { relativePath: '.gitignore', kind: { case: 'untracked' }, directory: false },
+      { relativePath: 'nested', kind: { case: 'untracked' }, directory: true },
+      { relativePath: 'new.txt', kind: { case: 'untracked' }, directory: false },
+      { relativePath: 'build', kind: { case: 'ignored' }, directory: true },
+      { relativePath: 'ignored.txt', kind: { case: 'ignored' }, directory: false },
     ]);
     const without = await harness.client.getStatus({ absolutePath: root });
     expect(without.status?.entries.map((entry) => entry.relativePath)).not.toContain('ignored.txt');
@@ -233,6 +243,324 @@ describe('status', () => {
     await linked.run('add', 'a.txt');
     await expect.poll(() => entries(seen)).toEqual(['changed:a.txt']);
     abort.abort();
+  });
+});
+
+describe('move', () => {
+  test('stages rename of tracked file, keeping edits unstaged', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.write('a.txt', 'changed\n');
+
+    await harness.client.move({ absolutePath: root, entries: [{ relativePath: 'a.txt', newRelativePath: 'b.txt' }] });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      {
+        relativePath: 'b.txt',
+        kind: { value: { staged: Change.RENAMED, unstaged: Change.MODIFIED, originalRelativePath: 'a.txt' } },
+      },
+    ]);
+    await expect(repo.read('b.txt')).resolves.toBe('changed\n');
+  });
+
+  test('moves untracked file into new folder', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.write('new.txt', 'new\n');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'new.txt', newRelativePath: 'dir/new.txt' }],
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([{ relativePath: 'dir/new.txt', kind: { case: 'untracked' } }]);
+  });
+
+  test('moves folder with tracked and untracked files', async () => {
+    await repo.commit('dir/a.txt', 'a\n');
+    await repo.write('dir/new.txt', 'new\n');
+
+    await harness.client.move({ absolutePath: root, entries: [{ relativePath: 'dir', newRelativePath: 'lib' }] });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'lib/a.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'dir/a.txt' } } },
+      { relativePath: 'lib/new.txt', kind: { case: 'untracked' } },
+    ]);
+  });
+
+  test('moves folder with tracked file deleted on disk', async () => {
+    await repo.commit('dir/a.txt', 'a\n');
+    await repo.commit('dir/c.txt', 'c\n');
+    await fs.rm(path.join(repo.nativeRoot, 'dir/c.txt'));
+
+    await harness.client.move({ absolutePath: root, entries: [{ relativePath: 'dir', newRelativePath: 'lib' }] });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'dir/c.txt', kind: { value: { staged: Change.UNSPECIFIED, unstaged: Change.DELETED } } },
+      { relativePath: 'lib/a.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'dir/a.txt' } } },
+    ]);
+  });
+
+  test('moves tracked file spelled differently on disk', async ({ skip }) => {
+    await repo.commit('a.txt', 'a\n');
+    if (!(await fs.stat(path.join(repo.nativeRoot, 'A.TXT')).catch(() => undefined))) {
+      skip('The file system is case-sensitive.');
+    }
+    await fs.rename(path.join(repo.nativeRoot, 'a.txt'), path.join(repo.nativeRoot, 'tmp'));
+    await fs.rename(path.join(repo.nativeRoot, 'tmp'), path.join(repo.nativeRoot, 'A.TXT'));
+
+    await harness.client.move({ absolutePath: root, entries: [{ relativePath: 'A.TXT', newRelativePath: 'b.txt' }] });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'b.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'a.txt' } } },
+    ]);
+  });
+
+  test('keeps source when overwriting other spelling under ignorecase config', async ({ skip }) => {
+    await repo.commit('A', 'a\n');
+    if (await fs.stat(path.join(repo.nativeRoot, 'a')).catch(() => undefined)) {
+      skip('The file system is case-insensitive.');
+    }
+    await repo.run('config', 'core.ignorecase', 'true');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'A', newRelativePath: 'a' }],
+      overwrite: true,
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'a', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'A' } } },
+    ]);
+    await expect(repo.read('a')).resolves.toBe('a\n');
+  });
+
+  test('moves source, not other spelling, under ignorecase config', async ({ skip }) => {
+    await repo.commit('A', 'upper\n');
+    if (await fs.stat(path.join(repo.nativeRoot, 'a')).catch(() => undefined)) {
+      skip('The file system is case-insensitive.');
+    }
+    await repo.commit('a', 'lower\n');
+    await repo.run('config', 'core.ignorecase', 'true');
+
+    await harness.client.move({ absolutePath: root, entries: [{ relativePath: 'a', newRelativePath: 'b' }] });
+
+    await expect(repo.read('b')).resolves.toBe('lower\n');
+    await expect(repo.read('A')).resolves.toBe('upper\n');
+  });
+
+  test('renames case only when overwriting', async () => {
+    await repo.commit('readme.md', 'a\n');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'readme.md', newRelativePath: 'README.md' }],
+      overwrite: true,
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'README.md', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'readme.md' } } },
+    ]);
+    await expect(repo.read('README.md')).resolves.toBe('a\n');
+  });
+
+  test('renames case only', async () => {
+    await repo.commit('readme.md', 'a\n');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'readme.md', newRelativePath: 'README.md' }],
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'README.md', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'readme.md' } } },
+    ]);
+  });
+
+  test('renames folder case only', async () => {
+    await repo.commit('dir/a.txt', 'a\n');
+
+    await harness.client.move({ absolutePath: root, entries: [{ relativePath: 'dir', newRelativePath: 'Dir' }] });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'Dir/a.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'dir/a.txt' } } },
+    ]);
+  });
+
+  test('refuses existing destination', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.commit('b.txt', 'b\n');
+
+    const response = await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'b.txt' }],
+    });
+
+    expect(response.failures).toMatchObject([{ relativePath: 'a.txt', reason: MoveReason.ALREADY_EXISTS }]);
+    await expect(repo.read('b.txt')).resolves.toBe('b\n');
+  });
+
+  test('overwrites tracked file', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.commit('b.txt', 'b\n');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'b.txt' }],
+      overwrite: true,
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'a.txt', kind: { value: { staged: Change.DELETED, unstaged: Change.UNSPECIFIED } } },
+      { relativePath: 'b.txt', kind: { value: { staged: Change.MODIFIED, unstaged: Change.UNSPECIFIED } } },
+    ]);
+    await expect(repo.read('b.txt')).resolves.toBe('a\n');
+  });
+
+  test('overwrites untracked file', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.write('b.txt', 'b\n');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'a.txt', newRelativePath: 'b.txt' }],
+      overwrite: true,
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'b.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'a.txt' } } },
+    ]);
+    await expect(repo.read('b.txt')).resolves.toBe('a\n');
+  });
+
+  test('replaces folder when overwriting', async () => {
+    await repo.commit('a/x.txt', 'x\n');
+    await repo.commit('b/y.txt', 'y\n');
+    await repo.write('b/new.txt', 'new\n');
+
+    await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'a', newRelativePath: 'b' }],
+      overwrite: true,
+    });
+
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'b/x.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'a/x.txt' } } },
+      { relativePath: 'b/y.txt', kind: { value: { staged: Change.DELETED, unstaged: Change.UNSPECIFIED } } },
+    ]);
+    await expect(fs.readdir(path.join(repo.nativeRoot, 'b'))).resolves.toEqual(['x.txt']);
+  });
+
+  test('refuses overwriting folder containing entry', async () => {
+    await repo.commit('dir/a.txt', 'a\n');
+
+    const response = await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'dir/a.txt', newRelativePath: 'dir' }],
+      overwrite: true,
+    });
+
+    expect(response.failures).toMatchObject([
+      { reason: MoveReason.OTHER, message: 'an entry cannot overwrite a folder containing it' },
+    ]);
+    await expect(repo.read('dir/a.txt')).resolves.toBe('a\n');
+  });
+
+  test('refuses folder into itself', async () => {
+    await repo.commit('dir/a.txt', 'a\n');
+
+    const response = await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'dir', newRelativePath: 'dir/sub/dir' }],
+    });
+
+    expect(response.failures).toMatchObject([
+      { reason: MoveReason.OTHER, message: 'an entry cannot be moved into itself' },
+    ]);
+    await expect(fs.readdir(path.join(repo.nativeRoot, 'dir'))).resolves.toEqual(['a.txt']);
+  });
+
+  test('refuses conflicted entry', async () => {
+    await diverge();
+    await harness.client.merge({ absolutePath: root, revision: 'feature' });
+
+    const response = await harness.client.move({
+      absolutePath: root,
+      entries: [{ relativePath: 'conflict.txt', newRelativePath: 'new/conflict.txt' }],
+    });
+
+    expect(response.failures).toMatchObject([
+      { relativePath: 'conflict.txt', reason: MoveReason.OTHER, message: '"conflict.txt" has conflicts' },
+    ]);
+    await expect(fs.readdir(repo.nativeRoot)).resolves.not.toContain('new');
+  });
+
+  test('refuses git directory', async () => {
+    await repo.commit('a.txt', 'a\n');
+    const moves = [
+      { relativePath: '.git', newRelativePath: 'x' },
+      { relativePath: 'a.txt', newRelativePath: '.git/a.txt' },
+      { relativePath: 'a.txt', newRelativePath: 'sub/.GIT' },
+    ];
+
+    for (const move of moves) {
+      await expect(harness.client.move({ absolutePath: root, entries: [move] })).rejects.toMatchObject({
+        code: Code.INVALID_ARGUMENT,
+      });
+    }
+    await expect(harness.client.getStatus({ absolutePath: root })).resolves.toMatchObject({
+      status: { entries: [] },
+    });
+  });
+
+  test('moves entries in order', async () => {
+    await repo.commit('a.txt', 'a\n');
+
+    const response = await harness.client.move({
+      absolutePath: root,
+      entries: [
+        { relativePath: 'a.txt', newRelativePath: 'b.txt' },
+        { relativePath: 'b.txt', newRelativePath: 'c.txt' },
+      ],
+    });
+
+    expect(response.failures).toEqual([]);
+    const { status } = await harness.client.getStatus({ absolutePath: root });
+    expect(status?.entries).toMatchObject([
+      { relativePath: 'c.txt', kind: { value: { staged: Change.RENAMED, originalRelativePath: 'a.txt' } } },
+    ]);
+  });
+
+  test('reports failed entries and moves others', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.commit('b.txt', 'b\n');
+    await repo.commit('dir/a.txt', 'old\n');
+
+    const response = await harness.client.move({
+      absolutePath: root,
+      entries: [
+        { relativePath: 'a.txt', newRelativePath: 'dir/a.txt' },
+        { relativePath: 'missing.txt', newRelativePath: 'dir/missing.txt' },
+        { relativePath: 'b.txt', newRelativePath: 'dir/b.txt' },
+      ],
+    });
+
+    expect(response.failures).toMatchObject([
+      { relativePath: 'a.txt', reason: MoveReason.ALREADY_EXISTS },
+      { relativePath: 'missing.txt', reason: MoveReason.OTHER, message: expect.stringContaining('ENOENT') },
+    ]);
+    await expect(repo.read('dir/a.txt')).resolves.toBe('old\n');
+    await expect(repo.read('dir/b.txt')).resolves.toBe('b\n');
   });
 });
 

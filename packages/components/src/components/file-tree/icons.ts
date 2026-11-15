@@ -16,9 +16,9 @@ const LETTER_SIZE: Record<number, string> = { 1: '8.5px', 2: '8.5px', 3: '5.75px
 
 const CHEVRON_ID = 'ew-chevron';
 
-// Phosphor's box widened until the chevron draws at three quarters of its lane: sizing the `<svg>` would shrink the
-// lane every indent is measured from.
-const CHEVRON_VIEW_BOX = '-42.6667 -42.6667 341.3333 341.3333';
+// Phosphor's box widened until the chevron draws at seven eighths of its lane, 14px like the sidebar's: sizing the
+// `<svg>` would shrink the lane every indent is measured from.
+const CHEVRON_VIEW_BOX = '-18.2857 -18.2857 292.5714 292.5714';
 
 export function useFileTreeIcons(): FileTreeIconConfig {
   const chevron = iconUrl(useIcons().expand);

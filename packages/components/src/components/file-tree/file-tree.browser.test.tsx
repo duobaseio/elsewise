@@ -31,30 +31,77 @@ const ROWS = 8;
 const ICON_LANE = 16;
 const ROW_GAP = 6;
 
-async function mount(options: Partial<FileTreeOptions> = {}, gitStatusBadges?: boolean) {
+async function mount(
+  options: Partial<FileTreeOptions> = {},
+  gitStatusBadges?: boolean,
+  indentGuides?: boolean,
+  cutPaths?: readonly string[],
+) {
   const model: { current: FileTreeModel | null } = { current: null };
-
-  function Harness() {
-    model.current = useFileTree({
-      initialExpandedPaths: ['daemon/', 'daemon/src/'],
-      initialGitStatus: GIT_STATUS,
-      initialPaths: PATHS,
-      ...options,
-    });
-    return <FileTree aria-label="Geometry" gitStatusBadges={gitStatusBadges} model={model.current} />;
-  }
-
-  await render(
+  const harness = (paths?: readonly string[]) => (
     <div className="h-64 w-72">
-      <Harness />
-    </div>,
+      <Harness
+        model={model}
+        options={options}
+        gitStatusBadges={gitStatusBadges}
+        indentGuides={indentGuides}
+        cutPaths={paths}
+      />
+    </div>
   );
+
+  const screen = await render(harness(cutPaths));
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
   if (shadowRoot == null) {
     throw new Error('no shadow root');
   }
-  return { model, shadowRoot };
+  const cut = (paths?: readonly string[]) => screen.rerender(harness(paths));
+  return { model, shadowRoot, cut };
+}
+
+function Harness({
+  model,
+  options,
+  gitStatusBadges,
+  indentGuides,
+  cutPaths,
+}: {
+  model: { current: FileTreeModel | null };
+  options: Partial<FileTreeOptions>;
+  gitStatusBadges?: boolean;
+  indentGuides?: boolean;
+  cutPaths?: readonly string[];
+}) {
+  model.current = useFileTree({
+    initialExpandedPaths: ['daemon/', 'daemon/src/'],
+    initialGitStatus: GIT_STATUS,
+    initialPaths: PATHS,
+    ...options,
+  });
+  return (
+    <FileTree
+      aria-label="Geometry"
+      cutPaths={cutPaths}
+      gitStatusBadges={gitStatusBadges}
+      indentGuides={indentGuides}
+      model={model.current}
+    />
+  );
+}
+
+function DropTree() {
+  return <FileTree aria-label="Drop" dropTarget="" model={useFileTree({ initialPaths: PATHS })} />;
+}
+
+function FlatTree() {
+  const model = useFileTree({ initialPaths: ['a.rs', 'b.rs'] });
+  return <FileTree aria-label="Flat" model={model} />;
+}
+
+function OverridesTree() {
+  const model = useFileTree({ initialExpandedPaths: ['daemon/', 'daemon/src/'], initialPaths: PATHS });
+  return <FileTree aria-label="Overrides" model={model} />;
 }
 
 function isExpanded(model: FileTreeModel | null, path: string): boolean {
@@ -68,6 +115,33 @@ function row(shadowRoot: ShadowRoot, path: string): HTMLElement {
     throw new Error(`no row for ${path}`);
   }
   return element;
+}
+
+function drag(type: 'dragstart' | 'dragover' | 'drop', element: HTMLElement) {
+  const rect = element.getBoundingClientRect();
+  dragAt(type, element, rect.left + 40, rect.top + rect.height / 2);
+}
+
+function dragAt(type: 'dragstart' | 'dragover' | 'drop', element: Element, clientX: number, clientY: number) {
+  element.dispatchEvent(
+    new DragEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      dataTransfer: new DataTransfer(),
+      clientX,
+      clientY,
+    }),
+  );
+}
+
+function dragOntoEmptySpace(type: 'dragover' | 'drop', shadowRoot: ShadowRoot) {
+  const { left, bottom } = shadowRoot.host.getBoundingClientRect();
+  const element = shadowRoot.elementFromPoint(left + 40, bottom - 8);
+  if (element == null || element.closest('[data-type="item"]') != null) {
+    throw new Error('no empty space');
+  }
+  dragAt(type, element, left + 40, bottom - 8);
 }
 
 function section(shadowRoot: ShadowRoot, path: string, name: string): HTMLElement {
@@ -162,9 +236,39 @@ test('theme.css reaches the host, and density keeps the inline style to itself',
   expect(host.style.getPropertyValue('--trees-item-height')).toBe('24px');
 });
 
+test('drop target tints the tree', async () => {
+  await render(<DropTree />);
+  const host = document.querySelector<HTMLElement>('file-tree-container');
+  if (host == null) {
+    throw new Error('no host');
+  }
+
+  const tint = getComputedStyle(host, '::after');
+  expect([tint.backgroundColor, tint.pointerEvents]).toEqual([
+    getComputedStyle(host).getPropertyValue('--layer-selected').trim(),
+    'none',
+  ]);
+  expect(getComputedStyle(host).getPropertyValue('--trees-bg').trim()).toBe('#ffffff');
+});
+
 test("a file's icon aligns with a sibling folder's icon", async () => {
   const { shadowRoot } = await mount();
   expect(fileIconCentre(shadowRoot, 'daemon/sibling.rs')).toBeCloseTo(folderIconCentre(shadowRoot, 'daemon/src/'), 1);
+});
+
+test('files without sibling folders start where chevron draws', async () => {
+  await render(
+    <div className="h-64 w-72">
+      <FlatTree />
+    </div>,
+  );
+  await settleTree(2);
+  const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
+  if (shadowRoot == null) {
+    throw new Error('no shadow root');
+  }
+
+  expect(getComputedStyle(section(shadowRoot, 'a.rs', 'icon')).marginLeft).toBe('3px');
 });
 
 test("a child's chevron aligns with its parent's folder icon", async () => {
@@ -180,15 +284,16 @@ test('a folder with no aria-expanded still renders the open icon', async () => {
     throw new Error('no icon lane');
   }
 
-  const open = getComputedStyle(lane, '::after').maskImage;
-  expect(open).toMatch(/^url\("data:image\/svg\+xml,/);
+  const mask = () => getComputedStyle(lane, '::after').maskImage;
+  const open = getComputedStyle(lane).getPropertyValue('--ew-folder-open-icon');
+  const closed = getComputedStyle(lane).getPropertyValue('--ew-folder-icon');
+  expect(mask()).toBe(open);
 
   folder.setAttribute('aria-expanded', 'false');
-  const closed = getComputedStyle(lane, '::after').maskImage;
-  expect(closed).not.toBe(open);
+  expect(mask()).toBe(closed);
 
   folder.removeAttribute('aria-expanded');
-  expect(getComputedStyle(lane, '::after').maskImage).toBe(open);
+  expect(mask()).toBe(open);
 });
 
 test('git status colours the name, never the icon', async () => {
@@ -199,6 +304,45 @@ test('git status colours the name, never the icon', async () => {
   expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'icon')).color).toBe(
     rgb(token('--trees-fg-muted')),
   );
+});
+
+test('cut paths take disabled ink on the name only', async () => {
+  const { shadowRoot } = await mount({}, undefined, undefined, ['daemon/src/main.rs', 'daemon/']);
+  const disabled = rgb(token('--disabled'));
+
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'content')).color).toBe(disabled);
+  expect(getComputedStyle(section(shadowRoot, 'daemon/', 'content')).color).toBe(disabled);
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'icon')).color).toBe(
+    rgb(token('--trees-fg-muted')),
+  );
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'git')).color).toBe(
+    rgb(token('--trees-status-modified')),
+  );
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/', 'content')).color).not.toBe(disabled);
+});
+
+test('cleared cut paths restore names', async () => {
+  const { shadowRoot, cut } = await mount({}, undefined, undefined, ['daemon/src/main.rs']);
+
+  await cut(undefined);
+
+  expect(getComputedStyle(section(shadowRoot, 'daemon/src/main.rs', 'content')).color).toBe(
+    rgb(token('--trees-status-modified')),
+  );
+});
+
+test('selection never colours the icon', async () => {
+  const { shadowRoot } = await mount({ initialSelectedPaths: ['daemon/'] });
+  expect(row(shadowRoot, 'daemon/').dataset.itemSelected).toBe('true');
+  expect(getComputedStyle(section(shadowRoot, 'daemon/', 'icon')).color).toBe(rgb(token('--trees-fg-muted')));
+});
+
+test('rows keep the default cursor', async () => {
+  const { shadowRoot } = await mount();
+  expect([
+    getComputedStyle(row(shadowRoot, 'daemon/')).cursor,
+    getComputedStyle(row(shadowRoot, 'README.md')).cursor,
+  ]).toEqual(['default', 'default']);
 });
 
 test('each status carries its letter', async () => {
@@ -237,6 +381,101 @@ test('conflict shows "!" and still carries the wrong title', async () => {
   expect(getComputedStyle(lane, '::after').content).toBe('"!"');
   // Conflict rides their unused `deleted` slot and CSS cannot reach a `title`. Fails the day upstream grows one.
   expect(lane.getAttribute('title')).toBe('Git status: deleted');
+});
+
+test('dragging over a closed folder keeps it closed', async () => {
+  const { model, shadowRoot } = await mount();
+
+  drag('dragstart', row(shadowRoot, 'README.md'));
+  drag('dragover', row(shadowRoot, 'vendor/'));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
+  expect(isExpanded(model.current, 'vendor/')).toBe(false);
+});
+
+test('dropping onto a closed folder moves into it and keeps it closed', async () => {
+  const onDropComplete = vi.fn();
+  const { model, shadowRoot } = await mount({ onDropComplete });
+
+  drag('dragstart', row(shadowRoot, 'README.md'));
+  drag('dragover', row(shadowRoot, 'vendor/'));
+  drag('drop', row(shadowRoot, 'vendor/'));
+
+  expect(onDropComplete).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({
+      draggedPaths: ['README.md'],
+      target: expect.objectContaining({ directoryPath: 'vendor/' }),
+    }),
+    model.current,
+  );
+  expect([model.current?.getItem('vendor/README.md') != null, isExpanded(model.current, 'vendor/')]).toEqual([
+    true,
+    false,
+  ]);
+});
+
+test('drops onto empty space into root', async () => {
+  const onDropComplete = vi.fn();
+  const { model, shadowRoot } = await mount({ onDropComplete });
+
+  drag('dragstart', row(shadowRoot, 'daemon/sibling.rs'));
+  dragOntoEmptySpace('dragover', shadowRoot);
+  dragOntoEmptySpace('drop', shadowRoot);
+
+  expect(onDropComplete).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ draggedPaths: ['daemon/sibling.rs'], target: expect.objectContaining({ kind: 'root' }) }),
+    model.current,
+  );
+  expect([model.current?.getItem('sibling.rs') != null, model.current?.getItem('daemon/sibling.rs') != null]).toEqual([
+    true,
+    false,
+  ]);
+});
+
+test('tints tree while dragging over empty space', async () => {
+  const { shadowRoot } = await mount();
+  const host = shadowRoot.host;
+
+  drag('dragstart', row(shadowRoot, 'daemon/sibling.rs'));
+  dragOntoEmptySpace('dragover', shadowRoot);
+  await vi.waitFor(() => expect(host.hasAttribute('data-drop-target')).toBe(true));
+  drag('dragover', row(shadowRoot, 'README.md'));
+  await vi.waitFor(() => expect(host.hasAttribute('data-drop-target')).toBe(false));
+});
+
+test('reports clash on drop onto empty space', async () => {
+  const onDropError = vi.fn();
+  const { model, shadowRoot } = await mount({
+    initialExpandedPaths: ['daemon/'],
+    initialPaths: [...PATHS, 'daemon/README.md', 'daemon/LICENSE'],
+    onDropError,
+  });
+
+  drag('dragstart', row(shadowRoot, 'daemon/README.md'));
+  dragOntoEmptySpace('dragover', shadowRoot);
+  dragOntoEmptySpace('drop', shadowRoot);
+
+  expect(onDropError).toHaveBeenCalledExactlyOnceWith(
+    expect.any(String),
+    expect.objectContaining({ draggedPaths: ['daemon/README.md'] }),
+    model.current,
+  );
+  expect(model.current?.getItem('daemon/README.md')).not.toBeNull();
+});
+
+test('passes model on drop error', async () => {
+  const onDropError = vi.fn();
+  const { model, shadowRoot } = await mount({ initialPaths: [...PATHS, 'vendor/README.md'], onDropError });
+
+  drag('dragstart', row(shadowRoot, 'README.md'));
+  drag('dragover', row(shadowRoot, 'vendor/'));
+  drag('drop', row(shadowRoot, 'vendor/'));
+
+  expect(onDropError).toHaveBeenCalledExactlyOnceWith(
+    expect.any(String),
+    expect.objectContaining({ draggedPaths: ['README.md'] }),
+    model.current,
+  );
 });
 
 test('clicking a folder toggles its expansion in the model', async () => {
@@ -305,6 +544,17 @@ test('the indent guides do not wait for a hover', async () => {
   expect(getComputedStyle(guide).transitionDuration).toBe('0s');
 });
 
+test('indent guides off clears the guide and keeps its width', async () => {
+  const { shadowRoot } = await mount({}, undefined, false);
+  const guide = row(shadowRoot, 'daemon/src/main.rs').querySelector('[data-item-section="spacing-item"]');
+  if (guide == null) {
+    throw new Error('no indent guide');
+  }
+
+  expect(getComputedStyle(guide).borderLeftColor).toBe('rgba(0, 0, 0, 0)');
+  expect(getComputedStyle(guide).borderLeftWidth).toBe('1px');
+});
+
 test('the focus ring is keyboard-only', async () => {
   const { shadowRoot } = await mount();
   const target = row(shadowRoot, 'README.md');
@@ -332,6 +582,47 @@ test('F2 opens an inline rename input', async () => {
   expect(input.getAttribute('aria-label')).toBe('Rename README.md');
 });
 
+test('passes model on rename', async () => {
+  const onRename = vi.fn();
+  const { model, shadowRoot } = await mount({ onRename });
+  await userEvent.click(row(shadowRoot, 'README.md'));
+  await userEvent.keyboard('{F2}');
+  const input = await vi.waitFor(() => {
+    const found = shadowRoot.querySelector<HTMLInputElement>('input[data-item-rename-input="true"]');
+    if (found == null) {
+      throw new Error('no rename input');
+    }
+    return found;
+  });
+
+  await userEvent.fill(input, 'NOTES.md');
+  await userEvent.keyboard('{Enter}');
+
+  expect(onRename).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ sourcePath: 'README.md', destinationPath: 'NOTES.md' }),
+    model.current,
+  );
+});
+
+test('passes model on rename error', async () => {
+  const onRenameError = vi.fn();
+  const { model, shadowRoot } = await mount({ onRenameError });
+  await userEvent.click(row(shadowRoot, 'daemon/sibling.rs'));
+  await userEvent.keyboard('{F2}');
+  const input = await vi.waitFor(() => {
+    const found = shadowRoot.querySelector<HTMLInputElement>('input[data-item-rename-input="true"]');
+    if (found == null) {
+      throw new Error('no rename input');
+    }
+    return found;
+  });
+
+  await userEvent.fill(input, 'Cargo.toml');
+  await userEvent.keyboard('{Enter}');
+
+  expect(onRenameError).toHaveBeenCalledExactlyOnceWith(expect.any(String), model.current);
+});
+
 test('search stays disabled', async () => {
   const { model, shadowRoot } = await mount();
   expect(shadowRoot.querySelectorAll('input')).toHaveLength(0);
@@ -352,20 +643,11 @@ test('FileIconProvider overrides reach the tree, at mount and on change', async 
     extensions: { rs: { kind: 'letters', letters: text, tint: null } },
   });
 
-  function Harness({ icons }: { icons: Partial<FileIcons> }) {
-    return (
-      <FileIconProvider icons={icons}>
-        <Tree />
-      </FileIconProvider>
-    );
-  }
-  function Tree() {
-    const model = useFileTree({ initialExpandedPaths: ['daemon/', 'daemon/src/'], initialPaths: PATHS });
-    return <FileTree aria-label="Overrides" model={model} />;
-  }
-
-  const first = letters('XA');
-  const screen = await render(<Harness icons={first} />);
+  const screen = await render(
+    <FileIconProvider icons={letters('XA')}>
+      <OverridesTree />
+    </FileIconProvider>,
+  );
   await settleTree(ROWS);
   const shadowRoot = document.querySelector('file-tree-container')?.shadowRoot;
   if (shadowRoot == null) {
@@ -373,7 +655,11 @@ test('FileIconProvider overrides reach the tree, at mount and on change', async 
   }
   expect(lettersOf(shadowRoot, 'daemon/src/main.rs')).toBe('XA');
 
-  await screen.rerender(<Harness icons={letters('XB')} />);
+  await screen.rerender(
+    <FileIconProvider icons={letters('XB')}>
+      <OverridesTree />
+    </FileIconProvider>,
+  );
   await vi.waitFor(() => expect(lettersOf(shadowRoot, 'daemon/src/main.rs')).toBe('XB'));
 });
 
@@ -386,14 +672,9 @@ test('IconProvider overrides reach the chevron and the folder icons', async () =
   );
   const icons: Partial<Icons> = { expand: mark('chevron'), folder: mark('closed'), 'folder-open': mark('open') };
 
-  function Tree() {
-    const model = useFileTree({ initialExpandedPaths: ['daemon/', 'daemon/src/'], initialPaths: PATHS });
-    return <FileTree aria-label="Overrides" model={model} />;
-  }
-
   await render(
     <IconProvider icons={icons}>
-      <Tree />
+      <OverridesTree />
     </IconProvider>,
   );
   await settleTree(ROWS);

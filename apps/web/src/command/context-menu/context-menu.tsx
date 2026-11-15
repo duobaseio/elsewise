@@ -12,13 +12,14 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { Application, ContextMenuGroup, Project, Workspace } from '@elsewise/frontend-plugin';
+import type { Application, ContextMenuGroup, FileTreeSelection, Project, Workspace } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { type ComponentProps, Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import {
   type CommandManager,
   isEditor,
+  isFileTreeSelection,
   isProject,
   isTerminal,
   isWorkspace,
@@ -31,9 +32,9 @@ export interface CommandContextMenuProps {
    */
   menu: readonly ContextMenuGroup[];
   /**
-   * The project, workspace, editor or terminal that the menu's commands run against.
+   * The project, workspace, editor, terminal or file tree selection that the menu's commands run against.
    */
-  target?: RefObject<Project | Workspace | EditorView | XTerm | null>;
+  target?: RefObject<Project | Workspace | EditorView | XTerm | FileTreeSelection | null>;
   /**
    * Returns whether the menu opens for `event`, e.g. a right-click or a touch's long-press. Defaults to true.
    */
@@ -142,7 +143,7 @@ function resolve(
   menu: readonly ContextMenuGroup[],
   application: Application,
   commands: CommandManager,
-  target: Project | Workspace | EditorView | XTerm | null,
+  target: Project | Workspace | EditorView | XTerm | FileTreeSelection | null,
   path: readonly string[],
 ): Group[] {
   const groups: Group[] = [];
@@ -207,6 +208,10 @@ function resolve(
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);
         } else if (command.scope === 'terminal' && target !== null && isTerminal(target)) {
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
+        } else if (command.scope === 'fileTree' && target !== null && isFileTreeSelection(target)) {
           shown = command.shown?.(application, target);
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);

@@ -1,6 +1,7 @@
 import {
-  DEFAULT_SETTINGS_GROUPS,
+  DEFAULT_FRONTEND_SETTINGS,
   type Disposable,
+  type FrontendSettings,
   type LocalSettingsPanel,
   type RemoteSettingsPanel,
   type Settings,
@@ -10,22 +11,68 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { LANGUAGES } from '@/settings/languages';
 
-const GROUPS: readonly string[] = Object.values(DEFAULT_SETTINGS_GROUPS);
-
 /**
  * The settings as plugins see them.
  */
 export class SettingsPanelManager implements Settings {
   private readonly listeners = new Set<() => void>();
+  private readonly frontendListeners = new Set<(settings: FrontendSettings) => void>();
+  private sourceFrontend: FrontendSettings;
+  private currentFrontend: FrontendSettings;
   private addedPanels: readonly (readonly (LocalSettingsPanel | RemoteSettingsPanel)[])[] = [];
   private currentLocalPanels: readonly LocalSettingsPanel[] = [];
   private currentRemotePanels: readonly RemoteSettingsPanel[] = [];
   private addedPreviews: readonly (readonly SettingsLanguagePreview[])[] = [];
   private currentPreviews: Readonly<Record<string, SettingsLanguagePreview>> = {};
 
-  constructor(defaults: readonly (LocalSettingsPanel | RemoteSettingsPanel)[] = []) {
+  constructor(
+    defaults: readonly (LocalSettingsPanel | RemoteSettingsPanel)[] = [],
+    frontend: FrontendSettings = DEFAULT_FRONTEND_SETTINGS,
+  ) {
     this.addedPanels = [defaults];
     this.updatePanels();
+    this.sourceFrontend = frontend;
+    this.currentFrontend = this.freeze(structuredClone(frontend));
+  }
+
+  get frontend(): FrontendSettings {
+    return this.currentFrontend;
+  }
+
+  /**
+   * Sets the frontend's settings to a frozen copy of `settings`, and calls the listeners only if they changed.
+   */
+  set frontend(settings: FrontendSettings) {
+    if (settings === this.sourceFrontend) {
+      return;
+    }
+
+    this.sourceFrontend = settings;
+    this.currentFrontend = this.freeze(structuredClone(settings));
+    for (const listener of this.frontendListeners) {
+      try {
+        listener(this.currentFrontend);
+      } catch (error) {
+        console.error('Frontend settings listener failed', error);
+      }
+    }
+  }
+
+  onFrontendChange(listener: (settings: FrontendSettings) => void): Disposable {
+    this.frontendListeners.add(listener);
+    return () => {
+      this.frontendListeners.delete(listener);
+    };
+  }
+
+  private freeze<T>(value: T): T {
+    if (typeof value === 'object' && value !== null) {
+      for (const child of Object.values(value)) {
+        this.freeze(child);
+      }
+      Object.freeze(value);
+    }
+    return value;
   }
 
   /**
@@ -53,20 +100,22 @@ export class SettingsPanelManager implements Settings {
         return false;
       }
 
-      const parent = GROUPS.includes(panel.in) ? undefined : known.get(panel.in);
-      if (!GROUPS.includes(panel.in) && parent === undefined) {
-        console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
-        return false;
-      }
+      if (panel.in !== undefined) {
+        const parent = known.get(panel.in);
+        if (parent === undefined) {
+          console.warn(`Settings panel ${panel.id} is in unknown panel ${panel.in}`);
+          return false;
+        }
 
-      if (parent !== undefined && !GROUPS.includes(parent.in)) {
-        console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
-        return false;
-      }
+        if (parent.in !== undefined) {
+          console.warn(`Settings panel ${panel.id} is in ${panel.in}, which is itself in a panel`);
+          return false;
+        }
 
-      if (parent !== undefined && parent.scope !== panel.scope) {
-        console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
-        return false;
+        if (parent.scope !== panel.scope) {
+          console.warn(`Settings panel ${panel.id} is ${panel.scope}, but ${panel.in} is ${parent.scope}`);
+          return false;
+        }
       }
 
       known.set(panel.id, panel);
@@ -78,7 +127,7 @@ export class SettingsPanelManager implements Settings {
       const removed = new Set(added.map((panel) => panel.id));
       this.addedPanels = this.addedPanels
         .filter((other) => other !== added)
-        .map((other) => other.filter((panel) => !removed.has(panel.in)));
+        .map((other) => other.filter((panel) => panel.in === undefined || !removed.has(panel.in)));
       this.updatePanels();
     };
   }

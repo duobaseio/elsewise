@@ -3,7 +3,7 @@ import type { EditorView } from '@codemirror/view';
 import {
   DEFAULT_COMMAND_GROUPS,
   DEFAULT_COMMANDS,
-  DEFAULT_DIFF_SOURCES,
+  DEFAULT_DIFF_SOURCE_GROUPS,
   DEFAULT_KEYS,
   EDITOR_DOCUMENT,
   type EditorCommand,
@@ -18,9 +18,9 @@ export const EDITOR_UNSTAGED_DIFF: EditorCommand = {
   defaultKeys: DEFAULT_KEYS.editor.diff.unstaged,
   shown: (_, view) => !base(view),
   enabled: (_, view) => !base(view),
-  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCES.unstaged,
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id,
   run: (application, view) => {
-    application.editor.diffs.set(view, DEFAULT_DIFF_SOURCES.unstaged);
+    application.editor.diffs.set(view, DEFAULT_DIFF_SOURCE_GROUPS.git.sources.unstaged.id);
     return true;
   },
 };
@@ -33,9 +33,9 @@ export const EDITOR_UNCOMMITTED_DIFF: EditorCommand = {
   defaultKeys: DEFAULT_KEYS.editor.diff.uncommitted,
   shown: (_, view) => !base(view),
   enabled: (_, view) => !base(view),
-  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCES.uncommitted,
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCE_GROUPS.git.sources.uncommitted.id,
   run: (application, view) => {
-    application.editor.diffs.set(view, DEFAULT_DIFF_SOURCES.uncommitted);
+    application.editor.diffs.set(view, DEFAULT_DIFF_SOURCE_GROUPS.git.sources.uncommitted.id);
     return true;
   },
 };
@@ -48,9 +48,9 @@ export const EDITOR_BRANCH_DIFF: EditorCommand = {
   defaultKeys: DEFAULT_KEYS.editor.diff.branch,
   shown: (_, view) => !base(view),
   enabled: (_, view) => !base(view),
-  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCES.branch,
+  active: (_, view) => view.state.facet(EDITOR_DIFF)?.source === DEFAULT_DIFF_SOURCE_GROUPS.git.sources.branch.id,
   run: (application, view) => {
-    application.editor.diffs.set(view, DEFAULT_DIFF_SOURCES.branch);
+    application.editor.diffs.set(view, DEFAULT_DIFF_SOURCE_GROUPS.git.sources.branch.id);
     return true;
   },
 };

@@ -4,9 +4,10 @@ import {
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@elsewise/components/components/dropdown-menu';
-import { type ReactElement, type RefObject, useState } from 'react';
+import { Fragment, type ReactElement, type RefObject, useState } from 'react';
 import { EDITOR_DIFF } from '@/editor/diff/diff';
 import { useEditorManager } from '@/editor/editor-manager';
 
@@ -27,7 +28,7 @@ export interface DiffSourceMenuProps {
  */
 export function DiffSourceMenu({ view, align, trigger }: DiffSourceMenuProps) {
   const diffs = useEditorManager((editor) => editor.diffs);
-  const sources = useEditorManager((editor) => editor.diffs.sources);
+  const groups = useEditorManager((editor) => editor.diffs.groups);
   // Controlled, so that the menu renders the editor's state as of opening.
   const [open, setOpen] = useState(false);
   const editor = view.current;
@@ -49,12 +50,21 @@ export function DiffSourceMenu({ view, align, trigger }: DiffSourceMenuProps) {
             value={editor.state.facet(EDITOR_DIFF)?.source ?? null}
             onValueChange={(id: string) => diffs.set(editor, id)}
           >
-            {sources
-              .filter((source) => source.shown?.(editor) !== false)
-              .map((source) => (
-                <DropdownMenuRadioItem key={source.id} value={source.id} closeOnClick>
-                  {source.label}
-                </DropdownMenuRadioItem>
+            {groups
+              .map((group) => ({
+                ...group,
+                sources: group.sources.filter((source) => source.shown?.(editor) !== false),
+              }))
+              .filter((group) => group.sources.length > 0)
+              .map((group, i) => (
+                <Fragment key={group.id}>
+                  {i > 0 && <DropdownMenuSeparator />}
+                  {group.sources.map((source) => (
+                    <DropdownMenuRadioItem key={source.id} value={source.id} closeOnClick>
+                      {source.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </Fragment>
               ))}
           </DropdownMenuRadioGroup>
         )}

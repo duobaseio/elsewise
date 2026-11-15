@@ -66,7 +66,16 @@ void main() {
   var copied = 0;
   folders.forEach((kind, folder) {
     for (final name in referenced[kind]!) {
-      File('$root/assets/file-icons/$folder/$name.svg').copySync('${target.path}/$name.svg');
+      final source = File('$root/assets/file-icons/$folder/$name.svg');
+      if (kind == 'slug') {
+        final svg = source.readAsStringSync();
+        if (!svg.startsWith('<svg ')) {
+          throw StateError('$name.svg: does not start with `<svg `');
+        }
+        File('${target.path}/$name.svg').writeAsStringSync(svg.replaceFirst('<svg ', '<svg id="glyph" '));
+      } else {
+        source.copySync('${target.path}/$name.svg');
+      }
       copied++;
     }
   });

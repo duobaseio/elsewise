@@ -1,10 +1,12 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type Settings } from '@elsewise/bridge';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryHistory, createRouter, RouterProvider } from '@tanstack/react-router';
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { PluginStoreContext } from '@/plugins/plugin-store';
+import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { routeTree } from '@/routeTree.gen';
 import { settingsQuery } from '@/settings/settings';
 import { pluginStore } from '../../../plugins';
@@ -23,7 +25,7 @@ const WORDS: InstalledFrontendPlugin = {
         onEnable(app) {
           return [
             app.settings.add([
-              { scope: 'local', id: 'io.example.words', label: 'Words', in: 'appearance', terms: {}, component: () => null },
+              { scope: 'local', id: 'io.example.words', label: 'Words', terms: {}, component: () => null },
               {
                 scope: 'local',
                 id: 'io.example.words.spelling',
@@ -41,21 +43,18 @@ const WORDS: InstalledFrontendPlugin = {
 };
 
 // A few languages under the editor, for the sidebar to fit.
-const LANGUAGES: Settings['appearance']['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
+const LANGUAGES: FrontendSettings['editor']['languages'] = { JavaScript: {}, Markdown: {}, Rust: {} };
 
-async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appearance.editor.languages) {
+async function mount(theme: 'light' | 'dark', languages = DEFAULT_FRONTEND_SETTINGS.editor.languages) {
   // The app sets the page's brightness from the settings, which the search results, portalled to the body, take.
   onTestFinished(() => {
     delete document.documentElement.dataset.brightness;
   });
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
-    ...DEFAULT_SETTINGS,
-    appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
-      editor: { ...DEFAULT_SETTINGS.appearance.editor, languages },
-    },
+    ...DEFAULT_FRONTEND_SETTINGS,
+    appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: theme },
+    editor: { ...DEFAULT_FRONTEND_SETTINGS.editor, languages },
   });
   const router = createRouter({ routeTree, history: createMemoryHistory({ initialEntries: ['/settings'] }) });
   const store = await pluginStore([WORDS]);
@@ -63,7 +62,9 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appea
     <div className="font-sans" data-brightness={theme} data-testid="sheet" style={{ width: 900, height: 480 }}>
       <QueryClientProvider client={client}>
         <PluginStoreContext value={store}>
-          <RouterProvider router={router} />
+          <WorkspaceStateStoreContext value={new WorkspaceStateStore(undefined)}>
+            <RouterProvider router={router} />
+          </WorkspaceStateStoreContext>
         </PluginStoreContext>
       </QueryClientProvider>
     </div>,
@@ -71,7 +72,7 @@ async function mount(theme: 'light' | 'dark', languages = DEFAULT_SETTINGS.appea
 
   await expect.element(page.getByRole('treeitem', { name: 'Words' })).toBeVisible();
   await router.navigate({ to: '/settings/local/$id', params: { id: 'io.example.words' } });
-  await expect.element(page.getByRole('heading', { name: 'General' })).not.toBeInTheDocument();
+  await expect.element(page.getByRole('heading', { name: 'Appearance' })).not.toBeInTheDocument();
   await userEvent.hover(page.getByRole('main'));
 }
 

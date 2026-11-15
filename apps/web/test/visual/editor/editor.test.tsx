@@ -4,9 +4,13 @@ import { setDiagnostics } from '@codemirror/lint';
 import { findNext, openSearchPanel, SearchQuery, setSearchQuery } from '@codemirror/search';
 import { EditorState, type Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_SETTINGS, type DiffLayout } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { EditorCompletion, LanguageServer } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_FRONTEND_SETTINGS,
+  type DiffLayout,
+  type EditorCompletion,
+  type LanguageServer,
+} from '@elsewise/frontend-plugin';
 import { tags } from '@lezer/highlight';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { expect, onTestFinished, test, vi } from 'vitest';
@@ -313,11 +317,8 @@ async function mount(
 ): Promise<EditorView> {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, {
-    ...DEFAULT_SETTINGS,
-    appearance: {
-      ...DEFAULT_SETTINGS.appearance,
-      general: { ...DEFAULT_SETTINGS.appearance.general, brightness: theme },
-    },
+    ...DEFAULT_FRONTEND_SETTINGS,
+    appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, brightness: theme },
   });
   const editor = new EditorManager();
   if (hovered) {
@@ -325,8 +326,13 @@ async function mount(
   }
   editor.addExtensions(extensions);
   editor.diffs.add([
-    { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
-    { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
+    {
+      id: 'test',
+      sources: [
+        { id: 'test.base', label: 'Base', base: async () => ({ code: BASE }) },
+        { id: 'test.branch', label: 'Branch main', base: async () => ({ code: BASE }) },
+      ],
+    },
   ]);
   const application = builtInApplication({
     appearance: new AppearanceManager(theme, resolveActiveTheme(undefined, theme)),
@@ -493,7 +499,7 @@ test.each(THEMES)('editor compare menu (%s)', async (theme) => {
     delete document.documentElement.dataset.brightness;
   });
   await mount(theme);
-  await userEvent.click(page.getByRole('button', { name: 'Compare with…' }));
+  await userEvent.click(page.getByRole('button', { name: 'Compare with' }));
   await expect.element(page.getByRole('menuitemradio', { name: 'Branch main' })).toBeVisible();
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`editor-compare-menu-${theme}`);

@@ -22,7 +22,7 @@
   --trees-font-size-override: var(--text-base);
   --trees-font-weight-semibold-override: 500;
 
-  --trees-item-padding-x-override: 6px;
+  --trees-item-padding-x-override: 7px;
   --trees-item-row-gap-override: 6px;
   --trees-item-margin-x-override: 2px;
   --trees-icon-nudge-override: 0px;

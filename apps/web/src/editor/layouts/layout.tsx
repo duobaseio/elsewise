@@ -18,9 +18,13 @@ import {
   keymap,
   rectangularSelection,
 } from '@codemirror/view';
-import type { LineSeparator } from '@elsewise/bridge';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { EDITOR_DOCUMENT, type EditorDocument, type EditorDocumentLayout } from '@elsewise/frontend-plugin';
+import {
+  EDITOR_DOCUMENT,
+  type EditorDocument,
+  type EditorDocumentLayout,
+  type LineSeparator,
+} from '@elsewise/frontend-plugin';
 import { type ReactNode, type RefObject, useEffect, useMemo, useRef, useState } from 'react';
 import { useCommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap/keymap';
@@ -393,7 +397,7 @@ export function useCompartment(view: RefObject<EditorView | null>, compartment: 
 // Rebuilds `view` when the editor's font changes. CodeMirror caches measurements such as the character width, and
 // does not notice a font that changes through a CSS variable.
 function useFontRebuild(view: RefObject<EditorView | null>): void {
-  const font = useSettings((settings) => settings.appearance.editor.font);
+  const font = useSettings((settings) => settings.editor.font);
   const previous = useRef(font);
 
   useEffect(() => {

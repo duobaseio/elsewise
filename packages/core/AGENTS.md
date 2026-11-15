@@ -15,5 +15,5 @@ This is a **source package**: `exports` points straight at `src/` and there is n
 - **No embedder's dependencies**, such as `electron`; the daemon runs without it.
 - **Not for plugins.** A plugin builds against `@elsewise/frontend-plugin` or `@elsewise/daemon-plugin`; this is the
   other side of that contract.
-- **Relative imports only**, with `.ts` extensions. No aliases.
+- **Relative imports only**, without extensions. No aliases.
 - **Comments**: `//` for comments, `/** … */` for doc comments. Wrap prose at 120 columns by hand.

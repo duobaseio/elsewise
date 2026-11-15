@@ -1,5 +1,13 @@
-import { DEFAULT_SETTINGS, type InstalledFrontendPlugin, type InvalidPlugin, type KeymapId } from '@elsewise/bridge';
-import { type ApplicationCommand, DEFAULT_COMMAND_GROUPS, Keymap } from '@elsewise/frontend-plugin';
+import type { InstalledFrontendPlugin } from '@elsewise/bridge';
+import type { InvalidPlugin } from '@elsewise/core';
+import {
+  type ApplicationCommand,
+  DEFAULT_COMMAND_GROUPS,
+  DEFAULT_FRONTEND_SETTINGS,
+  type FileTreeCommand,
+  Keymap,
+  type KeymapId,
+} from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
 import { renderToString } from 'react-dom/server';
@@ -9,6 +17,7 @@ import {
   installApplicationKeys,
   type LoadedKeymap,
   resolveKeymap,
+  runFileTreeKeys,
   useCopyKeymap,
   useDeleteKeymap,
   useLoadedKeymaps,
@@ -54,19 +63,15 @@ async function keymaps(
   const store = await pluginStore(plugins);
   const client = new QueryClient();
   client.setQueryData(userKeymapsQuery.queryKey, user);
-  let result: readonly LoadedKeymap[] = [];
-  function Probe() {
-    result = useLoadedKeymaps();
-    return null;
-  }
+  const result: { current?: readonly LoadedKeymap[] } = {};
   renderToString(
     createElement(
       QueryClientProvider,
       { client },
-      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+      createElement(PluginStoreContext, { value: store }, createElement(Probe, { use: useLoadedKeymaps, result })),
     ),
   );
-  return result.filter(({ id }) => id.source !== 'elsewise');
+  return (result.current ?? []).filter(({ id }) => id.source !== 'elsewise');
 }
 
 // Returns what `use` returns with `selected` selected, `plugins` installed and the user's `keymaps`, and the client and
@@ -86,21 +91,22 @@ async function probe<T>(
   vi.stubGlobal('window', { bridge: { settings: bridge } });
   const store = await pluginStore(plugins);
   const client = new QueryClient();
-  client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_SETTINGS, keymap: selected });
+  client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_FRONTEND_SETTINGS, keymap: selected });
   client.setQueryData(userKeymapsQuery.queryKey, user);
-  let result: T | undefined;
-  function Probe() {
-    result = use();
-    return null;
-  }
+  const result: { current?: T } = {};
   renderToString(
     createElement(
       QueryClientProvider,
       { client },
-      createElement(PluginStoreContext, { value: store }, createElement(Probe)),
+      createElement(PluginStoreContext, { value: store }, createElement(Probe<T>, { use, result })),
     ),
   );
-  return { result: result as T, client, bridge };
+  return { result: result.current as T, client, bridge };
+}
+
+function Probe<T>({ use, result }: { use: () => T; result: { current?: T } }) {
+  result.current = use();
+  return null;
 }
 
 // Returns a window with application keys installed for `added`, which are added in order.
@@ -219,6 +225,77 @@ describe('installApplicationKeys', () => {
     const { window, dispose } = install(command('a', run));
     dispose();
     window.dispatchEvent(press());
+
+    expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFileTreeKeys', () => {
+  const SELECTION = {
+    workspace: {
+      id: { daemon: 'local', project: 'p', workspace: 'w' },
+      name: 'w',
+      state: 'ok' as const,
+      main: false,
+      absolutePath: '/p/w',
+    },
+    paths: ['src/'],
+  };
+
+  // Returns commands with a file tree command bound to Ctrl-k that runs `run`.
+  function bound(run: FileTreeCommand['run']) {
+    const commands = builtInCommands();
+    commands.add([
+      {
+        id: 'a',
+        label: 'a',
+        scope: 'fileTree',
+        group: DEFAULT_COMMAND_GROUPS.fileTree.id,
+        defaultKeys: ['Ctrl-k'],
+        run,
+      },
+    ]);
+    return commands;
+  }
+
+  test('runs bound command on selection', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+    const event = press();
+
+    runFileTreeKeys(bound(run), SELECTION, event);
+    runFileTreeKeys(bound(run), SELECTION, press({ key: 'j', keyCode: 74 }));
+
+    expect(run).toHaveBeenCalledOnce();
+    expect(run.mock.lastCall?.[1]).toBe(SELECTION);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test('skips handled key', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+    const event = press();
+    event.preventDefault();
+
+    runFileTreeKeys(bound(run), SELECTION, event);
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test('skips empty selection', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+
+    runFileTreeKeys(bound(run), { ...SELECTION, paths: [] }, press());
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test('skips key typed into input', () => {
+    const run = vi.fn<FileTreeCommand['run']>(() => true);
+
+    runFileTreeKeys(
+      bound(run),
+      SELECTION,
+      press({ composedPath: () => [Object.assign(new EventTarget(), { tagName: 'INPUT' })] }),
+    );
 
     expect(run).not.toHaveBeenCalled();
   });
@@ -386,7 +463,10 @@ describe('useUpdateKeymap', () => {
       ],
     );
     update((keys) => ({ ...keys, ...KEYS }));
-    client.setQueryData(settingsQuery.queryKey, { ...DEFAULT_SETTINGS, keymap: { source: 'user', id: 'other' } });
+    client.setQueryData(settingsQuery.queryKey, {
+      ...DEFAULT_FRONTEND_SETTINGS,
+      keymap: { source: 'user', id: 'other' },
+    });
     undo();
 
     expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([
@@ -423,7 +503,7 @@ describe('useCopyKeymap', () => {
     await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('elsewise-copy', keymap));
     await vi.waitFor(() =>
       expect(bridge.save).toHaveBeenCalledExactlyOnceWith({
-        ...DEFAULT_SETTINGS,
+        ...DEFAULT_FRONTEND_SETTINGS,
         keymap: { source: 'user', id: 'elsewise-copy' },
       }),
     );
@@ -507,8 +587,8 @@ describe('useDeleteKeymap', () => {
     remove('mine');
 
     expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([other]);
-    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual(DEFAULT_SETTINGS.keymap);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual(DEFAULT_FRONTEND_SETTINGS.keymap);
     await vi.waitFor(() => expect(bridge.deleteUserKeymap).toHaveBeenCalledExactlyOnceWith('mine'));
-    await vi.waitFor(() => expect(bridge.save).toHaveBeenCalledExactlyOnceWith(DEFAULT_SETTINGS));
+    await vi.waitFor(() => expect(bridge.save).toHaveBeenCalledExactlyOnceWith(DEFAULT_FRONTEND_SETTINGS));
   });
 });
