@@ -4,7 +4,7 @@ on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/desktop_build.yaml
+      - .github/workflows/desktop_build.yml
       - apps/desktop/**
       - apps/web/**
       - packages/bridge/**
@@ -17,7 +17,7 @@ on:
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/desktop_build.yaml
+      - .github/workflows/desktop_build.yml
       - apps/desktop/**
       - apps/web/**
       - packages/bridge/**

@@ -1,26 +1,18 @@
-name: Web Build
+name: Bridge Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/web_build.yaml
-      - apps/web/**
+      - .github/workflows/bridge_build.yml
       - packages/bridge/**
-      - packages/components/**
-      - packages/frontend-plugin/**
-      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/web_build.yaml
-      - apps/web/**
+      - .github/workflows/bridge_build.yml
       - packages/bridge/**
-      - packages/components/**
-      - packages/frontend-plugin/**
-      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -30,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Web
+    name: Build Bridge
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -43,7 +35,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/web check
-      - run: pnpm --filter @elsewise/web typecheck
-      - run: pnpm --filter @elsewise/web test
-      - run: pnpm --filter @elsewise/web build
+      - run: pnpm --filter @elsewise/bridge check
+      - run: pnpm --filter @elsewise/bridge typecheck

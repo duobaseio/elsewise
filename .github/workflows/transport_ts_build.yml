@@ -1,28 +1,30 @@
-name: Bridge Build
+name: Transport TS Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/bridge_build.yaml
-      - packages/bridge/**
+      - .github/workflows/transport_ts_build.yml
+      - packages/transport/ts/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
+      - proto/**
   pull_request:
     paths:
-      - .github/workflows/bridge_build.yaml
-      - packages/bridge/**
+      - .github/workflows/transport_ts_build.yml
+      - packages/transport/ts/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
+      - proto/**
 
 permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Bridge
+  test:
+    name: Test Transport TS
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,5 +37,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/bridge check
-      - run: pnpm --filter @elsewise/bridge typecheck
+      - run: pnpm --filter @elsewise/transport check
+      - run: pnpm --filter @elsewise/transport typecheck
+      - run: pnpm --filter @elsewise/transport test

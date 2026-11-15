@@ -4,14 +4,14 @@ on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/components_build.yaml
+      - .github/workflows/components_build.yml
       - packages/components/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/components_build.yaml
+      - .github/workflows/components_build.yml
       - packages/components/**
       - package.json
       - pnpm-lock.yaml
