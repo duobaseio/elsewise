@@ -1,6 +1,7 @@
 import { DEFAULT_WORKSPACE_STATE } from '@elsewise/bridge';
 import { FileTree, type FileTreeModel, useFileTree } from '@elsewise/components/components/file-tree';
 import { toast } from '@elsewise/components/components/toast';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { FileTreeSelection, Workspace, WorkspaceId } from '@elsewise/frontend-plugin';
 import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
@@ -294,7 +295,8 @@ function usePlatformDrop(model: FileTreeModel, client: Daemon | undefined, works
     const entries = [...transfer.items]
       .flatMap((item) => {
         const file = item.getAsFile();
-        const source = file === null ? '' : absolutePathOf(file);
+        const native = file === null ? '' : absolutePathOf(file);
+        const source = PLATFORM === 'windows' ? native.replaceAll('\\', '/') : native;
         return file === null || source === ''
           ? []
           : [

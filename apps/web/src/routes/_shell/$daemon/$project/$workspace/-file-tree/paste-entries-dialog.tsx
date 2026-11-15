@@ -18,6 +18,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { Label } from '@elsewise/components/components/label';
 import { toast } from '@elsewise/components/components/toast';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { Workspace } from '@elsewise/frontend-plugin';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useId, useRef, useState } from 'react';
@@ -225,21 +226,22 @@ function PasteEntriesForm({
               onBrowse={
                 browsable
                   ? async () => {
-                      const [picked] = await platform.pickPaths({
+                      const [native] = await platform.pickPaths({
                         kind: 'folder',
                         defaultPath: absolutePath(workspace, folderPath),
                         createFolder: true,
                       });
-                      if (picked === undefined) {
+                      if (native === undefined) {
                         return;
                       }
 
-                      const root = workspace.absolutePath.replace(/[\\/]$/, '');
+                      const picked = PLATFORM === 'windows' ? native.replaceAll('\\', '/') : native;
+                      const root = workspace.absolutePath.replace(/\/$/, '');
                       if (picked === root) {
                         setFolder('');
                         setInvalid(null);
-                      } else if (picked.startsWith(`${root}/`) || picked.startsWith(`${root}\\`)) {
-                        setFolder(`${picked.slice(root.length + 1).replaceAll('\\', '/')}/`);
+                      } else if (picked.startsWith(`${root}/`)) {
+                        setFolder(`${picked.slice(root.length + 1)}/`);
                         setInvalid(null);
                       } else {
                         setInvalid(`Pick a folder in “${workspace.name}”.`);
