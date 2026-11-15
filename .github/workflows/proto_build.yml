@@ -4,11 +4,11 @@ on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/proto_build.yaml
+      - .github/workflows/proto_build.yml
       - proto/**
   pull_request:
     paths:
-      - .github/workflows/proto_build.yaml
+      - .github/workflows/proto_build.yml
       - proto/**
 
 permissions:

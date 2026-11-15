@@ -1,18 +1,20 @@
-name: Core Build
+name: Daemon Plugin Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/core_build.yaml
-      - packages/core/**
+      - .github/workflows/daemon_plugin_build.yml
+      - packages/daemon-plugin/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/core_build.yaml
-      - packages/core/**
+      - .github/workflows/daemon_plugin_build.yml
+      - packages/daemon-plugin/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -22,7 +24,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Core
+    name: Build Daemon Plugin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,5 +37,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/core check
-      - run: pnpm --filter @elsewise/core typecheck
+      - run: pnpm --filter @elsewise/daemon-plugin check
+      - run: pnpm --filter @elsewise/daemon-plugin typecheck

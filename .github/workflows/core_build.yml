@@ -1,18 +1,18 @@
-name: Plugin Build
+name: Core Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/plugin_build.yaml
-      - packages/plugin/**
+      - .github/workflows/core_build.yml
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
   pull_request:
     paths:
-      - .github/workflows/plugin_build.yaml
-      - packages/plugin/**
+      - .github/workflows/core_build.yml
+      - packages/core/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Plugin
+    name: Build Core
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -35,6 +35,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/plugin check
-      - run: pnpm --filter @elsewise/plugin typecheck
-      - run: pnpm --filter @elsewise/plugin test
+      - run: pnpm --filter @elsewise/core check
+      - run: pnpm --filter @elsewise/core typecheck

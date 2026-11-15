@@ -1,30 +1,30 @@
-name: Transport TS Build
+name: Frontend Plugin Build
 
 on:
   workflow_dispatch: {}
   push:
     paths:
-      - .github/workflows/transport_ts_build.yaml
-      - packages/transport/ts/**
+      - .github/workflows/frontend_plugin_build.yml
+      - packages/frontend-plugin/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
-      - proto/**
   pull_request:
     paths:
-      - .github/workflows/transport_ts_build.yaml
-      - packages/transport/ts/**
+      - .github/workflows/frontend_plugin_build.yml
+      - packages/frontend-plugin/**
+      - packages/plugin/**
       - package.json
       - pnpm-lock.yaml
       - pnpm-workspace.yaml
-      - proto/**
 
 permissions:
   contents: read
 
 jobs:
-  test:
-    name: Test Transport TS
+  build:
+    name: Build Frontend Plugin
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -37,6 +37,5 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @elsewise/transport check
-      - run: pnpm --filter @elsewise/transport typecheck
-      - run: pnpm --filter @elsewise/transport test
+      - run: pnpm --filter @elsewise/frontend-plugin check
+      - run: pnpm --filter @elsewise/frontend-plugin typecheck
