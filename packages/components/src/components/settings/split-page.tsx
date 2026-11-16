@@ -57,7 +57,7 @@ export function SplitPage({ title, preview, children }: SplitPageProps) {
       value={{
         form: (
           <>
-            <h1 className="text-heading-lg">{title}</h1>
+            <h1 className="font-display text-display-sm">{title}</h1>
             {children}
           </>
         ),

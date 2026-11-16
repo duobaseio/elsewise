@@ -34,6 +34,7 @@ import {
   ProjectService,
   WorkspaceSchema,
 } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { TerminalService } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { WorkspaceStateStore, WorkspaceStateStoreContext } from '@/projects/workspace-state-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../../../../../test/commands';
@@ -114,6 +115,7 @@ function fakeDaemon(git: Partial<Daemon['git']>, fileSystem: Partial<Daemon['fil
       ...git,
       watchStatus: async function* () {},
     },
+    terminals: unused(TerminalService) as unknown as Daemon['terminals'],
   };
 }
 

@@ -3,6 +3,7 @@ import { queryOptions } from '@tanstack/react-query';
 import { FileSystemService } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { GitService } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { ProjectService } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { TerminalService } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 
 /**
  * The daemon's services.
@@ -11,6 +12,7 @@ export interface Daemon {
   readonly fileSystem: Client<typeof FileSystemService>;
   readonly git: Client<typeof GitService>;
   readonly projects: Client<typeof ProjectService>;
+  readonly terminals: Client<typeof TerminalService>;
 }
 
 /**
@@ -39,6 +41,7 @@ export function daemonQuery(id: string) {
         fileSystem: createClient(channel, FileSystemService),
         git: createClient(channel, GitService),
         projects: createClient(channel, ProjectService),
+        terminals: createClient(channel, TerminalService),
       };
     },
     staleTime: 'static',

@@ -12,8 +12,14 @@ import {
   ContextMenuTrigger,
 } from '@elsewise/components/components/context-menu';
 import { formatKey } from '@elsewise/components/lib/platform';
-import type { Application, ContextMenuGroup, FileTreeSelection, Project, Workspace } from '@elsewise/frontend-plugin';
-import type { Terminal as XTerm } from '@xterm/xterm';
+import type {
+  Application,
+  ContextMenuGroup,
+  FileTreeSelection,
+  Project,
+  TerminalView,
+  Workspace,
+} from '@elsewise/frontend-plugin';
 import { type ComponentProps, Fragment, type ReactNode, type RefObject, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import {
@@ -21,7 +27,7 @@ import {
   isEditor,
   isFileTreeSelection,
   isProject,
-  isTerminal,
+  isTerminalView,
   isWorkspace,
   useCommandManager,
 } from '@/command/command-manager';
@@ -34,7 +40,7 @@ export interface CommandContextMenuProps {
   /**
    * The project, workspace, editor, terminal or file tree selection that the menu's commands run against.
    */
-  target?: RefObject<Project | Workspace | EditorView | XTerm | FileTreeSelection | null>;
+  target?: RefObject<Project | Workspace | EditorView | TerminalView | FileTreeSelection | null>;
   /**
    * Returns whether the menu opens for `event`, e.g. a right-click or a touch's long-press. Defaults to true.
    */
@@ -143,7 +149,7 @@ function resolve(
   menu: readonly ContextMenuGroup[],
   application: Application,
   commands: CommandManager,
-  target: Project | Workspace | EditorView | XTerm | FileTreeSelection | null,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | null,
   path: readonly string[],
 ): Group[] {
   const groups: Group[] = [];
@@ -207,7 +213,7 @@ function resolve(
           shown = command.shown?.(application, target);
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);
-        } else if (command.scope === 'terminal' && target !== null && isTerminal(target)) {
+        } else if (command.scope === 'terminal' && target !== null && isTerminalView(target)) {
           shown = command.shown?.(application, target);
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);

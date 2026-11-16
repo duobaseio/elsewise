@@ -129,5 +129,12 @@ export type {
   SettingsPanel,
   SettingsSearchTerm,
 } from './settings';
-export type { Terminal } from './terminal';
+export type {
+  TerminalExit,
+  TerminalOptions,
+  TerminalSession,
+  TerminalSessionId,
+  Terminals,
+  TerminalView,
+} from './terminal';
 export { Color, TextStyle, Theme, ThemeVariant } from './theme';

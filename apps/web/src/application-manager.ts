@@ -9,7 +9,7 @@ import { PlatformManager } from '@/platform-manager';
 import type { ProjectManager } from '@/projects/project-manager';
 import { SidebarStore } from '@/projects/sidebar-store';
 import type { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import type { TerminalManager } from '@/terminal/terminal-manager';
+import type { TerminalManager } from '@/terminals/terminal-manager';
 
 /**
  * The application, which owns its parts and creates its commands.
@@ -25,7 +25,7 @@ export class ApplicationManager implements Application {
     readonly settings: SettingsPanelManager,
     readonly projects: ProjectManager,
     readonly editor: EditorManager,
-    readonly terminal: TerminalManager,
+    readonly terminals: TerminalManager,
     readonly fileTree: FileTreeManager,
     selected: Keymap,
     platform?: Platform,

@@ -22,7 +22,16 @@ afterEach(async () => {
 });
 
 function create(name: string, workspace = workspaceId) {
-  return store.createTerminal({ workspace_id: workspace, name, columns: 80, rows: 24 });
+  return store.createTerminal({
+    workspace_id: workspace,
+    name,
+    relative_path: '',
+    env: '{}',
+    command: '[]',
+    restore: 1,
+    columns: 80,
+    rows: 24,
+  });
 }
 
 describe('getTerminals', () => {

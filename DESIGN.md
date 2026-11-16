@@ -266,15 +266,15 @@ brights lift lightness only (+0.08 L / +0.07 L).
 |--------------|-------------|--------------|---------------------------------------------|
 | `heading-sm` | 13 / 20     | 500, +0.01em | Group headers, section labels within panels, not in popups |
 | `heading`    | 15 / 20     | 500          | Panel titles, dialog titles                 |
-| `heading-lg` | 17 / 24     | 500          | View titles, settings page headers          |
+| `heading-lg` | 17 / 24     | 500          | View titles                                 |
 
 #### Display — Fraunces (opsz auto, never below 20)
 
-| Token        | Size / line | Weight | Usage                                   |
-|--------------|-------------|--------|-----------------------------------------|
-| `display-sm` | 20 / 26     | 500    | Screen titles, empty states             |
-| `display`    | 26 / 32     | 500    | Onboarding, welcome, feature moments    |
-| `display-lg` | 34 / 40     | 500    | Hero — about screen, marketing surfaces |
+| Token        | Size / line | Weight | Usage                                         |
+|--------------|-------------|--------|-----------------------------------------------|
+| `display-sm` | 20 / 26     | 500    | Screen and settings page titles, empty states |
+| `display`    | 26 / 32     | 500    | Onboarding, welcome, feature moments          |
+| `display-lg` | 34 / 40     | 500    | Hero — about screen, marketing surfaces       |
 
 #### Code — JetBrains Mono
 

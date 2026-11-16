@@ -1,16 +1,19 @@
-import type { Terminal as XTerm } from '@xterm/xterm';
+import type { TerminalView } from '@elsewise/frontend-plugin';
 import { expect, onTestFinished, test } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
-import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
+import { DEFAULT_CONTEXT_MENU } from '@/terminals/context-menu/default-context-menu';
 import { builtInApplication } from '../../../commands';
 
 import { THEMES } from '../../../sheet';
 
 // A terminal with a selection, for every built-in item to show.
-const TERMINAL = { buffer: {}, hasSelection: () => true, options: { disableStdin: false } } as unknown as XTerm;
+const TERMINAL = {
+  session: {},
+  terminal: { hasSelection: () => true, options: { disableStdin: false } },
+} as unknown as TerminalView;
 
 test.each(THEMES)('terminal context menu (%s)', async (theme) => {
   // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.

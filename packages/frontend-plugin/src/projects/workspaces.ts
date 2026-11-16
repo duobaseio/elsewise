@@ -28,6 +28,11 @@ export interface Workspaces {
   list(project: ProjectId): Promise<readonly Workspace[]>;
 
   /**
+   * Returns `workspace`, or null if it does not exist.
+   */
+  get(workspace: WorkspaceId): Promise<Workspace | null>;
+
+  /**
    * Adds a workspace to `project`.
    */
   add(project: ProjectId, workspace: NewWorkspace | ExistingWorkspace): Promise<Workspace>;

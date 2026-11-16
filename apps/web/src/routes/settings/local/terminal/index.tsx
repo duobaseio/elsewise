@@ -5,10 +5,11 @@ import { Switch } from '@elsewise/components/components/switch';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { CursorStyle, FrontendSettings, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
-import type { ITerminalAddon } from '@xterm/xterm';
+import { Terminal as XTerm } from '@xterm/xterm';
+import { useEffect, useState } from 'react';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
-import { Terminal as TerminalView } from '@/terminal/terminal';
+import { Terminal as TerminalView } from '@/terminals/terminal';
 import { FontRows } from '../-font-rows';
 import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from '../-theme';
@@ -60,17 +61,21 @@ const TRANSCRIPT = [
   PROMPT,
 ].join('\r\n');
 
-const PREVIEW: ITerminalAddon = {
-  activate: (terminal) => terminal.write(TRANSCRIPT),
-  dispose() {},
-};
-
 export function Terminal() {
   const terminal = useSettings((settings) => settings.terminal);
   const set = useUpdateSettingsSection('terminal');
+  const [preview, setPreview] = useState<XTerm | null>(null);
+
+  useEffect(() => {
+    const xterm = new XTerm({ allowProposedApi: true });
+    xterm.write(TRANSCRIPT);
+    setPreview(xterm);
+    // Disposes after the preview's own cleanup, which React runs after this one.
+    return () => void setTimeout(() => xterm.dispose());
+  }, []);
 
   return (
-    <SplitPage preview={<TerminalView session={PREVIEW} preview />} title="Terminal">
+    <SplitPage preview={preview && <TerminalView xterm={preview} />} title="Terminal">
       <Row
         id="theme"
         label={TERMINAL_TERMS.theme.label}

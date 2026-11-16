@@ -1,11 +1,11 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
-import type { Terminal } from '@xterm/xterm';
 import type { FileTreeSelection } from './file-tree';
 import type { Key, Keys } from './keymap';
 import type { Application } from './plugin';
 import type { Project } from './projects/projects';
 import type { Workspace } from './projects/workspaces';
+import type { TerminalView } from './terminal';
 
 /**
  * The ids of the built-in groups.
@@ -397,7 +397,7 @@ export interface Commands {
    *
    * Returns whether the command ran and applied.
    */
-  run(id: string, target?: Project | Workspace | EditorView | Terminal | FileTreeSelection): boolean;
+  run(id: string, target?: Project | Workspace | EditorView | TerminalView | FileTreeSelection): boolean;
 }
 
 /**
@@ -619,26 +619,26 @@ export interface TerminalCommand extends BaseCommand {
    *
    * A disabled command is greyed out in menus, and pressing its keys does not run it.
    */
-  enabled?(application: Application, terminal: Terminal): boolean;
+  enabled?(application: Application, view: TerminalView): boolean;
 
   /**
    * Returns whether the command is shown in menus. Defaults to true.
    */
-  shown?(application: Application, terminal: Terminal): boolean;
+  shown?(application: Application, view: TerminalView): boolean;
 
   /**
    * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
    * a command that is neither.
    */
-  active?(application: Application, terminal: Terminal): boolean;
+  active?(application: Application, view: TerminalView): boolean;
 
   /**
-   * Runs the command against `terminal`.
+   * Runs the command against `view`.
    *
    * Returns whether the command applied. If it did not, its keys fall through to the next command, and then to the
    * shell.
    */
-  run(application: Application, terminal: Terminal): boolean;
+  run(application: Application, view: TerminalView): boolean;
 }
 
 /**

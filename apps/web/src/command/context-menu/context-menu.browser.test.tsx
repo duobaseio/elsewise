@@ -5,8 +5,8 @@ import {
   type Command,
   type ContextMenuGroup,
   DEFAULT_COMMAND_GROUPS,
+  type TerminalView,
 } from '@elsewise/frontend-plugin';
-import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -121,7 +121,7 @@ describe('CommandContextMenu', () => {
 
   test.each([
     ['editor', { state: {} } as unknown as EditorView, 'Editor'],
-    ['terminal', { buffer: {} } as unknown as XTerm, 'Terminal'],
+    ['terminal', { session: {} } as unknown as TerminalView, 'Terminal'],
     [
       'file tree',
       {

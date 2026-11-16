@@ -6,7 +6,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { resolveActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
-import { SearchBar } from '@/terminal/search/search-bar';
+import { SearchBar } from '@/terminals/search/search-bar';
 import { builtInApplication } from '../../../commands';
 import { THEMES } from '../../../sheet';
 

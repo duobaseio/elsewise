@@ -38,7 +38,7 @@
     "@elsewise/frontend-plugin": "workspace:*",
     "@elsewise/web": "workspace:*",
     "@types/node": "^26.6.6",
-    "electron": "45.3.1",
+    "electron": "45.3.2",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
     "playwright": "^1.65.0",

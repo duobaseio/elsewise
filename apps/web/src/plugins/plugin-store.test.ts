@@ -136,8 +136,8 @@ describe('enable', () => {
       plugin(`
         export default function () {
           return {
-            onBrightnessChange: (brightness) => events.push('brightness ' + brightness),
-            onThemeChange: () => events.push('theme'),
+            onBrightnessChange: (app, brightness) => events.push('brightness ' + brightness + ' with ' + app.appearance.brightness),
+            onThemeChange: (app, theme) => events.push(app.appearance.theme === theme ? 'theme with application' : 'theme'),
           };
         }
       `),
@@ -147,7 +147,7 @@ describe('enable', () => {
     await store.disable('a');
     appearance.brightness = 'dark';
 
-    expect(events).toEqual(['brightness light', 'theme']);
+    expect(events).toEqual(['brightness light with light', 'theme with application']);
   });
 
   test('calls keymap hook while enabled', async () => {
@@ -156,7 +156,7 @@ describe('enable', () => {
       'a',
       plugin(`
         export default function () {
-          return { onKeymapChange: (keymap) => events.push('keymap ' + keymap.commands.size) };
+          return { onKeymapChange: (app, keymap) => events.push('keymap ' + keymap.commands.size + (app.commands.keymap === keymap ? ' with application' : '')) };
         }
       `),
     );
@@ -180,7 +180,7 @@ describe('enable', () => {
       },
     ]);
 
-    expect(events).toEqual([`keymap ${commands.keymap.commands.size - 1}`]);
+    expect(events).toEqual([`keymap ${commands.keymap.commands.size - 1} with application`]);
   });
 
   test('calls frontend settings hook while enabled', async () => {
@@ -189,7 +189,7 @@ describe('enable', () => {
       'a',
       plugin(`
         export default function () {
-          return { onFrontendSettingsChange: (settings) => events.push('keymap ' + settings.keymap.id) };
+          return { onFrontendSettingsChange: (app, settings) => events.push('keymap ' + settings.keymap.id + (app.settings ? ' with application' : '')) };
         }
       `),
     );
@@ -197,7 +197,7 @@ describe('enable', () => {
     await store.disable('a');
     settings.frontend = DEFAULT_FRONTEND_SETTINGS;
 
-    expect(events).toEqual(['keymap mine']);
+    expect(events).toEqual(['keymap mine with application']);
   });
 
   test('logs throwing hook', async () => {

@@ -17,10 +17,10 @@ import { type QueryClient, queryOptions, useQuery } from '@tanstack/react-query'
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { SortedSet } from '@/collections/sorted-set';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { SortedSet } from '@/plugins/sorted-set';
 import { DEFAULT_WORKSPACE_MENU } from '@/projects/default-context-menu';
 import { updateProjectLayout } from '@/projects/layout';
 import { WorkspaceStateStore } from '@/projects/workspace-state-store';
@@ -120,6 +120,12 @@ export class WorkspaceManager implements Workspaces {
   async list(project: ProjectId): Promise<readonly Workspace[]> {
     const workspaces = await this.client.query(workspacesQuery(project.daemon, project.project));
     return workspaces.map((workspace) => mapWorkspace(project.daemon, workspace));
+  }
+
+  async get(workspace: WorkspaceId): Promise<Workspace | null> {
+    const workspaces = await this.client.query(workspacesQuery(workspace.daemon, workspace.project));
+    const message = workspaces.find((candidate) => candidate.id === workspace.workspace);
+    return message === undefined ? null : mapWorkspace(workspace.daemon, message);
   }
 
   async add(project: ProjectId, workspace: NewWorkspace | ExistingWorkspace): Promise<Workspace> {

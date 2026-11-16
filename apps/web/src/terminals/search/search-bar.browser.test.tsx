@@ -1,5 +1,5 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
+import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings, type TerminalView } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { useEffect, useRef, useState } from 'react';
@@ -10,7 +10,7 @@ import type { CommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
-import { TerminalSearch } from '@/terminal/search/search-bar';
+import { TerminalSearch } from '@/terminals/search/search-bar';
 
 import '@xterm/xterm/css/xterm.css';
 import { ApplicationManagerContext } from '@/application-context';
@@ -43,7 +43,9 @@ async function mount() {
 }
 
 function Probe({ commands, resolve }: { commands: CommandManager; resolve: (xterm: XTerm) => void }) {
-  const [keymap] = useState(() => terminalKeymap(commands));
+  const [keymap] = useState(() =>
+    terminalKeymap(commands, (xterm) => ({ session: {}, terminal: xterm }) as unknown as TerminalView),
+  );
   const [terminal, setTerminal] = useState<XTerm | null>(null);
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {

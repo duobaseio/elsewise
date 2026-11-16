@@ -20,6 +20,11 @@ export interface Projects {
   list(daemonId: string): Promise<readonly Project[]>;
 
   /**
+   * Returns `project`, or null if it does not exist.
+   */
+  get(project: ProjectId): Promise<Project | null>;
+
+  /**
    * Adds a project on the daemon with `daemonId`.
    */
   add(daemonId: string, project: NewProject | ExistingProject): Promise<Project>;

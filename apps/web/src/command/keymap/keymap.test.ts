@@ -527,11 +527,11 @@ describe('useCopyKeymap', () => {
     const taken = { id: 'elsewise-copy', error: 'elsewise-copy.json is not JSON' };
     const { result: copy, client, bridge } = await probe(useCopyKeymap, ELSEWISE.id, [], [taken]);
 
-    expect(copy(ELSEWISE.keymap)).toBe('elsewise-copy-2');
-    const keymap = { name: 'Elsewise copy 2', keys: ELSEWISE.keymap.keys };
-    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([taken, { id: 'elsewise-copy-2', keymap }]);
-    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'elsewise-copy-2' });
-    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('elsewise-copy-2', keymap));
+    expect(copy(ELSEWISE.keymap)).toBe('elsewise-copy-1');
+    const keymap = { name: 'Elsewise copy (1)', keys: ELSEWISE.keymap.keys };
+    expect(client.getQueryData(userKeymapsQuery.queryKey)).toEqual([taken, { id: 'elsewise-copy-1', keymap }]);
+    expect(client.getQueryData(settingsQuery.queryKey)?.keymap).toEqual({ source: 'user', id: 'elsewise-copy-1' });
+    await vi.waitFor(() => expect(bridge.saveUserKeymap).toHaveBeenCalledExactlyOnceWith('elsewise-copy-1', keymap));
   });
 
   test('starts id with letter or digit', async () => {

@@ -33,14 +33,14 @@ async function mount(layout?: unknown) {
 
 test('restores layout after remount', async () => {
   const first = await mount();
-  first.api.getPanel('term-1')?.api.close();
+  first.api.getPanel('fileTree')?.api.close();
   await vi.waitFor(() => expect(first.saved()).toBeDefined());
   const layout = first.saved();
   first.unmount();
 
   const second = await mount(layout);
 
-  expect(second.api.panels.map((panel) => panel.id).sort()).toEqual(['editor:$workspace.tsx', 'fileTree']);
+  expect(second.api.panels.map((panel) => panel.id)).toEqual(['editor:$workspace.tsx']);
 });
 
 test('builds default layout from invalid layout', async () => {
@@ -48,5 +48,5 @@ test('builds default layout from invalid layout', async () => {
 
   const { api } = await mount({ grid: 'invalid' });
 
-  expect(api.panels.map((panel) => panel.id).sort()).toEqual(['editor:$workspace.tsx', 'fileTree', 'term-1']);
+  expect(api.panels.map((panel) => panel.id).sort()).toEqual(['editor:$workspace.tsx', 'fileTree']);
 });

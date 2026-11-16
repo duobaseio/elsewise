@@ -1,6 +1,11 @@
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { DEFAULT_COMMAND_GROUPS, type EditorCommand, type TerminalCommand } from '@elsewise/frontend-plugin';
+import {
+  DEFAULT_COMMAND_GROUPS,
+  type EditorCommand,
+  type TerminalCommand,
+  type TerminalView,
+} from '@elsewise/frontend-plugin';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { editorKeymap, terminalKeymap } from '@/command/keymap/keymap';
@@ -158,7 +163,9 @@ function openTerminal(...added: TerminalCommand[]) {
     commands.add([command]);
   }
   const terminal = new XTerm();
-  terminal.loadAddon(terminalKeymap(commands));
+  terminal.loadAddon(
+    terminalKeymap(commands, (xterm) => ({ session: {}, terminal: xterm }) as unknown as TerminalView),
+  );
   terminal.open(document.body);
   terminals.push(terminal);
   const sent = vi.fn<(data: string) => void>();
@@ -194,7 +201,7 @@ describe('terminalKeymap', () => {
     pressTerminal(terminal);
 
     expect(run).toHaveBeenCalledOnce();
-    expect(run.mock.lastCall?.[1]).toBe(terminal);
+    expect(run.mock.lastCall?.[1]?.terminal).toBe(terminal);
     expect(sent).not.toHaveBeenCalled();
   });
 

@@ -13,7 +13,7 @@ import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { FileTreeManager } from '@/fs/file-tree-manager';
 import { ProjectManager } from '@/projects/project-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { TerminalManager } from '@/terminals/terminal-manager';
 
 // A keymap without entries, so every command keeps its default keys.
 export const EMPTY_KEYMAP: Keymap = { name: 'Empty', keys: {} };
@@ -21,7 +21,7 @@ export const EMPTY_KEYMAP: Keymap = { name: 'Empty', keys: {} };
 // An application with the built-in commands and an empty keymap, from `parts` and fresh managers for the rest.
 export function builtInApplication(
   parts: Partial<
-    Pick<ApplicationManager, 'appearance' | 'editor' | 'fileTree' | 'projects' | 'router' | 'settings' | 'terminal'>
+    Pick<ApplicationManager, 'appearance' | 'editor' | 'fileTree' | 'projects' | 'router' | 'settings' | 'terminals'>
   > = {},
   platform?: Platform,
 ): ApplicationManager {
@@ -32,7 +32,7 @@ export function builtInApplication(
     parts.settings ?? new SettingsPanelManager(),
     parts.projects ?? new ProjectManager(new QueryClient(), router),
     parts.editor ?? new EditorManager(),
-    parts.terminal ?? new TerminalManager(),
+    parts.terminals ?? new TerminalManager(new QueryClient()),
     parts.fileTree ?? new FileTreeManager(),
     EMPTY_KEYMAP,
     platform,
