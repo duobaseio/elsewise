@@ -10,7 +10,7 @@ import {
   GetTerminalsResponseSchema,
   UpdateTerminalResponseSchema,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
-import { SessionStore } from '@/terminal/session-store';
+import { SessionStore } from '@/terminals/session-store';
 
 const SINGAPORE: WorkspaceId = { daemon: 'local', project: 'elsewise', workspace: 'singapore' };
 const TOKYO = { ...SINGAPORE, session: 'tokyo-1' };

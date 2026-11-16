@@ -5,7 +5,7 @@ import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
 import { useEffect, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
-import { Terminal } from '@/terminal/terminal';
+import { Terminal } from '@/terminals/terminal';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 

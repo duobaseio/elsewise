@@ -22,7 +22,7 @@ import {
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { STUB_PANELS } from '../../../../../../../test/dock-stubs';
 import { SETTINGS, terminals } from '../../../../../../../test/terminal';

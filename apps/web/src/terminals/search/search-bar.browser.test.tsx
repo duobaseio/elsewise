@@ -10,7 +10,7 @@ import type { CommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
-import { TerminalSearch } from '@/terminal/search/search-bar';
+import { TerminalSearch } from '@/terminals/search/search-bar';
 
 import '@xterm/xterm/css/xterm.css';
 import { ApplicationManagerContext } from '@/application-context';

@@ -9,7 +9,7 @@ import { Terminal as XTerm } from '@xterm/xterm';
 import { useEffect, useState } from 'react';
 import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
-import { Terminal as TerminalView } from '@/terminal/terminal';
+import { Terminal as TerminalView } from '@/terminals/terminal';
 import { FontRows } from '../-font-rows';
 import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from '../-theme';

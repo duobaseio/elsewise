@@ -9,8 +9,8 @@ import {
   GetTerminalsResponseSchema,
   UpdateTerminalResponseSchema,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
-import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { DEFAULT_CONTEXT_MENU } from '@/terminals/context-menu/default-context-menu';
+import { TerminalManager } from '@/terminals/terminal-manager';
 
 const SINGAPORE: WorkspaceId = { daemon: 'local', project: 'elsewise', workspace: 'singapore' };
 const TOKYO = { ...SINGAPORE, session: 'tokyo-1' };

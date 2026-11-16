@@ -3,7 +3,7 @@ import type { TerminalSessionId } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu/context-menu';
-import { useTerminalManager } from '@/terminal/terminal-manager';
+import { useTerminalManager } from '@/terminals/terminal-manager';
 
 /**
  * The terminal's context menu.

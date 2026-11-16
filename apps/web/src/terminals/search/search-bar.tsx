@@ -10,7 +10,7 @@ import { useActiveTheme } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
 import { eventKeys } from '@/command/keymap/keys';
 import { SearchAction, SearchOption } from '@/components/search-controls';
-import { FIND } from '@/terminal/search/commands';
+import { FIND } from '@/terminals/search/commands';
 
 const NEXT = 'Enter';
 const PREVIOUS = 'Shift-Enter';

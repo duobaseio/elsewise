@@ -16,8 +16,8 @@ import {
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
-import { Terminal } from '@/terminal/terminal';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { Terminal } from '@/terminals/terminal';
+import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from './commands';
 
 export const SETTINGS: FrontendSettings = {

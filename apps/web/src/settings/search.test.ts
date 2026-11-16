@@ -5,7 +5,7 @@ import { type SettingsSearchHit, search } from '@/settings/search';
 
 // TODO: Drop once the default panels' ids are importable without their components. The terminal panel loads xterm's
 // clipboard addon, which reads `self` as it loads and so fails outside a browser.
-vi.mock('@/terminal/terminal', () => ({ Terminal: () => null }));
+vi.mock('@/terminals/terminal', () => ({ Terminal: () => null }));
 
 // Returns a panel with `id` and `terms`.
 function panel(id: string, terms: Record<string, SettingsSearchTerm>): LocalSettingsPanel {

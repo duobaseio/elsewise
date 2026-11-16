@@ -3,7 +3,7 @@ import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
 import { useEffect } from 'react';
 import { useApplicationManager } from '@/application-context';
-import { useTerminalManager } from '@/terminal/terminal-manager';
+import { useTerminalManager } from '@/terminals/terminal-manager';
 import { DefaultTab } from '../route';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');

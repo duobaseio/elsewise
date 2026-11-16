@@ -1,6 +1,6 @@
 import type { Terminal as XTerm } from '@xterm/xterm';
 import { describe, expect, test, vi } from 'vitest';
-import { TerminalAttachment } from '@/terminal/terminal-attachment';
+import { TerminalAttachment } from '@/terminals/terminal-attachment';
 import { mount, terminals } from '../../test/terminal';
 
 function line(xterm: XTerm, row: number): string {

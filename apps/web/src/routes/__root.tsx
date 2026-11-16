@@ -18,7 +18,7 @@ import { DEFAULT_PANELS } from '@/settings/default-panels';
 import { DEFAULT_FONTS } from '@/settings/fonts';
 import { useBrightness, useSettings } from '@/settings/settings';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { TerminalManager } from '@/terminals/terminal-manager';
 
 import '../styles.css';
 

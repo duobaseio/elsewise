@@ -22,7 +22,7 @@ import type { CommandManager } from '@/command/command-manager';
 import { type Daemon, daemonQuery } from '@/daemon';
 import { EditorManager } from '@/editor/editor-manager';
 import { CreateTerminalResponseSchema } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication, EMPTY_KEYMAP } from '../../test/commands';
 
 const APPLICATION = DEFAULT_COMMAND_GROUPS.application.id;

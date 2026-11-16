@@ -13,7 +13,7 @@ import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { FileTreeManager } from '@/fs/file-tree-manager';
 import { ProjectManager } from '@/projects/project-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
-import { TerminalManager } from '@/terminal/terminal-manager';
+import { TerminalManager } from '@/terminals/terminal-manager';
 
 // A keymap without entries, so every command keeps its default keys.
 export const EMPTY_KEYMAP: Keymap = { name: 'Empty', keys: {} };

@@ -112,8 +112,8 @@ import {
   WORKSPACE_RENAME,
 } from '@/projects/commands';
 import { OPEN_SETTINGS } from '@/settings/settings';
-import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminal/commands';
-import { TERMINAL_FIND } from '@/terminal/search/commands';
+import { TERMINAL_CLEAR, TERMINAL_COPY, TERMINAL_PASTE, TERMINAL_SELECT_ALL } from '@/terminals/commands';
+import { TERMINAL_FIND } from '@/terminals/search/commands';
 
 export const DEFAULT_GROUPS: readonly CommandGroup[] = [
   APPLICATION,

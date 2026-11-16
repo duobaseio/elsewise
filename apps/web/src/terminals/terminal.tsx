@@ -12,9 +12,9 @@ import { useCommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
 import { monoFontStack } from '@/settings/fonts';
 import { useSettings } from '@/settings/settings';
-import { TerminalContextMenu } from '@/terminal/context-menu/context-menu';
-import { TerminalSearch } from '@/terminal/search/search-bar';
-import { useTerminalManager } from '@/terminal/terminal-manager';
+import { TerminalContextMenu } from '@/terminals/context-menu/context-menu';
+import { TerminalSearch } from '@/terminals/search/search-bar';
+import { useTerminalManager } from '@/terminals/terminal-manager';
 
 import '@xterm/xterm/css/xterm.css';
 import './terminal.css';

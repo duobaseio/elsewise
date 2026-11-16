@@ -14,9 +14,9 @@ import { useApplicationManager } from '@/application-context';
 import { KeyedMap } from '@/collections/keyed-map';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { type Daemon, daemonQuery } from '@/daemon';
-import { DEFAULT_CONTEXT_MENU } from '@/terminal/context-menu/default-context-menu';
-import { SessionStore } from '@/terminal/session-store';
-import { TerminalAttachment } from '@/terminal/terminal-attachment';
+import { DEFAULT_CONTEXT_MENU } from '@/terminals/context-menu/default-context-menu';
+import { SessionStore } from '@/terminals/session-store';
+import { TerminalAttachment } from '@/terminals/terminal-attachment';
 
 type AddonFactory = (view: TerminalView) => ITerminalAddon | null;
 
