@@ -9,9 +9,9 @@ import type {
   FileTreeSelection,
   Keymap,
   Project,
+  TerminalView,
   Workspace,
 } from '@elsewise/frontend-plugin';
-import type { Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
@@ -371,7 +371,7 @@ export class CommandManager implements Commands {
     this.notify();
   }
 
-  run(id: string, target?: Project | Workspace | EditorView | XTerm | FileTreeSelection): boolean {
+  run(id: string, target?: Project | Workspace | EditorView | TerminalView | FileTreeSelection): boolean {
     const command = this.currentCommands.get(id);
     if (command === undefined) {
       console.warn(`Unknown command ${id}`);
@@ -433,12 +433,12 @@ export class CommandManager implements Commands {
       }
 
       if (command.scope === 'terminal') {
-        if (target !== undefined && !isTerminal(target)) {
+        if (target !== undefined && !isTerminalView(target)) {
           console.warn(`Command ${id} runs in a terminal`);
           return false;
         }
 
-        const terminal = target ?? this.application.terminal.active;
+        const terminal = target ?? this.application.terminals.active;
         if (terminal === null) {
           return false;
         }
@@ -496,24 +496,32 @@ export class CommandManager implements Commands {
   }
 }
 
-export function isProject(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is Project {
+export function isProject(
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+): target is Project {
   return 'absolutePath' in target && !('main' in target);
 }
 
-export function isWorkspace(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is Workspace {
+export function isWorkspace(
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+): target is Workspace {
   return 'absolutePath' in target && 'main' in target;
 }
 
-export function isEditor(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is EditorView {
-  return !('absolutePath' in target) && !('paths' in target) && !('buffer' in target);
+export function isEditor(
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+): target is EditorView {
+  return !('absolutePath' in target) && !('paths' in target) && !('session' in target);
 }
 
-export function isTerminal(target: Project | Workspace | EditorView | XTerm | FileTreeSelection): target is XTerm {
-  return 'buffer' in target;
+export function isTerminalView(
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+): target is TerminalView {
+  return 'session' in target;
 }
 
 export function isFileTreeSelection(
-  target: Project | Workspace | EditorView | XTerm | FileTreeSelection,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
 ): target is FileTreeSelection {
   return 'paths' in target;
 }

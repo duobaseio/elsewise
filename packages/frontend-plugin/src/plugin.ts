@@ -8,7 +8,7 @@ import type { Platform } from './platform';
 import type { Projects } from './projects/projects';
 import type { Workspace } from './projects/workspaces';
 import type { Settings } from './settings';
-import type { Terminals } from './terminal';
+import type { Terminals, TerminalView } from './terminal';
 import type { ThemeVariant } from './theme';
 
 /**
@@ -80,27 +80,44 @@ export interface Plugin {
   /**
    * Called with the new brightness when it changes.
    */
-  onBrightnessChange?(brightness: 'light' | 'dark'): void;
+  onBrightnessChange?(app: Application, brightness: 'light' | 'dark'): void;
 
   /**
    * Called with the new theme when it changes.
    */
-  onThemeChange?(theme: ActiveTheme): void;
+  onThemeChange?(app: Application, theme: ActiveTheme): void;
 
   /**
    * Called with the new keymap when it changes.
    */
-  onKeymapChange?(keymap: ActiveKeymap): void;
+  onKeymapChange?(app: Application, keymap: ActiveKeymap): void;
 
   /**
    * Called with the frontend's new settings when they change.
    */
-  onFrontendSettingsChange?(settings: FrontendSettings): void;
+  onFrontendSettingsChange?(app: Application, settings: FrontendSettings): void;
+
+  // TODO: We lack Daemon streaming RPC support for finding out about workspace opens/closes.
 
   /**
    * Called with the workspace shown when another is shown, or it changes.
    */
-  onWorkspaceChange?(workspace: Workspace | null): void;
+  onWorkspaceChange?(app: Application, workspace: Workspace | null): void;
+
+  /**
+   * Called with a terminal when it opens.
+   */
+  onTerminalOpen?(app: Application, view: TerminalView): void;
+
+  /**
+   * Called with a terminal when it closes.
+   */
+  onTerminalClose?(app: Application, view: TerminalView): void;
+
+  /**
+   * Called with a terminal when its session changes, e.g. when it is renamed or its shell exits.
+   */
+  onTerminalChange?(app: Application, view: TerminalView): void;
 }
 
 /**

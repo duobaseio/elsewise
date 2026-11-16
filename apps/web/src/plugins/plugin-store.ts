@@ -53,7 +53,7 @@ export class PluginStore extends PluginResolver<
     if (plugin.onBrightnessChange) {
       listeners.push(
         application.appearance.onBrightnessChange((brightness) =>
-          this.call(id, 'onBrightnessChange', () => plugin.onBrightnessChange?.(brightness)),
+          this.call(id, 'onBrightnessChange', () => plugin.onBrightnessChange?.(application, brightness)),
         ),
       );
     }
@@ -61,7 +61,7 @@ export class PluginStore extends PluginResolver<
     if (plugin.onThemeChange) {
       listeners.push(
         application.appearance.onThemeChange((theme) =>
-          this.call(id, 'onThemeChange', () => plugin.onThemeChange?.(theme)),
+          this.call(id, 'onThemeChange', () => plugin.onThemeChange?.(application, theme)),
         ),
       );
     }
@@ -69,7 +69,7 @@ export class PluginStore extends PluginResolver<
     if (plugin.onKeymapChange) {
       listeners.push(
         application.commands.onKeymapChange((keymap) =>
-          this.call(id, 'onKeymapChange', () => plugin.onKeymapChange?.(keymap)),
+          this.call(id, 'onKeymapChange', () => plugin.onKeymapChange?.(application, keymap)),
         ),
       );
     }
@@ -77,7 +77,7 @@ export class PluginStore extends PluginResolver<
     if (plugin.onFrontendSettingsChange) {
       listeners.push(
         application.settings.onFrontendChange((settings) =>
-          this.call(id, 'onFrontendSettingsChange', () => plugin.onFrontendSettingsChange?.(settings)),
+          this.call(id, 'onFrontendSettingsChange', () => plugin.onFrontendSettingsChange?.(application, settings)),
         ),
       );
     }
@@ -85,7 +85,31 @@ export class PluginStore extends PluginResolver<
     if (plugin.onWorkspaceChange) {
       listeners.push(
         application.projects.workspaces.onActiveChange((workspace) =>
-          this.call(id, 'onWorkspaceChange', () => plugin.onWorkspaceChange?.(workspace)),
+          this.call(id, 'onWorkspaceChange', () => plugin.onWorkspaceChange?.(application, workspace)),
+        ),
+      );
+    }
+
+    if (plugin.onTerminalOpen) {
+      listeners.push(
+        application.terminals.onOpen((view) =>
+          this.call(id, 'onTerminalOpen', () => plugin.onTerminalOpen?.(application, view)),
+        ),
+      );
+    }
+
+    if (plugin.onTerminalClose) {
+      listeners.push(
+        application.terminals.onClose((view) =>
+          this.call(id, 'onTerminalClose', () => plugin.onTerminalClose?.(application, view)),
+        ),
+      );
+    }
+
+    if (plugin.onTerminalChange) {
+      listeners.push(
+        application.terminals.onChange((view) =>
+          this.call(id, 'onTerminalChange', () => plugin.onTerminalChange?.(application, view)),
         ),
       );
     }

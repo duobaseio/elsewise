@@ -64,12 +64,22 @@ export class Shells {
     return { case: 'stopped' };
   }
 
+  /** Returns the terminal, once an exited shell has saved its buffer and exit to it. */
+  async saved(terminalId: string): Promise<TerminalRow | undefined> {
+    const entry = this.#entries.get(terminalId);
+    if (entry?.shell.exit) {
+      await entry.finished;
+    }
+
+    return this.#store.getTerminal(terminalId);
+  }
+
   /** Returns the number of clients attached to the terminal's shell. */
   clientsOf(terminalId: string): number {
     return this.#entries.get(terminalId)?.shell.clients ?? 0;
   }
 
-  /** Starts the terminal's login shell in the given directory. */
+  /** Starts the terminal's command, or its login shell, in the given directory. */
   start(terminalId: string, cwd: string, size: Size | undefined): Promise<Shell> {
     // Ensures concurrent starts can't race each other.
     let starting = this.#starting.get(terminalId);
@@ -132,10 +142,12 @@ export class Shells {
       throw new TransportError(Code.FAILED_PRECONDITION, 'the terminal is being deleted');
     }
     const size = requestedSize ?? { columns: terminal.columns, rows: terminal.rows };
+    const [program, ...args]: string[] = JSON.parse(terminal.command);
+    const env: Record<string, string> = JSON.parse(terminal.env);
     const shell = await Shell.start({
-      ...(await loginShell()),
+      ...(program === undefined ? await loginShell() : { program, args }),
       cwd,
-      env: { ...process.env, COLORTERM: 'truecolor' },
+      env: { ...process.env, COLORTERM: 'truecolor', ...env },
       size,
       scrollback: this.#options.scrollback,
       restore: terminal.buffer

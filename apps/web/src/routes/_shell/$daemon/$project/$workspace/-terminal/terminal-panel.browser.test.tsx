@@ -1,4 +1,5 @@
 import { create } from '@bufbuild/protobuf';
+import type { WorkspaceId } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -7,15 +8,21 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
+import type { Terminal } from '@xterm/xterm';
 import type { DockviewApi } from 'dockview-react';
 import { expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
-import { CreateTerminalResponseSchema } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
+import {
+  CreateTerminalResponseSchema,
+  DeleteTerminalResponseSchema,
+  GetTerminalsResponseSchema,
+} from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
+import { TerminalManager } from '@/terminal/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { STUB_PANELS } from '../../../../../../../test/dock-stubs';
 import { SETTINGS, terminals } from '../../../../../../../test/terminal';
@@ -24,17 +31,26 @@ import { TerminalPanel } from './terminal-panel';
 
 import 'dockview-react/dist/styles/dockview.css';
 
-// Renders the dock of Singapore with a real terminal panel, whose terminal the daemon creates as tokyo-1.
-async function mount() {
-  const createTerminal = vi.fn(async () =>
-    create(CreateTerminalResponseSchema, {
-      terminal: { workspaceId: 'singapore', id: 'tokyo-1', name: 'elsewise-singapore-1' },
-    }),
-  );
-  const fake = terminals({ createTerminal });
+const SINGAPORE: WorkspaceId = { daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' };
+
+// The daemon of Singapore, which creates tokyo-1 running `command`.
+function setUp(command: string[] = []) {
+  const terminal = { workspaceId: 'singapore', id: 'tokyo-1', name: 'Terminal', command };
+  const deleteTerminal = vi.fn(async () => create(DeleteTerminalResponseSchema));
+  const getTerminals = vi.fn(async () => create(GetTerminalsResponseSchema, { terminals: [terminal] }));
+  const fake = terminals({
+    createTerminal: async () => create(CreateTerminalResponseSchema, { terminal }),
+    getTerminals,
+    deleteTerminal,
+  });
   const client = new QueryClient();
   client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, { terminals: fake.client } as unknown as Daemon);
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
+  return { ...fake, client, deleteTerminal, getTerminals, manager: new TerminalManager(client) };
+}
+
+// Renders the dock of Singapore with real terminal panels, restoring `layout` if given.
+async function mount({ client, manager }: ReturnType<typeof setUp>, layout?: unknown) {
   let api: DockviewApi | undefined;
   const root = createRootRoute();
   const shell = createRoute({ getParentRoute: () => root, id: '_shell' });
@@ -45,6 +61,7 @@ async function mount() {
       <div style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
           panels={{ ...STUB_PANELS, terminal: TerminalPanel }}
+          layout={layout}
           onDockviewReady={(ready) => {
             api = ready;
           }}
@@ -56,32 +73,254 @@ async function mount() {
     routeTree: root.addChildren([shell.addChildren([workspace])]),
     history: createMemoryHistory({ initialEntries: [`/${LOCAL_DAEMON_ID}/elsewise/singapore`] }),
   });
-  await render(
+  const screen = await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <ApplicationManagerContext value={builtInApplication({ router })}>
+        <ApplicationManagerContext value={builtInApplication({ router, terminals: manager })}>
           <RouterProvider router={router} />
         </ApplicationManagerContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => api).toBeDefined();
-  return { ...fake, api: api as DockviewApi, createTerminal };
+  return { api: api as DockviewApi, unmount: () => screen.unmount() };
 }
 
-test('creates terminal', async () => {
-  const { api, createTerminal } = await mount();
+// Adds tokyo-1 to Singapore and shows it.
+async function add(setup: ReturnType<typeof setUp>, api: DockviewApi) {
+  const session = await setup.manager.store.add(SINGAPORE);
+  api.addPanel({
+    id: 'terminal:tokyo-1',
+    component: 'terminal',
+    tabComponent: 'terminal',
+    title: session.name,
+    params: { session: session.id.session },
+  });
+  return session.id;
+}
 
-  await expect.element(page.getByText('elsewise-singapore-1')).toBeVisible();
-  expect(createTerminal).toHaveBeenCalledExactlyOnceWith({ workspaceId: 'singapore' });
-  expect(api.getPanel('term-1')?.params).toEqual({ terminalId: 'tokyo-1' });
+// Adds tokyo-1 to Singapore, shows it, and waits for it to attach.
+async function show(setup: ReturnType<typeof setUp>, api: DockviewApi) {
+  const id = await add(setup, api);
+  await expect.poll(() => setup.sent.length).toBeGreaterThan(0);
+  return id;
+}
+
+// Makes the daemon lookups from now on return what `daemon` does.
+function lookUpDaemon(setup: ReturnType<typeof setUp>, daemon: () => Promise<Daemon>) {
+  const query = setup.client.query.bind(setup.client);
+  return vi
+    .spyOn(setup.client, 'query')
+    .mockImplementation((options) => (options.queryKey[0] === 'daemons' ? daemon() : query(options)) as never);
+}
+
+// Returns the text on `xterm`'s screen.
+function text(xterm: Terminal | undefined): string {
+  const buffer = xterm?.buffer.active;
+  return Array.from({ length: buffer?.length ?? 0 }, (_, row) => buffer?.getLine(row)?.translateToString(true)).join(
+    '\n',
+  );
+}
+
+test('attaches shown terminal', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+
+  await show(setup, api);
+
+  expect(api.getPanel('terminal:tokyo-1')?.title).toBe('Terminal');
+  expect(setup.sent[0]).toMatchObject({ event: { case: 'open', value: { terminalId: 'tokyo-1' } } });
 });
 
-test('closes on exit', async () => {
-  const { api, respond, sent } = await mount();
-  await expect.poll(() => sent.length).toBeGreaterThan(0);
+test('keeps terminal across remount', async () => {
+  const setup = setUp();
+  const first = await mount(setup);
+  const id = await show(setup, first.api);
+  const xterm = setup.manager.get(id)?.terminal;
+  const layout = first.api.toJSON();
+  await first.unmount();
 
-  respond({ case: 'exit', value: { cause: { case: 'code', value: 0 } } });
+  await mount(setup, layout);
 
-  await expect.poll(() => api.getPanel('term-1')).toBeUndefined();
+  await expect.poll(() => xterm?.element?.isConnected).toBe(true);
+  expect(setup.manager.get(id)?.terminal).toBe(xterm);
+  expect(setup.sent.filter((request) => request.event?.case === 'open')).toHaveLength(1);
+  expect(setup.deleteTerminal).not.toHaveBeenCalled();
+});
+
+test('closes shell on exit', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  await show(setup, api);
+
+  setup.respond({ case: 'exit', value: { cause: { case: 'code', value: 0 } } });
+
+  await expect.poll(() => api.getPanel('terminal:tokyo-1')).toBeUndefined();
+  expect(setup.deleteTerminal).toHaveBeenCalledExactlyOnceWith({ terminalId: 'tokyo-1' });
+});
+
+test('keeps command open on exit', async () => {
+  const setup = setUp(['npm', 'test']);
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+
+  setup.respond({ case: 'exit', value: { cause: { case: 'code', value: 0 } } });
+
+  await expect.poll(() => setup.manager.get(id)?.session.exit).toEqual({ code: 0 });
+  expect(api.getPanel('terminal:tokyo-1')).toBeDefined();
+  expect(setup.deleteTerminal).not.toHaveBeenCalled();
+});
+
+test('adds addons once shown', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const activate = vi.fn();
+  setup.manager.addAddons([() => ({ activate, dispose() {} })]);
+
+  const id = await show(setup, api);
+
+  await expect.poll(() => activate).toHaveBeenCalledExactlyOnceWith(setup.manager.get(id)?.terminal);
+});
+
+test('disposes addons once disposed', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  await show(setup, api);
+  const dispose = vi.fn();
+  const remove = setup.manager.addAddons([() => ({ activate() {}, dispose })]);
+
+  remove();
+
+  expect(dispose).toHaveBeenCalledOnce();
+});
+
+test('attaches despite throwing addon', async () => {
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  const setup = setUp();
+  const { api } = await mount(setup);
+  setup.manager.addAddons([
+    () => {
+      throw new Error('broken');
+    },
+  ]);
+
+  await show(setup, api);
+
+  expect(setup.sent[0]).toMatchObject({ event: { case: 'open' } });
+});
+
+test('adds remaining addons past throwing addon', async () => {
+  const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const setup = setUp();
+  const { api } = await mount(setup);
+  await show(setup, api);
+  const activate = vi.fn();
+
+  const remove = setup.manager.addAddons([
+    () => {
+      throw new Error('broken');
+    },
+    () => ({ activate, dispose() {} }),
+  ]);
+
+  expect(remove).toBeTypeOf('function');
+  expect(activate).toHaveBeenCalledOnce();
+  expect(error).toHaveBeenCalledOnce();
+});
+
+test('shows failure to reach daemon', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const session = await setup.manager.store.add(SINGAPORE);
+  lookUpDaemon(setup, () => Promise.reject(new Error('The daemon is unreachable.')));
+
+  api.addPanel({
+    id: 'terminal:tokyo-1',
+    component: 'terminal',
+    tabComponent: 'terminal',
+    title: session.name,
+    params: { session: session.id.session },
+  });
+
+  await expect.poll(() => text(setup.manager.get(session.id)?.terminal)).toContain('The daemon is unreachable.');
+});
+
+test('shows failure to open', async () => {
+  const setup = setUp();
+  setup.getTerminals.mockRejectedValueOnce(new Error('connect ECONNREFUSED daemon.sock'));
+  const { api } = await mount(setup);
+
+  api.addPanel({ id: 'terminal:tokyo-1', component: 'terminal', params: { session: 'tokyo-1' } });
+
+  await expect.element(page.getByRole('heading', { name: "Couldn't open the terminal" })).toBeVisible();
+  await expect.element(page.getByText('connect ECONNREFUSED daemon.sock')).toBeVisible();
+  expect(api.getPanel('terminal:tokyo-1')).toBeDefined();
+});
+
+test('opens on retry', async () => {
+  const setup = setUp();
+  setup.getTerminals.mockRejectedValueOnce(new Error('connect ECONNREFUSED daemon.sock'));
+  const { api } = await mount(setup);
+  api.addPanel({ id: 'terminal:tokyo-1', component: 'terminal', params: { session: 'tokyo-1' } });
+
+  await page.getByRole('button', { name: 'Try again' }).click();
+
+  await expect.poll(() => setup.sent.length).toBeGreaterThan(0);
+  await expect.element(page.getByRole('heading', { name: "Couldn't open the terminal" })).not.toBeInTheDocument();
+});
+
+test('skips attaching terminal deleted while attaching', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await add(setup, api);
+  const real = setup.client.getQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey) as Daemon;
+  const { promise: held, resolve } = Promise.withResolvers<Daemon>();
+  let lookups = 0;
+  lookUpDaemon(setup, () => (++lookups === 1 ? held : Promise.resolve(real)));
+  await expect.poll(() => lookups).toBe(1);
+
+  await setup.manager.delete(id);
+  resolve(real);
+
+  await new Promise((settled) => setTimeout(settled));
+  expect(setup.sent).toEqual([]);
+});
+
+test('reports running once shell prints', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+
+  expect(setup.manager.get(id)?.session.state).toBe('stopped');
+
+  setup.respond({ case: 'output', value: new TextEncoder().encode('$ ') });
+
+  await expect.poll(() => setup.manager.get(id)?.session.state).toBe('running');
+});
+
+test('reports exit of replayed command without running', async () => {
+  const setup = setUp(['npm', 'test']);
+  const { api } = await mount(setup);
+  const states: string[] = [];
+  setup.manager.onChange((view) => states.push(view.session.state));
+  const id = await show(setup, api);
+
+  setup.respond(
+    { case: 'buffer', value: new TextEncoder().encode('ok') },
+    { case: 'exit', value: { cause: { case: 'code', value: 0 } } },
+  );
+
+  await expect.poll(() => setup.manager.get(id)?.session.state).toBe('exited');
+  expect(states).toEqual(['exited']);
+});
+
+test('keeps state when stream fails', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+
+  setup.fail(new Error('the terminal does not exist'));
+
+  await expect.poll(() => text(setup.manager.get(id)?.terminal)).toContain('the terminal does not exist');
+  expect(setup.manager.get(id)?.session.state).toBe('stopped');
 });

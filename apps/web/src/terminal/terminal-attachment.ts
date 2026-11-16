@@ -1,4 +1,5 @@
 import type { MessageInitShape } from '@bufbuild/protobuf';
+import type { TerminalExit } from '@elsewise/frontend-plugin';
 import type { BidiCall, Client } from '@elsewise/transport';
 import type { IDisposable, ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import type {
@@ -21,7 +22,8 @@ export class TerminalAttachment implements ITerminalAddon {
   constructor(
     private readonly terminals: Client<typeof TerminalService>,
     private readonly terminalId: string,
-    private readonly onExit: () => void,
+    private onStart: (() => void) | undefined,
+    private readonly onExit: (exit: TerminalExit) => void,
   ) {}
 
   activate(terminal: XTerm): void {
@@ -63,11 +65,15 @@ export class TerminalAttachment implements ITerminalAddon {
             terminal.write(event.value);
             break;
           case 'output':
+            this.onStart?.();
+            this.onStart = undefined;
             terminal.write(event.value);
             break;
-          case 'exit':
-            this.onExit();
+          case 'exit': {
+            const { cause } = event.value;
+            this.onExit(cause.case === 'signal' ? { signal: cause.value } : { code: cause.value ?? 0 });
             return;
+          }
         }
       }
     } catch (error) {

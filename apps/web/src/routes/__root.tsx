@@ -59,7 +59,7 @@ function RootComponent() {
       new SettingsPanelManager(Object.values(DEFAULT_PANELS), frontend),
       new ProjectManager(client, router, workspaceStates),
       new EditorManager(),
-      new TerminalManager(),
+      new TerminalManager(client),
       new FileTreeManager(),
       keymap,
     );

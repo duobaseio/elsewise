@@ -51,7 +51,10 @@ export class TerminalStore {
 
   /** Creates a terminal. */
   createTerminal(
-    values: Pick<Insertable<Terminal>, 'workspace_id' | 'name' | 'columns' | 'rows'>,
+    values: Pick<
+      Insertable<Terminal>,
+      'workspace_id' | 'name' | 'relative_path' | 'env' | 'command' | 'restore' | 'columns' | 'rows'
+    >,
   ): Promise<TerminalRow> {
     return this.#db
       .insertInto('terminal')

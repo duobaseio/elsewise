@@ -1,5 +1,5 @@
 import type { Disposable } from '@elsewise/plugin';
-import type { Terminal } from '@xterm/xterm';
+import type { ITerminalAddon, Terminal } from '@xterm/xterm';
 import type { ContextMenuGroup } from './context-menu';
 import type { WorkspaceId } from './projects/workspaces';
 
@@ -21,38 +21,36 @@ export interface Terminals {
    *
    * The active terminal remains the same when focus is elsewhere (except on another terminal), e.g. in a menu.
    */
-  readonly active: ActiveTerminal | null;
+  readonly active: TerminalView | null;
 
   /**
-   * Returns the sessions of `workspace`, oldest first.
+   * Returns the open terminals.
    */
-  list(workspace: WorkspaceId): Promise<readonly TerminalSession[]>;
+  list(): readonly TerminalView[];
 
   /**
-   * Adds a session to `workspace`.
+   * Returns the open terminal with the given id, or null otherwise.
+   */
+  get(session: TerminalSessionId): TerminalView | null;
+
+  /**
+   * Adds `addons` to the terminals, each a function that returns one for each terminal.
    *
-   * The name defaults to the project and workspace names with a number, e.g. `elsewise-main-1`.
-   */
-  add(workspace: WorkspaceId, options?: { name?: string }): Promise<TerminalSession>;
-
-  /**
-   * Renames `session`.
-   */
-  rename(session: TerminalSessionId, name: string): Promise<TerminalSession>;
-
-  /**
-   * Deletes `session` and kills its shell.
-   */
-  delete(session: TerminalSessionId): Promise<void>;
-
-  /**
-   * Returns the terminal for `session` in this window, or null if it is not shown.
+   * An addon is added to a terminal when the terminal is first shown.
    *
    * ```ts
-   * app.terminals.terminal(session)?.input('npm test\r');
+   * terminals.addAddons([
+   *   // In every terminal.
+   *   () => new WebLinksAddon(),
+   *
+   *   // In the terminals of the main workspace only.
+   *   ({ session }) => (session.id.workspace === 'main' ? new CommandLogger() : null),
+   * ]);
    * ```
+   *
+   * Returns a disposable that removes the `addons`.
    */
-  terminal(session: TerminalSessionId): Terminal | null;
+  addAddons(addons: readonly ((view: TerminalView) => ITerminalAddon | null)[]): Disposable;
 
   /**
    * Adds `groups`, and their items, to the context menu.
@@ -65,9 +63,39 @@ export interface Terminals {
 }
 
 /**
- * The active terminal and its session.
+ * The options of a new terminal.
  */
-export interface ActiveTerminal {
+export interface TerminalOptions {
+  /**
+   * Defaults to `Terminal`, or `Terminal (1)` if that name is taken.
+   */
+  readonly name?: string;
+
+  /**
+   * The folder to start in, relative to the workspace's root. Defaults to the workspace's root.
+   */
+  readonly cwd?: string;
+
+  /**
+   * The variables added to the environment.
+   */
+  readonly env?: Readonly<Record<string, string>>;
+
+  /**
+   * The program to run and its arguments, e.g. `['npm', 'run', 'dev']`. Defaults to the user's login shell.
+   */
+  readonly command?: readonly string[];
+
+  /**
+   * Whether to reopen the terminal, running `command` again, when Elsewise restarts. Defaults to true.
+   */
+  readonly restore?: boolean;
+}
+
+/**
+ * A terminal and its session.
+ */
+export interface TerminalView {
   readonly session: TerminalSession;
   readonly terminal: Terminal;
 }
@@ -86,6 +114,21 @@ export interface TerminalSession {
   readonly id: TerminalSessionId;
 
   readonly name: string;
+
+  /**
+   * The folder to start in, relative to the workspace's root. Empty is the workspace's root.
+   */
+  readonly cwd: string;
+
+  /**
+   * The program to run and its arguments. Empty is the user's login shell.
+   */
+  readonly command: readonly string[];
+
+  /**
+   * Whether to reopen the terminal, running `command` again, when Elsewise restarts.
+   */
+  readonly restore: boolean;
 
   /**
    * The shell's state:

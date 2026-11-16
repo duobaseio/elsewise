@@ -14,6 +14,6 @@ export const TERMINAL_FIND: TerminalCommand = {
   group: DEFAULT_COMMAND_GROUPS.terminal.id,
   label: 'Find…',
   defaultKeys: DEFAULT_KEYS.terminal.search.find,
-  run: (_, terminal) =>
-    terminal.element !== undefined && !terminal.element.dispatchEvent(new Event(FIND, { cancelable: true })),
+  run: (_, view) =>
+    view.terminal.element !== undefined && !view.terminal.element.dispatchEvent(new Event(FIND, { cancelable: true })),
 };

@@ -20,11 +20,11 @@ import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { SortedSet } from '@/collections/sorted-set';
 import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { SortedSet } from '@/plugins/sorted-set';
 import { DEFAULT_PROJECT_MENU } from '@/projects/default-context-menu';
 import { DEFAULT_PROJECT_SOURCES } from '@/projects/default-sources';
 import { updateProjectLayout } from '@/projects/layout';
@@ -69,6 +69,12 @@ export class ProjectManager implements Projects {
   async list(daemonId: string): Promise<readonly Project[]> {
     const projects = await this.client.query(projectsQuery(daemonId));
     return projects.map((project) => mapProject(daemonId, project));
+  }
+
+  async get(project: ProjectId): Promise<Project | null> {
+    const projects = await this.client.query(projectsQuery(project.daemon));
+    const message = projects.find((candidate) => candidate.id === project.project);
+    return message === undefined ? null : mapProject(project.daemon, message);
   }
 
   async add(daemonId: string, project: NewProject | ExistingProject): Promise<Project> {

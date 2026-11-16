@@ -23,7 +23,17 @@ beforeEach(async () => {
     absolute_path: '/demo',
   });
   workspaceId = workspace.id;
-  terminalId = (await store.createTerminal({ workspace_id: workspaceId, name: 'demo', columns: 80, rows: 24 })).id;
+  const terminal = await store.createTerminal({
+    workspace_id: workspaceId,
+    name: 'demo',
+    relative_path: '',
+    env: '{}',
+    command: '[]',
+    restore: 1,
+    columns: 80,
+    rows: 24,
+  });
+  terminalId = terminal.id;
 });
 
 afterEach(async () => {

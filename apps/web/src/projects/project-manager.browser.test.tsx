@@ -80,6 +80,20 @@ describe('list', () => {
   });
 });
 
+describe('get', () => {
+  test('returns project', async () => {
+    const { projects } = setup();
+
+    expect(await projects.get(ELSEWISE)).toEqual({ id: ELSEWISE, name: 'elsewise', state: 'ok', absolutePath: '' });
+  });
+
+  test('returns null for unknown project', async () => {
+    const { projects } = setup();
+
+    expect(await projects.get({ daemon: 'local', project: 'gone' })).toBeNull();
+  });
+});
+
 describe('add', () => {
   test('sends new source', async () => {
     const { projects, daemon } = setup();

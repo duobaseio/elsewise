@@ -1,8 +1,9 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import { attempt, errnoOf } from '../fs/error';
-import { toNativeAbsolutePath } from '../fs/path';
+import { toNativeAbsolutePath, toNativePathOrRoot } from '../fs/path';
 import type {
   AttachTerminalRequest,
   AttachTerminalResponseSchema,
@@ -16,7 +17,6 @@ import type {
   TerminalService,
   UpdateTerminalRequest,
 } from '../gen/elsewise/daemon/terminal/v1/terminal_service_pb';
-import { kebabCase } from '../project/name';
 import { exec } from './exec';
 import type { Shell, ShellEvent, Size } from './shell';
 import { type Outcome, Shells } from './shells';
@@ -92,20 +92,27 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
       if (!workspace) {
         throw new TransportError(Code.NOT_FOUND, 'the workspace does not exist');
       }
+
+      await refuseMissingDirectory(toNativePathOrRoot(workspace.absolute_path, request.relativePath));
+      if (request.command.some((part) => part.includes('\0')) || request.command[0] === '') {
+        throw new TransportError(Code.INVALID_ARGUMENT, 'the program must not be empty');
+      }
+
       let name = request.name;
       if (name === '') {
         const taken = new Set((await this.#store.getTerminals(workspace.id)).map((terminal) => terminal.name));
-        const base = [workspace.project_name, workspace.name].map(kebabCase).filter((part) => part !== '');
-        for (let n = 1; ; n++) {
-          name = [...base, n].join('-');
-          if (!taken.has(name)) {
-            break;
-          }
+        name = 'Terminal';
+        for (let number = 1; taken.has(name); number++) {
+          name = `Terminal (${number})`;
         }
       }
       const terminal = await this.#store.createTerminal({
         workspace_id: workspace.id,
         name,
+        relative_path: request.relativePath,
+        env: JSON.stringify(request.env),
+        command: JSON.stringify(request.command),
+        restore: request.restore ? 1 : 0,
         columns: DEFAULT_SIZE.columns,
         rows: DEFAULT_SIZE.rows,
       });
@@ -160,6 +167,23 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     }
     const open = first.value.event.value;
     const requestedSize = open.size ? guardSize(open.size) : undefined;
+    const terminal = await attempt(() => this.#refuseMissingTerminal(open.terminalId));
+
+    // Do not restart terminals which disabled restoration.
+    if (terminal.restore === 0 && !this.#shells.get(terminal.id)) {
+      const saved = (await this.#shells.saved(terminal.id)) ?? terminal;
+      if (saved.buffer !== null || saved.exit_code !== null || saved.exit_signal !== null) {
+        yield { event: { case: 'size', value: { columns: saved.columns, rows: saved.rows } } };
+        yield { event: { case: 'clients', value: 1 } };
+        yield { event: { case: 'buffer', value: saved.buffer ?? new Uint8Array() } };
+        if (saved.exit_code !== null) {
+          yield { event: { case: 'exit', value: { cause: { case: 'code', value: saved.exit_code } } } };
+        } else if (saved.exit_signal !== null) {
+          yield { event: { case: 'exit', value: { cause: { case: 'signal', value: saved.exit_signal } } } };
+        }
+        return;
+      }
+    }
     const shell = await attempt(() => this.#openShell(open.terminalId, requestedSize));
 
     let queue: ShellEvent[] = [];
@@ -259,7 +283,18 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     if (!workspace) {
       throw new TransportError(Code.NOT_FOUND, 'the workspace does not exist');
     }
-    const cwd = toNativeAbsolutePath(workspace.absolute_path);
+    const root = toNativeAbsolutePath(workspace.absolute_path);
+    let cwd = toNativePathOrRoot(workspace.absolute_path, terminal.relative_path);
+    while (
+      cwd !== root &&
+      !(await fs.stat(cwd).then(
+        (stats) => stats.isDirectory(),
+        () => false,
+      ))
+    ) {
+      cwd = path.dirname(cwd);
+    }
+
     await refuseMissingDirectory(cwd);
     try {
       return await this.#shells.start(terminal.id, cwd, size);
@@ -290,6 +325,9 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
           ? { case: 'exited', value: { exit: { cause: state.value } } }
           : { case: state.case, value: {} },
       clients: this.#shells.clientsOf(terminal.id),
+      relativePath: terminal.relative_path,
+      command: JSON.parse(terminal.command),
+      restore: terminal.restore === 1,
     };
   }
 }

@@ -1,11 +1,12 @@
+import type { TerminalSessionId } from '@elsewise/frontend-plugin';
 import { ClipboardAddon } from '@xterm/addon-clipboard';
 import { FitAddon } from '@xterm/addon-fit';
 import { LigaturesAddon } from '@xterm/addon-ligatures';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { WebglAddon } from '@xterm/addon-webgl';
-import { type ITerminalAddon, type ITheme, Terminal as XTerm } from '@xterm/xterm';
-import { type RefObject, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import type { ITerminalAddon, ITheme, Terminal as XTerm } from '@xterm/xterm';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useActiveTheme } from '@/appearance/themes';
 import { useCommandManager } from '@/command/command-manager';
 import { terminalKeymap } from '@/command/keymap/keymap';
@@ -19,25 +20,20 @@ import '@xterm/xterm/css/xterm.css';
 import './terminal.css';
 
 /**
- * `session` is the shell on the far side: an addon that reads the terminal's input and writes its output.
+ * Shows `xterm`, which outlives the component, as the terminal of `session`.
  *
- * A `preview`, e.g. in the settings, has no find, context menu or command keys, and never becomes the active terminal.
+ * Without `session`, e.g. in the settings' preview, it has no find, context menu or command keys, and never becomes
+ * the active terminal.
  */
-export function Terminal({
-  session,
-  ref,
-  preview = false,
-}: {
-  session: ITerminalAddon;
-  ref?: RefObject<XTerm | null>;
-  preview?: boolean;
-}) {
+export function Terminal({ xterm, session }: { xterm: XTerm; session?: TerminalSessionId }) {
   const host = useRef<HTMLDivElement>(null);
   const [terminal, setTerminal] = useState<{ xterm: XTerm; fit: FitAddon } | null>(null);
   const ligatures = useRef<LigaturesAddon>(null);
   const commands = useCommandManager();
   const terminals = useTerminalManager();
-  const [keymap] = useState(() => terminalKeymap(commands));
+  const [keymap] = useState(() =>
+    terminalKeymap(commands, () => (session === undefined ? null : terminals.get(session))),
+  );
 
   const colors = useActiveTheme().terminal;
   const theme = useMemo<ITheme>(() => {
@@ -59,40 +55,44 @@ export function Terminal({
       return;
     }
 
-    const xterm = new XTerm({
-      // Unicode11Addon and LigaturesAddon both reach proposed API.
-      allowProposedApi: true,
-      fontSize: font.size,
-      lineHeight: font.lineHeight,
-      cursorStyle,
-      cursorInactiveStyle,
-      cursorBlink,
-      macOptionClickForcesSelection,
-      macOptionIsMeta,
-      scrollback,
-      theme,
-    });
+    if (!xterm.unicode.versions.includes('11')) {
+      xterm.loadAddon(new Unicode11Addon());
+    }
+    xterm.unicode.activeVersion = '11';
+    xterm.options.fontSize = font.size;
+    xterm.options.lineHeight = font.lineHeight;
+    xterm.options.cursorStyle = cursorStyle;
+    xterm.options.cursorInactiveStyle = cursorInactiveStyle;
+    xterm.options.cursorBlink = cursorBlink;
+    xterm.options.macOptionClickForcesSelection = macOptionClickForcesSelection;
+    xterm.options.macOptionIsMeta = macOptionIsMeta;
+    xterm.options.scrollback = scrollback;
+    xterm.options.theme = theme;
 
     // DO NOT REORDER.
     const fit = new FitAddon();
-    for (const addon of [
+    const addons: ITerminalAddon[] = [
       fit,
-      new Unicode11Addon(),
       new WebLinksAddon((_event, uri) => window.open(uri, '_blank', 'noopener')),
       new ClipboardAddon(),
-      ...(preview ? [] : [keymap]),
-      session,
-    ]) {
+      ...(session === undefined ? [] : [keymap]),
+    ];
+    for (const addon of addons) {
       xterm.loadAddon(addon);
     }
 
-    xterm.unicode.activeVersion = '11';
-    xterm.open(host.current);
+    // Opening an open terminal does nothing, so a terminal shown before moves its element instead.
+    if (xterm.element === undefined) {
+      xterm.open(host.current);
+    } else {
+      host.current.appendChild(xterm.element);
+    }
 
     try {
       const webgl = new WebglAddon();
       webgl.onContextLoss(() => webgl.dispose());
       xterm.loadAddon(webgl);
+      addons.push(webgl);
     } catch (error) {
       console.warn('terminal: WebGL unavailable, using the DOM renderer', error);
     }
@@ -109,23 +109,27 @@ export function Terminal({
     setTerminal({ xterm, fit });
     // DO NOT REORDER.
 
-    const activate = () => terminals.activate(xterm);
-    if (!preview) {
-      xterm.textarea?.addEventListener('focus', activate);
-    }
+    const activate = () => {
+      if (session !== undefined) {
+        terminals.activate(session);
+      }
+    };
+    xterm.textarea?.addEventListener('focus', activate);
 
     return () => {
       observer.disconnect();
       clearTimeout(settle);
       xterm.textarea?.removeEventListener('focus', activate);
-      terminals.deactivate(xterm);
+      if (session !== undefined) {
+        terminals.deactivate(session);
+      }
       ligatures.current?.dispose();
-      xterm.dispose();
+      for (const addon of addons.reverse()) {
+        addon.dispose();
+      }
       setTerminal(null);
     };
-  }, [session]);
-
-  useImperativeHandle<XTerm | null, XTerm | null>(ref, () => terminal?.xterm ?? null, [terminal]);
+  }, [xterm]);
 
   useEffect(() => {
     if (terminal === null) {
@@ -220,12 +224,13 @@ export function Terminal({
     scrollback,
   ]);
 
-  return preview ? (
+  return session === undefined ? (
     <div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />
   ) : (
     <div className="relative h-full">
       <TerminalContextMenu
         render={<div className="terminal-host h-full" ref={host} style={{ backgroundColor: theme.background }} />}
+        session={session}
         terminal={terminal?.xterm ?? null}
       />
       <TerminalSearch terminal={terminal?.xterm ?? null} />

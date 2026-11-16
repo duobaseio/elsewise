@@ -9,10 +9,11 @@ function line(xterm: XTerm, row: number): string {
 
 async function attach() {
   const fake = terminals();
+  const onStart = vi.fn();
   const onExit = vi.fn();
-  const attachment = new TerminalAttachment(fake.client, 'tokyo-1', onExit);
+  const attachment = new TerminalAttachment(fake.client, 'tokyo-1', onStart, onExit);
   const { screen, xterm } = await mount(attachment);
-  return { ...fake, attachment, onExit, screen, xterm };
+  return { ...fake, attachment, onExit, onStart, screen, xterm };
 }
 
 describe('activate', () => {
@@ -53,6 +54,18 @@ describe('activate', () => {
     expect(sent.at(-1)).toEqual({ event: { case: 'input', value: new TextEncoder().encode('ls\r') } });
   });
 
+  test('calls onStart on first output', async () => {
+    const { onStart, respond } = await attach();
+
+    respond(
+      { case: 'buffer', value: new TextEncoder().encode('saved') },
+      { case: 'output', value: new TextEncoder().encode('$ ') },
+      { case: 'output', value: new TextEncoder().encode('ls') },
+    );
+
+    await expect.poll(() => onStart).toHaveBeenCalledOnce();
+  });
+
   test('calls onExit on exit', async () => {
     const { onExit, respond } = await attach();
 
@@ -72,9 +85,10 @@ describe('activate', () => {
 
 describe('dispose', () => {
   test('cancels call', async () => {
-    const { cancelled, screen } = await attach();
-
+    const { cancelled, screen, xterm } = await attach();
     await screen.unmount();
+
+    xterm.dispose();
 
     expect(cancelled()).toBe(true);
   });

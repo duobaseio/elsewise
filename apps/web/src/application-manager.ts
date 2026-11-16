@@ -25,7 +25,7 @@ export class ApplicationManager implements Application {
     readonly settings: SettingsPanelManager,
     readonly projects: ProjectManager,
     readonly editor: EditorManager,
-    readonly terminal: TerminalManager,
+    readonly terminals: TerminalManager,
     readonly fileTree: FileTreeManager,
     selected: Keymap,
     platform?: Platform,

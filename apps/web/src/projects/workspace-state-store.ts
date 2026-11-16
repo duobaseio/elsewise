@@ -1,30 +1,34 @@
 import { DEFAULT_WORKSPACE_STATE, type WorkspaceState, type WorkspacesBridge } from '@elsewise/bridge';
 import type { ProjectId, WorkspaceId } from '@elsewise/frontend-plugin';
 import { createContext, use, useContext } from 'react';
+import { KeyedMap } from '@/collections/keyed-map';
 
 const SAVE_DELAY = 500;
+
+function keyOf(workspace: WorkspaceId): readonly unknown[] {
+  return [workspace.daemon, workspace.project, workspace.workspace];
+}
 
 /**
  * The state of each workspace's window, loaded once per workspace and saved shortly after it changes.
  */
 export class WorkspaceStateStore {
-  private readonly states = new Map<string, WorkspaceState>();
-  private readonly loads = new Map<string, Promise<WorkspaceState>>();
-  private readonly saves = new Map<string, { workspace: WorkspaceId; timeout: ReturnType<typeof setTimeout> }>();
+  private readonly states = new KeyedMap<WorkspaceId, WorkspaceState>(keyOf);
+  private readonly loads = new KeyedMap<WorkspaceId, Promise<WorkspaceState>>(keyOf);
+  private readonly saves = new KeyedMap<WorkspaceId, ReturnType<typeof setTimeout>>(keyOf);
   private readonly deleted: (ProjectId | WorkspaceId)[] = [];
 
   constructor(private readonly bridge: WorkspacesBridge | undefined) {}
 
   get(workspace: WorkspaceId): WorkspaceState | undefined {
-    return this.states.get(this.key(workspace));
+    return this.states.get(workspace);
   }
 
   /**
    * Loads the state of `workspace`, returning the same promise each time.
    */
   load(workspace: WorkspaceId): Promise<WorkspaceState> {
-    const key = this.key(workspace);
-    let load = this.loads.get(key);
+    let load = this.loads.get(workspace);
     if (load === undefined) {
       load = (this.bridge?.load(workspace) ?? Promise.resolve(DEFAULT_WORKSPACE_STATE))
         .catch((error: unknown) => {
@@ -32,11 +36,11 @@ export class WorkspaceStateStore {
           return DEFAULT_WORKSPACE_STATE;
         })
         .then((loaded) => {
-          const state = this.states.get(key) ?? loaded;
-          this.states.set(key, state);
+          const state = this.states.get(workspace) ?? loaded;
+          this.states.set(workspace, state);
           return state;
         });
-      this.loads.set(key, load);
+      this.loads.set(workspace, load);
     }
     return load;
   }
@@ -45,35 +49,37 @@ export class WorkspaceStateStore {
    * Replaces the parts of the state of `workspace` in `state`, and saves it shortly after.
    */
   update(workspace: WorkspaceId, state: Partial<WorkspaceState>): void {
-    const key = this.key(workspace);
-    if (this.deleted.some((id) => this.contains(id, key))) {
+    if (this.deleted.some((id) => this.contains(id, workspace))) {
       return;
     }
 
-    this.states.set(key, { ...(this.states.get(key) ?? DEFAULT_WORKSPACE_STATE), ...state });
+    this.states.set(workspace, { ...(this.states.get(workspace) ?? DEFAULT_WORKSPACE_STATE), ...state });
     if (this.bridge === undefined) {
       return;
     }
 
-    clearTimeout(this.saves.get(key)?.timeout);
-    this.saves.set(key, { workspace, timeout: setTimeout(() => void this.save(key), SAVE_DELAY) });
+    clearTimeout(this.saves.get(workspace));
+    this.saves.set(
+      workspace,
+      setTimeout(() => void this.save(workspace), SAVE_DELAY),
+    );
   }
 
   async flush(): Promise<void> {
-    await Promise.all([...this.saves.keys()].map((key) => this.save(key)));
+    await Promise.all([...this.saves.keys()].map((workspace) => this.save(workspace)));
   }
 
-  private async save(key: string): Promise<void> {
-    const pending = this.saves.get(key);
-    const state = this.states.get(key);
-    if (pending === undefined || state === undefined) {
+  private async save(workspace: WorkspaceId): Promise<void> {
+    const timeout = this.saves.get(workspace);
+    const state = this.states.get(workspace);
+    if (timeout === undefined || state === undefined) {
       return;
     }
 
-    clearTimeout(pending.timeout);
-    this.saves.delete(key);
+    clearTimeout(timeout);
+    this.saves.delete(workspace);
     try {
-      await this.bridge?.save(pending.workspace, state);
+      await this.bridge?.save(workspace, state);
     } catch (error) {
       console.error('Saving the workspace state failed', error);
     }
@@ -84,12 +90,12 @@ export class WorkspaceStateStore {
    */
   async delete(id: ProjectId | WorkspaceId): Promise<void> {
     this.deleted.push(id);
-    for (const key of [...this.states.keys(), ...this.loads.keys(), ...this.saves.keys()]) {
-      if (this.contains(id, key)) {
-        clearTimeout(this.saves.get(key)?.timeout);
-        this.saves.delete(key);
-        this.loads.delete(key);
-        this.states.delete(key);
+    for (const workspace of [...this.states.keys(), ...this.loads.keys(), ...this.saves.keys()]) {
+      if (this.contains(id, workspace)) {
+        clearTimeout(this.saves.get(workspace));
+        this.saves.delete(workspace);
+        this.loads.delete(workspace);
+        this.states.delete(workspace);
       }
     }
 
@@ -100,14 +106,12 @@ export class WorkspaceStateStore {
     }
   }
 
-  private contains(id: ProjectId | WorkspaceId, key: string): boolean {
-    return 'workspace' in id
-      ? key === this.key(id)
-      : key.startsWith(`${JSON.stringify([id.daemon, id.project]).slice(0, -1)},`);
-  }
-
-  private key(workspace: WorkspaceId): string {
-    return JSON.stringify([workspace.daemon, workspace.project, workspace.workspace]);
+  private contains(id: ProjectId | WorkspaceId, workspace: WorkspaceId): boolean {
+    return (
+      id.daemon === workspace.daemon &&
+      id.project === workspace.project &&
+      (!('workspace' in id) || id.workspace === workspace.workspace)
+    );
   }
 }
 

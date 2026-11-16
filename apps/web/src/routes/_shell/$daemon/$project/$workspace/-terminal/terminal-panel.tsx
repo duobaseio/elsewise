@@ -1,46 +1,74 @@
-import { toast } from '@elsewise/components/components/toast';
-import { useQuery } from '@tanstack/react-query';
+import { Button } from '@elsewise/components/components/button';
+import { Icon } from '@elsewise/components/components/icon';
+import type { TerminalView } from '@elsewise/frontend-plugin';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
-import { useEffect, useMemo, useRef } from 'react';
-import { daemonQuery } from '@/daemon';
+import { useEffect, useState } from 'react';
+import { useApplicationManager } from '@/application-context';
 import { Terminal } from '@/terminal/terminal';
-import { TerminalAttachment } from '@/terminal/terminal-attachment';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
-export function TerminalPanel(props: IDockviewPanelProps<{ terminalId?: string }>) {
-  const { daemon, workspace } = route.useParams();
-  const { terminalId } = props.params;
-  const client = useQuery(daemonQuery(daemon)).data;
-  const creating = useRef(false);
+export function TerminalPanel(props: IDockviewPanelProps<{ session?: string }>) {
+  const { daemon, project, workspace } = route.useParams();
+  const { terminals } = useApplicationManager();
+  const { session } = props.params;
+  const [view, setView] = useState<TerminalView | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
 
   useEffect(() => {
-    if (client === undefined || terminalId !== undefined || creating.current) {
-      return;
+    if (session === undefined || failure !== null) {
+      return undefined;
     }
 
-    creating.current = true;
-    client.terminals
-      .createTerminal({ workspaceId: workspace })
-      .then(({ terminal }) => {
-        if (terminal !== undefined) {
-          props.api.updateParameters({ terminalId: terminal.id });
-          props.api.setTitle(terminal.name);
+    let mounted = true;
+    terminals
+      .open({ daemon, project, workspace, session })
+      .then((opened) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (opened === null) {
+          props.api.close();
+        } else {
+          setView(opened);
         }
       })
-      .catch((error: Error) =>
-        toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
-      );
-  }, [client, terminalId, workspace, props.api]);
+      .catch((error: unknown) => {
+        if (mounted) {
+          setFailure(error instanceof Error ? error.message : String(error));
+        }
+      });
 
-  const attachment = useMemo(() => {
-    if (client === undefined || terminalId === undefined) {
-      return null;
-    }
+    const subscription = terminals.onClose((view) => {
+      if (view.session.id.daemon === daemon && view.session.id.session === session) {
+        props.api.close();
+      }
+    });
 
-    return new TerminalAttachment(client.terminals, terminalId, () => props.api.close());
-  }, [client, terminalId, props.api]);
+    return () => {
+      mounted = false;
+      void subscription();
+    };
+  }, [terminals, daemon, project, workspace, session, failure, props.api]);
 
-  return attachment === null ? null : <Terminal session={attachment} />;
+  if (failure !== null) {
+    return (
+      <div className="flex h-full items-center justify-center px-6">
+        <div className="flex flex-col items-start gap-3">
+          <div className="flex items-center gap-2">
+            <Icon aria-hidden="true" className="size-5 text-destructive" name="error" />
+            <h2 className="font-display text-display-sm">Couldn't open the terminal</h2>
+          </div>
+          <p className="max-w-[80ch] font-mono text-code text-text-3 wrap-break-word">{failure}</p>
+          <Button className="mt-1" onClick={() => setFailure(null)} size="sm" variant="secondary">
+            Try again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return view === null ? null : <Terminal xterm={view.terminal} session={view.session.id} />;
 }

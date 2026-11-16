@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { SortedSet } from '@/plugins/sorted-set';
+import { SortedSet } from '@/collections/sorted-set';
 
 interface Item {
   readonly id: string;

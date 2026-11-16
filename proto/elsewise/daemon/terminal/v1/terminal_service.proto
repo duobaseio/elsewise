@@ -64,8 +64,26 @@ message CreateTerminalRequest {
 
   // The display name.
   //
-  // Empty uses the project and workspace name with a suffixed number (e.g. project-workspace-1).
+  // Defaults to "Terminal", or "Terminal (1)" if that name is taken.
   string name = 2;
+
+  // The directory the shell starts in, inside the workspace.
+  //
+  // Defaults to the workspace's root.
+  string relative_path = 3;
+
+  // The variables added to the shell's environment.
+  map<string, string> env = 4;
+
+  // The program to run and its arguments.
+  //
+  // Defaults to the user's login shell.
+  repeated string command = 5;
+
+  // Whether attaching starts the program again once it has ended.
+  //
+  // Defaults to true. Otherwise, attaching to the ended terminal sends its buffer and exit.
+  bool restore = 6 [default = true];
 }
 
 message CreateTerminalResponse {
@@ -168,6 +186,19 @@ message Terminal {
 
   // The number of clients attached to the shell.
   uint32 clients = 7;
+
+  // The directory the shell starts in, inside the workspace.
+  //
+  // Empty is the workspace's root.
+  string relative_path = 8;
+
+  // The program to run and its arguments.
+  //
+  // Empty is the user's login shell.
+  repeated string command = 9;
+
+  // Whether attaching starts the program again once it has ended.
+  bool restore = 10;
 
   // The shell is running.
   message Running {}

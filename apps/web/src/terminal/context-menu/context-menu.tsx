@@ -1,5 +1,7 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import type { TerminalSessionId } from '@elsewise/frontend-plugin';
 import type { Terminal as XTerm } from '@xterm/xterm';
+import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu, type CommandContextMenuProps } from '@/command/context-menu/context-menu';
 import { useTerminalManager } from '@/terminal/terminal-manager';
 
@@ -12,17 +14,20 @@ import { useTerminalManager } from '@/terminal/terminal-manager';
  * * elsewhere, Shift.
  */
 export function TerminalContextMenu({
+  session,
   terminal,
   render,
 }: {
+  session: TerminalSessionId;
   terminal: XTerm | null;
   render: CommandContextMenuProps['render'];
 }) {
-  const menu = useTerminalManager((terminals) => terminals.contextMenu);
+  const { terminals } = useApplicationManager();
+  const menu = useTerminalManager((manager) => manager.contextMenu);
   return (
     <CommandContextMenu
       menu={menu}
-      target={{ current: terminal }}
+      target={{ current: terminals.get(session) }}
       opens={(event) => {
         if (terminal === null || terminal.modes.mouseTrackingMode === 'none') {
           return true;

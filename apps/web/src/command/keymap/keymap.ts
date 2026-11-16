@@ -8,10 +8,11 @@ import {
   Keymap,
   type KeymapId,
   type Project,
+  type TerminalView,
   type Workspace,
 } from '@elsewise/frontend-plugin';
 import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from '@tanstack/react-query';
-import type { ITerminalAddon } from '@xterm/xterm';
+import type { ITerminalAddon, Terminal } from '@xterm/xterm';
 import { useMemo, useReducer, useRef } from 'react';
 import { type CommandManager, isWorkspace } from '@/command/command-manager';
 import elsewise from '@/command/keymap/bundled/elsewise.json';
@@ -204,7 +205,7 @@ export function resolveKeymap(keymaps: readonly LoadedKeymap[], id: KeymapId): L
 /**
  * Returns a function that copies `keymap` to the user's keymaps and selects the copy. It returns the copy's id.
  *
- * The copy is named `<name> copy`, numbered if the name or id is taken.
+ * The copy is named `<name> copy`, numbered if the name or id is taken, e.g. `Elsewise copy (1)`.
  */
 export function useCopyKeymap(): (keymap: Keymap) => string {
   const client = useQueryClient();
@@ -223,11 +224,11 @@ export function useCopyKeymap(): (keymap: Keymap) => string {
 
     // Ids are compared ignoring case, as macOS ignores case in file names.
     for (
-      let number = 2;
+      let number = 1;
       entries.some((entry) => entry.id.toLowerCase() === id || ('keymap' in entry && entry.keymap.name === name));
       number++
     ) {
-      name = `${baseName} ${number}`;
+      name = `${baseName} (${number})`;
       id = `${baseId}-${number}`;
     }
 
@@ -385,7 +386,10 @@ export function editorKeymap(commands: CommandManager, keys: ReadonlyMap<string,
  *
  * A key that does not run a command is handled by the shell.
  */
-export function terminalKeymap(commands: CommandManager): ITerminalAddon {
+export function terminalKeymap(
+  commands: CommandManager,
+  viewOf: (terminal: Terminal) => TerminalView | null,
+): ITerminalAddon {
   return {
     activate(terminal) {
       terminal.attachCustomKeyEventHandler((event) => {
@@ -393,8 +397,9 @@ export function terminalKeymap(commands: CommandManager): ITerminalAddon {
           return true;
         }
 
+        const view = viewOf(terminal);
         for (const key of eventKeys(event, PLATFORM)) {
-          if (commands.keymap.keys.terminal.get(key)?.some((id) => commands.run(id, terminal))) {
+          if (view !== null && commands.keymap.keys.terminal.get(key)?.some((id) => commands.run(id, view))) {
             // Chromium would also paste on its own paste event, which xterm listens for, so the text would land twice.
             event.preventDefault();
             return false;

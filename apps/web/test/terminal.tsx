@@ -2,16 +2,16 @@ import { create, type MessageInitShape } from '@bufbuild/protobuf';
 import { DEFAULT_FRONTEND_SETTINGS, type FrontendSettings } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
-import { createRef } from 'react';
 import { expect, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
-import type { Daemon } from '@/daemon';
+import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import {
   type AttachTerminalRequestSchema,
   type AttachTerminalResponse,
   AttachTerminalResponseSchema,
+  CreateTerminalResponseSchema,
   TerminalService,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
@@ -43,23 +43,41 @@ export function session() {
 export async function mount(fake: ITerminalAddon, settings = SETTINGS, preview = false) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, settings);
-  const terminals = new TerminalManager();
-  const application = builtInApplication({ terminal: terminals });
+  const createTerminal = async () =>
+    create(CreateTerminalResponseSchema, { terminal: { id: 'tokyo-1', name: 'Terminal' } });
+  // Terminals attach when first shown, to a shell that sends nothing.
+  const attachTerminal = () => ({
+    send: async () => {},
+    close() {},
+    cancel() {},
+    responses: (async function* () {})(),
+  });
+  client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, {
+    terminals: { createTerminal, attachTerminal },
+  } as unknown as Daemon);
+  const terminals = new TerminalManager(client);
+  const application = builtInApplication({ terminals });
   const commands = application.commands;
-  const ref = createRef<XTerm | null>();
+  const { id } = await terminals.store.add({ daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' });
+  const view = await terminals.open(id);
+  if (view === null) {
+    throw new Error('tokyo-1 is not open');
+  }
+  const xterm = view.terminal;
+  xterm.loadAddon(fake);
   const screen = await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
         <ApplicationManagerContext value={application}>
           <div data-testid="frame" style={{ height: 300, width: 600 }}>
-            <Terminal ref={ref} session={fake} preview={preview} />
+            <Terminal xterm={xterm} session={preview ? undefined : view.session.id} />
           </div>
         </ApplicationManagerContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
-  await expect.poll(() => ref.current).not.toBeNull();
-  return { client, commands, screen, terminals, xterm: ref.current as XTerm };
+  await expect.poll(() => xterm.element).toBeDefined();
+  return { client, commands, screen, terminals, view, xterm };
 }
 
 // Right-clicks the terminal, holding `key` if given. Leaves the selection to the test unless `selectsWord`, when the

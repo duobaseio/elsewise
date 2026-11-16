@@ -11,13 +11,17 @@ const MAIN: WorkspaceId = { daemon: 'local', project: 'elsewise', workspace: 'si
 const DHAKA: WorkspaceId = { daemon: 'local', project: 'elsewise', workspace: 'dhaka' };
 
 function setup() {
-  const deleteWorkspace = vi.fn(async () => ({}));
-  const client = new QueryClient();
-  client.setQueryData(daemonQuery('local').queryKey, { projects: { deleteWorkspace } } as unknown as Daemon);
-  client.setQueryData(workspacesQuery('local', 'elsewise').queryKey, [
+  const workspaceMessages = [
     create(WorkspaceSchema, { projectId: 'elsewise', id: 'singapore', name: 'Singapore', main: true }),
     create(WorkspaceSchema, { projectId: 'elsewise', id: 'dhaka', name: 'Dhaka' }),
-  ]);
+  ];
+  const deleteWorkspace = vi.fn(async () => ({}));
+  const getWorkspaces = vi.fn(async () => ({ workspaces: workspaceMessages }));
+  const client = new QueryClient();
+  client.setQueryData(daemonQuery('local').queryKey, {
+    projects: { deleteWorkspace, getWorkspaces },
+  } as unknown as Daemon);
+  client.setQueryData(workspacesQuery('local', 'elsewise').queryKey, workspaceMessages);
   const root = createRootRoute();
   const router = createRouter({
     routeTree: root.addChildren([createRoute({ getParentRoute: () => root, path: '/$daemon/$project/$workspace' })]),
@@ -31,6 +35,20 @@ function setup() {
   };
   return { workspaces, client, router, show, deleteWorkspace };
 }
+
+describe('get', () => {
+  test('returns workspace', async () => {
+    const { workspaces } = setup();
+
+    expect((await workspaces.get(DHAKA))?.id).toEqual(DHAKA);
+  });
+
+  test('returns null for unknown workspace', async () => {
+    const { workspaces } = setup();
+
+    expect(await workspaces.get({ ...MAIN, workspace: 'gone' })).toBeNull();
+  });
+});
 
 describe('status', () => {
   test('stays partial until every status completes', () => {

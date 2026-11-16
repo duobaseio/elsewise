@@ -111,7 +111,7 @@ describe('Terminal', () => {
 
     xterm.focus();
 
-    expect(terminals.active).toBe(xterm);
+    expect(terminals.active?.terminal).toBe(xterm);
   });
 
   test('deactivates on unmount', async () => {
@@ -312,9 +312,9 @@ describe('Terminal', () => {
     });
 
     test('skips search', async () => {
-      const { commands, xterm } = await mount(session(), SETTINGS, true);
+      const { commands, view } = await mount(session(), SETTINGS, true);
 
-      expect(commands.run(DEFAULT_COMMANDS.terminal.search.find, xterm)).toBe(false);
+      expect(commands.run(DEFAULT_COMMANDS.terminal.search.find, view)).toBe(false);
       expect(page.getByRole('textbox', { name: 'Find' }).query()).toBeNull();
     });
 

@@ -1,5 +1,6 @@
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
+import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import type { DiffLayout } from '@elsewise/frontend-plugin';
@@ -14,7 +15,8 @@ import {
   type IDockviewPanelProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
@@ -25,6 +27,7 @@ import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
 import { TerminalPanel } from './-terminal/terminal-panel';
+import { TerminalTab } from './-terminal/terminal-tab';
 // TODO: Back this with the daemon.
 import FAKE_CODE from './route.tsx?raw';
 
@@ -45,6 +48,7 @@ export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
 type PanelKind = keyof typeof PANELS;
 
 const TOOL_TABS = { fileTree: FileTab };
+const TABS = { ...TOOL_TABS, terminal: TerminalTab };
 const TOOL_PANELS = new Set(['fileTree' satisfies PanelKind]);
 const PANELS = {
   editor: EditorPanel,
@@ -62,10 +66,39 @@ function WorkspaceRoute() {
     (layout: SerializedDockview) => store.update({ daemon, project, workspace }, { dock: layout }),
     [store, daemon, project, workspace],
   );
+  const terminals = useApplicationManager().terminals;
+  const onDockviewReady = (api: DockviewApi) => {
+    if (dock === undefined) {
+      terminals.store
+        .add({ daemon, project, workspace })
+        .then((session) => {
+          // TODO: Place the terminal through the dock API once it has one.
+          api.addPanel({
+            id: `terminal:${session.id.session}`,
+            component: 'terminal' satisfies PanelKind,
+            tabComponent: 'terminal',
+            title: session.name,
+            params: { session: session.id.session },
+            position: api.activeGroup ? { referenceGroup: api.activeGroup, direction: 'below' } : undefined,
+            minimumWidth: 10,
+            minimumHeight: 10,
+            initialHeight: 200,
+          });
+        })
+        .catch((error: Error) =>
+          toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
+        );
+    }
+  };
 
   return (
     <>
-      <WorkspaceDock key={JSON.stringify([daemon, project, workspace])} layout={dock} onLayoutChange={onLayoutChange} />
+      <WorkspaceDock
+        key={JSON.stringify([daemon, project, workspace])}
+        layout={dock}
+        onDockviewReady={onDockviewReady}
+        onLayoutChange={onLayoutChange}
+      />
       <NewEntryDialog />
       <DeleteEntriesDialog />
       <PasteEntriesDialog />
@@ -166,16 +199,6 @@ export function WorkspaceDock({
       minimumHeight: 10,
       initialWidth: 350,
     });
-    event.api.addPanel({
-      id: 'term-1',
-      component: 'terminal' satisfies PanelKind,
-      title: 'Terminal',
-      params: {},
-      position: { referencePanel: 'editor:$workspace.tsx', direction: 'below' },
-      minimumWidth: 10,
-      minimumHeight: 10,
-      initialHeight: 200,
-    });
     setDockview(event.api);
 
     // TODO: Replace with actual active panel logic
@@ -191,7 +214,7 @@ export function WorkspaceDock({
           defaultTabComponent={DefaultTab}
           leftHeaderActionsComponent={AddTabAction}
           onReady={onReady}
-          tabComponents={TOOL_TABS}
+          tabComponents={TABS}
           theme={THEME}
         />
       </div>
@@ -204,22 +227,50 @@ export function WorkspaceDock({
  * The + after the last tab of every content group.
  */
 export function AddTabAction(props: IDockviewHeaderActionsProps) {
+  const application = useContext(ApplicationManagerContext);
   const isToolGroup = props.panels.some((panel) => TOOL_PANELS.has(panel.view.contentComponent));
   if (isToolGroup) {
     return null;
   }
 
-  // TODO: Wire up.
+  // TODO: Offer each kind of tab once the dock has an API for adding them, instead of always adding a terminal.
+  const add = () => {
+    const workspace = application?.projects.workspaces.active;
+    if (application === null || workspace == null) {
+      return;
+    }
+
+    application.terminals.store
+      .add(workspace.id)
+      .then((session) => {
+        props.containerApi
+          .addPanel({
+            id: `terminal:${session.id.session}`,
+            component: 'terminal' satisfies PanelKind,
+            tabComponent: 'terminal',
+            title: session.name,
+            params: { session: session.id.session },
+            position: { referenceGroup: props.group },
+            minimumWidth: 10,
+            minimumHeight: 10,
+          })
+          .api.setActive();
+      })
+      .catch((error: Error) =>
+        toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
+      );
+  };
+
   return (
     <div className="flex h-full items-center px-0.5">
-      <Button aria-label="New tab" className="text-text-3" size="icon-xs" variant="ghost">
+      <Button aria-label="New tab" className="text-text-3" onClick={add} size="icon-xs" variant="ghost">
         <Icon className="size-3.5" name="add" />
       </Button>
     </div>
   );
 }
 
-export function DefaultTab(props: IDockviewPanelHeaderProps) {
+export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { onClose?: () => void }) {
   // The dock's last remaining content tab is not closable.
   const [closable, setClosable] = useState(true);
 
@@ -247,7 +298,11 @@ export function DefaultTab(props: IDockviewPanelHeaderProps) {
           className="size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100"
           onClick={(event) => {
             event.stopPropagation();
-            props.api.close();
+            if (onClose === undefined) {
+              props.api.close();
+            } else {
+              onClose();
+            }
           }}
           onPointerDown={(event) => event.stopPropagation()}
           size="icon-xs"

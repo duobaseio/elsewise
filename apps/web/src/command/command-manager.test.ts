@@ -1,3 +1,4 @@
+import { create } from '@bufbuild/protobuf';
 import type { EditorView } from '@codemirror/view';
 import type { Platform } from '@elsewise/components/lib/platform';
 import {
@@ -9,19 +10,34 @@ import {
   type Project,
   type ProjectCommand,
   type TerminalCommand,
+  type TerminalSession,
+  type TerminalView,
   type Workspace,
   type WorkspaceCommand,
 } from '@elsewise/frontend-plugin';
-import type { Terminal as XTerm } from '@xterm/xterm';
+import { QueryClient } from '@tanstack/react-query';
+import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { CommandManager } from '@/command/command-manager';
+import { type Daemon, daemonQuery } from '@/daemon';
 import { EditorManager } from '@/editor/editor-manager';
+import { CreateTerminalResponseSchema } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { TerminalManager } from '@/terminal/terminal-manager';
 import { builtInApplication, EMPTY_KEYMAP } from '../../test/commands';
 
 const APPLICATION = DEFAULT_COMMAND_GROUPS.application.id;
 const EDITOR = DEFAULT_COMMAND_GROUPS.editor.id;
 const TERMINAL = DEFAULT_COMMAND_GROUPS.terminal.id;
+
+const SESSION: TerminalSession = {
+  id: { daemon: 'local', project: 'p', workspace: 'w', session: 'a' },
+  name: 'a',
+  cwd: '',
+  command: [],
+  restore: true,
+  state: 'stopped',
+  exit: null,
+};
 
 const PROJECT: Project = { id: { daemon: 'local', project: 'p' }, name: 'p', state: 'ok', absolutePath: '/p' };
 
@@ -37,9 +53,9 @@ const WORKSPACE: Workspace = {
 function commands(
   editor = new EditorManager(),
   platform: Platform = 'linux',
-  terminals = new TerminalManager(),
+  terminals = new TerminalManager(new QueryClient()),
 ): CommandManager {
-  return builtInApplication({ editor, terminal: terminals }, platform).commands;
+  return builtInApplication({ editor, terminals }, platform).commands;
 }
 
 // Returns commands on `platform` with an editor command for each id in `keys`, with those default keys, added in order.
@@ -57,8 +73,16 @@ function view(name: string): EditorView {
   return { name, plugin: () => null } as unknown as EditorView;
 }
 
-function terminal(name: string): XTerm {
-  return { name, buffer: {} } as unknown as XTerm;
+// Opens the terminal `name` in `terminals`, through the daemon that `client` fakes.
+async function terminal(terminals: TerminalManager, client: QueryClient, name: string): Promise<TerminalView> {
+  const createTerminal = async () => create(CreateTerminalResponseSchema, { terminal: { id: name, name } });
+  client.setQueryData(daemonQuery('local').queryKey, { terminals: { createTerminal } } as unknown as Daemon);
+  const { id } = await terminals.store.add({ daemon: 'local', project: 'p', workspace: 'w' });
+  const view = await terminals.open(id);
+  if (view === null) {
+    throw new Error(`${name} is not open`);
+  }
+  return view;
 }
 
 let error: ReturnType<typeof vi.spyOn>;
@@ -340,20 +364,21 @@ describe('run', () => {
     expect(run.mock.lastCall?.[1]).toBe(target);
   });
 
-  test('runs terminal command against terminal, else active terminal', () => {
-    const terminals = new TerminalManager();
+  test('runs terminal command against terminal, else active terminal', async () => {
+    const client = new QueryClient();
+    const terminals = new TerminalManager(client);
     const manager = commands(new EditorManager(), 'linux', terminals);
     const run = vi.fn<TerminalCommand['run']>(() => true);
     manager.add([{ id: 'c', label: 'C', scope: 'terminal', group: TERMINAL, run }]);
-    const active = terminal('active');
-    const target = terminal('target');
+    const active = await terminal(terminals, client, 'active');
+    const target = await terminal(terminals, client, 'target');
 
     expect(manager.run('c')).toBe(false);
     expect(run).not.toHaveBeenCalled();
 
-    terminals.activate(active);
+    terminals.activate(active.session.id);
     expect(manager.run('c')).toBe(true);
-    expect(run.mock.lastCall?.[1]).toBe(active);
+    expect(run.mock.lastCall?.[1]).toEqual(active);
 
     expect(manager.run('c', target)).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(target);
@@ -387,7 +412,7 @@ describe('run', () => {
     expect(manager.run('workspace', PROJECT)).toBe(false);
     expect(manager.run('editor', PROJECT)).toBe(false);
     expect(manager.run('editor', { workspace: WORKSPACE, paths: [] })).toBe(false);
-    expect(manager.run('editor', terminal('a'))).toBe(false);
+    expect(manager.run('editor', { session: SESSION, terminal: new XTerm({ allowProposedApi: true }) })).toBe(false);
     expect(manager.run('terminal', view('a'))).toBe(false);
     expect(manager.run('fileTree', WORKSPACE)).toBe(false);
     expect(run).not.toHaveBeenCalled();

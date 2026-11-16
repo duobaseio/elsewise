@@ -18,7 +18,7 @@ export type PageProps = {
 export function Page({ title, children }: PageProps) {
   return (
     <div className="flex max-w-3xl flex-col gap-8 p-8" data-slot="page">
-      <h1 className="text-heading-lg">{title}</h1>
+      <h1 className="font-display text-display-sm">{title}</h1>
       {children}
     </div>
   );
