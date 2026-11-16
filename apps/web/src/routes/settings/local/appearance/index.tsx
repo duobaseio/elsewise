@@ -8,9 +8,9 @@ import {
   type SettingsSearchTerm,
 } from '@elsewise/frontend-plugin';
 import { createFileRoute, Link } from '@tanstack/react-router';
-import { DEFAULT_FONTS, fontStack } from '@/settings/fonts';
+import { DEFAULT_DISPLAY_FONTS, DEFAULT_FONTS, displayFontStack, fontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
-import { FontRows } from '../-font-rows';
+import { FontRows, FontSelect } from '../-font-rows';
 import { ThemeSelect } from '../-theme';
 
 export const Route = createFileRoute('/settings/local/appearance/')({ component: Appearance });
@@ -19,8 +19,10 @@ export const APPEARANCE_TERMS = {
   brightness: { label: 'Brightness', keywords: ['theme', 'dark mode', 'system', 'light', 'dark'] },
   theme: { label: 'Theme', keywords: ['colors', 'color scheme', 'light', 'dark'] },
   font: { label: 'Font', keywords: ['font family', 'typeface', 'font size', 'ui font'] },
+  lineHeight: { label: 'Line height', keywords: ['line spacing', 'leading', 'ui font'] },
   ligatures: { label: 'Ligatures', keywords: ['font', 'glyphs', 'typography'] },
-} as const satisfies Record<keyof FrontendSettings['appearance'] | 'ligatures', SettingsSearchTerm>;
+  displayFont: { label: 'Display font', keywords: ['heading', 'title', 'serif', 'typeface'] },
+} as const satisfies Record<keyof FrontendSettings['appearance'] | 'lineHeight' | 'ligatures', SettingsSearchTerm>;
 
 const BRIGHTNESS: Record<Brightness, string> = { system: 'System', light: 'Light', dark: 'Dark' };
 
@@ -91,10 +93,21 @@ export function Appearance() {
           </>
         }
         font={appearance.font}
+        lineHeightDescription="A multiple of the font size, between 1 and 2.5."
         onChange={(font) => set({ font })}
         stack={fontStack}
         terms={APPEARANCE_TERMS}
       />
+
+      <Row id="displayFont" label={APPEARANCE_TERMS.displayFont.label} description="The interface's accent font for headlines.">
+        <FontSelect
+          family={appearance.displayFont}
+          defaults={DEFAULT_DISPLAY_FONTS}
+          stack={displayFontStack}
+          label={APPEARANCE_TERMS.displayFont.label}
+          onChange={(displayFont) => set({ displayFont })}
+        />
+      </Row>
     </Page>
   );
 }

@@ -67,7 +67,11 @@ export const FrontendSettings = z.lazy(() =>
          * The interface's theme.
          */
         theme: ThemeId.catch({ source: 'elsewise', id: 'elsewise' }),
-        font: font(13),
+        font: font(13, 1.54),
+        /**
+         * The display font's family, or `null` for the default.
+         */
+        displayFont: Font.shape.family.catch(null),
       }),
     ),
     /**
@@ -216,7 +220,7 @@ export const Brightness = z.enum(['light', 'dark', 'system']);
 export const FontSize = z.literal(FONT_SIZES);
 
 /**
- * A multiple of the font size in the editor, and of the glyph height in the terminal.
+ * A multiple of the font size in the interface and editor, and of the font height in the terminal.
  */
 export const LineHeight = z.number().min(1).max(2.5);
 
@@ -226,17 +230,15 @@ export const Font = z.object({
    */
   family: z.string().min(1).nullable(),
   size: FontSize,
-  lineHeight: LineHeight.optional(),
+  lineHeight: LineHeight,
   ligatures: z.boolean(),
 });
 
-function font(size: FontSize): z.ZodType<Omit<Font, 'lineHeight'>>;
-function font(size: FontSize, lineHeight: LineHeight): z.ZodType<Required<Font>>;
-function font(size: FontSize, lineHeight?: LineHeight): z.ZodType {
+function font(size: FontSize, lineHeight: LineHeight) {
   const font = z.object({
     family: Font.shape.family.catch(null),
     size: FontSize.catch(size),
-    ...(lineHeight === undefined ? {} : { lineHeight: LineHeight.catch(lineHeight) }),
+    lineHeight: LineHeight.catch(lineHeight),
     ligatures: Font.shape.ligatures.catch(true),
   });
   return font.catch(() => font.parse({}));

@@ -135,6 +135,7 @@ function useCurrentTheme(appearance: AppearanceManager) {
  */
 function useCurrentFonts() {
   const appearance = useSettings((settings) => settings.appearance.font);
+  const display = useSettings((settings) => settings.appearance.displayFont);
   const editor = useSettings((settings) => settings.editor.font);
 
   useLayoutEffect(() => {
@@ -152,12 +153,19 @@ function useCurrentFonts() {
         style.setProperty(`--font-${name}`, `${family}, ${fallback}`);
       }
 
+      if (display === null) {
+        style.removeProperty('--font-display');
+      } else {
+        const family = GENERIC_FAMILIES.has(display) ? display : JSON.stringify(display);
+        style.setProperty('--font-display', `${family}, 'Fraunces Variable', Georgia, serif`);
+      }
+
+      const grid = `round(calc(var(--text-${text}) * ${font.lineHeight}), 1px)`;
       style.setProperty(`--text-${text}`, `${font.size}px`);
-      if ('lineHeight' in font) {
+      style.setProperty(`--text-${text}--line-height`, grid);
+      if (name === 'mono') {
         // The gutter shares the editor's line grid.
-        const grid = `round(calc(var(--text-${text}) * ${font.lineHeight}), 1px)`;
-        style.setProperty(`--text-${text}--line-height`, grid);
-        style.setProperty(`--text-${text}-gutter--line-height`, grid);
+        style.setProperty('--text-code-gutter--line-height', grid);
       }
       style.setProperty(`--font-${name}-ligatures`, font.ligatures ? 'contextual' : 'none');
     }
@@ -168,5 +176,5 @@ function useCurrentFonts() {
     } else {
       style.removeProperty('--font-sans-features');
     }
-  }, [appearance, editor]);
+  }, [appearance, display, editor]);
 }

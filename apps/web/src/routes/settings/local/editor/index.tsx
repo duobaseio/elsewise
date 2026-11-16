@@ -8,7 +8,6 @@ import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { LANGUAGES } from '@/settings/languages';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
 import { FontRows } from '../-font-rows';
-import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from '../-theme';
 import { CompletionDocumentationHelp, HighlightUsagesHelp, ScrollbarMarkersHelp } from './-help';
 import { LanguageRows } from './-language-rows';
@@ -62,22 +61,11 @@ export function Editor() {
         defaults={DEFAULT_MONO_FONTS}
         description="The editor's font."
         font={editor.font}
+        lineHeightDescription="A multiple of the font size, between 1 and 2.5."
         onChange={(font) => set({ font })}
         stack={monoFontStack}
         terms={EDITOR_TERMS}
-      >
-        <Row
-          id="lineHeight"
-          label={EDITOR_TERMS.lineHeight.label}
-          description="A multiple of the font size, between 1 and 2.5."
-        >
-          <LineHeightInput
-            label={EDITOR_TERMS.lineHeight.label}
-            onChange={(lineHeight) => set({ font: { ...editor.font, lineHeight } })}
-            value={editor.font.lineHeight}
-          />
-        </Row>
-      </FontRows>
+      />
 
       <Separator />
 

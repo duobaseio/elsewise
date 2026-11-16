@@ -137,18 +137,18 @@ body,
   --font-mono-ligatures: contextual;
 
   --text-2xs: calc(var(--text-base) - 3px);
-  --text-2xs--line-height: calc(var(--text-base--line-height) - 6px);
+  --text-2xs--line-height: max(var(--text-2xs), calc(var(--text-base--line-height) - 6px));
   --text-2xs--font-weight: 500;
   --text-2xs--letter-spacing: 0.02em;
 
   --text-xs: calc(var(--text-base) - 2px);
-  --text-xs--line-height: calc(var(--text-base--line-height) - 4px);
+  --text-xs--line-height: max(var(--text-xs), calc(var(--text-base--line-height) - 4px));
 
   --text-sm: calc(var(--text-base) - 1px);
-  --text-sm--line-height: calc(var(--text-base--line-height) - 4px);
+  --text-sm--line-height: max(var(--text-sm), calc(var(--text-base--line-height) - 4px));
 
   --text-base: 13px;
-  --text-base--line-height: calc(var(--text-base) + 7px);
+  --text-base--line-height: round(calc(var(--text-base) * 1.54), 1px);
 
   --text-prose: calc(var(--text-base) + 2px);
   --text-prose--line-height: calc(var(--text-base--line-height) + 4px);
