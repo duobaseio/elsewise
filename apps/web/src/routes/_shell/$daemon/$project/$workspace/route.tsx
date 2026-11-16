@@ -4,7 +4,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/co
 import { cn } from '@elsewise/components/lib/utils';
 import type { DiffLayout } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
-import type { IDisposable, ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import {
   type DockviewApi,
   DockviewReact,
@@ -20,12 +19,12 @@ import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
-import { Terminal } from '@/terminal/terminal';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
 import { FileTreePanel } from './-file-tree/file-tree-panel';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
+import { TerminalPanel } from './-terminal/terminal-panel';
 // TODO: Back this with the daemon.
 import FAKE_CODE from './route.tsx?raw';
 
@@ -170,8 +169,8 @@ export function WorkspaceDock({
     event.api.addPanel({
       id: 'term-1',
       component: 'terminal' satisfies PanelKind,
-      title: 'zsh 1',
-      params: { index: 1 },
+      title: 'Terminal',
+      params: {},
       position: { referencePanel: 'editor:$workspace.tsx', direction: 'below' },
       minimumWidth: 10,
       minimumHeight: 10,
@@ -364,42 +363,4 @@ function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | 
   return (
     <Editor content={{ label: 'Current', code: FAKE_CODE }} relativePath={props.params.path} root={root} diff={diff} />
   );
-}
-
-function TerminalPanel(_props: IDockviewPanelProps<{ index: number }>) {
-  const [session] = useState(() => new EchoStub());
-  return <Terminal session={session} />;
-}
-
-const PROMPT = '\x1b[32m➜\x1b[0m \x1b[36melsewise\x1b[0m ';
-
-// TODO: Replace with actual terminal session.
-class EchoStub implements ITerminalAddon {
-  private input: IDisposable | undefined;
-
-  activate(terminal: XTerm): void {
-    let line = '';
-    terminal.write(PROMPT);
-    this.input = terminal.onData((data) => {
-      if (data === '\r') {
-        terminal.write(line === '' ? `\r\n${PROMPT}` : `\r\n${line}\r\n${PROMPT}`);
-        line = '';
-      } else if (data === '\x7f') {
-        if (line !== '') {
-          line = line.slice(0, -1);
-          terminal.write('\b \b');
-        }
-      } else if (data === '\x03') {
-        terminal.write(`^C\r\n${PROMPT}`);
-        line = '';
-      } else if (data >= ' ' && !data.startsWith('\x1b')) {
-        line += data;
-        terminal.write(data);
-      }
-    });
-  }
-
-  dispose(): void {
-    this.input?.dispose();
-  }
 }

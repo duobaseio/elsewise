@@ -43,6 +43,7 @@ import {
   type Workspace,
   WorkspaceSchema,
 } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
+import { TerminalService } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { projectLayoutQuery } from '@/projects/layout';
 import { ProjectManager } from '@/projects/project-manager';
 import { Projects } from '@/routes/_shell/-projects/projects';
@@ -243,7 +244,10 @@ function fakeDaemon(
         ],
       }),
   } satisfies Daemon['git'];
-  return { fileSystem, git, projects: projectService };
+  const terminals = Object.fromEntries(
+    TerminalService.methods.map((method) => [method.localName, unused]),
+  ) as unknown as Daemon['terminals'];
+  return { fileSystem, git, projects: projectService, terminals };
 }
 
 interface DeletedWorkspace {

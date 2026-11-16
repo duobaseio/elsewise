@@ -8,7 +8,7 @@ import type { Platform } from './platform';
 import type { Projects } from './projects/projects';
 import type { Workspace } from './projects/workspaces';
 import type { Settings } from './settings';
-import type { Terminal } from './terminal';
+import type { Terminals } from './terminal';
 import type { ThemeVariant } from './theme';
 
 /**
@@ -78,27 +78,27 @@ export interface Plugin {
   onDisable?(app: Application): void | Promise<void>;
 
   /**
-   * Called with the new brightness when it changes, while the plugin is enabled.
+   * Called with the new brightness when it changes.
    */
   onBrightnessChange?(brightness: 'light' | 'dark'): void;
 
   /**
-   * Called with the new theme when it changes, while the plugin is enabled.
+   * Called with the new theme when it changes.
    */
   onThemeChange?(theme: ActiveTheme): void;
 
   /**
-   * Called with the new keymap when it changes, while the plugin is enabled.
+   * Called with the new keymap when it changes.
    */
   onKeymapChange?(keymap: ActiveKeymap): void;
 
   /**
-   * Called with the frontend's new settings when they change, while the plugin is enabled.
+   * Called with the frontend's new settings when they change.
    */
   onFrontendSettingsChange?(settings: FrontendSettings): void;
 
   /**
-   * Called with the workspace shown when another is shown or it changes, while the plugin is enabled.
+   * Called with the workspace shown when another is shown, or it changes.
    */
   onWorkspaceChange?(workspace: Workspace | null): void;
 }
@@ -145,9 +145,9 @@ export interface Application {
   readonly editor: Editor;
 
   /**
-   * The terminal.
+   * The terminals.
    */
-  readonly terminal: Terminal;
+  readonly terminals: Terminals;
 
   /**
    * The file tree.
