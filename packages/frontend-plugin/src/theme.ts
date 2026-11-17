@@ -56,7 +56,9 @@ export const ThemeVariant = z.lazy(() =>
         ring: Color,
 
         // Actions
+        primary: Color,
         'primary-hover': Color,
+        'primary-foreground': Color,
         'secondary-hover': Color,
         'destructive-hover': Color,
         'destructive-foreground': Color,

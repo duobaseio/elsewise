@@ -23,9 +23,9 @@
   --input: #c9c2b0;
   --ring: #334a6b;
 
-  /* Actions — primary is the material inversion: ink by day, paper by night. */
-  --primary: var(--foreground);
-  --primary-hover: #334a6b;
+  /* Actions — primary is the material inversion: warm ink by day, paper by night. */
+  --primary: #2f2920;
+  --primary-hover: #464135;
   --primary-foreground: var(--inverse);
   --secondary: var(--surface-2);
   --secondary-hover: #f1ecdf;
