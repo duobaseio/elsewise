@@ -95,6 +95,11 @@ export interface Projects {
    *
    *   // After the built-in groups
    *   { id: 'example.github', order: 20, sources: [{ id: 'example.github.clone', label: 'Clone…', add: clone }] },
+   *
+   *   // Submenu trigger
+   *   { id: 'example.from', order: 30, sources: [{ label: 'Clone from', submenu: 'example.from' }] },
+   *   // Submenu content
+   *   { id: 'example.hosts', in: 'example.from', sources: [{ id: 'example.gitlab', label: 'GitLab…', add: clone }] },
    * ]);
    * ```
    *

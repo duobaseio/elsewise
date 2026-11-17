@@ -8,6 +8,9 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@elsewise/components/components/dropdown-menu';
 import { Icon } from '@elsewise/components/components/icon';
@@ -20,7 +23,13 @@ import {
 } from '@elsewise/components/components/sidebar';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
-import { DEFAULT_ROUTES, type Project, type ProjectSource } from '@elsewise/frontend-plugin';
+import {
+  type Application,
+  DEFAULT_ROUTES,
+  type Project,
+  type ProjectSource,
+  type ProjectSourceGroup,
+} from '@elsewise/frontend-plugin';
 import { useMutation, useMutationState, useQuery } from '@tanstack/react-query';
 import { Fragment, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
@@ -55,6 +64,14 @@ const SENSORS = [
     activationConstraints: () => [new PointerActivationConstraints.Distance({ value: 5 })],
   }),
 ];
+
+interface SourceGroup {
+  readonly id: string;
+  readonly entries: readonly (
+    | ProjectSource
+    | { readonly submenu: string; readonly label: string; readonly groups: readonly SourceGroup[] }
+    )[];
+}
 
 /**
  * The projects on every daemon, each with its workspaces under it.
@@ -138,12 +155,7 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
     select: (mutation) => mutation.state.variables,
   });
 
-  const groups = sourceGroups
-    .map((group) => ({
-      ...group,
-      sources: group.sources.filter((source) => source.shown?.(application, daemonId) !== false),
-    }))
-    .filter((group) => group.sources.length > 0);
+  const groups = resolveSources(sourceGroups, application, daemonId, []);
 
   return (
     <SidebarGroup>
@@ -168,22 +180,11 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
             <TooltipContent>Add project</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="end">
-            {groups.map((group, i) => (
-              <Fragment key={group.id}>
-                {i > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuGroup>
-                  {group.sources.map((source) => (
-                    <DropdownMenuItem
-                      key={source.id}
-                      disabled={adding.includes(source) || source.enabled?.(application, daemonId) === false}
-                      onClick={() => add.mutate(source)}
-                    >
-                      {source.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              </Fragment>
-            ))}
+            <SourceGroups
+              groups={groups}
+              disabled={(source) => adding.includes(source) || source.enabled?.(application, daemonId) === false}
+              onAdd={(source) => add.mutate(source)}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -214,6 +215,77 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
       </SidebarGroupContent>
     </SidebarGroup>
   );
+}
+
+function resolveSources(
+  groups: readonly ProjectSourceGroup[],
+  application: Application,
+  daemonId: string,
+  path: readonly string[],
+): SourceGroup[] {
+  const shown: SourceGroup[] = [];
+  for (const group of groups) {
+    if (group.in !== path.at(-1)) {
+      continue;
+    }
+
+    const entries: SourceGroup['entries'][number][] = [];
+    for (const source of group.sources) {
+      if (!('submenu' in source)) {
+        if (source.shown?.(application, daemonId) !== false) {
+          entries.push(source);
+        }
+        continue;
+      }
+
+      if (path.includes(source.submenu)) {
+        continue;
+      }
+
+      const inner = resolveSources(groups, application, daemonId, [...path, source.submenu]);
+      if (inner.length > 0) {
+        entries.push({ submenu: source.submenu, label: source.label, groups: inner });
+      }
+    }
+
+    if (entries.length > 0) {
+      shown.push({ id: group.id, entries });
+    }
+  }
+
+  return shown;
+}
+
+function SourceGroups({
+  groups,
+  disabled,
+  onAdd,
+}: {
+  groups: readonly SourceGroup[];
+  disabled: (source: ProjectSource) => boolean;
+  onAdd: (source: ProjectSource) => void;
+}) {
+  return groups.map((group, i) => (
+    <Fragment key={group.id}>
+      {i > 0 && <DropdownMenuSeparator />}
+      <DropdownMenuGroup>
+        {group.entries.map((entry) =>
+          'submenu' in entry ? (
+            <DropdownMenuSub key={`submenu:${entry.submenu}`}>
+              <DropdownMenuSubTrigger>{entry.label}</DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <SourceGroups groups={entry.groups} disabled={disabled} onAdd={onAdd} />
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          ) : (
+            <DropdownMenuItem key={`source:${entry.id}`} disabled={disabled(entry)} onClick={() => onAdd(entry)}>
+              {entry.label}
+            </DropdownMenuItem>
+          ),
+        )}
+      </DropdownMenuGroup>
+    </Fragment>
+  ));
 }
 
 function usePlatformDrop() {

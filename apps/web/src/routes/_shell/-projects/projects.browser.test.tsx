@@ -946,6 +946,55 @@ describe('Projects', () => {
     ).toEqual(['New project…', 'Import project…', 'separator', 'Clone…']);
   });
 
+  test('adds from submenu', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    const add = vi.fn(async () => null);
+    projects.addSources([
+      { id: 'test', sources: [{ label: 'Clone from', submenu: 'test.hosts' }] },
+      { id: 'test.hosts', in: 'test.hosts', sources: [{ id: 'test.gitlab', label: 'GitLab…', add }] },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Clone from' })).toBeVisible();
+    expect(page.getByRole('menuitem', { name: 'GitLab…' }).query()).toBeNull();
+
+    await page.getByRole('menuitem', { name: 'Clone from' }).click();
+    await page.getByRole('menuitem', { name: 'GitLab…' }).click();
+
+    await expect.poll(() => add).toHaveBeenCalledOnce();
+  });
+
+  test('hides submenu without shown source', async () => {
+    const { projects } = await mount('/local/elsewise/singapore');
+    projects.addSources([
+      {
+        id: 'test',
+        sources: [
+          { label: 'Clone from', submenu: 'test.hosts' },
+          { label: 'Empty', submenu: 'test.empty' },
+          { label: 'Itself', submenu: 'test.itself' },
+        ],
+      },
+      {
+        id: 'test.hosts',
+        in: 'test.hosts',
+        sources: [{ id: 'test.gitlab', label: 'GitLab…', shown: () => false, add: async () => null }],
+      },
+      { id: 'test.itself', in: 'test.itself', sources: [{ label: 'Itself', submenu: 'test.itself' }] },
+    ]);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'New project…' })).toBeVisible();
+    expect(
+      page
+        .getByRole('menuitem')
+        .elements()
+        .map((element) => element.textContent),
+    ).toEqual(['New project…']);
+  });
+
   test('disables source', async () => {
     const { projects } = await mount('/local/elsewise/singapore');
     projects.addSources([

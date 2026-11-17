@@ -383,6 +383,36 @@ describe('addSources', () => {
     expect(warn).toHaveBeenCalledWith(`Project source group ${add.id} already has order 10, ignoring 20`);
   });
 
+  test('keeps first submenu, warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { projects } = setup();
+    projects.addSources([{ id: 'test', in: 'test.clone', sources: [] }]);
+    projects.addSources([{ id: 'test', in: 'test.other', sources: [] }]);
+
+    expect(projects.sourceGroups.at(-1)?.in).toBe('test.clone');
+    expect(warn).toHaveBeenCalledWith('Project source group test is already in test.clone, ignoring test.other');
+  });
+
+  test('keeps first of duplicate submenu in group', () => {
+    const { projects } = setup();
+    const first = { label: 'first', submenu: 'test.clone' };
+    projects.addSources([{ id: 'test', sources: [first] }]);
+    projects.addSources([{ id: 'test', sources: [{ label: 'second', submenu: 'test.clone' }] }]);
+
+    expect(projects.sourceGroups.at(-1)?.sources).toEqual([first]);
+  });
+
+  test('sorts submenus among sources', () => {
+    const { projects } = setup();
+    const a = source('test.a', 10);
+    const c = source('test.c', 30);
+    const b = { order: 20, label: 'b', submenu: 'test.b' };
+    projects.addSources([{ id: 'test', sources: [c, b, a] }]);
+
+    expect(projects.sourceGroups.at(-1)?.sources).toEqual([a, b, c]);
+    expect(projects.sources.slice(-2)).toEqual([a, c]);
+  });
+
   test('sorts groups by order, then id', () => {
     const { projects } = setup();
     projects.addSources([
@@ -409,12 +439,7 @@ describe('addSources', () => {
       },
     ]);
 
-    expect(projects.sourceGroups.at(-1)?.sources.map(({ id }) => id)).toEqual([
-      'test.a',
-      'test.b',
-      'test.c',
-      'test.none',
-    ]);
+    expect(projects.sources.slice(-4).map(({ id }) => id)).toEqual(['test.a', 'test.b', 'test.c', 'test.none']);
   });
 
   test('keeps first of duplicate id across groups, warning', () => {

@@ -110,7 +110,12 @@ export type {
   WorkspaceSidebarItem,
   WorkspaceSidebarItemProps,
 } from './projects/sidebar';
-export { DEFAULT_PROJECT_SOURCE_GROUPS, type ProjectSource, type ProjectSourceGroup } from './projects/sources';
+export {
+  DEFAULT_PROJECT_SOURCE_GROUPS,
+  type ProjectSource,
+  type ProjectSourceGroup,
+  type ProjectSourceSubmenu,
+} from './projects/sources';
 export type {
   ExistingWorkspace,
   NewWorkspace,
