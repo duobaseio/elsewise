@@ -482,15 +482,16 @@ message Session {
   }
 
   enum StopReason {
-    STOP_REASON_UNSPECIFIED = 0; // Used when the agent starts or the last turn failed.
+    STOP_REASON_UNSPECIFIED = 0; // Never sent.
     STOP_REASON_OTHER = 1;
+    STOP_REASON_NONE = 2; // Used when the agent starts or the last turn failed.
 
     // Specified from the ACP spec.
-    STOP_REASON_END_TURN = 2;
-    STOP_REASON_MAX_TOKENS = 3;
-    STOP_REASON_MAX_TURN_REQUESTS = 4;
-    STOP_REASON_REFUSAL = 5;
-    STOP_REASON_CANCELLED = 6;
+    STOP_REASON_END_TURN = 3;
+    STOP_REASON_MAX_TOKENS = 4;
+    STOP_REASON_MAX_TURN_REQUESTS = 5;
+    STOP_REASON_REFUSAL = 6;
+    STOP_REASON_CANCELLED = 7;
   }
 
   // Represents something that went wrong with an agent.
