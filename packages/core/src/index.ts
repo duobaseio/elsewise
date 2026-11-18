@@ -5,4 +5,5 @@ export {
   type Lifecycle,
   PluginResolver,
   type PluginSnapshot,
+  type Scope,
 } from './plugins/plugin-resolver';

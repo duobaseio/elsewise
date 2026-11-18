@@ -1,6 +1,6 @@
 import fs from 'node:fs';
-import type { Daemon as DaemonApi } from '@elsewise/daemon-plugin';
 import { type Channel, serve } from '@elsewise/transport';
+import { AgentRegistry, McpServerRegistry } from './agent/registry';
 import { openDatabase } from './database/database';
 import { codeDirectory, dataDirectory } from './directories';
 import { DirectoryWatcher } from './directory-watcher';
@@ -15,6 +15,7 @@ import { MIGRATIONS } from './gen/migrations';
 import { type GitOptions, GitServiceImpl } from './git/service';
 import { InfoServiceImpl } from './info/service';
 import { PluginStore } from './plugins/plugin-store';
+import type { Registries } from './plugins/registry';
 import { type ProjectOptions, ProjectServiceImpl } from './project/service';
 import { ProjectStore } from './project/store';
 import { type TerminalOptions, TerminalServiceImpl } from './terminal/service';
@@ -84,8 +85,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     ...options.project,
   });
 
-  // TODO: Hand plugins what the daemon provides.
-  const api: DaemonApi = {};
+  const registries: Registries = { agents: new AgentRegistry(), mcpServers: new McpServerRegistry() };
   const plugins = new PluginStore(data);
   try {
     await plugins.loadAll();
@@ -93,7 +93,7 @@ export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
     console.error('Plugins failed to load', error);
   }
   // Not awaited, so a slow plugin delays only itself and not the services.
-  void plugins.enableAll(api);
+  void plugins.enableAll(registries);
 
   return {
     register(channel) {
