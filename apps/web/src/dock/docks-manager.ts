@@ -24,9 +24,9 @@ export class DocksManager implements Docks {
   /**
    * Attaches the dockview that shows `workspace`.
    *
-   * Returns a disposable that detaches it.
+   * Returns its dock, which is not active until the workspace is.
    */
-  attach(workspace: WorkspaceId, view: DockviewApi): Disposable {
+  attach(workspace: WorkspaceId, view: DockviewApi): DockManager {
     this.attached?.dispose();
     const dock = new DockManager(
       workspace,
@@ -51,14 +51,15 @@ export class DocksManager implements Docks {
     );
     this.attached = dock;
     this.update();
+    return dock;
+  }
 
-    return () => {
-      dock.dispose();
-      if (this.attached === dock) {
-        this.attached = null;
-        this.update();
-      }
-    };
+  detach(dock: DockManager) {
+    dock.dispose();
+    if (this.attached === dock) {
+      this.attached = null;
+      this.update();
+    }
   }
 
   // There is a slight gap between when the dock manager is attached and workspaces.active is updated.

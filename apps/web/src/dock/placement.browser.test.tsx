@@ -28,6 +28,10 @@ async function mount() {
     add: (placement: Placement) =>
       addPanel(dockview, panels, { id: 'n', component: 'terminal', params: { session: 'n' } }, placement)?.id ?? null,
     move: (moved: Panel, placement: Placement) => movePanel(dockview, panels, moved, placement),
+    size: (id: string) => {
+      const group = dockview.getPanel(id)?.group.api;
+      return { width: group?.width, height: group?.height };
+    },
     // The ids of each group's panels, in the splits that hold them.
     layout: () => ids(new DockStore(WORKSPACE, dockview).snapshot.layout),
   };
@@ -79,6 +83,39 @@ describe('addPanel', () => {
     add({ edge: 'bottom' });
 
     expect(layout()).toEqual({ column: [{ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] }, ['n']] });
+  });
+
+  test('sets height of group above or below', async () => {
+    const { tab, add, size } = await mount();
+
+    add({ group: 'below', of: tab('b'), height: 200 });
+
+    expect(size('n').height).toBe(200);
+    expect(size('b').height).toBe(500);
+  });
+
+  test('sets width of group left or right', async () => {
+    const { tab, add, size } = await mount();
+
+    add({ group: 'left', of: tab('b'), width: 300 });
+
+    expect(size('n').width).toBe(300);
+  });
+
+  test('sets size of group along edge', async () => {
+    const { add, size } = await mount();
+
+    add({ edge: 'top', height: 120 });
+
+    expect(size('n')).toEqual({ width: 1064, height: 120 });
+  });
+
+  test('limits size to space of dock', async () => {
+    const { add, size } = await mount();
+
+    add({ edge: 'bottom', height: 5000 });
+
+    expect(size('n').height).toBeLessThan(700);
   });
 
   test('returns null for panel that is not open', async () => {
@@ -170,6 +207,22 @@ describe('movePanel', () => {
     move(fileTree, { group: 'left', of: tab('b') });
 
     expect(layout()).toEqual({ row: [['fileTree'], [EDITOR, 'a', 'b', 'c']] });
+  });
+
+  test('sets size of new group beside group of panel', async () => {
+    const { tab, move, size } = await mount();
+
+    move(tab('c'), { group: 'below', of: tab('b'), height: 200 });
+
+    expect(size('c').height).toBe(200);
+  });
+
+  test('sets size of new group along edge', async () => {
+    const { tab, move, size } = await mount();
+
+    move(tab('c'), { edge: 'left', width: 250 });
+
+    expect(size('c')).toEqual({ width: 250, height: 700 });
   });
 
   test('returns false for panel that is not open', async () => {

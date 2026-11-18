@@ -1,12 +1,17 @@
-import { create } from '@bufbuild/protobuf';
-import type { Disposable } from '@elsewise/frontend-plugin';
-import { QueryClient } from '@tanstack/react-query';
-import { createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import { describe, expect, test, vi } from 'vitest';
-import { WorkspaceSchema } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
-import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
+import { WorkspaceManager } from '@/projects/workspace-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
-import { addTerminal, EDITOR, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
+import {
+  addTerminal,
+  EDITOR,
+  FILE_TREE,
+  mount as mountDock,
+  showWorkspace,
+  TERMINAL,
+  WORKSPACE,
+  workspaceRouter,
+} from '../../test/dock';
+import type { DockManager } from './dock-manager';
 import { DocksManager } from './docks-manager';
 
 // Dockview reports some changes late, so listeners are given time to be called.
@@ -16,19 +21,10 @@ function settle() {
 
 // The docks of a workspace manager that shows the workspace if `shown`.
 async function docksOf(shown: boolean) {
-  const client = new QueryClient();
-  client.setQueryData(workspacesQuery(WORKSPACE.daemon, WORKSPACE.project).queryKey, [
-    create(WorkspaceSchema, { projectId: WORKSPACE.project, id: WORKSPACE.workspace, name: 'w' }),
-  ]);
-  const root = createRootRoute();
-  const router = createRouter({
-    routeTree: root.addChildren([createRoute({ getParentRoute: () => root, path: '/$daemon/$project/$workspace' })]),
-    history: createMemoryHistory(),
-  });
+  const { client, router } = workspaceRouter();
   const workspaces = new WorkspaceManager(client, router);
   if (shown) {
-    await router.navigate({ to: `/${WORKSPACE.daemon}/${WORKSPACE.project}/${WORKSPACE.workspace}` });
-    await router.load();
+    await showWorkspace(router);
     await vi.waitFor(() => expect(workspaces.active).not.toBeNull());
   }
   return new DocksManager(workspaces, new TerminalManager(client));
@@ -36,9 +32,9 @@ async function docksOf(shown: boolean) {
 
 async function mount(shown = true) {
   const docks = await docksOf(shown);
-  let detach: Disposable | undefined;
+  let attached: DockManager | undefined;
   const api = await mountDock((ready) => {
-    detach = docks.attach(WORKSPACE, ready);
+    attached = docks.attach(WORKSPACE, ready);
   });
   await settle();
 
@@ -48,7 +44,7 @@ async function mount(shown = true) {
   docks.onPanelOpen(opened);
   docks.onPanelClose(closed);
   docks.onChange(changed);
-  return { docks, api, detach: detach as Disposable, opened, closed, changed };
+  return { docks, api, attached: attached as DockManager, opened, closed, changed };
 }
 
 describe('active', () => {
@@ -66,6 +62,13 @@ describe('active', () => {
 });
 
 describe('attach', () => {
+  test('returns dock before workspace is shown', async () => {
+    const { docks, attached } = await mount(false);
+
+    expect(docks.active).toBeNull();
+    expect(attached.panels).toEqual([EDITOR, FILE_TREE]);
+  });
+
   test('reports change without opened panels', async () => {
     const docks = await docksOf(true);
     const opened = vi.fn();
@@ -81,9 +84,9 @@ describe('attach', () => {
   });
 
   test('reports change without closed panels after detach', async () => {
-    const { docks, detach, closed, changed } = await mount();
+    const { docks, attached, closed, changed } = await mount();
 
-    void detach();
+    docks.detach(attached);
     await settle();
 
     expect(docks.active).toBeNull();

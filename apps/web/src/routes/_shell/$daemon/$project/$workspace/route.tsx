@@ -3,7 +3,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
-import type { DiffLayout, Disposable } from '@elsewise/frontend-plugin';
+import type { DiffLayout } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
@@ -15,8 +15,9 @@ import {
   type IDockviewPanelProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
+import type { DockManager } from '@/dock/dock-manager';
 import { DiffState } from '@/editor/diff/diff';
 import { Editor } from '@/editor/editor';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
@@ -61,41 +62,32 @@ const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 function WorkspaceRoute() {
   const { daemon, project, workspace } = Route.useParams();
   const store = useWorkspaceStateStore();
-  const { dock } = useWorkspaceState({ daemon, project, workspace });
+  const { dock: layout } = useWorkspaceState({ daemon, project, workspace });
   const onLayoutChange = useCallback(
     (layout: SerializedDockview) => store.update({ daemon, project, workspace }, { dock: layout }),
     [store, daemon, project, workspace],
   );
 
-  const { docks, terminals } = useApplicationManager();
-  const attached = useRef<Disposable | null>(null);
+  const { docks } = useApplicationManager();
+  const attached = useRef<DockManager | null>(null);
   // biome-ignore lint/correctness/useExhaustiveDependencies: detaches the dock of the workspace left
   useEffect(
     () => () => {
-      void attached.current?.();
-      attached.current = null;
+      if (attached.current !== null) {
+        docks.detach(attached.current);
+        attached.current = null;
+      }
     },
     [daemon, project, workspace],
   );
   const onDockviewReady = (api: DockviewApi) => {
-    attached.current = docks.attach({ daemon, project, workspace }, api);
-    if (dock === undefined) {
-      terminals.store
-        .add({ daemon, project, workspace })
-        .then((session) => {
-          // TODO: Place the terminal through the dock API once it has one.
-          api.addPanel({
-            id: `terminal:${session.id.session}`,
-            component: 'terminal' satisfies PanelKind,
-            tabComponent: 'terminal',
-            title: session.name,
-            params: { session: session.id.session },
-            position: api.activeGroup ? { referenceGroup: api.activeGroup, direction: 'below' } : undefined,
-            minimumWidth: 10,
-            minimumHeight: 10,
-            initialHeight: 200,
-          });
-        })
+    const dock = docks.attach({ daemon, project, workspace }, api);
+    attached.current = dock;
+
+    const editor = dock.activeTabPanel;
+    if (layout === undefined && editor !== null) {
+      dock
+        .addTerminal({}, { group: 'below', of: editor, height: 200 })
         .catch((error: Error) =>
           toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
         );
@@ -106,7 +98,7 @@ function WorkspaceRoute() {
     <>
       <WorkspaceDock
         key={JSON.stringify([daemon, project, workspace])}
-        layout={dock}
+        layout={layout}
         onDockviewReady={onDockviewReady}
         onLayoutChange={onLayoutChange}
       />
@@ -120,11 +112,13 @@ function WorkspaceRoute() {
 
 export function WorkspaceDock({
   panels = PANELS,
+  tabs = TABS,
   layout,
   onDockviewReady,
   onLayoutChange,
 }: {
   panels?: typeof PANELS;
+  tabs?: typeof TABS;
   /**
    * The layout to restore, as the dock serialized it.
    */
@@ -225,11 +219,11 @@ export function WorkspaceDock({
           defaultTabComponent={DefaultTab}
           leftHeaderActionsComponent={AddTabAction}
           onReady={onReady}
-          tabComponents={TABS}
+          tabComponents={tabs}
           theme={THEME}
         />
       </div>
-      <ToolStripe dockview={dockview} />
+      <ToolStripe />
     </div>
   );
 }
@@ -244,29 +238,16 @@ export function AddTabAction(props: IDockviewHeaderActionsProps) {
     return null;
   }
 
-  // TODO: Offer each kind of tab once the dock has an API for adding them, instead of always adding a terminal.
+  // TODO: Offer each kind of tab instead of always adding a terminal.
   const add = () => {
-    const workspace = application?.projects.workspaces.active;
-    if (application === null || workspace == null) {
+    const dock = application?.docks.active;
+    const last = dock?.get(props.panels.at(-1)?.id ?? '');
+    if (dock == null || last == null || !last.tab) {
       return;
     }
 
-    application.terminals.store
-      .add(workspace.id)
-      .then((session) => {
-        props.containerApi
-          .addPanel({
-            id: `terminal:${session.id.session}`,
-            component: 'terminal' satisfies PanelKind,
-            tabComponent: 'terminal',
-            title: session.name,
-            params: { session: session.id.session },
-            position: { referenceGroup: props.group },
-            minimumWidth: 10,
-            minimumHeight: 10,
-          })
-          .api.setActive();
-      })
+    dock
+      .addTerminal({}, { tab: 'last', with: last })
       .catch((error: Error) =>
         toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
       );
@@ -282,6 +263,7 @@ export function AddTabAction(props: IDockviewHeaderActionsProps) {
 }
 
 export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { onClose?: () => void }) {
+  const docks = useContext(ApplicationManagerContext)?.docks;
   // The dock's last remaining content tab is not closable.
   const [closable, setClosable] = useState(true);
 
@@ -309,10 +291,17 @@ export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { 
           className="size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100"
           onClick={(event) => {
             event.stopPropagation();
-            if (onClose === undefined) {
+            if (onClose !== undefined) {
+              onClose();
+              return;
+            }
+
+            const dock = docks?.active;
+            const panel = dock?.get(props.api.id);
+            if (dock == null || panel == null || !panel.closable) {
               props.api.close();
             } else {
-              onClose();
+              void dock.close(panel);
             }
           }}
           onPointerDown={(event) => event.stopPropagation()}
@@ -338,22 +327,25 @@ export function FileTab(props: IDockviewPanelHeaderProps) {
   );
 }
 
-export function ToolStripe({ dockview }: { dockview: DockviewApi | null }) {
-  const [fileTreeVisible, setFileTreeVisible] = useState(true);
-
-  useEffect(() => {
-    // The group api goes stale if the tree ever changes groups; fine while the tool lock pins it in place.
-    const group = dockview?.getPanel('fileTree')?.group.api;
-    const disposable = group?.onDidVisibilityChange((event) => {
-      setFileTreeVisible(event.isVisible);
-    });
-    return () => disposable?.dispose();
-  }, [dockview]);
+export function ToolStripe() {
+  const docks = useContext(ApplicationManagerContext)?.docks;
+  const fileTreeVisible = useSyncExternalStore(
+    (listener) => docks?.onChange(listener) ?? (() => {}),
+    () =>
+      docks?.active?.groups.find((group) => group.panels.some((panel) => panel.type === 'fileTree'))?.shown !== null,
+  );
 
   const toggleFiles = () => {
-    const group = dockview?.getPanel('fileTree')?.group.api;
-    if (group) {
-      group.setVisible(!group.isVisible);
+    const dock = docks?.active;
+    const fileTree = dock?.panels.find((panel) => panel.type === 'fileTree');
+    if (dock == null || fileTree === undefined) {
+      return;
+    }
+
+    if (fileTreeVisible) {
+      dock.hide(fileTree);
+    } else {
+      dock.show(fileTree);
     }
   };
 

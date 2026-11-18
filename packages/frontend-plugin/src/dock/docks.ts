@@ -62,7 +62,7 @@ export interface Dock {
   /**
    * Adds a panel that shows the file at `relativePath`, relative to the root of the dock's workspace.
    *
-   * The panel is shown, and becomes the active panel unless `activate` is false. `activate` defaults to true.
+   * The panel is shown, and becomes the active panel unless `activate` is false. Defaults to true.
    *
    * If the file is already open, `placement` is ignored.
    *
@@ -73,7 +73,7 @@ export interface Dock {
   /**
    * Adds a terminal, and a panel that shows it.
    *
-   * The panel is shown, and becomes the active panel unless `activate` is false. `activate` defaults to true.
+   * The panel is shown, and becomes the active panel unless `activate` is false. Defaults to true.
    *
    * Returns the panel, or null if the panel that `placement` refers to is not open.
    */
@@ -82,12 +82,12 @@ export interface Dock {
   /**
    * Moves `panel` to `placement`.
    *
-   * The panel is shown, and becomes the active panel.
+   * The panel is shown, and becomes the active panel if `activate` is true. Defaults to true.
    *
    * Does nothing if `panel`, or the panel that `placement` refers to, is not open.
    */
-  move(panel: TabPanel, placement: Placement): void;
-  move(panel: TablessPanel, placement: GroupPlacement): void;
+  move(panel: TabPanel, placement: Placement, activate?: boolean): void;
+  move(panel: TablessPanel, placement: GroupPlacement, activate?: boolean): void;
 
   /**
    * Shows `panel` and makes it the active panel.

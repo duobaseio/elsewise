@@ -13,7 +13,7 @@ const route = getRouteApi('/_shell/$daemon/$project/$workspace');
  */
 export function TerminalTab(props: IDockviewPanelHeaderProps<{ session?: string }>) {
   const { daemon, project, workspace } = route.useParams();
-  const { terminals } = useApplicationManager();
+  const { docks } = useApplicationManager();
   const { session } = props.params;
   const name = useTerminalManager((manager) =>
     session === undefined ? undefined : manager.get({ daemon, project, workspace, session })?.session.name,
@@ -34,8 +34,13 @@ export function TerminalTab(props: IDockviewPanelHeaderProps<{ session?: string 
           return;
         }
 
-        terminals
-          .delete({ daemon, project, workspace, session })
+        const panel = docks.active?.get(props.api.id);
+        if (panel == null || !panel.closable) {
+          return;
+        }
+
+        docks.active
+          ?.close(panel)
           .catch((error: Error) =>
             toast.add({ type: 'error', title: 'Deleting the terminal failed', description: error.message }),
           );

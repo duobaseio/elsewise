@@ -1,4 +1,4 @@
-import type { Panel, Placement } from '@elsewise/frontend-plugin';
+import type { GroupPlacement, Panel, Placement } from '@elsewise/frontend-plugin';
 import type { AddPanelOptions, DockviewApi, IDockviewPanel } from 'dockview-react';
 
 const EDGES = { left: 'left', right: 'right', top: 'above', bottom: 'below' } as const;
@@ -18,7 +18,13 @@ export function addPanel(
   placement: Placement,
 ): IDockviewPanel | null {
   if ('edge' in placement) {
-    return dockview.addPanel({ ...options, position: { direction: EDGES[placement.edge] } });
+    const { width, height } = extent(placement.edge, placement);
+    return dockview.addPanel({
+      ...options,
+      initialWidth: width,
+      initialHeight: height,
+      position: { direction: EDGES[placement.edge] },
+    });
   }
 
   const id = 'of' in placement ? placement.of.id : placement.with.id;
@@ -29,7 +35,13 @@ export function addPanel(
   }
 
   if ('group' in placement) {
-    return dockview.addPanel({ ...options, position: { referenceGroup: group, direction: placement.group } });
+    const { width, height } = extent(placement.group, placement);
+    return dockview.addPanel({
+      ...options,
+      initialWidth: width,
+      initialHeight: height,
+      position: { referenceGroup: group, direction: placement.group },
+    });
   }
 
   if (!reference.tab) {
@@ -42,7 +54,7 @@ export function addPanel(
 }
 
 /**
- * Moves the open panel `moved` in `dockview` to `placement`.
+ * Moves the open panel `moved` in `dockview` to `placement`, without activating it.
  *
  * Returns false if `placement`:
  * * refers to a panel that is not among the open `panels`
@@ -61,7 +73,8 @@ export function movePanel(
   }
 
   if ('edge' in placement) {
-    panel.api.moveTo({ group: dockview.addGroup({ direction: EDGES[placement.edge] }) });
+    panel.api.moveTo({ group: dockview.addGroup({ direction: EDGES[placement.edge] }), skipSetActive: true });
+    panel.group.api.setSize(extent(placement.edge, placement));
     return true;
   }
 
@@ -73,7 +86,8 @@ export function movePanel(
   }
 
   if ('group' in placement) {
-    panel.api.moveTo({ group, position: SIDES[placement.group] });
+    panel.api.moveTo({ group, position: SIDES[placement.group], skipSetActive: true });
+    panel.group.api.setSize(extent(placement.group, placement));
     return true;
   }
 
@@ -84,6 +98,13 @@ export function movePanel(
   // Dockview takes the moved panel out of its group before it places it.
   const tabs = group.panels.filter((tab) => tab.id !== moved.id);
   const at = tabs.findIndex((tab) => tab.id === id);
-  panel.api.moveTo({ group, index: { first: 0, last: tabs.length, before: at, after: at + 1 }[placement.tab] });
+  const index = { first: 0, last: tabs.length, before: at, after: at + 1 }[placement.tab];
+  panel.api.moveTo({ group, index, skipSetActive: true });
   return true;
+}
+
+function extent(side: string, placement: GroupPlacement): { width?: number; height?: number } {
+  return side === 'left' || side === 'right'
+    ? { width: 'width' in placement ? placement.width : undefined }
+    : { height: 'height' in placement ? placement.height : undefined };
 }
