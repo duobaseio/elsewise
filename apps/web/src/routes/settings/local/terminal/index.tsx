@@ -11,7 +11,6 @@ import { DEFAULT_MONO_FONTS, monoFontStack } from '@/settings/fonts';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
 import { Terminal as TerminalView } from '@/terminals/terminal';
 import { FontRows } from '../-font-rows';
-import { LineHeightInput } from '../-line-height-input';
 import { ThemeSelect } from '../-theme';
 import { ScrollbackInput } from './-scrollback-input';
 
@@ -96,22 +95,11 @@ export function Terminal() {
         defaults={DEFAULT_MONO_FONTS}
         description="The terminal's font."
         font={terminal.font}
+        lineHeightDescription="A multiple of the font height, between 1 and 2.5."
         onChange={(font) => set({ font })}
         stack={monoFontStack}
         terms={TERMINAL_TERMS}
-      >
-        <Row
-          id="lineHeight"
-          label={TERMINAL_TERMS.lineHeight.label}
-          description="A multiple of the font's height, between 1 and 2.5."
-        >
-          <LineHeightInput
-            label={TERMINAL_TERMS.lineHeight.label}
-            onChange={(lineHeight) => set({ font: { ...terminal.font, lineHeight } })}
-            value={terminal.font.lineHeight}
-          />
-        </Row>
-      </FontRows>
+      />
 
       <Separator />
 

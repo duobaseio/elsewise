@@ -12,6 +12,7 @@ import {
   type ProjectSidebarItem,
   type ProjectSource,
   type ProjectSourceGroup,
+  type ProjectSourceSubmenu,
   type Projects,
   type RepositoryGroup,
   type RepositorySource,
@@ -55,7 +56,6 @@ export class ProjectManager implements Projects {
   private readonly contextMenus = new ContextMenuManager(DEFAULT_PROJECT_MENU, () => this.notify());
   private addedSourceGroups: readonly (readonly ProjectSourceGroup[])[] = [DEFAULT_PROJECT_SOURCES];
   private currentSourceGroups: readonly ProjectSourceGroup[] = this.mergeSources(DEFAULT_PROJECT_SOURCES);
-  private currentSources: readonly ProjectSource[] = this.currentSourceGroups.flatMap((group) => group.sources);
   private repositorySources: readonly (readonly RepositorySource[])[] = [];
 
   constructor(
@@ -184,42 +184,67 @@ export class ProjectManager implements Projects {
    * The sources of every group, in the groups' order.
    */
   get sources(): readonly ProjectSource[] {
-    return this.currentSources;
+    return this.currentSourceGroups.flatMap((group) =>
+      group.sources.flatMap((source) => ('submenu' in source ? [] : [source])),
+    );
   }
 
   addSources(groups: readonly ProjectSourceGroup[]): Disposable {
     const added = [...groups];
     this.addedSourceGroups = [...this.addedSourceGroups, added];
     this.currentSourceGroups = this.mergeSources(this.addedSourceGroups.flat());
-    this.currentSources = this.currentSourceGroups.flatMap((group) => group.sources);
     this.notify();
     return () => {
       this.addedSourceGroups = this.addedSourceGroups.filter((other) => other !== added);
       this.currentSourceGroups = this.mergeSources(this.addedSourceGroups.flat());
-      this.currentSources = this.currentSourceGroups.flatMap((group) => group.sources);
       this.notify();
     };
   }
 
-  // Merges the groups that share an id, sorted. `order` comes from the first group that sets it, and a source whose id
-  // came earlier is skipped.
+  // Merges the groups that share an id, sorted.
   private mergeSources(groups: readonly ProjectSourceGroup[]): ProjectSourceGroup[] {
-    const merged = new Map<string, { order?: number; sources: ProjectSource[] }>();
+    const merged = new Map<
+      string,
+      { order?: number; in?: string; sources: (ProjectSource | ProjectSourceSubmenu)[] }
+    >();
     const ids = new Set<string>();
     for (const group of groups) {
       let existing = merged.get(group.id);
       if (existing === undefined) {
-        existing = { ...(group.order === undefined ? {} : { order: group.order }), sources: [] };
+        existing = {
+          ...(group.order === undefined ? {} : { order: group.order }),
+          ...(group.in === undefined ? {} : { in: group.in }),
+          sources: [],
+        };
         merged.set(group.id, existing);
-      } else if (group.order !== undefined) {
-        if (existing.order === undefined) {
-          existing.order = group.order;
-        } else if (existing.order !== group.order) {
-          console.warn(`Project source group ${group.id} already has order ${existing.order}, ignoring ${group.order}`);
+      } else {
+        if (group.order !== undefined) {
+          if (existing.order === undefined) {
+            existing.order = group.order;
+          } else if (existing.order !== group.order) {
+            console.warn(
+              `Project source group ${group.id} already has order ${existing.order}, ignoring ${group.order}`,
+            );
+          }
+        }
+
+        if (group.in !== undefined) {
+          if (existing.in === undefined) {
+            existing.in = group.in;
+          } else if (existing.in !== group.in) {
+            console.warn(`Project source group ${group.id} is already in ${existing.in}, ignoring ${group.in}`);
+          }
         }
       }
 
       for (const source of group.sources) {
+        if ('submenu' in source) {
+          if (!existing.sources.some((other) => 'submenu' in other && other.submenu === source.submenu)) {
+            existing.sources.push(source);
+          }
+          continue;
+        }
+
         if (ids.has(source.id)) {
           console.warn(`Project source ${source.id} was already added`);
           continue;

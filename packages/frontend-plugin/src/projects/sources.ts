@@ -20,7 +20,7 @@ export const DEFAULT_PROJECT_SOURCE_GROUPS = {
 /**
  * A group of sources, separated from other groups in menus.
  *
- * Groups with the same id are merged. `order` uses the first defined value.
+ * Groups with the same id are merged. `order` and `in` use the first defined values.
  */
 export interface ProjectSourceGroup {
   /**
@@ -38,9 +38,18 @@ export interface ProjectSourceGroup {
   readonly order?: number;
 
   /**
+   * The id of the submenu this group is in, or none for the menu itself.
+   *
+   * A differing submenu added later is ignored.
+   *
+   * See {@link ProjectSourceSubmenu} for opening a submenu.
+   */
+  readonly in?: string;
+
+  /**
    * The sources in this group. A source whose id already exists in any group is ignored.
    */
-  readonly sources: readonly ProjectSource[];
+  readonly sources: readonly (ProjectSource | ProjectSourceSubmenu)[];
 }
 
 /**
@@ -84,4 +93,31 @@ export interface ProjectSource {
   // TODO: Let sources ask for input in a dialog once the plugin API can open one.
   // TODO: Report errors through the plugin API once plugins can show toasts.
   add(application: Application, daemonId: string): Promise<Project | null>;
+}
+
+/**
+ * An item that opens a submenu.
+ *
+ * The submenu shows the groups whose `in` is the item's `submenu`. The item is hidden when none of them has a source to
+ * show.
+ */
+export interface ProjectSourceSubmenu {
+  /**
+   * The order of this item in its group, shown lowest first and by label when equal. Items without one are shown last.
+   */
+  readonly order?: number;
+
+  /**
+   * The label shown.
+   *
+   * It is possible for there to be multiple submenu items with different labels in different groups.
+   */
+  readonly label: string;
+
+  /**
+   * The id of the submenu it opens, namespaced by the plugin's, e.g. `io.example.clone`.
+   *
+   * See {@link ProjectSourceGroup.in} for adding a group to it.
+   */
+  readonly submenu: string;
 }

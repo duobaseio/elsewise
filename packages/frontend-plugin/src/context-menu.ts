@@ -236,7 +236,10 @@ export interface ContextMenuItem {
 }
 
 /**
- * An item that opens a submenu: the groups whose `in` is its id. It is hidden when none of them has an item to show.
+ * An item that opens a submenu.
+ *
+ * The submenu shows the groups whose `in` is the item's `submenu`. The item is hidden when none of them has an item to
+ * show.
  */
 export interface ContextMenuSubmenuItem {
   /**

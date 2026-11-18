@@ -112,6 +112,26 @@ describe('Appearance', () => {
     );
   });
 
+  test('saves line height', async () => {
+    const save = await mount();
+
+    await userEvent.fill(page.getByRole('textbox', { name: 'Line height' }), '1.8');
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(
+      withAppearance({ font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.font, lineHeight: 1.8 } }),
+    );
+  });
+
+  test('saves display font', async () => {
+    const save = await mount();
+    await userEvent.click(page.getByRole('combobox', { name: 'Display font' }));
+    await userEvent.click(page.getByRole('option', { name: 'Inter' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withAppearance({ displayFont: 'InterVariable' }));
+  });
+
   test('washes highlighted row only', async () => {
     await mount(DEFAULT_FRONTEND_SETTINGS, 'ligatures');
 

@@ -1,3 +1,11 @@
+export const DEFAULT_DISPLAY_FONTS: readonly FontChoice[] = [
+  { label: 'Fraunces', value: null },
+  { label: 'Public Sans', value: 'Public Sans Variable' },
+  { label: 'Inter', value: 'InterVariable' },
+  { label: 'Atkinson Hyperlegible Next', value: 'Atkinson Hyperlegible Next Variable' },
+  { label: 'System', value: 'system-ui' },
+];
+
 export const DEFAULT_FONTS: readonly FontChoice[] = [
   { label: 'Public Sans', value: null },
   { label: 'Inter', value: 'InterVariable', features: '"ss02"' },
@@ -14,6 +22,14 @@ export interface FontChoice {
   readonly label: string;
   readonly value: string | null;
   readonly features?: string;
+}
+
+export function displayFontStack(family: string | null): string {
+  const fallback = "'Fraunces Variable', Georgia, serif";
+  if (family === null) {
+    return fallback;
+  }
+  return family === 'system-ui' ? 'system-ui, sans-serif' : `${JSON.stringify(family)}, ${fallback}`;
 }
 
 export function fontStack(family: string | null): string {

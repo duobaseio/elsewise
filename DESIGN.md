@@ -27,8 +27,9 @@ terminal background to Elsewise's terminal background.
     - Menus, selects, comboboxes and tooltips cast `shadow-md`; submenus, dialogs and toasts cast `shadow-lg`
     - Dialogs and toasts are `rounded-xl`
     - Tooltips are chip scale, `rounded-md`, arrowless
-    - No inverse-surface tooltips: the solid ink slab means a control that is *on*, never a surface
-- **Scrim:** `rgba(47,41,32,.35)` / `rgba(0,0,0,.45)` — a shadow on the paper, not ink, so it is warm by day
+    - No inverse-surface tooltips: the solid primary slab means a control that is *on*, never a surface
+- **Scrim:** `rgba(47,41,32,.35)` / `rgba(0,0,0,.45)` — a shadow on the paper in warm ink, the primary fill's pigment,
+  so it is warm by day
 - **Shadow:** `0 8px 28px rgba(28,36,48,.14)` / `0 8px 28px rgba(0,0,0,.45)` — floating dock groups only
 
 #### Ink (text)
@@ -62,8 +63,10 @@ warm materials. Exceptions: Disabled; the dark fill of bordered controls (Outlin
 strong line at 30%, 50% under a hovered select or combobox trigger; and a focused destructive menu item, error ink at
 10% / 20%.
 
-- **Primary — the material inversion:** ink by day, paper by night
-    - Fill: `#1C2430` → hover `#334A6B` / `#E9E4D8` → hover `#FFFBEC`; text `#FEFDFB` / `#14181F`
+- **Primary — the material inversion:** warm ink by day, paper by night
+    - Fill: `#2F2920` → hover `#464135` / `#E9E4D8` → hover `#FFFBEC`; text `#FEFDFB` / `#14181F`
+    - Warm ink, not the text's: spread over a button, the cool ink reads as a navy slab on the paper. The hover is
+      warm ink mixed halfway to faded ink, a lift that shows at a glance without leaving the pigment
 - **Secondary — the quiet button:** vellum fill, foreground text, no border. Hover: the fill deepens to its line,
   `#F1ECDF` / `#3A4350`
 - **Outline:** page fill (`#FFFFFF` / strong line at 30%), deckle / strong-line border, inherited text
@@ -74,8 +77,8 @@ strong line at 30%, 50% under a hovered select or combobox trigger; and a focuse
 - **Ghost and Outline hover with the Hover state layer**, label and icon keep their ink. `aria-expanded` takes the
   Selected layer; Outline drops its rest fill for the duration
 - **Select and combobox triggers hover with a fill:** vellum (Surface-2) / strong line at 50%
-- **Switch — the instant setting:** checked track is ink with a paper thumb, the same slab as the checked checkbox;
-  unchecked, the strong line. 18 × 32, pen box on focus
+- **Switch — the instant setting:** checked track is the primary fill with a paper thumb, the same slab as the checked
+  checkbox; unchecked, the strong line. 18 × 32, pen box on focus
     - Switch when the value applies the moment it moves (settings rows, right-aligned, detached from its label);
       checkbox when the value is collected for something else to act on (forms, filters), label-adjacent
 - **Destructive — the error voice as a button:** error wash fill, error ink text, never solid madder at rest. Hover

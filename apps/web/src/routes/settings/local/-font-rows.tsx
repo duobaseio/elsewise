@@ -18,102 +18,42 @@ import { Switch } from '@elsewise/components/components/switch';
 import { FONT_SIZES, type Font, type FontSize, type SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { Fragment, type ReactNode, useEffect, useState } from 'react';
 import { type FontChoice, installedFonts } from '@/settings/fonts';
+import { LineHeightInput } from './-line-height-input';
 
 const SIZES: Record<string, string> = Object.fromEntries(FONT_SIZES.map((size) => [String(size), String(size)]));
 
 type FontGroup = { label: string | null; value: string; items: readonly FontChoice[] };
 
 /**
- * The rows of a font: its family and size, then `children`, then its ligatures.
+ * The rows of a font: its family and size, then its line height, then its ligatures.
  */
-export function FontRows<F extends Font>({
+export function FontRows({
   font,
   defaults,
   stack,
   terms,
   description,
+  lineHeightDescription,
   onChange,
-  children,
 }: {
-  font: F;
+  font: Font;
   defaults: readonly FontChoice[];
   stack: (family: string | null) => string;
-  terms: { font: SettingsSearchTerm; ligatures: SettingsSearchTerm };
+  terms: { font: SettingsSearchTerm; lineHeight: SettingsSearchTerm; ligatures: SettingsSearchTerm };
   description: ReactNode;
-  onChange: (font: F) => void;
-  children?: ReactNode;
+  lineHeightDescription: string;
+  onChange: (font: Font) => void;
 }) {
-  const [installed, setInstalled] = useState<readonly string[]>([]);
-  useEffect(() => {
-    installedFonts().then(setInstalled);
-  }, []);
-
-  const groups: FontGroup[] = [{ label: null, value: 'bundled', items: defaults }];
-  if (installed.length > 0) {
-    groups.push({
-      label: 'Installed',
-      value: 'installed',
-      items: installed.map((family) => ({ label: family, value: family })),
-    });
-  }
-  const known = groups.flatMap((group) => group.items).find((item) => item.value === font.family);
-  // A family that is neither bundled nor installed is still listed, so the user sees what is set.
-  const missing = !known && installed.length > 0;
-  const selected = known ?? { label: font.family ?? '', value: font.family };
-  if (missing) {
-    groups.unshift({ label: 'Not installed', value: 'missing', items: [selected] });
-  }
-
   return (
     <>
       <Row id="font" label={terms.font.label} description={description}>
-        <Combobox
-          autoHighlight
-          isItemEqualToValue={(item, value) => item.value === value.value}
-          items={groups}
-          onValueChange={(choice) => {
-            if (choice) {
-              onChange({ ...font, family: choice.value });
-            }
-          }}
-          value={selected}
-        >
-          <ComboboxTrigger aria-label={terms.font.label} className="w-60" size="sm">
-            <ComboboxValue>
-              {(choice: FontChoice | null) => (
-                <>
-                  {choice?.label}
-                  {missing && <span className="text-muted-foreground">(not installed)</span>}
-                </>
-              )}
-            </ComboboxValue>
-          </ComboboxTrigger>
-          <ComboboxContent align="end">
-            <ComboboxInput placeholder="Search fonts" />
-            <ComboboxEmpty>No fonts found</ComboboxEmpty>
-            <ComboboxList>
-              {(group: FontGroup, index: number) => (
-                <Fragment key={group.value}>
-                  {index > 0 && <ComboboxSeparator />}
-                  <ComboboxGroup items={group.items}>
-                    {group.label !== null && <ComboboxLabel>{group.label}</ComboboxLabel>}
-                    <ComboboxCollection>
-                      {(item: FontChoice) => (
-                        <ComboboxItem
-                          key={item.value ?? ''}
-                          style={{ fontFamily: stack(item.value), fontFeatureSettings: item.features }}
-                          value={item}
-                        >
-                          {item.label}
-                        </ComboboxItem>
-                      )}
-                    </ComboboxCollection>
-                  </ComboboxGroup>
-                </Fragment>
-              )}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
+        <FontSelect
+          family={font.family}
+          defaults={defaults}
+          stack={stack}
+          label={terms.font.label}
+          onChange={(family) => onChange({ ...font, family })}
+        />
 
         <Select
           items={SIZES}
@@ -137,7 +77,13 @@ export function FontRows<F extends Font>({
         </Select>
       </Row>
 
-      {children}
+      <Row id="lineHeight" label={terms.lineHeight.label} description={lineHeightDescription}>
+        <LineHeightInput
+          label={terms.lineHeight.label}
+          onChange={(lineHeight) => onChange({ ...font, lineHeight })}
+          value={font.lineHeight}
+        />
+      </Row>
 
       <Row id="ligatures" label={terms.ligatures.label} description="Use several characters as a single ligature.">
         <Switch
@@ -147,5 +93,90 @@ export function FontRows<F extends Font>({
         />
       </Row>
     </>
+  );
+}
+
+export function FontSelect({
+  family,
+  defaults,
+  stack,
+  label,
+  onChange,
+}: {
+  family: string | null;
+  defaults: readonly FontChoice[];
+  stack: (family: string | null) => string;
+  label: string;
+  onChange: (family: string | null) => void;
+}) {
+  const [installed, setInstalled] = useState<readonly string[]>([]);
+  useEffect(() => {
+    installedFonts().then(setInstalled);
+  }, []);
+
+  const groups: FontGroup[] = [{ label: null, value: 'bundled', items: defaults }];
+  if (installed.length > 0) {
+    groups.push({
+      label: 'Installed',
+      value: 'installed',
+      items: installed.map((family) => ({ label: family, value: family })),
+    });
+  }
+  const known = groups.flatMap((group) => group.items).find((item) => item.value === family);
+  // A family that is neither bundled nor installed is still listed, so the user sees what is set.
+  const missing = !known && installed.length > 0;
+  const selected = known ?? { label: family ?? '', value: family };
+  if (missing) {
+    groups.unshift({ label: 'Not installed', value: 'missing', items: [selected] });
+  }
+
+  return (
+    <Combobox
+      autoHighlight
+      isItemEqualToValue={(item, value) => item.value === value.value}
+      items={groups}
+      onValueChange={(choice) => {
+        if (choice) {
+          onChange(choice.value);
+        }
+      }}
+      value={selected}
+    >
+      <ComboboxTrigger aria-label={label} className="w-60" size="sm">
+        <ComboboxValue>
+          {(choice: FontChoice | null) => (
+            <>
+              {choice?.label}
+              {missing && <span className="text-muted-foreground">(not installed)</span>}
+            </>
+          )}
+        </ComboboxValue>
+      </ComboboxTrigger>
+      <ComboboxContent align="end">
+        <ComboboxInput placeholder="Search fonts" />
+        <ComboboxEmpty>No fonts found</ComboboxEmpty>
+        <ComboboxList>
+          {(group: FontGroup, index: number) => (
+            <Fragment key={group.value}>
+              {index > 0 && <ComboboxSeparator />}
+              <ComboboxGroup items={group.items}>
+                {group.label !== null && <ComboboxLabel>{group.label}</ComboboxLabel>}
+                <ComboboxCollection>
+                  {(item: FontChoice) => (
+                    <ComboboxItem
+                      key={item.value ?? ''}
+                      style={{ fontFamily: stack(item.value), fontFeatureSettings: item.features }}
+                      value={item}
+                    >
+                      {item.label}
+                    </ComboboxItem>
+                  )}
+                </ComboboxCollection>
+              </ComboboxGroup>
+            </Fragment>
+          )}
+        </ComboboxList>
+      </ComboboxContent>
+    </Combobox>
   );
 }

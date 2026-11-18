@@ -86,7 +86,10 @@ describe('settings:load', () => {
 
     expect(load()).toEqual({
       ...DEFAULT_FRONTEND_SETTINGS,
-      appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, font: { family: 'Inter', size: 13, ligatures: true } },
+      appearance: {
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        font: { family: 'Inter', size: 13, lineHeight: 1.54, ligatures: true },
+      },
     });
   });
 
@@ -310,9 +313,30 @@ describe('settings:load', () => {
     }
   });
 
-  test('drops the interface font line height', () => {
-    write({ appearance: { font: { lineHeight: 2 } } });
+  test('keeps a valid display font and replaces a bad one', () => {
+    write({ appearance: { displayFont: 'Georgia' } });
+    expect(load()).toEqual({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, displayFont: 'Georgia' },
+    });
 
+    for (const displayFont of ['', 12]) {
+      write({ appearance: { displayFont } });
+      expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
+    }
+  });
+
+  test('keeps a valid interface line height and replaces a bad one', () => {
+    write({ appearance: { font: { lineHeight: 2 } } });
+    expect(load()).toEqual({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      appearance: {
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        font: { ...DEFAULT_FRONTEND_SETTINGS.appearance.font, lineHeight: 2 },
+      },
+    });
+
+    write({ appearance: { font: { lineHeight: 0.9 } } });
     expect(load()).toEqual(DEFAULT_FRONTEND_SETTINGS);
   });
 
@@ -328,7 +352,7 @@ describe('settings:save', () => {
     const appearance = {
       ...DEFAULT_FRONTEND_SETTINGS.appearance,
       brightness: 'dark',
-      font: { family: 'Inter', size: 16, ligatures: true },
+      font: { family: 'Inter', size: 16, lineHeight: 1.54, ligatures: true },
     };
     save({ ...DEFAULT_FRONTEND_SETTINGS, appearance: { ...appearance, extra: 1 } });
 
@@ -355,7 +379,10 @@ describe('settings:save', () => {
 
     expect(JSON.parse(fs.readFileSync(FILE, 'utf8'))).toEqual({
       ...DEFAULT_FRONTEND_SETTINGS,
-      appearance: { ...DEFAULT_FRONTEND_SETTINGS.appearance, font: { family: null, size: 16, ligatures: true } },
+      appearance: {
+        ...DEFAULT_FRONTEND_SETTINGS.appearance,
+        font: { family: null, size: 16, lineHeight: 1.54, ligatures: true },
+      },
       terminal: { ...DEFAULT_FRONTEND_SETTINGS.terminal, cursorStyle: 'bar' },
     });
   });
