@@ -17,8 +17,8 @@ export const FILE_TREE_NEW_FILE: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'New file…',
   defaultKeys: DEFAULT_KEYS.fileTree.new.file,
-  enabled: (_, { paths }) => paths.length <= 1,
-  run: ({ fileTree }: ApplicationManager, { workspace, paths: [path] }) => {
+  enabled: (_, { relativePaths }) => relativePaths.length <= 1,
+  run: ({ fileTree }: ApplicationManager, { workspace, relativePaths: [path] }) => {
     fileTree.newDialog.openWithPayload({ workspace, folder: folderOf(path), kind: 'file' });
     return true;
   },
@@ -30,8 +30,8 @@ export const FILE_TREE_NEW_FOLDER: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'New folder…',
   defaultKeys: DEFAULT_KEYS.fileTree.new.folder,
-  enabled: (_, { paths }) => paths.length <= 1,
-  run: ({ fileTree }: ApplicationManager, { workspace, paths: [path] }) => {
+  enabled: (_, { relativePaths }) => relativePaths.length <= 1,
+  run: ({ fileTree }: ApplicationManager, { workspace, relativePaths: [path] }) => {
     fileTree.newDialog.openWithPayload({ workspace, folder: folderOf(path), kind: 'folder' });
     return true;
   },
@@ -43,10 +43,10 @@ export const FILE_TREE_CUT: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Cut',
   defaultKeys: DEFAULT_KEYS.fileTree.clipboard.cut,
-  shown: (_, { paths }) => paths.length > 0,
-  enabled: (_, { paths }) => paths.length > 0,
-  run: ({ fileTree }: ApplicationManager, { workspace, paths }) => {
-    fileTree.clipboard = { cut: true, workspace: workspace.id, paths };
+  shown: (_, { relativePaths }) => relativePaths.length > 0,
+  enabled: (_, { relativePaths }) => relativePaths.length > 0,
+  run: ({ fileTree }: ApplicationManager, { workspace, relativePaths }) => {
+    fileTree.clipboard = { cut: true, workspace: workspace.id, paths: relativePaths };
     return true;
   },
 };
@@ -57,10 +57,10 @@ export const FILE_TREE_COPY: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Copy',
   defaultKeys: DEFAULT_KEYS.fileTree.clipboard.copy,
-  shown: (_, { paths }) => paths.length > 0,
-  enabled: (_, { paths }) => paths.length > 0,
-  run: ({ fileTree }: ApplicationManager, { workspace, paths }) => {
-    fileTree.clipboard = { cut: false, workspace: workspace.id, paths };
+  shown: (_, { relativePaths }) => relativePaths.length > 0,
+  enabled: (_, { relativePaths }) => relativePaths.length > 0,
+  run: ({ fileTree }: ApplicationManager, { workspace, relativePaths }) => {
+    fileTree.clipboard = { cut: false, workspace: workspace.id, paths: relativePaths };
     return true;
   },
 };
@@ -71,10 +71,10 @@ export const FILE_TREE_COPY_PATH: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Copy absolute path',
   defaultKeys: DEFAULT_KEYS.fileTree.clipboard.copyPath,
-  shown: (_, { paths }) => paths.length > 0,
-  enabled: (_, { paths }) => paths.length > 0,
-  run: (_, { workspace, paths }) => {
-    void navigator.clipboard.writeText(paths.map((path) => absolutePath(workspace, path)).join('\n'));
+  shown: (_, { relativePaths }) => relativePaths.length > 0,
+  enabled: (_, { relativePaths }) => relativePaths.length > 0,
+  run: (_, { workspace, relativePaths }) => {
+    void navigator.clipboard.writeText(relativePaths.map((path) => absolutePath(workspace, path)).join('\n'));
     return true;
   },
 };
@@ -85,10 +85,10 @@ export const FILE_TREE_COPY_RELATIVE_PATH: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Copy path from workspace',
   defaultKeys: DEFAULT_KEYS.fileTree.clipboard.copyRelativePath,
-  shown: (_, { paths }) => paths.length > 0,
-  enabled: (_, { paths }) => paths.length > 0,
-  run: (_, { paths }) => {
-    void navigator.clipboard.writeText(paths.map((path) => path.replace(/\/$/, '')).join('\n'));
+  shown: (_, { relativePaths }) => relativePaths.length > 0,
+  enabled: (_, { relativePaths }) => relativePaths.length > 0,
+  run: (_, { relativePaths }) => {
+    void navigator.clipboard.writeText(relativePaths.map((path) => path.replace(/\/$/, '')).join('\n'));
     return true;
   },
 };
@@ -99,9 +99,11 @@ export const FILE_TREE_PASTE: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Paste…',
   defaultKeys: DEFAULT_KEYS.fileTree.clipboard.paste,
-  enabled: ({ fileTree }: ApplicationManager, { workspace, paths }) =>
-    paths.length <= 1 && fileTree.clipboard !== null && sameWorkspace(fileTree.clipboard.workspace, workspace.id),
-  run: ({ fileTree }: ApplicationManager, { workspace, paths: [path] }) => {
+  enabled: ({ fileTree }: ApplicationManager, { workspace, relativePaths }) =>
+    relativePaths.length <= 1 &&
+    fileTree.clipboard !== null &&
+    sameWorkspace(fileTree.clipboard.workspace, workspace.id),
+  run: ({ fileTree }: ApplicationManager, { workspace, relativePaths: [path] }) => {
     if (fileTree.clipboard !== null) {
       fileTree.pasteDialog.openWithPayload({ workspace, folder: folderOf(path), clipboard: fileTree.clipboard });
     }
@@ -129,9 +131,9 @@ export const FILE_TREE_RENAME: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Rename…',
   defaultKeys: DEFAULT_KEYS.fileTree.edit.rename,
-  shown: (_, { paths }) => paths.length > 0,
-  enabled: (_, { paths }) => paths.length === 1,
-  run: ({ fileTree }: ApplicationManager, { workspace, paths: [path] }) => {
+  shown: (_, { relativePaths }) => relativePaths.length > 0,
+  enabled: (_, { relativePaths }) => relativePaths.length === 1,
+  run: ({ fileTree }: ApplicationManager, { workspace, relativePaths: [path] }) => {
     if (path !== undefined) {
       fileTree.renaming = { workspace: workspace.id, path };
     }
@@ -145,8 +147,8 @@ export const FILE_TREE_DELETE: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: 'Delete…',
   defaultKeys: DEFAULT_KEYS.fileTree.edit.delete,
-  shown: (_, { paths }) => paths.length > 0,
-  enabled: (_, { paths }) => paths.length > 0,
+  shown: (_, { relativePaths }) => relativePaths.length > 0,
+  enabled: (_, { relativePaths }) => relativePaths.length > 0,
   run: ({ fileTree }: ApplicationManager, selection) => {
     fileTree.deleteDialog.openWithPayload(selection);
     return true;
@@ -159,13 +161,13 @@ export const FILE_TREE_OPEN_FILE_MANAGER: FileTreeCommand = {
   group: DEFAULT_COMMAND_GROUPS.fileTree.id,
   label: `Open in ${FILE_MANAGER}`,
   defaultKeys: DEFAULT_KEYS.fileTree.open.fileManager,
-  shown: (_, { workspace, paths }) =>
-    paths.length > 0 &&
+  shown: (_, { workspace, relativePaths }) =>
+    relativePaths.length > 0 &&
     workspace.id.daemon === LOCAL_DAEMON_ID &&
     workspace.state !== 'missing' &&
     window.bridge?.window?.showPath !== undefined,
-  enabled: (_, { paths }) => paths.length === 1,
-  run: ({ platform }, { workspace, paths: [path] }) => {
+  enabled: (_, { relativePaths }) => relativePaths.length === 1,
+  run: ({ platform }, { workspace, relativePaths: [path] }) => {
     if (path === undefined) {
       return true;
     }

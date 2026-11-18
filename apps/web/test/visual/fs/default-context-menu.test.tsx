@@ -42,7 +42,7 @@ async function open(theme: 'light' | 'dark', paths: readonly string[]) {
   });
   const application = builtInApplication();
   application.fileTree.clipboard = { cut: false, workspace: WORKSPACE.id, paths: ['README.md'] };
-  const target: { current: FileTreeSelection } = { current: { workspace: WORKSPACE, paths } };
+  const target: { current: FileTreeSelection } = { current: { workspace: WORKSPACE, relativePaths: paths } };
   render(
     <ApplicationManagerContext value={application}>
       <div

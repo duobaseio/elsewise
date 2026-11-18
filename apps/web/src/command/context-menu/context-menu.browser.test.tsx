@@ -132,7 +132,7 @@ describe('CommandContextMenu', () => {
           main: false,
           absolutePath: '/p/w',
         },
-        paths: ['a'],
+        relativePaths: ['a'],
       },
       'File tree',
     ],

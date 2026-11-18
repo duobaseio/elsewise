@@ -79,7 +79,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
           }
         }
         clicked.current = path ?? null;
-        target.current = { workspace, paths: [...paths] };
+        target.current = { workspace, relativePaths: [...paths] };
         return true;
       }}
       onClosed={() => {
@@ -94,7 +94,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
         <div
           onKeyDown={(event) => {
             if (workspace !== undefined) {
-              runFileTreeKeys(commands, { workspace, paths: [...model.getSelectedPaths()] }, event.nativeEvent);
+              runFileTreeKeys(commands, { workspace, relativePaths: [...model.getSelectedPaths()] }, event.nativeEvent);
             }
           }}
           onDragOver={(event) => {

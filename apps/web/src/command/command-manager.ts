@@ -511,7 +511,7 @@ export function isWorkspace(
 export function isEditor(
   target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
 ): target is EditorView {
-  return !('absolutePath' in target) && !('paths' in target) && !('session' in target);
+  return !('absolutePath' in target) && !('relativePaths' in target) && !('session' in target);
 }
 
 export function isTerminalView(
@@ -523,7 +523,7 @@ export function isTerminalView(
 export function isFileTreeSelection(
   target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
 ): target is FileTreeSelection {
-  return 'paths' in target;
+  return 'relativePaths' in target;
 }
 
 export function useCommandManager(): CommandManager;

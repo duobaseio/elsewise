@@ -1,6 +1,8 @@
 import type { Disposable } from '@elsewise/plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { ActiveKeymap, Commands } from './command';
+import type { Dock, Docks } from './dock/docks';
+import type { Panel } from './dock/panels';
 import type { Editor } from './editor/editor';
 import type { FileTree } from './file-tree';
 import type { FrontendSettings } from './frontend-settings';
@@ -118,6 +120,28 @@ export interface Plugin {
    * Called with a terminal when its session changes, e.g. when it is renamed or its shell exits.
    */
   onTerminalChange?(app: Application, view: TerminalView): void;
+
+  /**
+   * Called with a dock panel when it opens.
+   *
+   * It is not called when another workspace is shown.
+   */
+  onPanelOpen?(app: Application, dock: Dock, panel: Panel): void;
+
+  /**
+   * Called with a dock panel when it closes.
+   *
+   * It is not called when another workspace is shown.
+   */
+  onPanelClose?(app: Application, dock: Dock, panel: Panel): void;
+
+  /**
+   * Called with the dock of the workspace shown when another workspace is shown, or it changes, e.g. when a panel opens,
+   * closes or moves, or another becomes active.
+   *
+   * It is called once for changes that happen together, after `onPanelOpen` and `onPanelClose`.
+   */
+  onDockChange?(app: Application, dock: Dock | null): void;
 }
 
 /**
@@ -170,6 +194,11 @@ export interface Application {
    * The file tree.
    */
   readonly fileTree: FileTree;
+
+  /**
+   * The docks.
+   */
+  readonly docks: Docks;
 }
 
 /**
