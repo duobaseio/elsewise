@@ -7,6 +7,7 @@ import { useActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
 import { ApplicationManager } from '@/application-manager';
 import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
+import { DocksManager } from '@/dock/docks-manager';
 import { FAKE_GIT } from '@/editor/diff/fake-diff';
 import { EditorManager } from '@/editor/editor-manager';
 import { LanguageServers, LanguageServersContext } from '@/editor/lsp/language-servers';
@@ -53,14 +54,16 @@ function RootComponent() {
   const workspaceStates = useWorkspaceStateStore();
 
   const [{ application, languageServers }] = useState(() => {
+    const projects = new ProjectManager(client, router, workspaceStates);
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
       router,
       new SettingsPanelManager(Object.values(DEFAULT_PANELS), frontend),
-      new ProjectManager(client, router, workspaceStates),
+      projects,
       new EditorManager(),
       new TerminalManager(client),
       new FileTreeManager(),
+      new DocksManager(projects.workspaces),
       keymap,
     );
 

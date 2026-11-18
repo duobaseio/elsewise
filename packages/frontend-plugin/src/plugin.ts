@@ -139,7 +139,7 @@ export interface Plugin {
    * Called with the dock of the workspace shown when another workspace is shown, or it changes, e.g. when a panel opens,
    * closes or moves, or another becomes active.
    *
-   * It is called once for changes that happen together, after `onPanelOpen` and `onPanelClose`.
+   * It is called after `onPanelOpen` and `onPanelClose`.
    */
   onDockChange?(app: Application, dock: Dock | null): void;
 }

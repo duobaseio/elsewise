@@ -9,6 +9,7 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { ApplicationManager } from '@/application-manager';
 import type { CommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap/keymap';
+import { DocksManager } from '@/dock/docks-manager';
 import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { FileTreeManager } from '@/fs/file-tree-manager';
 import { ProjectManager } from '@/projects/project-manager';
@@ -26,14 +27,16 @@ export function builtInApplication(
   platform?: Platform,
 ): ApplicationManager {
   const router = parts.router ?? memoryRouter();
+  const projects = parts.projects ?? new ProjectManager(new QueryClient(), router);
   return new ApplicationManager(
     parts.appearance ?? new AppearanceManager('light', resolveActiveTheme(undefined, 'light')),
     router,
     parts.settings ?? new SettingsPanelManager(),
-    parts.projects ?? new ProjectManager(new QueryClient(), router),
+    projects,
     parts.editor ?? new EditorManager(),
     parts.terminals ?? new TerminalManager(new QueryClient()),
     parts.fileTree ?? new FileTreeManager(),
+    new DocksManager(projects.workspaces),
     EMPTY_KEYMAP,
     platform,
   );

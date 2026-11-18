@@ -343,8 +343,14 @@ export class WorkspaceManager implements Workspaces {
   }
 }
 
-export function sameWorkspace(a: WorkspaceId, b: WorkspaceId): boolean {
-  return a.daemon === b.daemon && a.project === b.project && a.workspace === b.workspace;
+export function sameWorkspace(a: WorkspaceId | undefined, b: WorkspaceId | undefined): boolean {
+  return (
+    a !== undefined &&
+    b !== undefined &&
+    a.daemon === b.daemon &&
+    a.project === b.project &&
+    a.workspace === b.workspace
+  );
 }
 
 // Returns the workspace in the URL.

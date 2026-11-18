@@ -3,7 +3,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
-import type { DiffLayout } from '@elsewise/frontend-plugin';
+import type { DiffLayout, Disposable } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
@@ -66,8 +66,19 @@ function WorkspaceRoute() {
     (layout: SerializedDockview) => store.update({ daemon, project, workspace }, { dock: layout }),
     [store, daemon, project, workspace],
   );
-  const terminals = useApplicationManager().terminals;
+
+  const { docks, terminals } = useApplicationManager();
+  const attached = useRef<Disposable | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: detaches the dock of the workspace left
+  useEffect(
+    () => () => {
+      void attached.current?.();
+      attached.current = null;
+    },
+    [daemon, project, workspace],
+  );
   const onDockviewReady = (api: DockviewApi) => {
+    attached.current = docks.attach({ daemon, project, workspace }, api);
     if (dock === undefined) {
       terminals.store
         .add({ daemon, project, workspace })

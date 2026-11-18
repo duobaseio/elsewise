@@ -113,6 +113,30 @@ export class PluginStore extends PluginResolver<
         ),
       );
     }
+
+    if (plugin.onPanelOpen) {
+      listeners.push(
+        application.docks.onPanelOpen((dock, panel) =>
+          this.call(id, 'onPanelOpen', () => plugin.onPanelOpen?.(application, dock, panel)),
+        ),
+      );
+    }
+
+    if (plugin.onPanelClose) {
+      listeners.push(
+        application.docks.onPanelClose((dock, panel) =>
+          this.call(id, 'onPanelClose', () => plugin.onPanelClose?.(application, dock, panel)),
+        ),
+      );
+    }
+
+    if (plugin.onDockChange) {
+      listeners.push(
+        application.docks.onChange((dock) =>
+          this.call(id, 'onDockChange', () => plugin.onDockChange?.(application, dock)),
+        ),
+      );
+    }
     return listeners;
   }
 
