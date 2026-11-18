@@ -605,7 +605,8 @@ message Item {
       // A terminal type is not supported as the terminal is always run on the same instance as the daemon running the
       // acp server.
       oneof type {
-        Other other = 1; // An output this message does not describe (e.g. a terminal).
+        // An output this message does not describe (e.g. a terminal).
+        Other other = 1;
         Content content = 2;
         Diff diff = 3;
       }
@@ -688,7 +689,8 @@ message Item {
 // A piece of a message that represents ACP's content types.
 message Content {
   oneof type {
-    Other other = 1; // Content this message does not describe (e.g. audio).
+    // Content this message does not describe (e.g. audio).
+    Other other = 1;
     string text = 2;
     Image image = 3;
     Link link = 4;

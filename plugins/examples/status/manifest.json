@@ -2,6 +2,6 @@
   "id": "io.duobase.elsewise.examples.status",
   "name": "Status example",
   "version": "1.0.0",
-  "elsewise": "^1.0.0",
+  "elsewise": "^0.1.0",
   "frontend": { "main": "main.js" }
 }
