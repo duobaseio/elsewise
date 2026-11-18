@@ -1,35 +1,13 @@
 import { create } from '@bufbuild/protobuf';
-import type { Disposable, WorkspaceId } from '@elsewise/frontend-plugin';
+import type { Disposable } from '@elsewise/frontend-plugin';
 import { QueryClient } from '@tanstack/react-query';
 import { createMemoryHistory, createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
-import type { DockviewApi } from 'dockview-react';
 import { describe, expect, test, vi } from 'vitest';
-import { render } from 'vitest-browser-react';
 import { WorkspaceSchema } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { WorkspaceManager, workspacesQuery } from '@/projects/workspace-manager';
-import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
-import { STUB_PANELS } from '../../test/dock-stubs';
+import { TerminalManager } from '@/terminals/terminal-manager';
+import { addTerminal, EDITOR, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
 import { DocksManager } from './docks-manager';
-
-import 'dockview-react/dist/styles/dockview.css';
-
-const WORKSPACE: WorkspaceId = { daemon: 'd', project: 'p', workspace: 'w' };
-
-const EDITOR = {
-  id: 'editor:$workspace.tsx',
-  type: 'editor',
-  tab: true,
-  closable: true,
-  relativePath: 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx',
-};
-const FILE_TREE = { id: 'fileTree', type: 'fileTree', tab: false, closable: false };
-const TERMINAL = {
-  id: 'terminal:1',
-  type: 'terminal',
-  tab: true,
-  closable: true,
-  session: { ...WORKSPACE, session: '1' },
-};
 
 // Dockview reports some changes late, so listeners are given time to be called.
 function settle() {
@@ -53,28 +31,14 @@ async function docksOf(shown: boolean) {
     await router.load();
     await vi.waitFor(() => expect(workspaces.active).not.toBeNull());
   }
-  return new DocksManager(workspaces);
+  return new DocksManager(workspaces, new TerminalManager(client));
 }
 
 async function mount(shown = true) {
   const docks = await docksOf(shown);
-  let api: DockviewApi | undefined;
   let detach: Disposable | undefined;
-  await render(
-    <div style={{ width: 1100, height: 700 }}>
-      <WorkspaceDock
-        panels={STUB_PANELS}
-        onDockviewReady={(ready) => {
-          api = ready;
-          detach = docks.attach(WORKSPACE, ready);
-        }}
-      />
-    </div>,
-  );
-  await vi.waitFor(() => {
-    if (api === undefined) {
-      throw new Error('dock not ready');
-    }
+  const api = await mountDock((ready) => {
+    detach = docks.attach(WORKSPACE, ready);
   });
   await settle();
 
@@ -84,16 +48,7 @@ async function mount(shown = true) {
   docks.onPanelOpen(opened);
   docks.onPanelClose(closed);
   docks.onChange(changed);
-  return { docks, api: api as DockviewApi, detach: detach as Disposable, opened, closed, changed };
-}
-
-function addTerminal(api: DockviewApi) {
-  return api.addPanel({
-    id: 'terminal:1',
-    component: 'terminal',
-    params: { session: '1' },
-    position: { referencePanel: EDITOR.id, direction: 'below' },
-  });
+  return { docks, api, detach: detach as Disposable, opened, closed, changed };
 }
 
 describe('active', () => {
@@ -118,11 +73,7 @@ describe('attach', () => {
     docks.onPanelOpen(opened);
     docks.onChange(changed);
 
-    await render(
-      <div style={{ width: 1100, height: 700 }}>
-        <WorkspaceDock panels={STUB_PANELS} onDockviewReady={(ready) => docks.attach(WORKSPACE, ready)} />
-      </div>,
-    );
+    await mountDock((ready) => docks.attach(WORKSPACE, ready));
     await settle();
 
     expect(changed).toHaveBeenCalledExactlyOnceWith(docks.active);

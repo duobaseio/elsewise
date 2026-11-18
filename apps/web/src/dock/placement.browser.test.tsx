@@ -1,37 +1,14 @@
-import type { Layout, Panel, Placement, TablessPanel, TabPanel, WorkspaceId } from '@elsewise/frontend-plugin';
-import type { DockviewApi } from 'dockview-react';
-import { describe, expect, test, vi } from 'vitest';
-import { render } from 'vitest-browser-react';
-import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
-import { STUB_PANELS } from '../../test/dock-stubs';
+import type { Layout, Panel, Placement, TablessPanel, TabPanel } from '@elsewise/frontend-plugin';
+import { describe, expect, test } from 'vitest';
+import { mount as mountDock, WORKSPACE } from '../../test/dock';
 import { DockStore } from './dock-store';
 import { addPanel, movePanel } from './placement';
 
-import 'dockview-react/dist/styles/dockview.css';
-
-const WORKSPACE: WorkspaceId = { daemon: 'd', project: 'p', workspace: 'w' };
 const EDITOR = 'editor:$workspace.tsx';
 
 // A dock whose first group has the tabs editor, a, b and c, beside the file tree's.
 async function mount() {
-  let api: DockviewApi | undefined;
-  await render(
-    <div style={{ width: 1100, height: 700 }}>
-      <WorkspaceDock
-        panels={STUB_PANELS}
-        onDockviewReady={(ready) => {
-          api = ready;
-        }}
-      />
-    </div>,
-  );
-  await vi.waitFor(() => {
-    if (api === undefined) {
-      throw new Error('dock not ready');
-    }
-  });
-
-  const dockview = api as DockviewApi;
+  const dockview = await mountDock();
   for (const id of ['a', 'b', 'c']) {
     dockview.addPanel({ id, component: 'terminal', params: { session: id }, position: { referencePanel: EDITOR } });
   }

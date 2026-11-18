@@ -28,15 +28,16 @@ export function builtInApplication(
 ): ApplicationManager {
   const router = parts.router ?? memoryRouter();
   const projects = parts.projects ?? new ProjectManager(new QueryClient(), router);
+  const terminals = parts.terminals ?? new TerminalManager(new QueryClient());
   return new ApplicationManager(
     parts.appearance ?? new AppearanceManager('light', resolveActiveTheme(undefined, 'light')),
     router,
     parts.settings ?? new SettingsPanelManager(),
     projects,
     parts.editor ?? new EditorManager(),
-    parts.terminals ?? new TerminalManager(new QueryClient()),
+    terminals,
     parts.fileTree ?? new FileTreeManager(),
-    new DocksManager(projects.workspaces),
+    new DocksManager(projects.workspaces, terminals),
     EMPTY_KEYMAP,
     platform,
   );

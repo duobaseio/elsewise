@@ -82,17 +82,19 @@ export interface Dock {
   /**
    * Moves `panel` to `placement`.
    *
+   * The panel is shown, and becomes the active panel.
+   *
    * Does nothing if `panel`, or the panel that `placement` refers to, is not open.
    */
   move(panel: TabPanel, placement: Placement): void;
   move(panel: TablessPanel, placement: GroupPlacement): void;
 
   /**
-   * Closes `panel`, unless what it shows refuses, e.g. to keep unsaved changes.
+   * Shows `panel` and makes it the active panel.
    *
-   * Returns false if the panel stays open.
+   * Does nothing if `panel` is not open.
    */
-  close(panel: ClosablePanel): Promise<boolean>;
+  activate(panel: Panel): void;
 
   /**
    * Shows `panel` in its group, and the group if it is hidden.
@@ -109,9 +111,9 @@ export interface Dock {
   hide(panel: Panel): void;
 
   /**
-   * Shows `panel` and makes it the active panel.
+   * Closes `panel`, unless what it shows refuses, e.g. to keep unsaved changes.
    *
-   * Does nothing if `panel` is not open.
+   * Returns false if the panel stays open.
    */
-  activate(panel: Panel): void;
+  close(panel: ClosablePanel): Promise<boolean>;
 }

@@ -55,15 +55,16 @@ function RootComponent() {
 
   const [{ application, languageServers }] = useState(() => {
     const projects = new ProjectManager(client, router, workspaceStates);
+    const terminals = new TerminalManager(client);
     const application = new ApplicationManager(
       new AppearanceManager(brightness, theme),
       router,
       new SettingsPanelManager(Object.values(DEFAULT_PANELS), frontend),
       projects,
       new EditorManager(),
-      new TerminalManager(client),
+      terminals,
       new FileTreeManager(),
-      new DocksManager(projects.workspaces),
+      new DocksManager(projects.workspaces, terminals),
       keymap,
     );
 

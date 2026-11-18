@@ -1,9 +1,13 @@
 import type {
+  ClosablePanel,
   Dock,
   EditorPanel,
   Group,
+  GroupPlacement,
   Layout,
   Panel,
+  Placement,
+  TablessPanel,
   TabPanel,
   TerminalPanel,
   Workspace,
@@ -11,7 +15,9 @@ import type {
 } from '@elsewise/frontend-plugin';
 import type { DockviewApi, DockviewIDisposable } from 'dockview-react';
 import { sameWorkspace, type WorkspaceManager } from '@/projects/workspace-manager';
+import type { TerminalManager } from '@/terminals/terminal-manager';
 import { DockStore } from './dock-store';
+import { movePanel } from './placement';
 
 /**
  * A workspace's dock, read from its dockview.
@@ -24,8 +30,9 @@ export class DockManager implements Dock {
 
   constructor(
     readonly workspaceId: WorkspaceId,
-    dockview: DockviewApi,
+    private readonly dockview: DockviewApi,
     private readonly workspaces: WorkspaceManager,
+    private readonly terminals: TerminalManager,
     onOpen: (panel: Panel) => void,
     onClose: (panel: Panel) => void,
     onChange: () => void,
@@ -114,29 +121,51 @@ export class DockManager implements Dock {
     throw new Error('Not implemented');
   }
 
-  // TODO: Implement with the operations on open panels.
-  move(): void {
-    throw new Error('Not implemented');
+  move(panel: TabPanel, placement: Placement): void;
+  move(panel: TablessPanel, placement: GroupPlacement): void;
+  move(panel: Panel, placement: Placement): void {
+    if (movePanel(this.dockview, this.panels, panel, placement)) {
+      this.update();
+    }
   }
 
-  // TODO: Implement with the operations on open panels.
-  close(): Promise<boolean> {
-    throw new Error('Not implemented');
+  activate(panel: Panel): void {
+    const open = this.dockview.getPanel(panel.id);
+    if (open === undefined) {
+      return;
+    }
+
+    open.group.api.setVisible(true);
+    open.api.setActive();
+    this.update();
   }
 
-  // TODO: Implement with the operations on open panels.
-  show(): void {
-    throw new Error('Not implemented');
+  show(panel: Panel): void {
+    const open = this.dockview.getPanel(panel.id);
+    if (open === undefined) {
+      return;
+    }
+
+    open.group.api.setVisible(true);
+    open.group.model.openPanel(open, { skipSetGroupActive: true });
+    this.update();
   }
 
-  // TODO: Implement with the operations on open panels.
-  hide(): void {
-    throw new Error('Not implemented');
+  hide(panel: Panel): void {
+    this.dockview.getPanel(panel.id)?.group.api.setVisible(false);
+    this.update();
   }
 
-  // TODO: Implement with the operations on open panels.
-  activate(): void {
-    throw new Error('Not implemented');
+  async close(panel: ClosablePanel): Promise<boolean> {
+    const open = this.get(panel.id);
+    if (open?.type === 'terminal') {
+      await this.terminals.delete(open.session);
+    }
+
+    // A terminal's panel closes itself once its terminal is deleted.
+    this.dockview.getPanel(panel.id)?.api.close();
+    this.update();
+    return true;
   }
 
   dispose() {

@@ -1,58 +1,10 @@
-import type { WorkspaceId } from '@elsewise/frontend-plugin';
-import type { DockviewApi } from 'dockview-react';
-import { describe, expect, test, vi } from 'vitest';
-import { render } from 'vitest-browser-react';
-import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
-import { STUB_PANELS } from '../../test/dock-stubs';
+import { describe, expect, test } from 'vitest';
+import { addTerminal, EDITOR, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
 import { DockStore } from './dock-store';
 
-import 'dockview-react/dist/styles/dockview.css';
-
-const WORKSPACE: WorkspaceId = { daemon: 'd', project: 'p', workspace: 'w' };
-
-const EDITOR = {
-  id: 'editor:$workspace.tsx',
-  type: 'editor',
-  tab: true,
-  closable: true,
-  relativePath: 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx',
-};
-const FILE_TREE = { id: 'fileTree', type: 'fileTree', tab: false, closable: false };
-const TERMINAL = {
-  id: 'terminal:1',
-  type: 'terminal',
-  tab: true,
-  closable: true,
-  session: { ...WORKSPACE, session: '1' },
-};
-
 async function mount() {
-  let api: DockviewApi | undefined;
-  await render(
-    <div style={{ width: 1100, height: 700 }}>
-      <WorkspaceDock
-        panels={STUB_PANELS}
-        onDockviewReady={(ready) => {
-          api = ready;
-        }}
-      />
-    </div>,
-  );
-  await vi.waitFor(() => {
-    if (api === undefined) {
-      throw new Error('dock not ready');
-    }
-  });
-  return { api: api as DockviewApi, store: new DockStore(WORKSPACE, api as DockviewApi) };
-}
-
-function addTerminal(api: DockviewApi) {
-  return api.addPanel({
-    id: 'terminal:1',
-    component: 'terminal',
-    params: { session: '1' },
-    position: { referencePanel: EDITOR.id, direction: 'below' },
-  });
+  const api = await mountDock();
+  return { api, store: new DockStore(WORKSPACE, api) };
 }
 
 describe('snapshot', () => {
