@@ -99,7 +99,11 @@ export function Appearance() {
         terms={APPEARANCE_TERMS}
       />
 
-      <Row id="displayFont" label={APPEARANCE_TERMS.displayFont.label} description="The interface's accent font for headlines.">
+      <Row
+        id="displayFont"
+        label={APPEARANCE_TERMS.displayFont.label}
+        description="The interface's accent font for headlines."
+      >
         <FontSelect
           family={appearance.displayFont}
           defaults={DEFAULT_DISPLAY_FONTS}

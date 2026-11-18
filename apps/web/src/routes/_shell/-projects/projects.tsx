@@ -70,7 +70,7 @@ interface SourceGroup {
   readonly entries: readonly (
     | ProjectSource
     | { readonly submenu: string; readonly label: string; readonly groups: readonly SourceGroup[] }
-    )[];
+  )[];
 }
 
 /**
