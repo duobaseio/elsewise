@@ -47,6 +47,19 @@ awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/d
   relative one is a protocol path with no `.` or `..` segment, resolved against a root. `FileSystemService` predates
   the rule and keeps `root` for the absolute path a request works in.
 
+## Absent values
+
+A plain value (a string, bytes, a number, a bool) never gives "unset" a meaning of its own. The generated TypeScript
+types it as required (`title: string`) and reads an unset field as its default, so only `isFieldSet` could tell the
+two apart, and no handler calls it.
+
+- The default is the value for "nothing here", and the comment says so: `// Empty leaves it as is.`,
+  `// Empty when unknown.`, `// 0 when unknown.`
+- "Unset" is written only on a message field or a `oneof`, which read as `undefined`.
+- A plain value whose default is a real value the caller must be able to send gets an explicit third state, as an enum
+  whose `_UNSPECIFIED` leaves things as they are. This is the one case where `_UNSPECIFIED` is sent, and its comment
+  says what it does: `READ_STATE_UNSPECIFIED = 0; // Leaves the session as it is.`
+
 ## Commands
 
 Run from the repo root:

@@ -1,5 +1,11 @@
 import type { InstalledFrontendPlugin } from '@elsewise/bridge';
-import { type EnabledSnapshot, type InvalidPlugin, PluginResolver, type PluginSnapshot } from '@elsewise/core';
+import {
+  type EnabledSnapshot,
+  type InvalidPlugin,
+  PluginResolver,
+  type PluginSnapshot,
+  type Scope,
+} from '@elsewise/core';
 import type { Disposable, Keymap, Plugin as PluginImplementation, Theme } from '@elsewise/frontend-plugin';
 import { createContext, useCallback, useContext, useSyncExternalStore } from 'react';
 import type { ApplicationManager } from '@/application-manager';
@@ -46,6 +52,10 @@ export class PluginStore extends PluginResolver<
         console.error(`Plugin ${id}'s keymap ${keymap.id} failed to load: ${keymap.error}`);
       }
     }
+  }
+
+  protected scope(_id: string, application: ApplicationManager): Scope<ApplicationManager> {
+    return { api: application, dispose: () => {} };
   }
 
   protected onEnable(id: string, plugin: PluginImplementation, application: ApplicationManager): readonly Disposable[] {

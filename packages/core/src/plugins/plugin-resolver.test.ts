@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { InstalledPlugin, InvalidPlugin } from './plugin';
-import { type EnabledSnapshot, type Lifecycle, PluginResolver } from './plugin-resolver';
+import { type EnabledSnapshot, type Lifecycle, PluginResolver, type Scope } from './plugin-resolver';
 
 // A resolver over the plugins `source` returns, for a host that provides nothing.
 class TestResolver extends PluginResolver<InstalledPlugin, object, Lifecycle<object>, EnabledSnapshot> {
   protected readonly part = 'frontend';
   version: string | undefined;
+  // The ids of the plugins whose scope was disposed in order.
+  readonly unscoped: string[] = [];
   source: (id?: string) => Promise<(InstalledPlugin | InvalidPlugin)[] | InstalledPlugin | InvalidPlugin | undefined> =
     async () => [];
 
@@ -13,6 +15,10 @@ class TestResolver extends PluginResolver<InstalledPlugin, object, Lifecycle<obj
   protected installed(id: string): Promise<InstalledPlugin | InvalidPlugin | undefined>;
   protected installed(id?: string) {
     return this.source(id);
+  }
+
+  protected scope(id: string, host: object): Scope<object> {
+    return { api: host, dispose: () => void this.unscoped.push(id) };
   }
 
   protected onEnable() {
@@ -182,6 +188,25 @@ describe('enable', () => {
     ).resolves.toBe('failed');
 
     expect(error).toHaveBeenCalledOnce();
+  });
+
+  test('disposes scope of plugin whose onEnable throws', async () => {
+    const { resolver, enable } = setUp();
+
+    await enable('a', FAILING);
+
+    expect(resolver.unscoped).toEqual(['a']);
+  });
+
+  test('disposes scope after disposables', async () => {
+    const { resolver, enable } = setUp();
+    await enable('a', plugin('export default () => ({ onEnable: () => [() => events.push(unscoped.length)] });'));
+    vi.stubGlobal('unscoped', resolver.unscoped);
+
+    await resolver.disable('a');
+
+    expect(events).toEqual([0]);
+    expect(resolver.unscoped).toEqual(['a']);
   });
 
   test('re-enables disabled plugin', async () => {

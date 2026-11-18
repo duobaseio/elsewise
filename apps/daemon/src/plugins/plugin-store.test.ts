@@ -3,8 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { AgentRegistry, McpServerRegistry } from '../agent/registry';
 import { type DataDirectory, dataDirectory } from '../directories';
 import { PluginStore } from './plugin-store';
+import type { Registries } from './registry';
 
 // A main module that records what happens to it, with `enabled` for an enable, through a module it and the test share.
 function tracked(enabled = 'enable'): string {
@@ -22,11 +24,24 @@ export default ({ id }) => ({
 `;
 }
 
+// A main module that adds an agent and a server.
+const AGENT = `
+export default () => ({
+  onEnable(daemon) {
+    daemon.agents.add({ name: 'Agent' });
+    daemon.mcpServers.add({ name: 'mcp-server' });
+    return [];
+  },
+});
+`;
+
 let data: DataDirectory;
 let events: string[];
 let store: PluginStore;
+let registries: Registries;
 
 beforeEach(async () => {
+  registries = { agents: new AgentRegistry(), mcpServers: new McpServerRegistry() };
   data = dataDirectory(await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), 'elsewise-plugins-'))));
   const recorder = path.join(data.root, 'recorder.mjs');
   await fs.writeFile(recorder, 'export const events = [];\n');
@@ -46,7 +61,7 @@ async function install(
   {
     code = tracked(),
     dependencies,
-    elsewise = '^1.0.0',
+    elsewise = '^0.1.0',
     version = '1.0.0',
     enabled = true,
   }: {
@@ -178,12 +193,12 @@ describe('load', () => {
   test('runs reloaded code', async () => {
     await install('a', { code: tracked('one') });
     await store.loadAll();
-    await store.enableAll({});
+    await store.enableAll(registries);
     await fs.writeFile(path.join(data.plugins, 'a', 'daemon', 'main.js'), tracked('two'));
 
     await store.disable('a');
     await store.load('a');
-    await store.enable('a', {});
+    await store.enable('a', registries);
 
     expect(events).toEqual(['one a', 'disable a', 'dispose a', 'two a']);
   });
@@ -195,7 +210,7 @@ describe('enableAll', () => {
     await install('a');
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(events).toEqual(['enable a', 'enable b']);
   });
@@ -204,7 +219,7 @@ describe('enableAll', () => {
     await install('a', { enabled: false });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(events).toEqual([]);
     expect(status('a')).toBe('disabled');
@@ -214,7 +229,7 @@ describe('enableAll', () => {
     await install('a', { elsewise: '^2.0.0' });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(store.plugins).toMatchObject([{ id: 'a', status: 'incompatible', unsatisfied: { elsewise: '^2.0.0' } }]);
     expect(events).toEqual([]);
@@ -224,7 +239,7 @@ describe('enableAll', () => {
     await install('b', { dependencies: { a: '^1.0.0' } });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(store.plugins).toMatchObject([
       { id: 'b', status: 'incompatible', unsatisfied: { dependency: 'a', cause: 'missing' } },
@@ -236,7 +251,7 @@ describe('enableAll', () => {
     await install('b', { dependencies: { a: '^1.0.0' } });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(status('b')).toBe('incompatible');
     expect(events).toEqual(['enable a']);
@@ -247,7 +262,7 @@ describe('enableAll', () => {
     await install('b', { dependencies: { a: '*' } });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(store.plugins).toMatchObject([
       { id: 'a', status: 'incompatible', unsatisfied: { cycle: ['a', 'b'] } },
@@ -259,7 +274,7 @@ describe('enableAll', () => {
     await install('a', { code: 'export const x = 1;' });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(status('a')).toBe('failed');
   });
@@ -268,7 +283,7 @@ describe('enableAll', () => {
     await install('a', { code: 'export default () => ({ onEnable() { throw new Error("no"); } });' });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(status('a')).toBe('failed');
   });
@@ -278,19 +293,72 @@ describe('enableAll', () => {
     await fs.rm(path.join(data.plugins, 'a', 'daemon', 'main.js'));
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(status('a')).toBe('failed');
+  });
+
+  test('adds agent under plugin id', async () => {
+    await install('a', { code: AGENT });
+    await store.loadAll();
+
+    await store.enableAll(registries);
+
+    expect(registries.agents.get('a')).toMatchObject({ name: 'Agent' });
+    expect(registries.mcpServers.get('mcp-server')).toBeDefined();
+  });
+
+  test('adds second agent under plugin id and its own', async () => {
+    await install('a', { code: AGENT.replace('return [];', "daemon.agents.add({ id: 'other', name: 'Other' });") });
+    await store.loadAll();
+
+    await store.enableAll(registries);
+
+    expect(status('a')).toBe('enabled');
+    expect(registries.agents.get('a')).toMatchObject({ name: 'Agent' });
+    expect(registries.agents.get('a/other')).toMatchObject({ name: 'Other' });
+  });
+
+  test('fails plugin that adds second agent with same id', async () => {
+    await install('a', { code: AGENT.replace('return [];', "daemon.agents.add({ name: 'Other' });") });
+    await store.loadAll();
+
+    await store.enableAll(registries);
+
+    expect(status('a')).toBe('failed');
+  });
+
+  test('removes what failed plugin added', async () => {
+    await install('a', { code: AGENT.replace('return [];', "throw new Error('no');") });
+    await store.loadAll();
+
+    await store.enableAll(registries);
+
+    expect(registries.agents.entries()).toEqual([]);
+    expect(registries.mcpServers.entries()).toEqual([]);
   });
 
   test('enables plugin without daemon part', async () => {
     await install('a', { code: null });
     await store.loadAll();
 
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     expect(status('a')).toBe('enabled');
     expect(events).toEqual([]);
+  });
+});
+
+describe('disable', () => {
+  test('removes what plugin added', async () => {
+    await install('a', { code: AGENT });
+    await store.loadAll();
+    await store.enableAll(registries);
+
+    await store.disable('a');
+
+    expect(registries.agents.entries()).toEqual([]);
+    expect(registries.mcpServers.entries()).toEqual([]);
   });
 });
 
@@ -299,7 +367,7 @@ describe('disableAll', () => {
     await install('a');
     await install('b', { dependencies: { a: '^1.0.0' } });
     await store.loadAll();
-    await store.enableAll({});
+    await store.enableAll(registries);
 
     await store.disableAll();
 

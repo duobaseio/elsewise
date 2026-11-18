@@ -983,17 +983,17 @@ message UpdateRemoteRequest {
 
   // The new name.
   //
-  // Unset leaves it as is. A remote that already exists fails with ALREADY_EXISTS.
+  // Empty leaves it as is. A remote that already exists fails with ALREADY_EXISTS.
   string name = 3;
 
   // The new URL fetched from.
   //
-  // Unset leaves it as is.
+  // Empty leaves it as is.
   string fetch_url = 4;
 
   // The new URL pushed to.
   //
-  // Unset leaves it as is.
+  // Empty leaves it as is.
   string push_url = 5;
 }
 

@@ -1,4 +1,6 @@
 import type { Disposable } from '@elsewise/plugin';
+import type { Agents } from './agent';
+import type { McpServers } from './mcp-server';
 
 /**
  * A `Plugin`.
@@ -22,8 +24,8 @@ export interface Plugin {
    * The disposables it returns are disposed in reverse order when the plugin is disabled. It is recommended to avoid
    * computationally expensive and high latency operations in this function since it may affect start-up time.
    *
-   * Throwing an error causes the plugin to be disabled (without calling `onDisable`). It is the plugin's responsibility
-   * to safely dispose of any added items in such cases.
+   * Throwing an error causes the plugin to be disabled (without calling `onDisable`), and what it added to the daemon
+   * is removed. It is the plugin's responsibility to safely dispose of anything else in such cases.
    */
   onEnable?(daemon: Daemon): Disposable[] | undefined | Promise<Disposable[] | undefined>;
 
@@ -36,6 +38,14 @@ export interface Plugin {
 /**
  * The daemon.
  */
-// TODO: Add what the daemon provides a plugin, once it has an API for plugins.
-// biome-ignore lint/suspicious/noEmptyInterface: Nothing to provide yet, see above.
-export interface Daemon {}
+export interface Daemon {
+  /**
+   * The agents users can start sessions with.
+   */
+  readonly agents: Agents;
+
+  /**
+   * The Model Context Protocol servers every agent is given.
+   */
+  readonly mcpServers: McpServers;
+}
