@@ -104,6 +104,8 @@ as a fill is invisible against at least one other (the light ladder is 1.04:1 en
 *image* so it adds to a selected row instead of replacing it.
 
 - **Hover:** `rgba(95,90,76,.06)` / `rgba(233,228,216,.05)`. No press layer — buttons answer press with a 1px translate
+    - An action inside a hoverable host (a tab's close, a row's delete, a chip's remove, a field's clear) is a ghost
+      button with its own Hover layer, painted over the host's. The host never lights up for the action
 - **Selected (focused list/tree):** `rgba(95,90,76,.09)` / `rgba(233,228,216,.08)` — one step above Hover; heavier reads
   as a grey bar across the pane
 - **Selection (::selection text):** `rgba(51,74,107,.18)` / `rgba(159,178,200,.25)` — iron gall, because a warm neutral

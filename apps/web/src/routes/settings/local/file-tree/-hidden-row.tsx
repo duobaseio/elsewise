@@ -1,3 +1,4 @@
+import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { Row } from '@elsewise/components/components/settings';
@@ -163,18 +164,20 @@ export function HiddenRow({ term }: { term: SettingsSearchTerm }) {
                     }}
                   >
                     <span className="truncate text-sm">{pattern}</span>
-                    <button
-                      type="button"
-                      tabIndex={-1}
+                    <Button
                       aria-label={`Remove ${pattern}`}
-                      className="flex size-6 shrink-0 cursor-default items-center justify-center text-text-3 opacity-0 outline-none group-hover:opacity-100 group-aria-selected:opacity-100"
+                      className="mr-0.5 size-5 rounded-sm text-text-3 opacity-0 group-hover:opacity-100 group-aria-selected:opacity-100"
                       onClick={(event) => {
                         event.stopPropagation();
                         remove(index);
                       }}
+                      size="icon-xs"
+                      tabIndex={-1}
+                      type="button"
+                      variant="ghost"
                     >
                       <Icon name="close" className="size-3" />
-                    </button>
+                    </Button>
                   </div>
                 ),
               )}

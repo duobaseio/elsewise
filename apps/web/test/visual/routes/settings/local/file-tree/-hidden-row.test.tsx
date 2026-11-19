@@ -34,7 +34,10 @@ test.each(THEMES)('hidden row selected (%s)', async (theme) => {
 
   await userEvent.click(page.getByRole('option', { name: '.hg' }));
   await userEvent.keyboard('{Escape}');
-  await forcePseudoStates([{ selector: '[role="option"][aria-label=".svn"]', pseudoClasses: ['hover'] }]);
+  await forcePseudoStates([
+    { selector: '[role="option"][aria-label=".svn"]', pseudoClasses: ['hover'] },
+    { selector: '[aria-label="Remove .svn"]', pseudoClasses: ['hover'] },
+  ]);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`hidden-row-selected-${theme}`);
 });

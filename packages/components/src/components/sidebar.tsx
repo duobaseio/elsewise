@@ -964,7 +964,7 @@ export function SidebarMenuRowAction({
     props: mergeProps<'button'>(
       {
         className: cn(
-          'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md p-0 text-text-3 outline-none group-data-[collapsible=icon]:hidden focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-3 [&>svg]:shrink-0',
+          'flex size-5 shrink-0 cursor-default items-center justify-center rounded-md p-0 text-text-3 outline-none group-data-[collapsible=icon]:hidden enabled:hover:overlay-hover focus-visible:-outline-offset-1 focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring [&>svg]:size-3 [&>svg]:shrink-0',
           showOnHover &&
             'opacity-0 group-hover/menu-row:opacity-100 group-data-active/menu-row:opacity-100 group-has-[>[data-active]]/menu-row:opacity-100 focus-visible:opacity-100 data-popup-open:opacity-100',
           className,
