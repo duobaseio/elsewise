@@ -24,7 +24,7 @@
     "@bufbuild/protobuf": "^2.17.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.6.7",
+    "@biomejs/biome": "2.6.8",
     "@bufbuild/buf": "^1.75.0",
     "@bufbuild/protoc-gen-es": "^2.17.0",
     "@types/node": "^26.6.6",
