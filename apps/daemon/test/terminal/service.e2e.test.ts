@@ -69,19 +69,20 @@ describe('CreateTerminal', () => {
     expect(await create('Build')).toMatchObject({ name: 'Build' });
   });
 
-  test('returns the directory, the command and whether the terminal is restored', async () => {
+  test('returns the directory, the program, its arguments and whether the terminal is restored', async () => {
     await mkdir(path.join(workspacePath, 'scripts'));
     const { terminal } = await harness.client.createTerminal({
       workspaceId,
       relativePath: 'scripts',
       env: { TOKEN: 'secret' },
-      command: ['npm', 'test'],
+      program: 'npm',
+      args: ['test'],
       restore: false,
     });
-    const expected = { relativePath: 'scripts', command: ['npm', 'test'], restore: false };
+    const expected = { relativePath: 'scripts', program: 'npm', args: ['test'], restore: false };
     expect(terminal).toMatchObject(expected);
     expect(await getTerminals()).toMatchObject([expected]);
-    expect(await create()).toMatchObject({ relativePath: '', command: [], restore: true });
+    expect(await create()).toMatchObject({ relativePath: '', program: '', args: [], restore: true });
   });
 
   test('fails with INVALID_ARGUMENT for a directory outside the workspace', async () => {
@@ -96,8 +97,8 @@ describe('CreateTerminal', () => {
     });
   });
 
-  test('fails with INVALID_ARGUMENT for an empty program', async () => {
-    await expect(harness.client.createTerminal({ workspaceId, command: [''] })).rejects.toMatchObject({
+  test('fails with INVALID_ARGUMENT for arguments without a program', async () => {
+    await expect(harness.client.createTerminal({ workspaceId, args: ['test'] })).rejects.toMatchObject({
       code: Code.INVALID_ARGUMENT,
     });
   });
@@ -304,7 +305,8 @@ describe('AttachTerminal', () => {
     const { terminal } = await harness.client.createTerminal({
       workspaceId,
       relativePath: 'scripts/build',
-      command: [process.execPath, '-e', 'console.log(process.cwd())'],
+      program: process.execPath,
+      args: ['-e', 'console.log(process.cwd())'],
     });
     await rm(path.join(workspacePath, 'scripts', 'build'), { recursive: true });
 
@@ -318,7 +320,8 @@ describe('AttachTerminal', () => {
     const { terminal } = await harness.client.createTerminal({
       workspaceId,
       relativePath: 'scripts',
-      command: [process.execPath, '-e', 'console.log(process.cwd())'],
+      program: process.execPath,
+      args: ['-e', 'console.log(process.cwd())'],
     });
     await rm(path.join(workspacePath, 'scripts'), { recursive: true });
 
@@ -327,10 +330,11 @@ describe('AttachTerminal', () => {
     expect(attached.text()).toContain(`${await realpath(workspacePath)}\r\n`);
   });
 
-  test('does not run the command again for a terminal that is not restored', async () => {
+  test('does not run the program again for a terminal that is not restored', async () => {
     const { terminal } = await harness.client.createTerminal({
       workspaceId,
-      command: [process.execPath, '-e', 'console.log("once")'],
+      program: process.execPath,
+      args: ['-e', 'console.log("once")'],
       restore: false,
     });
     const first = attach(terminal?.id ?? '');
@@ -343,13 +347,14 @@ describe('AttachTerminal', () => {
     expect(await getTerminals()).toMatchObject([{ state: { case: 'exited' } }]);
   });
 
-  test('runs the command in the directory with the variables', async () => {
+  test('runs the program in the directory with the variables', async () => {
     await mkdir(path.join(workspacePath, 'scripts'));
     const { terminal } = await harness.client.createTerminal({
       workspaceId,
       relativePath: 'scripts',
       env: { GREETING: 'hello' },
-      command: [process.execPath, '-e', 'console.log(process.cwd(), process.env.GREETING)'],
+      program: process.execPath,
+      args: ['-e', 'console.log(process.cwd(), process.env.GREETING)'],
     });
     const attached = attach(terminal?.id ?? '');
     await attached.ended;

@@ -94,7 +94,10 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
       }
 
       await refuseMissingDirectory(toNativePathOrRoot(workspace.absolute_path, request.relativePath));
-      if (request.command.some((part) => part.includes('\0')) || request.command[0] === '') {
+      if (
+        [request.program, ...request.args].some((part) => part.includes('\0')) ||
+        (request.program === '' && request.args.length > 0)
+      ) {
         throw new TransportError(Code.INVALID_ARGUMENT, 'the program must not be empty');
       }
 
@@ -111,7 +114,8 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
         name,
         relative_path: request.relativePath,
         env: JSON.stringify(request.env),
-        command: JSON.stringify(request.command),
+        program: request.program,
+        args: JSON.stringify(request.args),
         restore: request.restore ? 1 : 0,
         columns: DEFAULT_SIZE.columns,
         rows: DEFAULT_SIZE.rows,
@@ -326,7 +330,8 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
           : { case: state.case, value: {} },
       clients: this.#shells.clientsOf(terminal.id),
       relativePath: terminal.relative_path,
-      command: JSON.parse(terminal.command),
+      program: terminal.program,
+      args: JSON.parse(terminal.args),
       restore: terminal.restore === 1,
     };
   }

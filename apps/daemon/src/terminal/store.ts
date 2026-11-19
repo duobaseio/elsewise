@@ -53,7 +53,7 @@ export class TerminalStore {
   createTerminal(
     values: Pick<
       Insertable<Terminal>,
-      'workspace_id' | 'name' | 'relative_path' | 'env' | 'command' | 'restore' | 'columns' | 'rows'
+      'workspace_id' | 'name' | 'relative_path' | 'env' | 'program' | 'args' | 'restore' | 'columns' | 'rows'
     >,
   ): Promise<TerminalRow> {
     return this.#db

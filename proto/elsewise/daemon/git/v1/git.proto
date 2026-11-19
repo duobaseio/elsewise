@@ -121,18 +121,18 @@ message Status {
     // An entry the operation in progress left with conflicts.
     message Conflicted {
       // How the two sides conflict.
-      Kind kind = 1;
+      Type type = 1;
 
-      enum Kind {
-        KIND_UNSPECIFIED = 0; // Never sent.
-        KIND_OTHER = 1;
-        KIND_BOTH_MODIFIED = 2;
-        KIND_BOTH_ADDED = 3;
-        KIND_BOTH_DELETED = 4;
-        KIND_DELETED_BY_US = 5;
-        KIND_DELETED_BY_THEM = 6;
-        KIND_ADDED_BY_US = 7;
-        KIND_ADDED_BY_THEM = 8;
+      enum Type {
+        TYPE_UNSPECIFIED = 0; // Never sent.
+        TYPE_OTHER = 1;
+        TYPE_BOTH_MODIFIED = 2;
+        TYPE_BOTH_ADDED = 3;
+        TYPE_BOTH_DELETED = 4;
+        TYPE_DELETED_BY_US = 5;
+        TYPE_DELETED_BY_THEM = 6;
+        TYPE_ADDED_BY_US = 7;
+        TYPE_ADDED_BY_THEM = 8;
       }
     }
   }

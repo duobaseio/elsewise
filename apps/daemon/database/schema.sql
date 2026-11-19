@@ -31,9 +31,10 @@ create table terminal (
     workspace_id text not null references workspace (id) on delete cascade,
     name text not null,
     relative_path text not null,
-    env text not null,
-    command text not null,
-    restore integer not null,
+    env text not null, -- A JSON object (e.g. `{"NODE_ENV":"development"}`).
+    program text not null, -- The program to run (e.g. `npm`). Empty is the user's login shell.
+    args text not null, -- A JSON array (e.g. `["run","dev"]`).
+    restore integer not null, -- A boolean.
     columns integer not null,
     rows integer not null,
     exit_code integer,

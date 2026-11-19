@@ -4,7 +4,7 @@ import type { ContextMenuGroup } from './context-menu';
 import type { WorkspaceId } from './projects/workspaces';
 
 /**
- * A shell's exit code or signal that killed it, e.g. SIGKILL.
+ * A shell's exit code or signal that killed it (e.g. SIGKILL).
  */
 export type TerminalExit = { readonly code: number } | { readonly signal: string };
 
@@ -82,12 +82,17 @@ export interface TerminalOptions {
   readonly env?: Readonly<Record<string, string>>;
 
   /**
-   * The program to run and its arguments, e.g. `['npm', 'run', 'dev']`. Defaults to the user's login shell.
+   * The program to run (e.g. `npm`). Defaults to the user's login shell.
    */
-  readonly command?: readonly string[];
+  readonly program?: string;
 
   /**
-   * Whether to reopen the terminal, running `command` again, when Elsewise restarts. Defaults to true.
+   * The program's arguments (e.g. `['run', 'dev']`).
+   */
+  readonly args?: readonly string[];
+
+  /**
+   * Whether to reopen the terminal, running `program` again, when Elsewise restarts. Defaults to true.
    */
   readonly restore?: boolean;
 }
@@ -121,12 +126,17 @@ export interface TerminalSession {
   readonly cwd: string;
 
   /**
-   * The program to run and its arguments. Empty is the user's login shell.
+   * The program to run. Empty is the user's login shell.
    */
-  readonly command: readonly string[];
+  readonly program: string;
 
   /**
-   * Whether to reopen the terminal, running `command` again, when Elsewise restarts.
+   * The program's arguments.
+   */
+  readonly args: readonly string[];
+
+  /**
+   * Whether to reopen the terminal, running `program` again, when Elsewise restarts.
    */
   readonly restore: boolean;
 

@@ -46,7 +46,8 @@ export class SessionStore {
       name: options.name,
       relativePath: options.cwd,
       env: { ...options.env },
-      command: [...(options.command ?? [])],
+      program: options.program,
+      args: [...(options.args ?? [])],
       restore: options.restore,
     });
     if (terminal === undefined) {
@@ -105,7 +106,8 @@ export class SessionStore {
       id: { daemon: workspace.daemon, project: workspace.project, workspace: workspace.workspace, session: message.id },
       name: message.name,
       cwd: message.relativePath,
-      command: message.command,
+      program: message.program,
+      args: message.args,
       restore: message.restore,
       state: message.state.case ?? 'stopped',
       exit: exit?.case === 'code' ? { code: exit.value } : exit?.case === 'signal' ? { signal: exit.value } : null,

@@ -1,7 +1,7 @@
 import { create, type MessageInitShape } from '@bufbuild/protobuf';
 import type { FileTreeGitStatus } from '@elsewise/components/components/file-tree';
 import { describe, expect, test } from 'vitest';
-import { Change, Status_Entry_Conflicted_Kind, StatusSchema } from '@/gen/elsewise/daemon/git/v1/git_pb';
+import { Change, Status_Entry_Conflicted_Type, StatusSchema } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import { type WatchStatusResponse, WatchStatusResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { watchGitStatus } from './status';
 
@@ -41,7 +41,7 @@ describe('watchGitStatus', () => {
         { relativePath: '.env', kind: { case: 'ignored', value: {} } },
         {
           relativePath: 'd.ts',
-          kind: { case: 'conflicted', value: { kind: Status_Entry_Conflicted_Kind.BOTH_MODIFIED } },
+          kind: { case: 'conflicted', value: { type: Status_Entry_Conflicted_Type.BOTH_MODIFIED } },
         },
       ]),
     ]);

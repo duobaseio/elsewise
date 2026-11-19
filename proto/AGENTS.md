@@ -46,6 +46,9 @@ awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/d
   comment does not have to: an absolute path is a protocol path that is absolute on the daemon's machine, and a
   relative one is a protocol path with no `.` or `..` segment, resolved against a root. `FileSystemService` predates
   the rule and keeps `root` for the absolute path a request works in.
+- An enum that classifies its message is `enum Type` in a `type` field, never `kind`.
+- A oneof is named for what its members are: `state`, `event`, `source`, `target`, `cause`. `kind` is the fallback
+  for members with nothing in common, as in `Envelope`; never `type`.
 
 ## Commands
 

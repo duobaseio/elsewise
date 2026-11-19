@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { Code } from '@elsewise/transport';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { Change, FastForward, Status_Entry_Conflicted_Kind as Kind } from '../../src/gen/elsewise/daemon/git/v1/git_pb';
+import { Change, FastForward, Status_Entry_Conflicted_Type as Type } from '../../src/gen/elsewise/daemon/git/v1/git_pb';
 import {
   MoveResponse_Failure_Reason as MoveReason,
   PullRequest_Mode,
@@ -1056,7 +1056,7 @@ describe('operations', () => {
     const { status } = await harness.client.getStatus({ absolutePath: root });
     expect(status?.operation).toMatchObject({ case: 'merge', value: { hashes: [feature] } });
     expect(status?.entries).toMatchObject([
-      { relativePath: 'conflict.txt', kind: { value: { kind: Kind.BOTH_MODIFIED } } },
+      { relativePath: 'conflict.txt', kind: { value: { type: Type.BOTH_MODIFIED } } },
     ]);
 
     await expect(harness.client.continueOperation({ absolutePath: root })).rejects.toMatchObject({
@@ -1164,7 +1164,7 @@ describe('operations', () => {
     });
     const { status } = await harness.client.getStatus({ absolutePath: root });
     expect(status?.entries).toMatchObject([
-      { relativePath: 'gone.txt', kind: { value: { kind: Kind.DELETED_BY_THEM } } },
+      { relativePath: 'gone.txt', kind: { value: { type: Type.DELETED_BY_THEM } } },
     ]);
     await harness.client.resolveConflicts({ absolutePath: root, relativePaths: [], side: Side.THEIRS });
     await expect(fs.access(path.join(repo.nativeRoot, 'gone.txt'))).rejects.toThrow();
