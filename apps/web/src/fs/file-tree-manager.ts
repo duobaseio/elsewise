@@ -113,7 +113,7 @@ export class FileTreeManager implements FileTree {
     this.notify();
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -135,6 +135,6 @@ export function useFileTreeManager(): FileTreeManager;
 export function useFileTreeManager<T>(select: (fileTree: FileTreeManager) => T): T;
 export function useFileTreeManager<T>(select?: (fileTree: FileTreeManager) => T): FileTreeManager | T {
   const fileTree = useApplicationManager().fileTree;
-  const subscribe = useCallback((listener: () => void) => fileTree.subscribe(listener), [fileTree]);
+  const subscribe = useCallback((listener: () => void) => fileTree.onChange(listener), [fileTree]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? fileTree : select(fileTree)));
 }

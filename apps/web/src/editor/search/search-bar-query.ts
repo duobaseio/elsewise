@@ -100,16 +100,16 @@ export const toggleReplaceRow = StateEffect.define<boolean>();
 /**
  * Returns the editor's state, search query and matches.
  *
- * Updates whenever `subscribe` calls its listener.
+ * Updates whenever `onChange` calls its listener.
  */
 export function useSearchBarQuery({
   view,
-  subscribe,
+  onChange,
 }: {
   view: EditorView;
-  subscribe: (listener: () => void) => () => void;
+  onChange: (listener: () => void) => () => void;
 }): { state: EditorState; replace: boolean; query: SearchQuery; matches: Matches } {
-  const state = useSyncExternalStore(subscribe, () => view.state);
+  const state = useSyncExternalStore(onChange, () => view.state);
   const replace = state.field(replaceRow, false) ?? false;
   const query = getSearchQuery(state);
   const found = state.field(matches);

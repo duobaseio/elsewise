@@ -176,11 +176,11 @@ describe('active', () => {
   });
 });
 
-describe('subscribe', () => {
+describe('onChange', () => {
   test('notifies on status change', () => {
     const { workspaces } = setup();
     const listener = vi.fn();
-    workspaces.subscribe(listener);
+    workspaces.onChange(listener);
 
     workspaces.addStatus(DHAKA, 'running').set('complete');
 

@@ -10,8 +10,8 @@ import { useEditorManager } from '@/editor/editor-manager';
 /**
  * The toolbar's Compare button, which opens the sources while the file is not compared.
  */
-export function CompareToolbarItem({ view, subscribe }: EditorToolbarProps) {
-  const listen = useCallback((listener: () => void) => subscribe(() => listener()), [subscribe]);
+export function CompareToolbarItem({ view, onChange }: EditorToolbarProps) {
+  const listen = useCallback((listener: () => void) => onChange(() => listener()), [onChange]);
   const sources = useEditorManager((editor) => editor.diffs.sources);
   const comparing = useSyncExternalStore(listen, () => view.state.facet(EDITOR_DIFF)?.source != null);
   const ref = useMemo(() => ({ current: view }), [view]);

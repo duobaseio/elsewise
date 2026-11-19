@@ -309,7 +309,7 @@ export class ProjectManager implements Projects {
       );
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -366,7 +366,7 @@ export function mapProject(daemon: string, message: ProjectMessage | undefined):
  */
 export function useProjectIcons(): readonly ProjectIcon[] {
   const projects = useApplicationManager().projects;
-  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  const subscribe = useCallback((listener: () => void) => projects.onChange(listener), [projects]);
   return useSyncExternalStore(subscribe, () => projects.icons);
 }
 
@@ -375,7 +375,7 @@ export function useProjectIcons(): readonly ProjectIcon[] {
  */
 export function useProjectSidebarItems(): readonly ProjectSidebarItem[] {
   const projects = useApplicationManager().projects;
-  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  const subscribe = useCallback((listener: () => void) => projects.onChange(listener), [projects]);
   return useSyncExternalStore(subscribe, () => projects.sidebarItems);
 }
 
@@ -384,7 +384,7 @@ export function useProjectSidebarItems(): readonly ProjectSidebarItem[] {
  */
 export function useProjectContextMenu(): readonly ContextMenuGroup[] {
   const projects = useApplicationManager().projects;
-  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  const subscribe = useCallback((listener: () => void) => projects.onChange(listener), [projects]);
   return useSyncExternalStore(subscribe, () => projects.contextMenu);
 }
 
@@ -393,6 +393,6 @@ export function useProjectContextMenu(): readonly ContextMenuGroup[] {
  */
 export function useProjectSourceGroups(): readonly ProjectSourceGroup[] {
   const projects = useApplicationManager().projects;
-  const subscribe = useCallback((listener: () => void) => projects.subscribe(listener), [projects]);
+  const subscribe = useCallback((listener: () => void) => projects.onChange(listener), [projects]);
   return useSyncExternalStore(subscribe, () => projects.sourceGroups);
 }

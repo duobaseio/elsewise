@@ -39,7 +39,7 @@ export class TerminalManager implements Terminals {
   private readonly listeners = new Set<() => void>();
   private readonly openListeners = new Set<(view: TerminalView) => void>();
   private readonly closeListeners = new Set<(view: TerminalView) => void>();
-  private readonly changeListeners = new Set<(view: TerminalView) => void>();
+  private readonly sessionListeners = new Set<(view: TerminalView) => void>();
   private readonly entries = new KeyedMap<TerminalSessionId, TerminalEntry>(keyOf);
   private readonly opening = new KeyedMap<TerminalSessionId, Promise<TerminalEntry | null>>(keyOf);
   private readonly factories = new Set<AddonFactory>();
@@ -112,7 +112,7 @@ export class TerminalManager implements Terminals {
     const session = await this.store.rename(id, name);
     const entry = this.entries.get(id);
     if (entry !== undefined) {
-      this.call(this.changeListeners, { session, terminal: entry.xterm });
+      this.call(this.sessionListeners, { session, terminal: entry.xterm });
       this.notify();
     }
   }
@@ -163,7 +163,7 @@ export class TerminalManager implements Terminals {
     if (started !== undefined) {
       const session: TerminalSession = { ...started, state: 'running', exit: null };
       this.store.sessions.set(session.id, session);
-      this.call(this.changeListeners, { session, terminal: entry.xterm });
+      this.call(this.sessionListeners, { session, terminal: entry.xterm });
       this.notify();
     }
   }
@@ -176,7 +176,7 @@ export class TerminalManager implements Terminals {
 
     const session: TerminalSession = { ...exited, state: 'exited', exit };
     this.store.sessions.set(session.id, session);
-    this.call(this.changeListeners, { session, terminal: entry.xterm });
+    this.call(this.sessionListeners, { session, terminal: entry.xterm });
     this.notify();
 
     // Close terminal if login shell, keep program since the output is usually relevant.
@@ -258,14 +258,14 @@ export class TerminalManager implements Terminals {
   /**
    * Calls `listener` with each terminal whose session changes.
    */
-  onChange(listener: (view: TerminalView) => void): Disposable {
-    this.changeListeners.add(listener);
+  onSessionChange(listener: (view: TerminalView) => void): Disposable {
+    this.sessionListeners.add(listener);
     return () => {
-      this.changeListeners.delete(listener);
+      this.sessionListeners.delete(listener);
     };
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -324,6 +324,6 @@ export function useTerminalManager(): TerminalManager;
 export function useTerminalManager<T>(select: (terminal: TerminalManager) => T): T;
 export function useTerminalManager<T>(select?: (terminal: TerminalManager) => T): TerminalManager | T {
   const terminals = useApplicationManager().terminals;
-  const subscribe = useCallback((listener: () => void) => terminals.subscribe(listener), [terminals]);
+  const subscribe = useCallback((listener: () => void) => terminals.onChange(listener), [terminals]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? terminals : select(terminals)));
 }

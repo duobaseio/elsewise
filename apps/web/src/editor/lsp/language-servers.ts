@@ -34,7 +34,7 @@ export class LanguageServers {
   private readonly unsubscribe: Disposable;
 
   constructor(private readonly editor: EditorManager) {
-    this.unsubscribe = editor.subscribe(() => {
+    this.unsubscribe = editor.onChange(() => {
       for (const [server, roots] of this.instances) {
         if (!editor.languages.servers.includes(server)) {
           for (const running of roots.values()) {
@@ -88,8 +88,8 @@ export class LanguageServers {
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  subscribe(listener: () => void): Disposable {
-    return this.editor.subscribe(listener);
+  onChange(listener: () => void): Disposable {
+    return this.editor.onChange(listener);
   }
 
   /**
@@ -323,7 +323,7 @@ export function useLanguageServerExtension(
   path: string,
 ): Extension {
   const servers = useLanguageServers();
-  const subscribe = useCallback((listener: () => void) => servers.subscribe(listener), [servers]);
+  const subscribe = useCallback((listener: () => void) => servers.onChange(listener), [servers]);
   const server = useSyncExternalStore(subscribe, () => (language === undefined ? undefined : servers.find(language)));
 
   // Uses href rather than root since a caller's new URL for the same root would otherwise reconnect the document.

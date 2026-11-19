@@ -108,7 +108,7 @@ export class PluginStore extends PluginResolver<
 
     if (plugin.onTerminalChange) {
       listeners.push(
-        application.terminals.onChange((view) =>
+        application.terminals.onSessionChange((view) =>
           this.call(id, 'onTerminalChange', () => plugin.onTerminalChange?.(application, view)),
         ),
       );
@@ -170,7 +170,7 @@ export function usePluginStore<T>(select?: (plugins: PluginStore) => T): PluginS
     throw new Error('Missing PluginStoreContext');
   }
 
-  const subscribe = useCallback((listener: () => void) => plugins.subscribe(listener), [plugins]);
+  const subscribe = useCallback((listener: () => void) => plugins.onChange(listener), [plugins]);
   const snapshot = () => (select === undefined ? plugins : select(plugins));
   // A server render, as in the hooks' Node tests, reads the same snapshot.
   return useSyncExternalStore(subscribe, snapshot, snapshot);

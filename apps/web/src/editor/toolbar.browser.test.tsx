@@ -34,9 +34,9 @@ function Field() {
   return <input aria-label="Field" />;
 }
 
-function Length({ view, subscribe }: EditorToolbarProps) {
+function Length({ view, onChange }: EditorToolbarProps) {
   const [length, setLength] = useState(view.state.doc.length);
-  useEffect(() => subscribe((update) => setLength(update.state.doc.length)), [subscribe]);
+  useEffect(() => onChange((update) => setLength(update.state.doc.length)), [onChange]);
   return <span data-slot="length">{length}</span>;
 }
 

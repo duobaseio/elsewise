@@ -167,7 +167,7 @@ export class Shell {
   }
 
   /** Adds a listener. Returns a function that clears the listener. */
-  subscribe(listener: (event: ShellEvent) => void): () => void {
+  onEvent(listener: (event: ShellEvent) => void): () => void {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
   }

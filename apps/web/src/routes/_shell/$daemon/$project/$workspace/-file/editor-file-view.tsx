@@ -52,7 +52,7 @@ export function EditorFileView({
   }, [root]);
 
   useEffect(() => {
-    const dispose = diff.subscribe(() => onParamsChange({ type: 'editor', diff: diff.source, layout: diff.layout }));
+    const dispose = diff.onChange(() => onParamsChange({ type: 'editor', diff: diff.source, layout: diff.layout }));
     return () => {
       void dispose();
     };

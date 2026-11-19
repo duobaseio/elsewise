@@ -49,7 +49,7 @@ const PANEL: readonly string[] = [
 interface Mounted {
   view: EditorView;
   dom: HTMLElement;
-  subscribe: (listener: () => void) => () => void;
+  onChange: (listener: () => void) => () => void;
 }
 
 /**
@@ -68,7 +68,7 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
           setMounted({
             view,
             dom,
-            subscribe: (listener) => {
+            onChange: (listener) => {
               listeners.add(listener);
               return () => listeners.delete(listener);
             },
@@ -99,15 +99,15 @@ export function useSearchExtension(): { search: Extension; portal: ReactNode } {
     ];
   }, []);
 
-  const portal = mounted && createPortal(<SearchBar view={mounted.view} subscribe={mounted.subscribe} />, mounted.dom);
+  const portal = mounted && createPortal(<SearchBar view={mounted.view} onChange={mounted.onChange} />, mounted.dom);
   return { search: extension, portal };
 }
 
 /**
  * The editor's search bar.
  */
-export function SearchBar({ view, subscribe }: { view: EditorView; subscribe: Mounted['subscribe'] }) {
-  const { state, replace, query, matches } = useSearchBarQuery({ view, subscribe });
+export function SearchBar({ view, onChange }: { view: EditorView; onChange: Mounted['onChange'] }) {
+  const { state, replace, query, matches } = useSearchBarQuery({ view, onChange });
   const field = useRef<HTMLInputElement>(null);
   const typed = useRef<string | null>(null);
   const replaceId = useId();

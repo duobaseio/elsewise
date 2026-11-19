@@ -71,11 +71,11 @@ describe('find', () => {
   });
 });
 
-describe('subscribe', () => {
+describe('onChange', () => {
   test('notifies on add and remove until disposed', () => {
     const editor = new EditorManager();
     const listener = vi.fn();
-    const unsubscribe = new LanguageServers(editor).subscribe(listener);
+    const unsubscribe = new LanguageServers(editor).onChange(listener);
     const remove = editor.languages.addServers([server(() => new StubTransport())]);
     remove();
 

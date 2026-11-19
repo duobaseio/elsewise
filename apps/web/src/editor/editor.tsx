@@ -42,7 +42,7 @@ export interface EditorContent {
  * A code editor.
  */
 export function Editor({ root, relativePath, content, diff, file }: EditorProps) {
-  const subscribe = useCallback((listener: () => void) => diff.subscribe(listener), [diff]);
+  const subscribe = useCallback((listener: () => void) => diff.onChange(listener), [diff]);
   const source = useSyncExternalStore(subscribe, () => diff.source);
   const layout = useSyncExternalStore(subscribe, () => diff.layout);
   const sources = useEditorManager((editor) => editor.diffs.sources);

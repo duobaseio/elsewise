@@ -134,7 +134,7 @@ describe('add', () => {
   test('notifies on add and dispose', () => {
     const settings = new SettingsPanelManager();
     const listener = vi.fn();
-    settings.subscribe(listener);
+    settings.onChange(listener);
     const dispose = settings.add([localPanel('a')]);
     dispose();
 
@@ -171,7 +171,7 @@ describe('addLanguagePreviews', () => {
   test('notifies on addition and disposal', () => {
     const settings = new SettingsPanelManager();
     const listener = vi.fn();
-    settings.subscribe(listener);
+    settings.onChange(listener);
     const dispose = settings.addLanguagePreviews([{ language: 'a', path: 'a.toy', code: 'a' }]);
     dispose();
 

@@ -182,7 +182,7 @@ describe('add', () => {
   test('notifies listeners', () => {
     const manager = commands();
     const listener = vi.fn();
-    manager.subscribe(listener);
+    manager.onChange(listener);
     const dispose = manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, run: () => true }]);
     dispose();
 
@@ -275,7 +275,7 @@ describe('addGroups', () => {
   test('notifies listeners', () => {
     const manager = commands();
     const listener = vi.fn();
-    manager.subscribe(listener);
+    manager.onChange(listener);
     const dispose = manager.addGroups([{ id: 'a', label: 'A' }]);
     dispose();
 

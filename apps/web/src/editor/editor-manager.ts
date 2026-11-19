@@ -109,7 +109,7 @@ export class EditorManager implements Editor {
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -134,6 +134,6 @@ export function useEditorManager(): EditorManager;
 export function useEditorManager<T>(select: (editor: EditorManager) => T): T;
 export function useEditorManager<T>(select?: (editor: EditorManager) => T): EditorManager | T {
   const editor = useApplicationManager().editor;
-  const subscribe = useCallback((listener: () => void) => editor.subscribe(listener), [editor]);
+  const subscribe = useCallback((listener: () => void) => editor.onChange(listener), [editor]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? editor : select(editor)));
 }

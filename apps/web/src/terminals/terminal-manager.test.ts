@@ -76,7 +76,7 @@ describe('activate', () => {
   test('ignores active terminal', () => {
     const terminals = setUp();
     const listener = vi.fn();
-    terminals.subscribe(listener);
+    terminals.onChange(listener);
     terminals.activate(TOKYO);
     terminals.activate({ ...TOKYO });
 
@@ -90,7 +90,7 @@ describe('deactivate', () => {
     const view = await open(terminals);
     const listener = vi.fn();
     terminals.activate(view.session.id);
-    terminals.subscribe(listener);
+    terminals.onChange(listener);
     terminals.deactivate(view.session.id);
 
     expect(terminals.active).toBeNull();
@@ -102,7 +102,7 @@ describe('deactivate', () => {
     const view = await open(terminals);
     const listener = vi.fn();
     terminals.activate(view.session.id);
-    terminals.subscribe(listener);
+    terminals.onChange(listener);
     terminals.deactivate(OSAKA);
 
     expect(terminals.active).toEqual(view);
@@ -204,13 +204,13 @@ describe('rename', () => {
   test('tells renamed terminal', async () => {
     const terminals = setUp();
     await open(terminals);
-    const onChange = vi.fn<(view: TerminalView) => void>();
-    terminals.onChange(onChange);
+    const onSessionChange = vi.fn<(view: TerminalView) => void>();
+    terminals.onSessionChange(onSessionChange);
 
     await terminals.rename(TOKYO, 'Build');
 
     expect(terminals.get(TOKYO)?.session.name).toBe('Build');
-    expect(onChange).toHaveBeenCalledExactlyOnceWith(terminals.get(TOKYO));
+    expect(onSessionChange).toHaveBeenCalledExactlyOnceWith(terminals.get(TOKYO));
   });
 });
 
@@ -245,7 +245,7 @@ describe('addContextMenu', () => {
   test('notifies on change', () => {
     const terminals = setUp();
     const listener = vi.fn();
-    terminals.subscribe(listener);
+    terminals.onChange(listener);
 
     terminals.addContextMenu([{ id: 'reactions', items: [] }])();
 
@@ -253,15 +253,15 @@ describe('addContextMenu', () => {
   });
 });
 
-describe('subscribe', () => {
+describe('onChange', () => {
   test('continues past throwing listener', () => {
     const terminals = setUp();
     const error = vi.spyOn(console, 'error').mockImplementation(() => {});
     const listener = vi.fn();
-    terminals.subscribe(() => {
+    terminals.onChange(() => {
       throw new Error('boom');
     });
-    terminals.subscribe(listener);
+    terminals.onChange(listener);
 
     terminals.activate(TOKYO);
 
@@ -272,7 +272,7 @@ describe('subscribe', () => {
   test('stops notifying once disposed', () => {
     const terminals = setUp();
     const listener = vi.fn();
-    terminals.subscribe(listener)();
+    terminals.onChange(listener)();
 
     terminals.activate(TOKYO);
 

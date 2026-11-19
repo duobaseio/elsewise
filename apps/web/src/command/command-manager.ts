@@ -279,7 +279,7 @@ export class CommandManager implements Commands {
 
   onKeymapChange(listener: (keymap: ActiveKeymap) => void): Disposable {
     let last = this.keymap.commands;
-    return this.subscribe(() => {
+    return this.onChange(() => {
       if (this.keymap.commands === last) {
         return;
       }
@@ -482,7 +482,7 @@ export class CommandManager implements Commands {
     }
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -534,6 +534,6 @@ export function useCommandManager(): CommandManager;
 export function useCommandManager<T>(select: (commands: CommandManager) => T): T;
 export function useCommandManager<T>(select?: (commands: CommandManager) => T): CommandManager | T {
   const commands = useApplicationManager().commands;
-  const subscribe = useCallback((listener: () => void) => commands.subscribe(listener), [commands]);
+  const subscribe = useCallback((listener: () => void) => commands.onChange(listener), [commands]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? commands : select(commands)));
 }
