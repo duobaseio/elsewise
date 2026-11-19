@@ -33,9 +33,9 @@ import 'dockview-react/dist/styles/dockview.css';
 
 const SINGAPORE: WorkspaceId = { daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' };
 
-// The daemon of Singapore, which creates tokyo-1 running `command`.
-function setUp(command: string[] = []) {
-  const terminal = { workspaceId: 'singapore', id: 'tokyo-1', name: 'Terminal', command };
+// The daemon of Singapore, which creates tokyo-1 running `program`.
+function setUp(program = '') {
+  const terminal = { workspaceId: 'singapore', id: 'tokyo-1', name: 'Terminal', program };
   const deleteTerminal = vi.fn(async () => create(DeleteTerminalResponseSchema));
   const getTerminals = vi.fn(async () => create(GetTerminalsResponseSchema, { terminals: [terminal] }));
   const fake = terminals({
@@ -159,8 +159,8 @@ test('closes shell on exit', async () => {
   expect(setup.deleteTerminal).toHaveBeenCalledExactlyOnceWith({ terminalId: 'tokyo-1' });
 });
 
-test('keeps command open on exit', async () => {
-  const setup = setUp(['npm', 'test']);
+test('keeps program open on exit', async () => {
+  const setup = setUp('npm');
   const { api } = await mount(setup);
   const id = await show(setup, api);
 
@@ -298,8 +298,8 @@ test('reports running once shell prints', async () => {
   await expect.poll(() => setup.manager.get(id)?.session.state).toBe('running');
 });
 
-test('reports exit of replayed command without running', async () => {
-  const setup = setUp(['npm', 'test']);
+test('reports exit of replayed program without running', async () => {
+  const setup = setUp('npm');
   const { api } = await mount(setup);
   const states: string[] = [];
   setup.manager.onChange((view) => states.push(view.session.state));

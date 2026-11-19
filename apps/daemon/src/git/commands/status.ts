@@ -2,9 +2,9 @@ import fs from 'node:fs/promises';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import {
   Change,
-  Status_Entry_Conflicted_Kind as Kind,
   type Status,
   type StatusSchema,
+  Status_Entry_Conflicted_Type as Type,
 } from '../../gen/elsewise/daemon/git/v1/git_pb';
 import type { Git } from '../git';
 
@@ -23,14 +23,14 @@ const CHANGES: Record<string, Change> = {
   C: Change.COPIED,
 };
 
-const CONFLICTS: Record<string, Kind> = {
-  DD: Kind.BOTH_DELETED,
-  AU: Kind.ADDED_BY_US,
-  UD: Kind.DELETED_BY_THEM,
-  UA: Kind.ADDED_BY_THEM,
-  DU: Kind.DELETED_BY_US,
-  AA: Kind.BOTH_ADDED,
-  UU: Kind.BOTH_MODIFIED,
+const CONFLICTS: Record<string, Type> = {
+  DD: Type.BOTH_DELETED,
+  AU: Type.ADDED_BY_US,
+  UD: Type.DELETED_BY_THEM,
+  UA: Type.ADDED_BY_THEM,
+  DU: Type.DELETED_BY_US,
+  AA: Type.BOTH_ADDED,
+  UU: Type.BOTH_MODIFIED,
 };
 
 /** Reads the status of the worktree. */
@@ -106,10 +106,10 @@ export function parseStatus(text: string): Omit<StatusInit, 'operation'> {
       case 'u': {
         const match = /^u (\S\S) (\S+) \S+ \S+ \S+ \S+ \S+ \S+ \S+ (.*)$/s.exec(token);
         if (match) {
-          const kind = CONFLICTS[match[1] as string] ?? Kind.OTHER;
+          const type = CONFLICTS[match[1] as string] ?? Type.OTHER;
           entries.push({
             relativePath: match[3] as string,
-            kind: { case: 'conflicted', value: { kind } },
+            kind: { case: 'conflicted', value: { type } },
             directory: submodule(match[2] as string),
           });
         }

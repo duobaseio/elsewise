@@ -179,8 +179,8 @@ export class TerminalManager implements Terminals {
     this.call(this.changeListeners, { session, terminal: entry.xterm });
     this.notify();
 
-    // Close terminal if login shell, keep command since the output is usually relevant.
-    if (session.command.length === 0) {
+    // Close terminal if login shell, keep program since the output is usually relevant.
+    if (session.program === '') {
       await this.delete(session.id).catch((error: unknown) => console.error('Deleting the terminal failed', error));
     }
   }

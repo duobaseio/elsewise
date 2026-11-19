@@ -75,15 +75,20 @@ message CreateTerminalRequest {
   // The variables added to the shell's environment.
   map<string, string> env = 4;
 
-  // The program to run and its arguments.
+  // The program to run.
   //
   // Defaults to the user's login shell.
-  repeated string command = 5;
+  string program = 5;
+
+  // The program's arguments.
+  //
+  // Arguments without a program fail with INVALID_ARGUMENT.
+  repeated string args = 6;
 
   // Whether attaching starts the program again once it has ended.
   //
   // Defaults to true. Otherwise, attaching to the ended terminal sends its buffer and exit.
-  bool restore = 6 [default = true];
+  bool restore = 7 [default = true];
 }
 
 message CreateTerminalResponse {
@@ -192,13 +197,16 @@ message Terminal {
   // Empty is the workspace's root.
   string relative_path = 8;
 
-  // The program to run and its arguments.
+  // The program to run.
   //
   // Empty is the user's login shell.
-  repeated string command = 9;
+  string program = 9;
+
+  // The program's arguments.
+  repeated string args = 10;
 
   // Whether attaching starts the program again once it has ended.
-  bool restore = 10;
+  bool restore = 11;
 
   // The shell is running.
   message Running {}

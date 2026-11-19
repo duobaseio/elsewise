@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { TestRepo } from '../../../test/git/repo';
-import { Change, Status_Entry_Conflicted_Kind as Kind } from '../../gen/elsewise/daemon/git/v1/git_pb';
+import { Change, Status_Entry_Conflicted_Type as Type } from '../../gen/elsewise/daemon/git/v1/git_pb';
 import { hasConflicts, parseStatus, readOperation, readStatus } from './status';
 
 const NUL = '\0';
@@ -124,12 +124,12 @@ describe('parseStatus', () => {
       },
       {
         relativePath: 'conflict.txt',
-        kind: { case: 'conflicted', value: { kind: Kind.BOTH_MODIFIED } },
+        kind: { case: 'conflicted', value: { type: Type.BOTH_MODIFIED } },
         directory: false,
       },
       {
         relativePath: 'deleted-by-us.txt',
-        kind: { case: 'conflicted', value: { kind: Kind.DELETED_BY_US } },
+        kind: { case: 'conflicted', value: { type: Type.DELETED_BY_US } },
         directory: false,
       },
       { relativePath: 'new.txt', kind: { case: 'untracked', value: {} }, directory: false },
@@ -179,12 +179,12 @@ describe('parseStatus', () => {
         },
         directory: false,
       },
-      { relativePath: 'dd.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_DELETED } }, directory: false },
-      { relativePath: 'au.txt', kind: { case: 'conflicted', value: { kind: Kind.ADDED_BY_US } }, directory: false },
-      { relativePath: 'ud.txt', kind: { case: 'conflicted', value: { kind: Kind.DELETED_BY_THEM } }, directory: false },
-      { relativePath: 'ua.txt', kind: { case: 'conflicted', value: { kind: Kind.ADDED_BY_THEM } }, directory: false },
-      { relativePath: 'aa.txt', kind: { case: 'conflicted', value: { kind: Kind.BOTH_ADDED } }, directory: false },
-      { relativePath: 'xy.txt', kind: { case: 'conflicted', value: { kind: Kind.OTHER } }, directory: false },
+      { relativePath: 'dd.txt', kind: { case: 'conflicted', value: { type: Type.BOTH_DELETED } }, directory: false },
+      { relativePath: 'au.txt', kind: { case: 'conflicted', value: { type: Type.ADDED_BY_US } }, directory: false },
+      { relativePath: 'ud.txt', kind: { case: 'conflicted', value: { type: Type.DELETED_BY_THEM } }, directory: false },
+      { relativePath: 'ua.txt', kind: { case: 'conflicted', value: { type: Type.ADDED_BY_THEM } }, directory: false },
+      { relativePath: 'aa.txt', kind: { case: 'conflicted', value: { type: Type.BOTH_ADDED } }, directory: false },
+      { relativePath: 'xy.txt', kind: { case: 'conflicted', value: { type: Type.OTHER } }, directory: false },
     ]);
   });
 });

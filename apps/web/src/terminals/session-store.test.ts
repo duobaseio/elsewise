@@ -47,7 +47,8 @@ describe('add', () => {
       name: 'Build',
       cwd: 'scripts',
       env: { NODE_ENV: 'test' },
-      command: ['npm', 'test'],
+      program: 'npm',
+      args: ['test'],
       restore: false,
     });
 
@@ -56,7 +57,8 @@ describe('add', () => {
       name: 'Build',
       relativePath: 'scripts',
       env: { NODE_ENV: 'test' },
-      command: ['npm', 'test'],
+      program: 'npm',
+      args: ['test'],
       restore: false,
     });
   });
@@ -70,7 +72,8 @@ describe('add', () => {
       id: TOKYO,
       name: 'Terminal',
       cwd: '',
-      command: [],
+      program: '',
+      args: [],
       restore: true,
       state: 'stopped',
       exit: null,

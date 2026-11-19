@@ -26,7 +26,6 @@ CREATE UNIQUE INDEX `workspace_absolute_path` ON `workspace` (`absolute_path`);
 CREATE INDEX `workspace_project_id` ON `workspace` (`project_id`);
 -- Create index "workspace_main" to table: "workspace"
 CREATE UNIQUE INDEX `workspace_main` ON `workspace` (`project_id`) WHERE main = 1;
-
 -- Create "terminal" table
 CREATE TABLE `terminal` (
   `id` text NOT NULL,
@@ -34,7 +33,8 @@ CREATE TABLE `terminal` (
   `name` text NOT NULL,
   `relative_path` text NOT NULL,
   `env` text NOT NULL,
-  `command` text NOT NULL,
+  `program` text NOT NULL,
+  `args` text NOT NULL,
   `restore` integer NOT NULL,
   `columns` integer NOT NULL,
   `rows` integer NOT NULL,
