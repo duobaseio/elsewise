@@ -13,9 +13,8 @@ import {
   type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
-import type { DockManager } from '@/dock/dock-manager';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { FilePanel } from './-file/file-panel';
 import { FileTab } from './-file/file-tab';
@@ -55,38 +54,33 @@ function WorkspaceRoute() {
   );
 
   const { docks } = useApplicationManager();
-  const attached = useRef<DockManager | null>(null);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: detaches the dock of the workspace left
-  useEffect(
-    () => () => {
-      if (attached.current !== null) {
-        docks.detach(attached.current);
-        attached.current = null;
-      }
-    },
-    [daemon, project, workspace],
-  );
-  const onDockviewReady = (api: DockviewApi) => {
-    const dock = docks.attach({ daemon, project, workspace }, api);
-    attached.current = dock;
+  const key = JSON.stringify([daemon, project, workspace]);
+  const [view, setView] = useState<{ key: string; api: DockviewApi } | null>(null);
+  useEffect(() => {
+    if (view?.key !== key) {
+      return undefined;
+    }
 
+    const dock = docks.attach({ daemon, project, workspace }, view.api);
     const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
     // TODO: Replace with default tab.
-    if (layout === undefined && fileTree !== undefined) {
+    if (fileTree !== undefined && !dock.panels.some((panel) => panel.tab)) {
       dock
         .addTerminal({}, { group: 'left', of: fileTree })
         .catch((error: Error) =>
           toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
         );
     }
-  };
+
+    return () => docks.detach(dock);
+  }, [daemon, project, workspace, key, docks, view]);
 
   return (
     <>
       <WorkspaceDock
-        key={JSON.stringify([daemon, project, workspace])}
+        key={key}
         layout={layout}
-        onDockviewReady={onDockviewReady}
+        onDockviewReady={(api) => setView({ key, api })}
         onLayoutChange={onLayoutChange}
       />
       <NewEntryDialog />
@@ -231,19 +225,30 @@ export function AddTabAction(props: IDockviewHeaderActionsProps) {
   };
 
   return (
-    <div className="flex h-full items-center px-0.5">
-      <Button aria-label="New tab" className="text-text-3" onClick={add} size="icon-xs" variant="ghost">
-        <Icon className="size-3.5" name="add" />
+    <div className="-ml-1 flex h-full py-1 pr-0.5 pl-px">
+      <Button
+        aria-label="New tab"
+        className="aspect-square size-auto text-text-3"
+        onClick={add}
+        size="icon-xs"
+        variant="ghost"
+      >
+        <Icon className="size-3" name="add" />
       </Button>
     </div>
   );
 }
 
 export function DefaultTab({
+  icon,
   dirty = false,
   onClose,
   ...props
 }: IDockviewPanelHeaderProps & {
+  /**
+   * The icon before the tab's title.
+   */
+  icon?: ReactNode;
   /**
    * Whether the panel has unsaved changes, which marks the tab with a dot that turns into the close button on hover.
    */
@@ -270,13 +275,14 @@ export function DefaultTab({
   }, [props.containerApi]);
 
   return (
-    <div className="flex h-full items-center gap-1.5 px-2 text-base" data-dirty={dirty || undefined}>
+    <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
+      {icon}
       <span>{props.api.title}</span>
       {closable ? (
         <Button
           aria-label={`Close ${props.api.title}`}
           className={cn(
-            'size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
+            '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
             dirty && 'opacity-100',
           )}
           onClick={(event) => {
@@ -314,7 +320,7 @@ export function DefaultTab({
  */
 export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
-    <div className="flex h-full items-center gap-1.5 px-2 text-base text-text-2" data-tool>
+    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tool>
       <span>{props.api.title}</span>
     </div>
   );

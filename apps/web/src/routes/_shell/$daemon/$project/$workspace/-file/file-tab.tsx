@@ -1,3 +1,4 @@
+import { FileIcon } from '@elsewise/components/components/file-icon';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
 import { useCallback, useSyncExternalStore } from 'react';
@@ -18,5 +19,5 @@ export function FileTab(props: IDockviewPanelHeaderProps<{ path: string }>) {
   const subscribe = useCallback((listener: () => void) => file?.onChange(listener) ?? (() => {}), [file]);
   const dirty = useSyncExternalStore(subscribe, () => file?.dirty ?? false);
 
-  return <DefaultTab {...props} dirty={dirty} />;
+  return <DefaultTab {...props} icon={<FileIcon name={path.slice(path.lastIndexOf('/') + 1)} />} dirty={dirty} />;
 }

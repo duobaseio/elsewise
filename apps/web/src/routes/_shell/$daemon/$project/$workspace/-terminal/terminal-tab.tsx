@@ -1,3 +1,4 @@
+import { Icon } from '@elsewise/components/components/icon';
 import { toast } from '@elsewise/components/components/toast';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
@@ -28,6 +29,7 @@ export function TerminalTab(props: IDockviewPanelHeaderProps<{ session?: string 
   return (
     <DefaultTab
       {...props}
+      icon={<Icon className="size-4 shrink-0 text-text-3" name="terminal" />}
       onClose={() => {
         if (session === undefined) {
           props.api.close();
