@@ -10,8 +10,8 @@ const EDITOR_FILE_HANDLE = Facet.define<FileHandle, FileHandle | null>({
 });
 
 /**
- * Edits `file`: keeps whether the view has unsaved changes on the file, and applies the file's changes on disk while it
- * has none.
+ * Lets the view edit `file`. Keeps whether the view has unsaved changes on the file, and applies the file's changes on
+ * disk while it has none.
  */
 export function editorFile(file: FileHandle): Extension {
   return [EDITOR_FILE_HANDLE.of(file), ViewPlugin.define((view) => new FileHandlePlugin(view, file))];
@@ -120,6 +120,14 @@ class FileHandlePlugin {
       current[current.length - 1 - end] === next[next.length - 1 - end]
     ) {
       end++;
+    }
+
+    // Avoid selections inside UTF-16 surrogate pairs.
+    if (start > 0 && /[\uD800-\uDBFF]/.test(current[start - 1] ?? '')) {
+      start--;
+    }
+    if (end > 0 && /[\uDC00-\uDFFF]/.test(current[current.length - end] ?? '')) {
+      end--;
     }
 
     this.view.dispatch({

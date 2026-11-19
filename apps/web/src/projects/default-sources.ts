@@ -4,6 +4,8 @@ import type { ApplicationManager } from '@/application-manager';
 
 const { add } = DEFAULT_PROJECT_SOURCE_GROUPS;
 
+export const IMPORT_FOLDER = 'elsewise.projects.import-folder';
+
 export const DEFAULT_PROJECT_SOURCES: readonly ProjectSourceGroup[] = [
   {
     id: add.id,
@@ -24,12 +26,16 @@ export const DEFAULT_PROJECT_SOURCES: readonly ProjectSourceGroup[] = [
         label: 'Import project…',
         shown: () => window.bridge?.window?.pickPaths !== undefined,
         add: async ({ platform, projects }, daemonId) => {
-          const [absolutePath] = await platform.pickPaths({ kind: 'folder' });
+          const [absolutePath] = await platform.pickPaths({
+            kind: 'folder',
+            defaultPath: localStorage.getItem(IMPORT_FOLDER) ?? undefined,
+          });
           if (absolutePath === undefined) {
             return null;
           }
 
           try {
+            localStorage.setItem(IMPORT_FOLDER, absolutePath.slice(0, absolutePath.lastIndexOf('/')) || '/');
             return await projects.add(daemonId, { type: 'existing', absolutePath });
           } catch (error) {
             toast.add({

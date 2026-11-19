@@ -89,6 +89,17 @@ describe('editorFile', () => {
     expect(view.state.selection.main.head).toBe(12);
   });
 
+  test('keeps caret off surrogate pair on change on disk', async () => {
+    const { fake, view } = await open('x\u{1F600}abc\n');
+    view.dispatch({ selection: EditorSelection.cursor(4) });
+
+    fake.put('main.ts', 'x\u{1F601}zzz\n');
+    fake.report('main.ts');
+
+    await expect.poll(() => view.state.doc.toString()).toBe('x\u{1F601}zzz\n');
+    expect(view.state.selection.main.head).toBe(1);
+  });
+
   test('keeps edits on change on disk', async () => {
     const { fake, file, view } = await open('let a;\n');
     view.dispatch({ changes: { from: 4, to: 5, insert: 'b' } });
