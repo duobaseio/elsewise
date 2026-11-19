@@ -1,0 +1,756 @@
+edition = "2024";
+
+package elsewise.daemon.agent.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Interfaces with an agent via Agent Client Protocol (ACP).
+//
+// Common fields:
+// - `uri`: Uniform Resource Identifier stored in the URI format (not protocol path).
+service AgentService {
+  // Watches the agents the enabled plugins have added.
+  rpc WatchAgents(WatchAgentsRequest) returns (stream WatchAgentsResponse);
+
+  // Returns the sessions an acp agent has for a workspace that are not an Elsewise session.
+  rpc GetAcpSessions(GetAcpSessionsRequest) returns (GetAcpSessionsResponse);
+
+  // Creates a session in a workspace and starts its agent.
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+
+  // Watches the sessions of a workspace.
+  //
+  // The first response send all sessions.
+  rpc WatchSessions(WatchSessionsRequest) returns (stream WatchSessionsResponse);
+
+  // Updates a session.
+  rpc UpdateSession(UpdateSessionRequest) returns (UpdateSessionResponse);
+
+  // Deletes a session.
+  //
+  // A turn still running is cancelled and every attached stream ends. The agent's own record of the session is left as
+  // it is.
+  rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse);
+
+  // Attaches to a session.
+  //
+  // Behavior notes:
+  // - The agent is started if it is not running.
+  // - The first responses are the session, the queue, the prompt capabilities, the config options, the commands, the
+  //   usage and the transcript with the oldest first.
+  // - Multiple clients may attach, and each is sent what the others do.
+  // - A request that no longer applies (e.g. an answer to a permission already answered) is ignored.
+  // - When the agent stops, the session is sent with its stopped state and the stream ends.
+  // - The daemon stops an agent that has had no turn running and no client attached for a while.
+  rpc AttachSession(stream AttachSessionRequest) returns (stream AttachSessionResponse);
+}
+
+message WatchAgentsRequest {}
+
+message WatchAgentsResponse {
+  // Agents sorted by name.
+  repeated Agent agents = 1;
+}
+
+message GetAcpSessionsRequest {
+  // The workspace.
+  string workspace_id = 1;
+
+  // The agent.
+  string agent_id = 2;
+}
+
+message GetAcpSessionsResponse {
+  // The sessions sorted by most to least recently updated.
+  repeated AcpSession acp_sessions = 1;
+
+  // A session an agent has.
+  message AcpSession {
+    // The agent's id for the session.
+    string id = 1;
+
+    // The title.
+    //
+    // Empty if the agent has not given it one.
+    string title = 2;
+
+    // When the session last changed.
+    //
+    // Unset if the agent does not include one.
+    google.protobuf.Timestamp updated_at = 3;
+  }
+}
+
+message CreateSessionRequest {
+  // The workspace the agent works in.
+  string workspace_id = 1;
+
+  // The id of the plugin who owns it (e.g. @scope/name/<optional_id>) or an uuid if manually imported.
+  string agent_id = 2;
+
+  // Where the session comes from.
+  oneof source {
+    New new = 3;
+    Existing existing = 4;
+  }
+
+  // A session the agent creates.
+  message New {
+    // The values the session's config options start with.
+    //
+    // A value for an option or a choice the agent does not offer is skipped.
+    repeated ConfigOptionValue config_option_values = 1;
+  }
+
+  // A session the agent already has.
+  //
+  // The session must be one that has not been added.
+  message Existing {
+    // The agent's id for the session.
+    string acp_session_id = 1;
+
+    // The title.
+    //
+    // Empty uses the agent's title.
+    string title = 2;
+  }
+}
+
+message CreateSessionResponse {
+  // The created session.
+  Session session = 1;
+}
+
+message WatchSessionsRequest {
+  // The workspace whose sessions to watch.
+  //
+  // Empty watches the sessions of all workspaces.
+  string workspace_id = 1;
+}
+
+message WatchSessionsResponse {
+  oneof event {
+    // Every session. Sent by the first response.
+    Sessions all_sessions = 1;
+
+    // A session that is new or has changed.
+    Session session = 2;
+
+    // The id of a session that was deleted.
+    string deleted_session_id = 3;
+  }
+
+  message Sessions {
+    repeated Session sessions = 1;
+  }
+}
+
+message UpdateSessionRequest {
+  // The session.
+  string session_id = 1;
+
+  // The new title.
+  //
+  // Empty leaves the title as it is.
+  string title = 2;
+
+  // Whether the session is read or unread.
+  ReadState read_state = 3;
+
+  enum ReadState {
+    READ_STATE_UNSPECIFIED = 0; // Leaves the session as it is.
+    READ_STATE_READ = 1;
+    READ_STATE_UNREAD = 2;
+  }
+}
+
+message UpdateSessionResponse {
+  // The session after the update.
+  Session session = 1;
+}
+
+message DeleteSessionRequest {
+  // The session.
+  string session_id = 1;
+}
+
+message DeleteSessionResponse {}
+
+message AttachSessionRequest {
+  oneof event {
+    Open open = 1;
+    SendPrompt send_prompt = 2;
+    UpdateQueuedPrompt update_queued_prompt = 3;
+    MoveQueuedPrompt move_queued_prompt = 4;
+    DeleteQueuedPrompt delete_queued_prompt = 5;
+    CancelPrompt cancel_prompt = 6;
+    ResolvePermission resolve_permission = 7;
+    ConfigOptionValue set_config_option = 8;
+  }
+
+  // Opens the stream.
+  //
+  // Sent by the first request only. A later request that sends it fails with INVALID_ARGUMENT.
+  message Open {
+    // The session to attach to.
+    string session_id = 1;
+  }
+
+  // Sends a prompt.
+  //
+  // A session with no turn running runs the prompt immediately. Otherwise, the prompt goes to the end of the queue.
+  message SendPrompt {
+    // The prompt.
+    //
+    // Content that starts with `/` and references a session's commands abd runs that command.
+    repeated Content content = 1;
+  }
+
+  // Changes a prompt that is still queued.
+  message UpdateQueuedPrompt {
+    // The queued prompt.
+    string queued_prompt_id = 1;
+
+    // The updated prompt.
+    repeated Content content = 2;
+  }
+
+  // Moves a prompt that is still queued.
+  message MoveQueuedPrompt {
+    // The queued prompt.
+    string queued_prompt_id = 1;
+
+    // The queued prompt to move the prompt in front of.
+    //
+    // Empty moves it to the end of the queue.
+    string before_queued_prompt_id = 2;
+  }
+
+  // Deletes a prompt that is still queued.
+  message DeleteQueuedPrompt {
+    // The queued prompt.
+    string queued_prompt_id = 1;
+  }
+
+  // Cancels the running turn.
+  //
+  // Every permission the turn is waiting on is cancelled with it.
+  message CancelPrompt {}
+
+  // Answers a permission the agent is waiting on.
+  message ResolvePermission {
+    // The permission.
+    string permission_id = 1;
+
+    // The chosen option.
+    string option_id = 2;
+  }
+}
+
+message AttachSessionResponse {
+  oneof event {
+    // The session.
+    Session session = 1;
+
+    // The prompts waiting for a turn.
+    Queue queue = 2;
+
+    // An item that is new or has changed.
+    //
+    // An item whose id is already in the transcript replaces that item, and any other goes at the end.
+    Item item = 3;
+
+    // Content streamed onto the end of a message.
+    Chunk chunk = 4;
+
+    // How much of the agent's context the session uses.
+    Usage usage = 5;
+
+    // What the agent lets the user configure (e.g. its model or its mode).
+    ConfigOptions config_options = 6;
+
+    // The commands the agent offers, whenever they change.
+    Commands commands = 7;
+
+    // What the agent accepts in a prompt besides text and links.
+    PromptCapabilities prompt_capabilities = 8;
+  }
+
+  message Queue {
+    // The queued prompts, in the order their turns start.
+    repeated QueuedPrompt prompts = 1;
+  }
+
+  // Content to add to the end of a user message, an agent message or a thought.
+  message Chunk {
+    // The item's id.
+    string item_id = 1;
+
+    // The content.
+    //
+    // Text continues the item's last content when that is text as well, and anything else is added after it.
+    Content content = 2;
+  }
+
+  // How much of the agent's context a session uses.
+  message Usage {
+    // The number of tokens in the context.
+    uint64 used = 1;
+
+    // The number of tokens the context holds.
+    uint64 size = 2;
+
+    // What the session has cost so far.
+    //
+    // Unset when the agent does not report it.
+    Cost cost = 3;
+
+    message Cost {
+      double amount = 1;
+
+      // The currency (e.g. USD).
+      string currency = 2;
+    }
+  }
+
+  // A prompt waiting for the turns before it to end.
+  message QueuedPrompt {
+    // The id.
+    string id = 1;
+
+    repeated Content content = 2;
+  }
+
+  message ConfigOptions {
+    repeated ConfigOption options = 1;
+  }
+
+  message Commands {
+    repeated Command commands = 1;
+  }
+
+  // What an agent accepts in a prompt besides text and links.
+  message PromptCapabilities {
+    // Whether a prompt may carry images.
+    bool image = 1;
+
+    // Whether a prompt may carry resources.
+    bool resource = 2;
+  }
+
+  // A setting of a session.
+  message ConfigOption {
+    // The id.
+    string id = 1;
+
+    // The label.
+    string name = 2;
+
+    // The description.
+    string description = 3;
+
+    // The category the option is under.
+    Category category = 4;
+
+    oneof type {
+      Select select = 5;
+
+      // The current value of a boolean option.
+      bool boolean = 6;
+    }
+
+    // A choice of one value.
+    message Select {
+      // The value of the current choice.
+      string value = 1;
+
+      // The choices in order.
+      repeated Choice choices = 2;
+
+      message Choice {
+        // The value.
+        string value = 1;
+
+        // The label.
+        string name = 2;
+
+        // What the choice does.
+        string description = 3;
+
+        // The label of the group the choice is listed under.
+        //
+        // Empty when the choices are not grouped.
+        string group = 4;
+      }
+    }
+
+    enum Category {
+      CATEGORY_UNSPECIFIED = 0; // Never sent.
+      CATEGORY_OTHER = 1;
+      CATEGORY_MODE = 2;
+      CATEGORY_MODEL = 3;
+      CATEGORY_MODEL_CONFIG = 4;
+      CATEGORY_THOUGHT_LEVEL = 5;
+    }
+  }
+
+  // A command the agent offers, accessible by a prompt with `/` and its name.
+  message Command {
+    // The name without the `/`.
+    string name = 1;
+
+    // The description.
+    string description = 2;
+
+    // A hint for what to type after the name.
+    //
+    // Empty when the command takes no input.
+    string hint = 3;
+  }
+}
+
+// Represents an agent connected through ACP.
+message Agent {
+  // The id of the plugin who owns it (e.g. @scope/name/<optional_id>) or an uuid if manually imported.
+  string id = 1;
+
+  // The display name.
+  string name = 2;
+
+  // The icon which is a square SVG document.
+  //
+  // Empty if an icon is not specified.
+  string icon = 3;
+}
+
+// Represents an ACP session.
+message Session {
+  // The workspace's id.
+  string workspace_id = 1;
+
+  // The id of the plugin who owns it (e.g. @scope/name/<optional_id>) or an uuid if manually imported.
+  string agent_id = 2;
+
+  // The id.
+  string id = 3;
+
+  // The title.
+  string title = 4;
+
+  // When the last turn ended.
+  google.protobuf.Timestamp updated_at = 5;
+
+  // The state.
+  oneof state {
+    Stopped stopped = 6;
+    Starting starting = 7;
+    Idle idle = 8;
+    Running running = 9;
+  }
+
+  // Whether a session requires attention.
+  //
+  // This field is automated toggled by the daemon and the frontend may toggle it to false.
+  bool unread = 10;
+
+  // The agent does not have the session open.
+  message Stopped {
+    // Why the agent stopped.
+    //
+    // Unset when the daemon stopped the agent itself.
+    Error error = 1;
+  }
+
+  // The agent is starting or is opening the session.
+  message Starting {}
+
+  // The agent is waiting for a prompt.
+  message Idle {
+    // Why the last turn ended.
+    StopReason stop_reason = 1;
+
+    // What went wrong in the last turn.
+    //
+    // Unset when an error does not exist.
+    Error error = 2;
+  }
+
+  // A turn is running.
+  message Running {
+    // When the turn started.
+    google.protobuf.Timestamp started_at = 1;
+  }
+
+  enum StopReason {
+    STOP_REASON_UNSPECIFIED = 0; // Never sent.
+    STOP_REASON_OTHER = 1;
+    STOP_REASON_NONE = 2; // Used when the agent starts or the last turn failed.
+
+    // Specified from the ACP spec.
+    STOP_REASON_END_TURN = 3;
+    STOP_REASON_MAX_TOKENS = 4;
+    STOP_REASON_MAX_TURN_REQUESTS = 5;
+    STOP_REASON_REFUSAL = 6;
+    STOP_REASON_CANCELLED = 7;
+  }
+
+  // Represents something that went wrong with an agent.
+  message Error {
+    // Represents the type of error.
+    Type type = 1;
+
+    // The error message from the agent or daemon.
+    string message = 2;
+
+    enum Type {
+      TYPE_UNSPECIFIED = 0; // Never sent.
+      TYPE_OTHER = 1;
+      TYPE_AUTH_REQUIRED = 2; // The agent requires authentication.
+      TYPE_START_FAILED = 3; // The agent's program could not be started.
+      TYPE_EXITED = 4; // The agent's program exited.
+    }
+  }
+}
+
+// A value of a session's config option.
+message ConfigOptionValue {
+  // The config option.
+  string id = 1;
+
+  oneof value {
+    string choice = 2;
+    bool boolean = 3;
+  }
+}
+
+// One entry of a session's transcript.
+message Item {
+  // The id.
+  //
+  // Does not outlive the agent's process.
+  string id = 1;
+
+  oneof type {
+    Message user_message = 2;
+    Message agent_message = 3;
+    Message agent_thought = 4;
+    ToolCall tool_call = 5;
+    Plan plan = 6;
+  }
+
+  // Represents what an agent or user mentioned.
+  message Message {
+    repeated Content content = 1;
+  }
+
+  // Something the agent does through a tool.
+  message ToolCall {
+    // The title displayed to users.
+    string title = 1;
+
+    // The type of tool.
+    Type type = 2;
+
+    // The status of the call.
+    Status status = 3;
+
+    // What the call produced.
+    repeated Output outputs = 4;
+
+    // The files the call interacts with.
+    repeated Location locations = 5;
+
+    // What the tool was given as JSON.
+    //
+    // Empty when the agent does not report it.
+    string input = 6;
+
+    // The question the agent is waiting on before it runs the call.
+    //
+    // Unset when the call is not waiting on one.
+    Permission permission = 7;
+
+    // A question the agent asks before it runs a tool call.
+    message Permission {
+      // The id.
+      string id = 1;
+
+      // The answers to choose from.
+      repeated Option options = 2;
+
+      // An answer.
+      message Option {
+        // The id.
+        string id = 1;
+
+        // The label.
+        string name = 2;
+
+        // What choosing the option does.
+        Type type = 3;
+
+        enum Type {
+          TYPE_UNSPECIFIED = 0; // Never sent.
+          TYPE_OTHER = 1;
+          TYPE_ALLOW_ONCE = 2;
+          TYPE_ALLOW_ALWAYS = 3;
+          TYPE_REJECT_ONCE = 4;
+          TYPE_REJECT_ALWAYS = 5;
+        }
+      }
+    }
+
+    message Output {
+      // Represents the type of an output.
+      //
+      // A terminal type is not supported as the terminal is always run on the same instance as the daemon running the
+      // acp server.
+      oneof type {
+        // An output this message does not describe (e.g. a terminal).
+        Other other = 1;
+        Content content = 2;
+        Diff diff = 3;
+      }
+
+      message Other {}
+
+      // A change to a file.
+      //
+      // ACP provides a mechanism to know if a file is created (but not deleted). This Diff omits that detail
+      // as it is unlikely the client requires that detail.
+      message Diff {
+        // The file.
+        string absolute_path = 1;
+
+        // The file's text before the change.
+        //
+        // Empty when the change creates the file.
+        string old_text = 2;
+
+        // The file's text after the change.
+        string new_text = 3;
+      }
+    }
+
+    message Location {
+      // The file.
+      string absolute_path = 1;
+
+      // The line, counted from 1.
+      //
+      // 0 when the line is omitted by the agent.
+      uint32 line = 2;
+    }
+
+    enum Type {
+      TYPE_UNSPECIFIED = 0; // Never sent.
+      TYPE_OTHER = 1;
+      TYPE_READ = 2;
+      TYPE_EDIT = 3;
+      TYPE_DELETE = 4;
+      TYPE_MOVE = 5;
+      TYPE_SEARCH = 6;
+      TYPE_EXECUTE = 7;
+      TYPE_THINK = 8;
+      TYPE_FETCH = 9;
+      TYPE_SWITCH_MODE = 10;
+    }
+
+    enum Status {
+      STATUS_UNSPECIFIED = 0; // Never sent.
+      STATUS_PENDING = 1;
+      STATUS_IN_PROGRESS = 2;
+      STATUS_COMPLETED = 3;
+      STATUS_FAILED = 4;
+    }
+  }
+
+  // The agent's plan for a turn.
+  message Plan {
+    // The steps.
+    repeated Step steps = 1;
+
+    message Step {
+      // What the step is.
+      string content = 1;
+
+      // How far the step is.
+      Status status = 2;
+
+      enum Status {
+        STATUS_UNSPECIFIED = 0; // Never sent.
+        STATUS_PENDING = 1;
+        STATUS_IN_PROGRESS = 2;
+        STATUS_COMPLETED = 3;
+      }
+    }
+  }
+}
+
+// A piece of a message that represents ACP's content types.
+message Content {
+  oneof type {
+    // Content this message does not describe (e.g. audio).
+    Other other = 1;
+    string text = 2;
+    Image image = 3;
+    Link link = 4;
+    Resource resource = 5;
+  }
+
+  message Other {}
+
+  message Image {
+    // The media type (e.g. `image/png`).
+    string mime_type = 1;
+
+    bytes data = 2;
+
+    // Where the image comes from (e.g. the `file://` URI of the file it was read from).
+    //
+    // Empty when unknown.
+    string uri = 3;
+  }
+
+  // A mention of something that can be fetched (e.g. a file on the daemon's machine with the `file://` URI).
+  message Link {
+    // The uri (e.g. `file:///project/schema.sql`).
+    string uri = 1;
+
+    // The name (e.g. docs.example.com/setup).
+    //
+    // An agent's link carries its title when it has one and its name otherwise.
+    string name = 2;
+
+    // What the link leads to.
+    //
+    // Empty when unknown.
+    string description = 3;
+
+    // The media type.
+    //
+    // Empty when unknown.
+    string mime_type = 4;
+
+    // The size in bytes.
+    //
+    // 0 when unknown.
+    uint64 size = 5;
+  }
+
+  // A resource whose content is sent along.
+  message Resource {
+    // The uri (e.g. `file:///project/schema.sql#L45:55`).
+    string uri = 1;
+
+    // The media type.
+    //
+    // Empty when unknown.
+    string mime_type = 2;
+
+    oneof content {
+      string text = 3;
+      bytes blob = 4;
+    }
+  }
+}

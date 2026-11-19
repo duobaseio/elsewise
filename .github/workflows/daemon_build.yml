@@ -7,6 +7,8 @@ on:
       - .github/workflows/daemon_build.yml
       - apps/daemon/**
       - packages/core/**
+      - packages/daemon-plugin/**
+      - packages/plugin/**
       - packages/transport/ts/**
       - package.json
       - pnpm-lock.yaml
@@ -17,6 +19,8 @@ on:
       - .github/workflows/daemon_build.yml
       - apps/daemon/**
       - packages/core/**
+      - packages/daemon-plugin/**
+      - packages/plugin/**
       - packages/transport/ts/**
       - package.json
       - pnpm-lock.yaml

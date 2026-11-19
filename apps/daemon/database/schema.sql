@@ -44,3 +44,29 @@ create table terminal (
 ) strict;
 
 create index terminal_workspace_id on terminal (workspace_id);
+
+
+-- An agent the user entered by hand. An agent a plugin adds has no row.
+create table agent (
+    id text not null primary key,
+    name text not null,
+    program text not null,
+    args text not null, -- A JSON array of strings.
+    env text not null, -- A JSON object of strings.
+    icon text, -- A square SVG document.
+    created_at integer not null
+) strict;
+
+
+create table agent_session (
+    id text not null primary key,
+    workspace_id text not null references workspace (id) on delete cascade,
+    -- The id of the plugin who owns it (e.g. @scope/name/<optional_id>) or an uuid from `agent` if manually imported.
+    agent_id text not null,
+    acp_session_id text,
+    title text not null,
+    created_at integer not null,
+    updated_at integer not null
+) strict;
+
+create index agent_session_workspace_id on agent_session (workspace_id);

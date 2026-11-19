@@ -252,7 +252,7 @@ message UpdateWorkspaceRequest {
 
   // The new display name.
   //
-  // Unset leaves it as is.
+  // Empty leaves it as is.
   string name = 3;
 }
 

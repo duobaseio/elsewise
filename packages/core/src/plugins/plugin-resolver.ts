@@ -6,9 +6,9 @@ import type { InstalledPlugin, InvalidPlugin } from './plugin';
 /**
  * A plugin's lifecycle hooks.
  */
-export interface Lifecycle<Host> {
-  onEnable?(host: Host): Disposable[] | undefined | Promise<Disposable[] | undefined>;
-  onDisable?(host: Host): void | Promise<void>;
+export interface Lifecycle<Api> {
+  onEnable?(api: Api): Disposable[] | undefined | Promise<Disposable[] | undefined>;
+  onDisable?(api: Api): void | Promise<void>;
 }
 
 /**
@@ -34,9 +34,20 @@ export interface EnabledSnapshot {
   readonly manifest: Manifest;
 }
 
-interface Running<Host, Plugin> {
+/**
+ * The API one plugin is given, and a disposable that removes what the plugin added through it.
+ */
+export interface Scope<Api> {
+  /** The API the plugin is given. */
+  readonly api: Api;
+
+  /** Removes what the plugin added through `api`. */
+  readonly dispose: Disposable;
+}
+
+interface Running<Api, Plugin> {
   readonly plugin: Plugin;
-  readonly host: Host;
+  readonly scope: Scope<Api>;
   readonly onEnableDisposables: readonly Disposable[];
   readonly attached: readonly Disposable[];
 }
@@ -51,10 +62,16 @@ const DISPOSE_TIMEOUT = 15_000;
  *
  * Loading a plugin doesn't restart its code.
  */
-export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Plugin extends Lifecycle<Host>, Enabled> {
+export abstract class PluginResolver<
+  Installed extends InstalledPlugin,
+  Host,
+  Plugin extends Lifecycle<Api>,
+  Enabled,
+  Api = Host,
+> {
   private static imports = 0;
 
-  private readonly entries = new Map<string, Entry<Installed, Running<Host, Plugin>>>();
+  private readonly entries = new Map<string, Entry<Installed, Running<Api, Plugin>>>();
   private readonly listeners = new Set<() => void>();
   private snapshot: readonly PluginSnapshot<Enabled>[] = [];
 
@@ -253,11 +270,19 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
           }
 
           const created = module.default({ id });
-          const disposables = (await created.onEnable?.(host)) ?? [];
-          const attached = this.onEnable(id, created, host);
+          const scope = this.scope(id, host);
+          let disposables: readonly Disposable[];
+          try {
+            disposables = (await created.onEnable?.(scope.api)) ?? [];
+          } catch (error) {
+            await this.guard(id, 'dispose', scope.dispose);
+            throw error;
+          }
+
+          const attached = this.onEnable(id, created, scope.api);
           entry.state = {
             status: 'enabled',
-            running: { plugin: created, host, onEnableDisposables: disposables, attached },
+            running: { plugin: created, scope, onEnableDisposables: disposables, attached },
           };
         } catch (error) {
           console.error(`Plugin ${id} failed to enable`, error);
@@ -270,9 +295,16 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
   }
 
   /**
+   * Returns the API the plugin `id` is given of `host` and a disposable that removes what the plugin added through it.
+   *
+   * The disposable is called when the plugin is disabled or fails to enable.
+   */
+  protected abstract scope(id: string, host: Host): Scope<Api>;
+
+  /**
    * Called when a plugin is enabled. The returned disposables run when it is disabled.
    */
-  protected abstract onEnable(id: string, plugin: Plugin, host: Host): readonly Disposable[];
+  protected abstract onEnable(id: string, plugin: Plugin, api: Api): readonly Disposable[];
 
   private reason(manifest: Manifest, unsatisfied: Unsatisfied): string {
     if ('elsewise' in unsatisfied) {
@@ -365,10 +397,11 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
           for (const disposable of running.attached) {
             disposable();
           }
-          await this.guard(id, 'disable', () => running.plugin.onDisable?.(running.host));
+          await this.guard(id, 'disable', () => running.plugin.onDisable?.(running.scope.api));
           for (const disposable of running.onEnableDisposables.toReversed()) {
             await this.guard(id, 'dispose', disposable);
           }
+          await this.guard(id, 'dispose', running.scope.dispose);
         }
 
         if ('error' in entry.plugin) {

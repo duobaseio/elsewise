@@ -1,10 +1,17 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { type EnabledSnapshot, type InstalledPlugin, type InvalidPlugin, PluginResolver } from '@elsewise/core';
+import {
+  type EnabledSnapshot,
+  type InstalledPlugin,
+  type InvalidPlugin,
+  PluginResolver,
+  type Scope,
+} from '@elsewise/core';
 import { readPluginsSync } from '@elsewise/core/node';
 import type { Daemon, Disposable, Plugin } from '@elsewise/daemon-plugin';
 import type { DataDirectory } from '../directories';
 import { VERSION } from '../global';
+import type { Registries } from './registry';
 
 /**
  * The installed plugins, loaded from the data directory, whose daemon parts run in the daemon.
@@ -12,7 +19,7 @@ import { VERSION } from '../global';
  * A load returns each folder in `plugins/` with its `manifest.json`, and whether `plugins.json` enables it. It
  * rejects a malformed `plugins.json` rather than repair it.
  */
-export class PluginStore extends PluginResolver<InstalledPlugin, Daemon, Plugin, EnabledSnapshot> {
+export class PluginStore extends PluginResolver<InstalledPlugin, Registries, Plugin, EnabledSnapshot, Daemon> {
   protected readonly part = 'daemon';
   protected readonly version = VERSION;
   private readonly data: DataDirectory;
@@ -41,6 +48,25 @@ export class PluginStore extends PluginResolver<InstalledPlugin, Daemon, Plugin,
 
     const { id, daemon } = plugin.manifest;
     return { ...plugin, url: pathToFileURL(path.join(this.data.plugins, id, 'daemon', daemon.main)).href };
+  }
+
+  protected scope(id: string, registries: Registries): Scope<Daemon> {
+    const added: Disposable[] = [];
+    const track = (remove: Disposable): Disposable => {
+      added.push(remove);
+      return remove;
+    };
+    return {
+      api: {
+        agents: { add: (agent) => track(registries.agents.addFrom(id, agent)) },
+        mcpServers: { add: (server) => track(registries.mcpServers.add(server.name, server)) },
+      },
+      dispose: async () => {
+        for (const remove of added.toReversed()) {
+          await remove();
+        }
+      },
+    };
   }
 
   protected onEnable(): readonly Disposable[] {
