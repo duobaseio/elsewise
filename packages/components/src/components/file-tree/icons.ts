@@ -14,6 +14,10 @@ const DEVICON_SIZE = 128;
 const PHOSPHOR_SIZE = 256;
 const LETTER_SIZE: Record<number, string> = { 1: '8.5px', 2: '8.5px', 3: '5.75px' };
 
+// Glyphs and brand marks fill their box, so they draw at 14px of the 16px slot to sit with Phosphor's icons, which
+// carry their own margin.
+const MARK_SCALE = 14 / 16;
+
 const CHEVRON_ID = 'ew-chevron';
 
 // Phosphor's box widened until the chevron draws at seven eighths of its lane, 14px like the sidebar's: sizing the
@@ -74,9 +78,15 @@ export function fileTreeIcons(fileIcons: FileIcons, chevron: string): FileTreeIc
 function symbolFor(id: string, spec: FileIconData): string {
   switch (spec.kind) {
     case 'glyph':
-      return maskedSymbol(id, SIMPLE_ICONS_SIZE, spec.src, fillOf(spec.tint));
+      return maskedSymbol(
+        id,
+        SIMPLE_ICONS_SIZE,
+        spec.src,
+        fillOf(spec.tint),
+        scaledViewBox(SIMPLE_ICONS_SIZE, MARK_SCALE),
+      );
     case 'brand':
-      return `<symbol id="${id}" viewBox="0 0 ${DEVICON_SIZE} ${DEVICON_SIZE}"><image href="${spec.src}" x="0" y="0" width="${DEVICON_SIZE}" height="${DEVICON_SIZE}"/></symbol>`;
+      return `<symbol id="${id}" viewBox="${scaledViewBox(DEVICON_SIZE, MARK_SCALE)}"><image href="${spec.src}" x="0" y="0" width="${DEVICON_SIZE}" height="${DEVICON_SIZE}"/></symbol>`;
     case 'phosphor':
       return maskedSymbol(id, PHOSPHOR_SIZE, iconUrl(PHOSPHOR_ICONS[spec.name]), fillOf(spec.tint));
     case 'letters': {
@@ -108,6 +118,14 @@ function maskedSymbol(id: string, size: number, url: string, fill: string, viewB
     `<rect ${box} mask="url(#${id}-mask)" style="fill: ${fill}"/>`,
     `</symbol>`,
   ].join('');
+}
+
+// The box of `size` widened about its centre until its contents draw at `scale` of the slot: sizing the `<svg>` would
+// move the row's text.
+function scaledViewBox(size: number, scale: number): string {
+  const widened = size / scale;
+  const offset = (size - widened) / 2;
+  return `${offset} ${offset} ${widened} ${widened}`;
 }
 
 // Always a fill: inheriting would take the lane's muted ink.
