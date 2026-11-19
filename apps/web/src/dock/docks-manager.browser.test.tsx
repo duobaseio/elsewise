@@ -3,7 +3,7 @@ import { WorkspaceManager } from '@/projects/workspace-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
 import {
   addTerminal,
-  EDITOR,
+  FILE,
   FILE_TREE,
   mount as mountDock,
   showWorkspace,
@@ -66,7 +66,7 @@ describe('attach', () => {
     const { docks, attached } = await mount(false);
 
     expect(docks.active).toBeNull();
-    expect(attached.panels).toEqual([EDITOR, FILE_TREE]);
+    expect(attached.panels).toEqual([FILE, FILE_TREE]);
   });
 
   test('reports change without opened panels', async () => {
@@ -103,7 +103,7 @@ describe('onPanelOpen', () => {
 
     addTerminal(api);
 
-    expect(panels).toHaveBeenCalledExactlyOnceWith([EDITOR, TERMINAL, FILE_TREE]);
+    expect(panels).toHaveBeenCalledExactlyOnceWith([FILE, TERMINAL, FILE_TREE]);
   });
 
   test('reports added panel before change', async () => {
@@ -125,8 +125,8 @@ describe('onPanelOpen', () => {
     opened.mockClear();
     changed.mockClear();
 
-    const editor = api.getPanel(EDITOR.id);
-    api.getPanel('terminal:1')?.api.moveTo({ group: editor?.group });
+    const file = api.getPanel(FILE.id);
+    api.getPanel('terminal:1')?.api.moveTo({ group: file?.group });
     await settle();
 
     expect(opened).not.toHaveBeenCalled();

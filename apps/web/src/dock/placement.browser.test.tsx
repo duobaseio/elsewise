@@ -4,13 +4,13 @@ import { mount as mountDock, WORKSPACE } from '../../test/dock';
 import { DockStore } from './dock-store';
 import { addPanel, movePanel } from './placement';
 
-const EDITOR = 'editor:$workspace.tsx';
+const FILE = 'file:$workspace.tsx';
 
-// A dock whose first group has the tabs editor, a, b and c, beside the file tree's.
+// A dock whose first group has the tabs file, a, b and c, beside the file tree's.
 async function mount() {
   const dockview = await mountDock();
   for (const id of ['a', 'b', 'c']) {
-    dockview.addPanel({ id, component: 'terminal', params: { session: id }, position: { referencePanel: EDITOR } });
+    dockview.addPanel({ id, component: 'terminal', params: { session: id }, position: { referencePanel: FILE } });
   }
   const { panels } = new DockStore(WORKSPACE, dockview).snapshot;
   const ids = (layout: Layout | null): unknown => {
@@ -42,7 +42,7 @@ describe('addPanel', () => {
     const { tab, add, layout } = await mount();
 
     expect(add({ tab: 'before', of: tab('b') })).toBe('n');
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'n', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'n', 'b', 'c'], ['fileTree']] });
   });
 
   test('adds tab after panel', async () => {
@@ -50,7 +50,7 @@ describe('addPanel', () => {
 
     add({ tab: 'after', of: tab('b') });
 
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'n', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'n', 'c'], ['fileTree']] });
   });
 
   test('adds tab first in group', async () => {
@@ -58,7 +58,7 @@ describe('addPanel', () => {
 
     add({ tab: 'first', with: tab('b') });
 
-    expect(layout()).toEqual({ row: [['n', EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [['n', FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 
   test('adds tab last in group', async () => {
@@ -66,7 +66,7 @@ describe('addPanel', () => {
 
     add({ tab: 'last', with: tab('a') });
 
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c', 'n'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c', 'n'], ['fileTree']] });
   });
 
   test('adds group beside group of panel', async () => {
@@ -74,7 +74,7 @@ describe('addPanel', () => {
 
     add({ group: 'above', of: fileTree });
 
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], { column: [['n'], ['fileTree']] }] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], { column: [['n'], ['fileTree']] }] });
   });
 
   test('adds group along edge', async () => {
@@ -82,7 +82,7 @@ describe('addPanel', () => {
 
     add({ edge: 'bottom' });
 
-    expect(layout()).toEqual({ column: [{ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] }, ['n']] });
+    expect(layout()).toEqual({ column: [{ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] }, ['n']] });
   });
 
   test('sets height of group above or below', async () => {
@@ -123,14 +123,14 @@ describe('addPanel', () => {
 
     expect(add({ tab: 'after', of: { ...tab('b'), id: 'closed' } })).toBeNull();
     expect(add({ group: 'right', of: { ...tab('b'), id: 'closed' } })).toBeNull();
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 
   test('returns null for tab in group of tabless panel', async () => {
     const { fileTree, add, layout } = await mount();
 
     expect(add({ tab: 'last', with: fileTree as unknown as TabPanel })).toBeNull();
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 });
 
@@ -139,7 +139,7 @@ describe('movePanel', () => {
     const { tab, move, layout } = await mount();
 
     expect(move(tab('a'), { tab: 'after', of: tab('b') })).toBe(true);
-    expect(layout()).toEqual({ row: [[EDITOR, 'b', 'a', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'b', 'a', 'c'], ['fileTree']] });
   });
 
   test('moves tab before earlier panel', async () => {
@@ -147,7 +147,7 @@ describe('movePanel', () => {
 
     move(tab('c'), { tab: 'before', of: tab('a') });
 
-    expect(layout()).toEqual({ row: [[EDITOR, 'c', 'a', 'b'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'c', 'a', 'b'], ['fileTree']] });
   });
 
   test('moves tab first in group', async () => {
@@ -155,7 +155,7 @@ describe('movePanel', () => {
 
     move(tab('b'), { tab: 'first', with: tab('c') });
 
-    expect(layout()).toEqual({ row: [['b', EDITOR, 'a', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [['b', FILE, 'a', 'c'], ['fileTree']] });
   });
 
   test('moves tab last in group', async () => {
@@ -163,7 +163,7 @@ describe('movePanel', () => {
 
     move(tab('a'), { tab: 'last', with: tab('a') });
 
-    expect(layout()).toEqual({ row: [[EDITOR, 'b', 'c', 'a'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'b', 'c', 'a'], ['fileTree']] });
   });
 
   test('moves tab to new group beside group of panel', async () => {
@@ -171,7 +171,7 @@ describe('movePanel', () => {
 
     move(tab('c'), { group: 'below', of: tab('b') });
 
-    expect(layout()).toEqual({ row: [{ column: [[EDITOR, 'a', 'b'], ['c']] }, ['fileTree']] });
+    expect(layout()).toEqual({ row: [{ column: [[FILE, 'a', 'b'], ['c']] }, ['fileTree']] });
   });
 
   test('moves tab to other group', async () => {
@@ -184,7 +184,7 @@ describe('movePanel', () => {
       row: [
         {
           column: [
-            [EDITOR, 'b'],
+            [FILE, 'b'],
             ['a', 'c'],
           ],
         },
@@ -198,7 +198,7 @@ describe('movePanel', () => {
 
     move(tab('c'), { edge: 'top' });
 
-    expect(layout()).toEqual({ column: [['c'], { row: [[EDITOR, 'a', 'b'], ['fileTree']] }] });
+    expect(layout()).toEqual({ column: [['c'], { row: [[FILE, 'a', 'b'], ['fileTree']] }] });
   });
 
   test('moves tabless panel beside group of panel', async () => {
@@ -206,7 +206,7 @@ describe('movePanel', () => {
 
     move(fileTree, { group: 'left', of: tab('b') });
 
-    expect(layout()).toEqual({ row: [['fileTree'], [EDITOR, 'a', 'b', 'c']] });
+    expect(layout()).toEqual({ row: [['fileTree'], [FILE, 'a', 'b', 'c']] });
   });
 
   test('sets size of new group beside group of panel', async () => {
@@ -230,27 +230,27 @@ describe('movePanel', () => {
 
     expect(move(tab('a'), { tab: 'after', of: { ...tab('b'), id: 'closed' } })).toBe(false);
     expect(move({ ...tab('a'), id: 'closed' }, { tab: 'after', of: tab('b') })).toBe(false);
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 
   test('returns false for tab in group of tabless panel', async () => {
     const { tab, fileTree, move, layout } = await mount();
 
     expect(move(tab('a'), { tab: 'last', with: fileTree as unknown as TabPanel })).toBe(false);
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 
   test('returns false for tabless panel among tabs', async () => {
     const { tab, fileTree, move, layout } = await mount();
 
     expect(move(fileTree, { tab: 'last', with: tab('b') })).toBe(false);
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 
   test('returns false for panel before or after itself', async () => {
     const { tab, move, layout } = await mount();
 
     expect(move(tab('b'), { tab: 'after', of: tab('b') })).toBe(false);
-    expect(layout()).toEqual({ row: [[EDITOR, 'a', 'b', 'c'], ['fileTree']] });
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 });

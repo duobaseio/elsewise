@@ -3,7 +3,6 @@ import { Icon } from '@elsewise/components/components/icon';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
-import type { DiffLayout } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
@@ -12,16 +11,14 @@ import {
   type DockviewWillShowOverlayLocationEvent,
   type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
-  type IDockviewPanelProps,
   type SerializedDockview,
 } from 'dockview-react';
 import { useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import type { DockManager } from '@/dock/dock-manager';
-import { DiffState } from '@/editor/diff/diff';
-import { Editor } from '@/editor/editor';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
-import { useSettings } from '@/settings/settings';
+import { FilePanel } from './-file/file-panel';
+import { FileTab } from './-file/file-tab';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
 import { FileTreePanel } from './-file-tree/file-tree-panel';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
@@ -29,17 +26,6 @@ import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
 import { TerminalPanel } from './-terminal/terminal-panel';
 import { TerminalTab } from './-terminal/terminal-tab';
-// TODO: Back this with the daemon.
-import FAKE_CODE from './route.tsx?raw';
-
-declare global {
-  interface ImportMetaEnv {
-    /**
-     * The repository that the dev server runs in, as a `file:` URL ending in `/`.
-     */
-    readonly ELSEWISE_REPOSITORY: string;
-  }
-}
 
 export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
   component: WorkspaceRoute,
@@ -48,11 +34,11 @@ export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
 
 type PanelKind = keyof typeof PANELS;
 
-const TOOL_TABS = { fileTree: FileTab };
-const TABS = { ...TOOL_TABS, terminal: TerminalTab };
+const TOOL_TABS = { fileTree: FileTreeTab };
+const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab };
 const TOOL_PANELS = new Set(['fileTree' satisfies PanelKind]);
 const PANELS = {
-  editor: EditorPanel,
+  file: FilePanel,
   terminal: TerminalPanel,
   fileTree: FileTreePanel,
 };
@@ -84,10 +70,11 @@ function WorkspaceRoute() {
     const dock = docks.attach({ daemon, project, workspace }, api);
     attached.current = dock;
 
-    const editor = dock.activeTabPanel;
-    if (layout === undefined && editor !== null) {
+    const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
+    // TODO: Replace with default tab.
+    if (layout === undefined && fileTree !== undefined) {
       dock
-        .addTerminal({}, { group: 'below', of: editor, height: 200 })
+        .addTerminal({}, { group: 'left', of: fileTree })
         .catch((error: Error) =>
           toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
         );
@@ -186,28 +173,18 @@ export function WorkspaceDock({
     }
 
     event.api.addPanel({
-      id: 'editor:$workspace.tsx',
-      component: 'editor' satisfies PanelKind,
-      title: '$workspace.tsx',
-      params: { path: 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx' },
-      minimumWidth: 10,
-      minimumHeight: 10,
-    });
-    event.api.addPanel({
       id: 'fileTree',
-      component: 'fileTree' satisfies PanelKind,
       tabComponent: 'fileTree' satisfies PanelKind,
+      component: 'fileTree' satisfies PanelKind,
       title: 'Files',
       params: { path: '/' },
-      position: { referencePanel: 'editor:$workspace.tsx', direction: 'right' },
       minimumWidth: 10,
       minimumHeight: 10,
+      // TODO: Add a default group beside the file tree, which balances this width. Until then the file tree fills the
+      // dock while it is alone.
       initialWidth: 350,
     });
     setDockview(event.api);
-
-    // TODO: Replace with actual active panel logic
-    event.api.getPanel('editor:$workspace.tsx')?.api.setActive();
     onDockviewReady?.(event.api);
   };
 
@@ -262,7 +239,17 @@ export function AddTabAction(props: IDockviewHeaderActionsProps) {
   );
 }
 
-export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { onClose?: () => void }) {
+export function DefaultTab({
+  dirty = false,
+  onClose,
+  ...props
+}: IDockviewPanelHeaderProps & {
+  /**
+   * Whether the panel has unsaved changes, which marks the tab with a dot that turns into the close button on hover.
+   */
+  dirty?: boolean;
+  onClose?: () => void;
+}) {
   const docks = useContext(ApplicationManagerContext)?.docks;
   // The dock's last remaining content tab is not closable.
   const [closable, setClosable] = useState(true);
@@ -283,12 +270,15 @@ export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { 
   }, [props.containerApi]);
 
   return (
-    <div className="flex h-full items-center gap-1.5 px-2 text-base">
+    <div className="flex h-full items-center gap-1.5 px-2 text-base" data-dirty={dirty || undefined}>
       <span>{props.api.title}</span>
-      {closable && (
+      {closable ? (
         <Button
           aria-label={`Close ${props.api.title}`}
-          className="size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100"
+          className={cn(
+            'size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
+            dirty && 'opacity-100',
+          )}
           onClick={(event) => {
             event.stopPropagation();
             if (onClose !== undefined) {
@@ -308,8 +298,11 @@ export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { 
           size="icon-xs"
           variant="ghost"
         >
-          <Icon className="size-3" name="close" />
+          {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
+          <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
         </Button>
+      ) : (
+        dirty && <span aria-hidden className="size-2 rounded-full bg-text-3" />
       )}
     </div>
   );
@@ -319,7 +312,7 @@ export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { 
  * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tool` is the adapter CSS hook for
  * tool-specific state painting.
  */
-export function FileTab(props: IDockviewPanelHeaderProps) {
+export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
     <div className="flex h-full items-center gap-1.5 px-2 text-base text-text-2" data-tool>
       <span>{props.api.title}</span>
@@ -402,23 +395,4 @@ function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
   if (draggedTool || targetHasTool) {
     event.preventDefault();
   }
-}
-
-function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | null; layout?: DiffLayout }>) {
-  // TODO: Back this with the daemon.
-  const root = new URL(import.meta.env.ELSEWISE_REPOSITORY);
-  const defaultLayout = useSettings((settings) => settings.editor.diffLayout);
-  const [diff] = useState(() => new DiffState(props.params.diff ?? null, props.params.layout ?? defaultLayout));
-
-  // Keeps the comparison in the panel's parameters, so that it is restored with the dock.
-  useEffect(() => {
-    const dispose = diff.subscribe(() => props.api.updateParameters({ diff: diff.source, layout: diff.layout }));
-    return () => {
-      void dispose();
-    };
-  }, [diff, props.api]);
-
-  return (
-    <Editor content={{ label: 'Current', code: FAKE_CODE }} relativePath={props.params.path} root={root} diff={diff} />
-  );
 }

@@ -3,7 +3,7 @@ import type { TerminalSessionId } from '../terminal';
 /**
  * A panel.
  */
-export type Panel = EditorPanel | TerminalPanel | FileTreePanel;
+export type Panel = FilePanel | TerminalPanel | FileTreePanel;
 
 /**
  * A panel that can share its group with others.
@@ -29,7 +29,7 @@ export interface BasePanel {
    */
   readonly id: string;
 
-  readonly type: 'editor' | 'terminal' | 'fileTree';
+  readonly type: 'file' | 'terminal' | 'fileTree';
 
   /**
    * Whether the panel sits among a group's tabs.
@@ -43,10 +43,10 @@ export interface BasePanel {
 }
 
 /**
- * A panel that shows a file in an editor.
+ * A panel that shows a file.
  */
-export interface EditorPanel extends BasePanel {
-  readonly type: 'editor';
+export interface FilePanel extends BasePanel {
+  readonly type: 'file';
   readonly tab: true;
   readonly closable: true;
 

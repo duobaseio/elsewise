@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { addTerminal, EDITOR, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
+import { addTerminal, FILE, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
 import { DockStore } from './dock-store';
 
 async function mount() {
@@ -14,7 +14,7 @@ describe('snapshot', () => {
     expect(store.snapshot.layout).toEqual({
       direction: 'row',
       children: [
-        { panels: [EDITOR], shown: EDITOR },
+        { panels: [FILE], shown: FILE },
         { panels: [FILE_TREE], shown: FILE_TREE },
       ],
     });
@@ -34,7 +34,7 @@ describe('update', () => {
         {
           direction: 'column',
           children: [
-            { panels: [EDITOR], shown: EDITOR },
+            { panels: [FILE], shown: FILE },
             { panels: [TERMINAL], shown: TERMINAL },
           ],
         },
@@ -50,7 +50,7 @@ describe('update', () => {
     store.update();
 
     expect(store.snapshot.groups).toEqual([
-      { panels: [EDITOR], shown: EDITOR },
+      { panels: [FILE], shown: FILE },
       { panels: [FILE_TREE], shown: null },
     ]);
   });
@@ -72,7 +72,7 @@ describe('update', () => {
     api.getPanel('fileTree')?.group.api.setVisible(false);
     store.update();
 
-    expect(store.snapshot.activePanel).toEqual(EDITOR);
+    expect(store.snapshot.activePanel).toEqual(FILE);
   });
 
   test('keeps active tab panel when tabless panel is activated', async () => {
@@ -81,7 +81,7 @@ describe('update', () => {
     api.getPanel('fileTree')?.api.setActive();
     store.update();
 
-    expect(store.snapshot.activeTabPanel).toEqual(EDITOR);
+    expect(store.snapshot.activeTabPanel).toEqual(FILE);
   });
 
   test('falls back to open tab panel when active tab panel closes', async () => {
@@ -92,7 +92,7 @@ describe('update', () => {
     api.getPanel('terminal:1')?.api.close();
     store.update();
 
-    expect(store.snapshot.activeTabPanel).toEqual(EDITOR);
+    expect(store.snapshot.activeTabPanel).toEqual(FILE);
   });
 
   test('returns false for resized group', async () => {

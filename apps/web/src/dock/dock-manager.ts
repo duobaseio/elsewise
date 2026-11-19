@@ -1,7 +1,7 @@
 import type {
   ClosablePanel,
   Dock,
-  EditorPanel,
+  FilePanel,
   Group,
   GroupPlacement,
   Layout,
@@ -74,51 +74,20 @@ export class DockManager implements Dock {
     }
   }
 
-  get workspace(): Workspace {
-    const active = this.workspaces.active;
-    if (sameWorkspace(active?.id, this.workspaceId)) {
-      this.resolved = active;
-    }
-
-    if (this.resolved === null) {
-      throw new Error('The workspace of the dock is not loaded');
-    }
-    return this.resolved;
-  }
-
-  get activePanel(): Panel | null {
-    return this.store.snapshot.activePanel;
-  }
-
-  get activeTabPanel(): TabPanel | null {
-    return this.store.snapshot.activeTabPanel;
-  }
-
-  get panels(): readonly Panel[] {
-    return this.store.snapshot.panels;
-  }
-
-  get groups(): readonly Group[] {
-    return this.store.snapshot.groups;
-  }
-
-  get layout(): Layout | null {
-    return this.store.snapshot.layout;
-  }
-
   get(id: string): Panel | null {
     return this.panels.find((panel) => panel.id === id) ?? null;
   }
 
-  addEditor(relativePath: string, placement: Placement, activate = true): EditorPanel | null {
-    let panel = this.panels.find((open) => open.type === 'editor' && open.relativePath === relativePath) ?? null;
+  addFile(relativePath: string, placement: Placement, activate = true): FilePanel | null {
+    let panel = this.panels.find((open) => open.type === 'file' && open.relativePath === relativePath) ?? null;
     if (panel === null) {
       const added = addPanel(
         this.dockview,
         this.panels,
         {
-          id: `editor:${crypto.randomUUID()}`,
-          component: 'editor',
+          id: `file:${crypto.randomUUID()}`,
+          tabComponent: 'file',
+          component: 'file',
           title: relativePath.split('/').at(-1),
           params: { path: relativePath },
           inactive: true,
@@ -130,7 +99,7 @@ export class DockManager implements Dock {
       panel = added && this.get(added.id);
     }
 
-    if (panel?.type !== 'editor') {
+    if (panel?.type !== 'file') {
       return null;
     }
 
@@ -159,8 +128,8 @@ export class DockManager implements Dock {
       this.panels,
       {
         id: `terminal:${session.id.session}`,
-        component: 'terminal',
         tabComponent: 'terminal',
+        component: 'terminal',
         title: session.name,
         params: { session: session.id.session },
         inactive: true,
@@ -236,6 +205,38 @@ export class DockManager implements Dock {
     this.dockview.getPanel(panel.id)?.api.close();
     this.update();
     return true;
+  }
+
+  get workspace(): Workspace {
+    const active = this.workspaces.active;
+    if (sameWorkspace(active?.id, this.workspaceId)) {
+      this.resolved = active;
+    }
+
+    if (this.resolved === null) {
+      throw new Error('The workspace of the dock is not loaded');
+    }
+    return this.resolved;
+  }
+
+  get activePanel(): Panel | null {
+    return this.store.snapshot.activePanel;
+  }
+
+  get activeTabPanel(): TabPanel | null {
+    return this.store.snapshot.activeTabPanel;
+  }
+
+  get panels(): readonly Panel[] {
+    return this.store.snapshot.panels;
+  }
+
+  get groups(): readonly Group[] {
+    return this.store.snapshot.groups;
+  }
+
+  get layout(): Layout | null {
+    return this.store.snapshot.layout;
   }
 
   dispose() {

@@ -79,6 +79,7 @@ import {
   EDITOR_UNIFIED_DIFF,
   EDITOR_UNSTAGED_DIFF,
 } from '@/editor/diff/commands';
+import { EDITOR_SAVE } from '@/editor/file';
 import { EDITOR_FORMAT } from '@/editor/format';
 import { EDITOR_SHOW_HOVER } from '@/editor/hover';
 import { EDITOR_GO_TO_DEFINITION } from '@/editor/lsp/definition';
@@ -94,6 +95,7 @@ import {
   FILE_TREE_DELETE,
   FILE_TREE_NEW_FILE,
   FILE_TREE_NEW_FOLDER,
+  FILE_TREE_OPEN_FILE,
   FILE_TREE_OPEN_FILE_MANAGER,
   FILE_TREE_PASTE,
   FILE_TREE_RENAME,
@@ -145,6 +147,7 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   WORKSPACE_MARK_READ,
   WORKSPACE_OPEN_FILE_MANAGER,
   // Editor
+  EDITOR_SAVE,
   EDITOR_CUT,
   EDITOR_COPY,
   EDITOR_PASTE,
@@ -221,6 +224,7 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   FILE_TREE_CANCEL_CUT,
   FILE_TREE_RENAME,
   FILE_TREE_DELETE,
+  FILE_TREE_OPEN_FILE,
   FILE_TREE_OPEN_FILE_MANAGER,
 ];
 

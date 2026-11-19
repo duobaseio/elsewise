@@ -4,9 +4,9 @@ import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
 import { builtInApplication } from '../../../../../../test/commands';
-import { EDITOR, FILE_TREE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../test/dock';
-import { STUB_PANELS } from '../../../../../../test/dock-stubs';
-import { WorkspaceDock } from './route';
+import { addFile, FILE, FILE_TREE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../test/dock';
+import { STUB_PANELS, STUB_TABS } from '../../../../../../test/dock-stubs';
+import { DefaultTab, WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -22,7 +22,9 @@ async function mount() {
       <div style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
           panels={STUB_PANELS}
+          tabs={{ ...STUB_TABS, file: DefaultTab }}
           onDockviewReady={(ready) => {
+            addFile(ready);
             application.docks.attach(WORKSPACE, ready);
           }}
         />
@@ -60,10 +62,10 @@ test('shows file tree hidden through dock in tool stripe', async () => {
 test('closes editor through dock', async () => {
   const dock = await mount();
   const closed = vi.spyOn(dock, 'close');
-  const added = dock.addEditor('src/other.ts', { tab: 'after', of: EDITOR });
+  const added = dock.addFile('src/other.ts', { tab: 'after', of: FILE });
 
   await page.getByRole('button', { name: 'Close other.ts' }).click();
 
   expect(closed).toHaveBeenCalledExactlyOnceWith(added);
-  await vi.waitFor(() => expect(dock.panels).toEqual([EDITOR, FILE_TREE]));
+  await vi.waitFor(() => expect(dock.panels).toEqual([FILE, FILE_TREE]));
 });

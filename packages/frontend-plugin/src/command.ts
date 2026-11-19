@@ -66,6 +66,9 @@ export const DEFAULT_COMMANDS = {
     },
   },
   editor: {
+    file: {
+      save: 'elsewise.editor.file.save',
+    },
     clipboard: {
       cut: 'elsewise.editor.clipboard.cut',
       copy: 'elsewise.editor.clipboard.copy',
@@ -179,6 +182,7 @@ export const DEFAULT_COMMANDS = {
       delete: 'elsewise.fileTree.edit.delete',
     },
     open: {
+      file: 'elsewise.fileTree.open.file',
       fileManager: 'elsewise.fileTree.open.fileManager',
     },
   },
@@ -227,6 +231,9 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
   },
   editor: {
+    file: {
+      save: ['Mod-s'],
+    },
     clipboard: {
       cut: ['Mod-x', { windows: 'Shift-Delete', linux: 'Shift-Delete' }],
       copy: ['Mod-c', { windows: 'Ctrl-Insert', linux: 'Ctrl-Insert' }],
@@ -341,6 +348,7 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       delete: ['Delete', 'Backspace'],
     },
     open: {
+      file: ['Enter'],
       fileManager: [],
     },
   },

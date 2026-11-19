@@ -322,6 +322,35 @@ describe('WriteFile', () => {
     await expect(deleted).rejects.toMatchObject({ code: Code.FAILED_PRECONDITION });
     await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('changed');
   });
+
+  test('overwrites a file that no longer matches the base hash', async () => {
+    await fs.writeFile(harness.nativeAt('a.txt'), 'changed');
+
+    const response = await harness.client.writeFile({
+      root,
+      relativePath: 'a.txt',
+      baseHash: sha256('old'),
+      content,
+      overwrite: true,
+    });
+
+    expect(response.hash).toEqual(sha256('new'));
+    await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('new');
+  });
+
+  test('overwrites a file that already exists without a base hash', async () => {
+    await fs.writeFile(harness.nativeAt('a.txt'), 'old');
+
+    await harness.client.writeFile({ root, relativePath: 'a.txt', content, overwrite: true });
+
+    await expect(fs.readFile(harness.nativeAt('a.txt'), 'utf8')).resolves.toBe('new');
+  });
+
+  test('creates the file when overwriting nothing', async () => {
+    await harness.client.writeFile({ root, relativePath: 'a/b.txt', content, overwrite: true });
+
+    await expect(fs.readFile(harness.nativeAt('a', 'b.txt'), 'utf8')).resolves.toBe('new');
+  });
 });
 
 describe('CreateDirectory', () => {

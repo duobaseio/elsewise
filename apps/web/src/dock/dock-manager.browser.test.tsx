@@ -3,22 +3,22 @@ import { describe, expect, test, vi } from 'vitest';
 import { ProjectManager } from '@/projects/project-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
 import { memoryRouter } from '../../test/commands';
-import { addTerminal, EDITOR, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
+import { addTerminal, FILE, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
 import { DockManager } from './dock-manager';
 
-const OTHER = { ...EDITOR, id: 'editor:other.ts', relativePath: 'other.ts' };
+const OTHER = { ...FILE, id: 'file:other.ts', relativePath: 'other.ts' };
 
-// A dock that has the editor and another in a group, above the terminal and beside the file tree.
+// A dock that has the file and another in a group, above the terminal and beside the file tree.
 async function mount() {
   const dockview = await mountDock();
   dockview.addPanel({
     id: OTHER.id,
-    component: 'editor',
+    component: 'file',
     params: { path: OTHER.relativePath },
-    position: { referencePanel: EDITOR.id },
+    position: { referencePanel: FILE.id },
   });
   addTerminal(dockview);
-  dockview.getPanel(EDITOR.id)?.api.setActive();
+  dockview.getPanel(FILE.id)?.api.setActive();
 
   const terminals = new TerminalManager(new QueryClient());
   const deleted = vi.spyOn(terminals, 'delete').mockResolvedValue();
@@ -39,30 +39,30 @@ async function mount() {
 
 const ADDED = { ...TERMINAL, id: 'terminal:2', session: { ...WORKSPACE, session: '2' } };
 
-describe('addEditor', () => {
+describe('addFile', () => {
   test('adds and activates panel of file', async () => {
     const { dock } = await mount();
 
-    const panel = dock.addEditor('src/new.ts', { tab: 'after', of: EDITOR });
+    const panel = dock.addFile('src/new.ts', { tab: 'after', of: FILE });
 
-    expect(panel).toEqual({ ...EDITOR, id: panel?.id, relativePath: 'src/new.ts' });
-    expect(dock.groups[0]).toEqual({ panels: [EDITOR, panel, OTHER], shown: panel });
+    expect(panel).toEqual({ ...FILE, id: panel?.id, relativePath: 'src/new.ts' });
+    expect(dock.groups[0]).toEqual({ panels: [FILE, panel, OTHER], shown: panel });
     expect(dock.activePanel).toEqual(panel);
   });
 
   test('shows panel without activating it', async () => {
     const { dock } = await mount();
 
-    const panel = dock.addEditor('src/new.ts', { tab: 'first', with: TERMINAL }, false);
+    const panel = dock.addFile('src/new.ts', { tab: 'first', with: TERMINAL }, false);
 
     expect(dock.groups[1]).toEqual({ panels: [panel, TERMINAL], shown: panel });
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.activePanel).toEqual(FILE);
   });
 
   test('activates panel of open file', async () => {
     const { dock } = await mount();
 
-    expect(dock.addEditor(OTHER.relativePath, { edge: 'top' })).toEqual(OTHER);
+    expect(dock.addFile(OTHER.relativePath, { edge: 'top' })).toEqual(OTHER);
 
     expect(dock.panels).toHaveLength(4);
     expect(dock.activePanel).toEqual(OTHER);
@@ -71,7 +71,7 @@ describe('addEditor', () => {
   test('returns null for panel that is not open', async () => {
     const { dock } = await mount();
 
-    expect(dock.addEditor('src/new.ts', { tab: 'after', of: { ...OTHER, id: 'closed' } })).toBeNull();
+    expect(dock.addFile('src/new.ts', { tab: 'after', of: { ...OTHER, id: 'closed' } })).toBeNull();
 
     expect(dock.panels).toHaveLength(4);
   });
@@ -84,7 +84,7 @@ describe('addTerminal', () => {
     await expect(dock.addTerminal({ name: 'x' }, { tab: 'last', with: OTHER })).resolves.toEqual(ADDED);
 
     expect(created).toHaveBeenCalledExactlyOnceWith(WORKSPACE, { name: 'x' });
-    expect(dock.groups[0]).toEqual({ panels: [EDITOR, OTHER, ADDED], shown: ADDED });
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER, ADDED], shown: ADDED });
     expect(dock.activePanel).toEqual(ADDED);
   });
 
@@ -94,7 +94,7 @@ describe('addTerminal', () => {
     await dock.addTerminal({}, { group: 'right', of: TERMINAL }, false);
 
     expect(dock.groups[2]).toEqual({ panels: [ADDED], shown: ADDED });
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.activePanel).toEqual(FILE);
   });
 
   test('returns null without terminal for panel that is not open', async () => {
@@ -145,7 +145,7 @@ describe('move', () => {
     dock.move(OTHER, { tab: 'first', with: TERMINAL });
 
     expect(dock.groups).toEqual([
-      { panels: [EDITOR], shown: EDITOR },
+      { panels: [FILE], shown: FILE },
       { panels: [OTHER, TERMINAL], shown: OTHER },
       { panels: [FILE_TREE], shown: FILE_TREE },
     ]);
@@ -158,7 +158,7 @@ describe('move', () => {
     dock.move(OTHER, { tab: 'last', with: TERMINAL }, false);
 
     expect(dock.groups[1]).toEqual({ panels: [TERMINAL, OTHER], shown: OTHER });
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.activePanel).toEqual(FILE);
   });
 
   test('moves panel to edge without activating it', async () => {
@@ -167,16 +167,16 @@ describe('move', () => {
     dock.move(OTHER, { edge: 'top' }, false);
 
     expect(dock.groups[0]).toEqual({ panels: [OTHER], shown: OTHER });
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.activePanel).toEqual(FILE);
   });
 
   test('keeps moved panel active', async () => {
     const { dock } = await mount();
 
-    dock.move(EDITOR, { tab: 'last', with: TERMINAL }, false);
+    dock.move(FILE, { tab: 'last', with: TERMINAL }, false);
 
-    expect(dock.groups[1]).toEqual({ panels: [TERMINAL, EDITOR], shown: EDITOR });
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.groups[1]).toEqual({ panels: [TERMINAL, FILE], shown: FILE });
+    expect(dock.activePanel).toEqual(FILE);
   });
 
   test('shows hidden group that panel moves to', async () => {
@@ -200,7 +200,7 @@ describe('move', () => {
 });
 
 describe('close', () => {
-  test('closes editor', async () => {
+  test('closes file', async () => {
     const { dock, deleted } = await mount();
 
     await expect(dock.close(OTHER)).resolves.toBe(true);
@@ -241,7 +241,7 @@ describe('show', () => {
 
     dock.show(OTHER);
 
-    expect(dock.groups[0]).toEqual({ panels: [EDITOR, OTHER], shown: OTHER });
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: OTHER });
     expect(dock.activePanel).toEqual(TERMINAL);
   });
 
@@ -252,7 +252,7 @@ describe('show', () => {
     dock.show(FILE_TREE);
 
     expect(dock.groups[2]).toEqual({ panels: [FILE_TREE], shown: FILE_TREE });
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.activePanel).toEqual(FILE);
   });
 });
 
@@ -262,15 +262,15 @@ describe('hide', () => {
 
     dock.hide(OTHER);
 
-    expect(dock.groups[0]).toEqual({ panels: [EDITOR, OTHER], shown: null });
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: null });
   });
 
   test('activates last active panel that is shown', async () => {
     const { dock } = await mount();
     dock.activate(TERMINAL);
-    dock.activate(EDITOR);
+    dock.activate(FILE);
 
-    dock.hide(EDITOR);
+    dock.hide(FILE);
 
     expect(dock.activePanel).toEqual(TERMINAL);
   });
@@ -283,7 +283,7 @@ describe('activate', () => {
     dock.activate(OTHER);
 
     expect(dock.activePanel).toEqual(OTHER);
-    expect(dock.groups[0]).toEqual({ panels: [EDITOR, OTHER], shown: OTHER });
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: OTHER });
   });
 
   test('shows hidden group of panel', async () => {
@@ -301,6 +301,6 @@ describe('activate', () => {
 
     dock.activate({ ...OTHER, id: 'closed' });
 
-    expect(dock.activePanel).toEqual(EDITOR);
+    expect(dock.activePanel).toEqual(FILE);
   });
 });

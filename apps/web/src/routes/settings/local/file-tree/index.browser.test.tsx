@@ -53,13 +53,13 @@ describe('FileTree', () => {
   test('saves only git status badges leaf', async () => {
     const save = await mount();
     const toggle = page.getByRole('switch', { name: 'Git status badges' });
-    await expect.element(toggle).toBeChecked();
+    await expect.element(toggle).not.toBeChecked();
 
     await userEvent.click(toggle);
 
-    await expect.element(toggle).not.toBeChecked();
+    await expect.element(toggle).toBeChecked();
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith(withFileTree({ gitStatusBadges: false }));
+    expect(save).toHaveBeenCalledWith(withFileTree({ gitStatusBadges: true }));
   });
 
   test('saves only indent guides leaf', async () => {

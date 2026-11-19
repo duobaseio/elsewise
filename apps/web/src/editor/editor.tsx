@@ -7,6 +7,7 @@ import { useEditorManager } from '@/editor/editor-manager';
 import type { EditorSession } from '@/editor/layouts/layout';
 import { SplitLayout } from '@/editor/layouts/split-layout';
 import { UnifiedLayout } from '@/editor/layouts/unified-layout';
+import type { FileHandle } from '@/fs/file-handle';
 
 export interface EditorProps {
   /**
@@ -23,6 +24,10 @@ export interface EditorProps {
   diff: DiffState;
 
   content: EditorContent;
+  /**
+   * The file that the editor saves to and reloads from when it changes on disk, if any.
+   */
+  file?: FileHandle;
 }
 
 export interface EditorContent {
@@ -36,7 +41,7 @@ export interface EditorContent {
 /**
  * A code editor.
  */
-export function Editor({ root, relativePath, content, diff }: EditorProps) {
+export function Editor({ root, relativePath, content, diff, file }: EditorProps) {
   const subscribe = useCallback((listener: () => void) => diff.subscribe(listener), [diff]);
   const source = useSyncExternalStore(subscribe, () => diff.source);
   const layout = useSyncExternalStore(subscribe, () => diff.layout);
@@ -107,7 +112,7 @@ export function Editor({ root, relativePath, content, diff }: EditorProps) {
       header={header}
       relativePath={relativePath}
       base={{ source: { type: 'blob' }, code: fetched.code }}
-      target={{ source: { type: 'workingTree', root }, code: content.code }}
+      target={{ source: { type: 'workingTree', root, file }, code: content.code }}
       extensions={diff.extension}
       session={session}
       ratio={ratio}
@@ -115,7 +120,7 @@ export function Editor({ root, relativePath, content, diff }: EditorProps) {
   ) : (
     <UnifiedLayout
       header={header}
-      source={{ type: 'workingTree', root }}
+      source={{ type: 'workingTree', root, file }}
       relativePath={relativePath}
       code={content.code}
       base={fetched?.code ?? null}

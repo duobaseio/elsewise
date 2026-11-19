@@ -1,7 +1,7 @@
 import type { Workspace } from '../projects/workspaces';
 import type { TerminalOptions } from '../terminal';
 import type { Group, Layout } from './layout';
-import type { ClosablePanel, EditorPanel, Panel, TablessPanel, TabPanel, TerminalPanel } from './panels';
+import type { ClosablePanel, FilePanel, Panel, TablessPanel, TabPanel, TerminalPanel } from './panels';
 import type { GroupPlacement, Placement } from './placement';
 
 /**
@@ -68,7 +68,7 @@ export interface Dock {
    *
    * Returns the panel, or null if the panel that `placement` refers to is not open.
    */
-  addEditor(relativePath: string, placement: Placement, activate?: boolean): EditorPanel | null;
+  addFile(relativePath: string, placement: Placement, activate?: boolean): FilePanel | null;
 
   /**
    * Adds a terminal, and a panel that shows it.

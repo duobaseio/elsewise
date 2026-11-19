@@ -35,7 +35,7 @@ export type { Group, Layout, Split } from './dock/layout';
 export type {
   BasePanel,
   ClosablePanel,
-  EditorPanel,
+  FilePanel,
   FileTreePanel,
   Panel,
   TablessPanel,

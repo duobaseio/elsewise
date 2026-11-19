@@ -20,9 +20,9 @@ import 'dockview-react/dist/styles/dockview.css';
 
 export const WORKSPACE: WorkspaceId = { daemon: 'd', project: 'p', workspace: 'w' };
 
-export const EDITOR = {
-  id: 'editor:$workspace.tsx',
-  type: 'editor',
+export const FILE = {
+  id: 'file:$workspace.tsx',
+  type: 'file',
   tab: true,
   closable: true,
   relativePath: 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx',
@@ -55,7 +55,21 @@ export async function showWorkspace(router: AnyRouter) {
   await router.load();
 }
 
-// Mounts a dock of stub panels, which has the editor beside the file tree.
+// Adds the file beside the file tree, which is alone in a new dock.
+export function addFile(dockview: DockviewApi) {
+  dockview.addPanel({
+    id: FILE.id,
+    component: 'file',
+    title: '$workspace.tsx',
+    params: { path: FILE.relativePath },
+    position: { referencePanel: FILE_TREE.id, direction: 'left' },
+    minimumWidth: 10,
+    minimumHeight: 10,
+  });
+  dockview.getPanel(FILE_TREE.id)?.group.api.setSize({ width: 350 });
+}
+
+// Mounts a dock of stub panels, which has the file beside the file tree.
 export async function mount(onReady?: (dockview: DockviewApi) => void): Promise<DockviewApi> {
   let api: DockviewApi | undefined;
   await render(
@@ -64,6 +78,7 @@ export async function mount(onReady?: (dockview: DockviewApi) => void): Promise<
         panels={STUB_PANELS}
         tabs={STUB_TABS}
         onDockviewReady={(ready) => {
+          addFile(ready);
           api = ready;
           onReady?.(ready);
         }}
@@ -78,12 +93,12 @@ export async function mount(onReady?: (dockview: DockviewApi) => void): Promise<
   return api as DockviewApi;
 }
 
-// Adds the terminal below the editor.
+// Adds the terminal below the file.
 export function addTerminal(dockview: DockviewApi) {
   return dockview.addPanel({
     id: TERMINAL.id,
     component: 'terminal',
     params: { session: TERMINAL.session.session },
-    position: { referencePanel: EDITOR.id, direction: 'below' },
+    position: { referencePanel: FILE.id, direction: 'below' },
   });
 }

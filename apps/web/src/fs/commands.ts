@@ -155,6 +155,39 @@ export const FILE_TREE_DELETE: FileTreeCommand = {
   },
 };
 
+export const FILE_TREE_OPEN_FILE: FileTreeCommand = {
+  scope: 'fileTree',
+  id: DEFAULT_COMMANDS.fileTree.open.file,
+  group: DEFAULT_COMMAND_GROUPS.fileTree.id,
+  label: 'Open',
+  defaultKeys: DEFAULT_KEYS.fileTree.open.file,
+  shown: (_, { relativePaths }) => relativePaths.some((path) => !path.endsWith('/')),
+  run: ({ docks }: ApplicationManager, { workspace, relativePaths }) => {
+    const dock = docks.active;
+    const files = relativePaths.filter((path) => !path.endsWith('/'));
+    if (dock === null || !sameWorkspace(dock.workspaceId, workspace.id) || files.length === 0) {
+      return false;
+    }
+
+    // TODO: Review placement logic of file relative to file tree. Sizing and placement might be incorrect.
+    // TODO: How are hidden file tree panels handled?
+    for (const path of files) {
+      const active = dock.activeTabPanel;
+      const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
+      // TODO: Open in the dock's default group once it has one, instead of splitting the file tree.
+      dock.addFile(
+        path,
+        active !== null
+          ? { tab: 'last', with: active }
+          : fileTree !== undefined
+            ? { group: 'left', of: fileTree }
+            : { edge: 'left' },
+      );
+    }
+    return true;
+  },
+};
+
 export const FILE_TREE_OPEN_FILE_MANAGER: FileTreeCommand = {
   scope: 'fileTree',
   id: DEFAULT_COMMANDS.fileTree.open.fileManager,

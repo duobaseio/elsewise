@@ -141,7 +141,7 @@ export const FrontendSettings = z.lazy(() =>
         /**
          * Whether the file tree shows a git status's letter, e.g. `M`.
          */
-        gitStatusBadges: z.boolean().catch(true),
+        gitStatusBadges: z.boolean().catch(false),
         /**
          * Whether the file tree draws a vertical line for each folder level.
          */
