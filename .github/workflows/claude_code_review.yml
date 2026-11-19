@@ -13,7 +13,6 @@ on:
 jobs:
   review:
     name: Review Pull Request
-    # The action fails for bot actors, so skip the job for them instead.
     if: github.event.sender.type != 'Bot'
     # Optional: Filter by PR author
     # if: |
