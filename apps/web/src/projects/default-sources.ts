@@ -34,13 +34,16 @@ export const DEFAULT_PROJECT_SOURCES: readonly ProjectSourceGroup[] = [
             return null;
           }
 
+          const separator = Math.max(absolutePath.lastIndexOf('/'), absolutePath.lastIndexOf('\\'));
+          const parent = absolutePath.slice(0, separator);
+          const root = parent === '' || parent.endsWith(':');
           try {
-            localStorage.setItem(IMPORT_FOLDER, absolutePath.slice(0, absolutePath.lastIndexOf('/')) || '/');
+            localStorage.setItem(IMPORT_FOLDER, root ? absolutePath.slice(0, separator + 1) : parent);
             return await projects.add(daemonId, { type: 'existing', absolutePath });
           } catch (error) {
             toast.add({
               type: 'error',
-              title: `Could not import “${absolutePath.split('/').at(-1) ?? absolutePath}”`,
+              title: `Could not import “${absolutePath.slice(separator + 1) || absolutePath}”`,
               description: error instanceof Error ? error.message : String(error),
             });
             return null;

@@ -1122,6 +1122,40 @@ describe('Projects', () => {
     await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: '/Users/me' }]);
   });
 
+  test('remembers folder of backslash path', async () => {
+    pickFolder('C:\\Users\\me\\downloads');
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.poll(() => added.mock.lastCall?.[0]).toMatchObject({ title: 'Could not import “downloads”' });
+
+    const pickPaths = pickFolder(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: 'C:\\Users\\me' }]);
+  });
+
+  test('remembers drive root', async () => {
+    pickFolder('C:\\downloads');
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.poll(() => added.mock.calls.length).toBe(1);
+
+    const pickPaths = pickFolder(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: 'C:\\' }]);
+  });
+
   test('keeps folder when picker is cancelled', async () => {
     localStorage.setItem(IMPORT_FOLDER, '/Users/me');
     const pickPaths = pickFolder(null);
