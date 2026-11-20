@@ -91,13 +91,7 @@ export function FileIcon({ name, className }: { name: string; className?: string
       );
     case 'brand':
       return (
-        <img
-          aria-hidden
-          alt=""
-          data-slot="file-icon"
-          src={data.src}
-          className={cn(ICON_CLASS, 'p-px', className)}
-        />
+        <img aria-hidden alt="" data-slot="file-icon" src={data.src} className={cn(ICON_CLASS, 'p-px', className)} />
       );
     case 'phosphor':
       return <PhosphorIcon name={data.name} tint={data.tint} className={className} />;
