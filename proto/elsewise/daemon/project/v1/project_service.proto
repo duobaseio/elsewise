@@ -24,8 +24,10 @@ service ProjectService {
   // Updates a project.
   rpc UpdateProject(UpdateProjectRequest) returns (UpdateProjectResponse);
 
-  // Deletes a project.
-  rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  // Deletes projects in order.
+  //
+  // Each project that fails is reported in the response, and the others are still deleted.
+  rpc DeleteProjects(DeleteProjectsRequest) returns (DeleteProjectsResponse);
 
   // Returns an unused name for a new workspace.
   rpc GetNewWorkspaceName(GetNewWorkspaceNameRequest) returns (GetNewWorkspaceNameResponse);
@@ -39,10 +41,11 @@ service ProjectService {
   // Updates a workspace.
   rpc UpdateWorkspace(UpdateWorkspaceRequest) returns (UpdateWorkspaceResponse);
 
-  // Deletes a workspace.
+  // Deletes workspaces of a project in order.
   //
-  // The main workspace cannot be deleted.
-  rpc DeleteWorkspace(DeleteWorkspaceRequest) returns (DeleteWorkspaceResponse);
+  // The main workspace cannot be deleted. Each workspace that fails is reported in the response, and the others are
+  // still deleted.
+  rpc DeleteWorkspaces(DeleteWorkspacesRequest) returns (DeleteWorkspacesResponse);
 }
 
 message CreateProjectRequest {
@@ -131,17 +134,28 @@ message UpdateProjectResponse {
   Project project = 1;
 }
 
-message DeleteProjectRequest {
-  // The project to delete.
-  string project_id = 1;
+message DeleteProjectsRequest {
+  // Every project to delete, in order.
+  repeated string project_ids = 1;
 
-  // Whether to delete the project from disk.
+  // Whether to delete each project from disk.
   //
   // The main worktree and every linked worktree will be deleted locally.
   bool delete_files = 2;
 }
 
-message DeleteProjectResponse {}
+message DeleteProjectsResponse {
+  // The projects that failed, in order.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The project's id.
+    string project_id = 1;
+
+    // What failed.
+    string message = 2;
+  }
+}
 
 message Project {
   // The id.
@@ -252,7 +266,7 @@ message UpdateWorkspaceRequest {
 
   // The new display name.
   //
-  // Unset leaves it as is.
+  // Empty leaves it as is.
   string name = 3;
 }
 
@@ -261,27 +275,38 @@ message UpdateWorkspaceResponse {
   Workspace workspace = 1;
 }
 
-message DeleteWorkspaceRequest {
-  // The project the workspace belongs to.
+message DeleteWorkspacesRequest {
+  // The project the workspaces belong to.
   string project_id = 1;
 
-  // The workspace to delete.
-  string workspace_id = 2;
+  // Every workspace to delete, in order.
+  repeated string workspace_ids = 2;
 
-  // Whether to delete the workspace from disk.
+  // Whether to delete each workspace from disk.
   //
   // The folder will be deleted locally and removed from the repository's worktrees. Otherwise the daemon only stops
   // tracking it.
   bool delete_files = 3;
 
-  // Whether to delete the branch checked out in the workspace as well.
+  // Whether to delete the branch checked out in each workspace as well.
   //
   // A workspace with no branch checked out leaves nothing to delete. If set without `delete_files`, it fails with
   // INVALID_ARGUMENT (as git cannot delete a branch that is still checked out).
   bool delete_branch = 4;
 }
 
-message DeleteWorkspaceResponse {}
+message DeleteWorkspacesResponse {
+  // The workspaces that failed, in order.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The workspace's id.
+    string workspace_id = 1;
+
+    // What failed.
+    string message = 2;
+  }
+}
 
 message Workspace {
   // The project's id.

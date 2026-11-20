@@ -245,7 +245,7 @@ message WriteFileRequest {
 
   // The hash the file must currently have on disk. Ignored if `overwrite` is set.
   //
-  // Unset means the file must not exist yet and if one is present, it fails with ALREADY_EXISTS.
+  // Empty means the file must not exist yet and if one is present, it fails with ALREADY_EXISTS.
   bytes base_hash = 3;
 
   // The file's new content.

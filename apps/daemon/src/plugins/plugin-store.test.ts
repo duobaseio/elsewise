@@ -46,7 +46,7 @@ async function install(
   {
     code = tracked(),
     dependencies,
-    elsewise = '^1.0.0',
+    elsewise = '^0.1.0',
     version = '1.0.0',
     enabled = true,
   }: {

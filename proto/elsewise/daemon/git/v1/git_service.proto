@@ -85,8 +85,10 @@ service GitService {
   // Sets or clears the upstream of a branch.
   rpc SetBranchUpstream(SetBranchUpstreamRequest) returns (SetBranchUpstreamResponse);
 
-  // Deletes a branch.
-  rpc DeleteBranch(DeleteBranchRequest) returns (DeleteBranchResponse);
+  // Deletes branches in order.
+  //
+  // Each branch that fails is reported in the response and the others are still deleted.
+  rpc DeleteBranches(DeleteBranchesRequest) returns (DeleteBranchesResponse);
 
   // Checks out a branch or a revision.
   //
@@ -96,20 +98,20 @@ service GitService {
   // Returns every worktree of the repository.
   rpc GetWorktrees(GetWorktreesRequest) returns (GetWorktreesResponse);
 
-  // Adds a linked worktree.
-  rpc AddWorktree(AddWorktreeRequest) returns (AddWorktreeResponse);
+  // Creates a linked worktree.
+  rpc CreateWorktree(CreateWorktreeRequest) returns (CreateWorktreeResponse);
 
   // Moves a linked worktree to another path.
   rpc MoveWorktree(MoveWorktreeRequest) returns (MoveWorktreeResponse);
 
-  // Locks a linked worktree so it cannot be moved, removed or pruned.
+  // Locks a linked worktree so it cannot be moved, deleted or pruned.
   rpc LockWorktree(LockWorktreeRequest) returns (LockWorktreeResponse);
 
   // Unlocks a linked worktree.
   rpc UnlockWorktree(UnlockWorktreeRequest) returns (UnlockWorktreeResponse);
 
-  // Removes a linked worktree.
-  rpc RemoveWorktree(RemoveWorktreeRequest) returns (RemoveWorktreeResponse);
+  // Deletes a linked worktree.
+  rpc DeleteWorktree(DeleteWorktreeRequest) returns (DeleteWorktreeResponse);
 
   // Prunes every linked worktree whose folder is gone.
   rpc PruneWorktrees(PruneWorktreesRequest) returns (PruneWorktreesResponse);
@@ -120,8 +122,10 @@ service GitService {
   // Creates a tag.
   rpc CreateTag(CreateTagRequest) returns (CreateTagResponse);
 
-  // Deletes a tag.
-  rpc DeleteTag(DeleteTagRequest) returns (DeleteTagResponse);
+  // Deletes tags in order.
+  //
+  // Each tag that fails is reported in the response and the others are still deleted.
+  rpc DeleteTags(DeleteTagsRequest) returns (DeleteTagsResponse);
 
   // Merges a revision into the current branch.
   rpc Merge(MergeRequest) returns (MergeResponse);
@@ -156,16 +160,16 @@ service GitService {
   // Returns every remote.
   rpc GetRemotes(GetRemotesRequest) returns (GetRemotesResponse);
 
-  // Adds a remote.
-  rpc AddRemote(AddRemoteRequest) returns (AddRemoteResponse);
+  // Creates a remote.
+  rpc CreateRemote(CreateRemoteRequest) returns (CreateRemoteResponse);
 
   // Updates a remote.
   //
   // Renaming keeps the remote's branches and every upstream that points at them.
   rpc UpdateRemote(UpdateRemoteRequest) returns (UpdateRemoteResponse);
 
-  // Removes a remote.
-  rpc RemoveRemote(RemoveRemoteRequest) returns (RemoveRemoteResponse);
+  // Deletes a remote.
+  rpc DeleteRemote(DeleteRemoteRequest) returns (DeleteRemoteResponse);
 
   // Fetches from a remote.
   //
@@ -196,8 +200,10 @@ service GitService {
   // apply. The client resolves the conflicts with Stage, ResolveConflicts or Restore.
   rpc ApplyStash(ApplyStashRequest) returns (ApplyStashResponse);
 
-  // Drops a stash.
-  rpc DropStash(DropStashRequest) returns (DropStashResponse);
+  // Drops stashes.
+  //
+  // Each stash that fails is reported in the response and the others are still dropped.
+  rpc DropStashes(DropStashesRequest) returns (DropStashesResponse);
 
   // Returns the git identity.
   rpc GetIdentity(GetIdentityRequest) returns (GetIdentityResponse);
@@ -629,20 +635,39 @@ message SetBranchUpstreamResponse {
   Branch branch = 1;
 }
 
-message DeleteBranchRequest {
+message DeleteBranchesRequest {
   // The worktree's path.
   string absolute_path = 1;
 
-  // The branch's name.
-  //
-  // A branch checked out in any worktree fails with FAILED_PRECONDITION.
-  string name = 2;
+  // The name of every branch to delete, in order.
+  repeated string names = 2;
 
-  // Whether to delete the branch even when it has commits not merged into its upstream or HEAD.
+  // Whether to delete a branch even when it has commits not merged into its upstream or HEAD.
   bool force = 3;
 }
 
-message DeleteBranchResponse {}
+message DeleteBranchesResponse {
+  // The branches that failed, in order.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The branch's name.
+    string name = 1;
+
+    // Why the branch failed.
+    Reason reason = 2;
+
+    // What failed.
+    string message = 3;
+
+    enum Reason {
+      REASON_UNSPECIFIED = 0; // Never sent.
+      REASON_OTHER = 1;
+      REASON_CHECKED_OUT = 2; // The branch is checked out in a worktree.
+      REASON_NOT_MERGED = 3; // The branch has commits not merged into its upstream or HEAD, and `force` is not set.
+    }
+  }
+}
 
 message CheckoutRequest {
   // The worktree's path.
@@ -674,7 +699,7 @@ message GetWorktreesResponse {
   repeated Worktree worktrees = 1;
 }
 
-message AddWorktreeRequest {
+message CreateWorktreeRequest {
   // The worktree's path.
   string absolute_path = 1;
 
@@ -695,8 +720,8 @@ message AddWorktreeRequest {
   string revision = 4;
 }
 
-message AddWorktreeResponse {
-  // The added worktree.
+message CreateWorktreeResponse {
+  // The created worktree.
   Worktree worktree = 1;
 }
 
@@ -755,20 +780,20 @@ message UnlockWorktreeResponse {
   Worktree worktree = 1;
 }
 
-message RemoveWorktreeRequest {
+message DeleteWorktreeRequest {
   // The worktree's path.
   string absolute_path = 1;
 
-  // The path of the worktree to remove.
+  // The path of the worktree to delete.
   //
   // The main worktree fails with INVALID_ARGUMENT and a locked worktree with FAILED_PRECONDITION.
   string worktree_absolute_path = 2;
 
-  // Whether to force remove the worktree.
+  // Whether to force delete the worktree.
   bool force = 3;
 }
 
-message RemoveWorktreeResponse {}
+message DeleteWorktreeResponse {}
 
 message PruneWorktreesRequest {
   // The worktree's path.
@@ -815,15 +840,26 @@ message CreateTagResponse {
   Tag tag = 1;
 }
 
-message DeleteTagRequest {
+message DeleteTagsRequest {
   // The worktree's path.
   string absolute_path = 1;
 
-  // The tag's name.
-  string name = 2;
+  // The name of every tag to delete, in order.
+  repeated string names = 2;
 }
 
-message DeleteTagResponse {}
+message DeleteTagsResponse {
+  // The tags that failed, in order.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The tag's name.
+    string name = 1;
+
+    // What failed.
+    string message = 2;
+  }
+}
 
 message MergeRequest {
   // The worktree's path.
@@ -956,7 +992,7 @@ message GetRemotesResponse {
   repeated Remote remotes = 1;
 }
 
-message AddRemoteRequest {
+message CreateRemoteRequest {
   // The worktree's path.
   string absolute_path = 1;
 
@@ -969,8 +1005,8 @@ message AddRemoteRequest {
   string url = 3;
 }
 
-message AddRemoteResponse {
-  // The added remote.
+message CreateRemoteResponse {
+  // The created remote.
   Remote remote = 1;
 }
 
@@ -983,17 +1019,17 @@ message UpdateRemoteRequest {
 
   // The new name.
   //
-  // Unset leaves it as is. A remote that already exists fails with ALREADY_EXISTS.
+  // Empty leaves it as is. A remote that already exists fails with ALREADY_EXISTS.
   string name = 3;
 
   // The new URL fetched from.
   //
-  // Unset leaves it as is.
+  // Empty leaves it as is.
   string fetch_url = 4;
 
   // The new URL pushed to.
   //
-  // Unset leaves it as is.
+  // Empty leaves it as is.
   string push_url = 5;
 }
 
@@ -1002,7 +1038,7 @@ message UpdateRemoteResponse {
   Remote remote = 1;
 }
 
-message RemoveRemoteRequest {
+message DeleteRemoteRequest {
   // The worktree's path.
   string absolute_path = 1;
 
@@ -1010,7 +1046,7 @@ message RemoveRemoteRequest {
   string name = 2;
 }
 
-message RemoveRemoteResponse {}
+message DeleteRemoteResponse {}
 
 message FetchRequest {
   // The worktree's path.
@@ -1181,15 +1217,28 @@ message ApplyStashResponse {
   bool conflicted = 1;
 }
 
-message DropStashRequest {
+message DropStashesRequest {
   // The worktree's path.
   string absolute_path = 1;
 
-  // The stash's index.
-  uint32 index = 2;
+  // The index of every stash to drop.
+  //
+  // Each index is the stash's position before the call and dropping one does not shift the others.
+  repeated uint32 indexes = 2;
 }
 
-message DropStashResponse {}
+message DropStashesResponse {
+  // The stashes that failed.
+  repeated Failure failures = 1;
+
+  message Failure {
+    // The stash's index.
+    uint32 index = 1;
+
+    // What failed.
+    string message = 2;
+  }
+}
 
 message GetIdentityRequest {
   // The worktree's path.

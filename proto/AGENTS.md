@@ -30,8 +30,7 @@ awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/d
 
 - An empty response carries no comment at all. `message CreateEntryResponse {}` already says the rpc answers with
   nothing, and the rpc above it says what it did.
-- Full sentences, ending in a period, directly above the item — never trailing on the same line.
-- Lead with what the thing *is*; put protocol rules (ordering, caps, what an empty value means) in a following
+- Full sentences, ending in a period, directly above the item — never trailing on the same line.- Lead with what the thing *is*; put protocol rules (ordering, caps, what an empty value means) in a following
   paragraph after a blank `//` line.
 - Name an error status only where it changes what the caller does — an `ALREADY_EXISTS` the creation form surfaces, a
   `FAILED_PRECONDITION` that means re-reading before retrying. Never write that failures arrive as error statuses;
@@ -49,6 +48,55 @@ awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/d
 - An enum that classifies its message is `enum Type` in a `type` field, never `kind`.
 - A oneof is named for what its members are: `state`, `event`, `source`, `target`, `cause`. `kind` is the fallback
   for members with nothing in common, as in `Envelope`; never `type`.
+
+## Rpc names
+
+Every service uses the same verbs for the same operations:
+
+| Verb     | What it does                                                    | Example                      |
+|----------|-----------------------------------------------------------------|------------------------------|
+| `Create` | Makes a thing. Never `Add` or `New`.                            | `CreateRemote`               |
+| `Get`    | Fetches one thing or a whole collection. Never `List`.          | `GetCommit`, `GetProjects`   |
+| `Update` | Changes the fields the request sets and leaves the rest as is.  | `UpdateWorkspace`            |
+| `Delete` | Destroys a thing. Never `Remove`.                               | `DeleteWorktree`             |
+| `Read`   | Fetches a file's content.                                       | `ReadFile`                   |
+| `Write`  | Replaces a file's content.                                      | `WriteFile`                  |
+| `Watch`  | Streams a state and every change to it.                         | `WatchStatus`                |
+
+- An operation none of these can name takes its own verb: `MoveEntries`, `RenameBranch`, `AttachTerminal`.
+- `GitService` takes that verb from git: `Checkout`, `Fetch`, `PruneWorktrees`, and the stash's `PushStash`,
+  `ApplyStash` and `DropStashes`.
+
+## Absent values
+
+A plain value (a string, bytes, a number, a bool) never gives "unset" a meaning of its own. The generated TypeScript
+types it as required (`title: string`) and reads an unset field as its default, so only `isFieldSet` could tell the
+two apart, and no handler calls it.
+
+- The default is the value for "nothing here", and the comment says so: `// Empty leaves it as is.`,
+  `// Empty when unknown.`, `// 0 when unknown.`
+- "Unset" is written only on a message field or a `oneof`, which read as `undefined`.
+- A plain value whose default is a real value the caller must be able to send gets an explicit third state, as an enum
+  whose `_UNSPECIFIED` leaves things as they are. This is the one case where `_UNSPECIFIED` is sent, and its comment
+  says what it does: `READ_STATE_UNSPECIFIED = 0; // Leaves the session as it is.`
+
+## Single and bulk rpcs
+
+- **An rpc takes a list when the UI applies it to a selection in one gesture**: deleting, moving, copying, staging,
+  discarding. An rpc that always serves one view or one form takes a single item, whether it reads or writes:
+  `ReadFile`, `WriteFile`, `CreateBranch`. Several independent items go out as parallel calls.
+- **The UI decides, not the verb.** `MoveEntries` takes a list because the file tree drags a selection to another
+  folder; `MoveWorktree` takes one because relocating a worktree is a form. A delete that no view applies to a selection
+  stays single too: `DeleteWorktree`, `DeleteRemote`.
+- **Never make an rpc bulk just in case.** A bulk rpc is added when a caller needs it.
+- **One shape per operation.** An operation never has both a single and a bulk rpc.
+- A read takes a list only as a filter or a watch set that yields one combined result, as in `GetDiff`'s
+  `relative_paths` or `WatchFiles`; never to return several independent results in one response.
+- A bulk rpc with a noun in its name takes the plural: `DeleteEntries`, not `DeleteEntry`.
+- A bulk rpc that applies its items one by one works through them in order, carries on past an item that fails, and
+  reports each in `repeated Failure failures`: the item's key, a `Reason reason` where the caller acts on it, and a
+  `message`. One that git applies as a whole, such as `Stage`, fails as a whole with an error status.
+- A flag such as `overwrite` or `force` applies to the whole request, never to one item.
 
 ## Commands
 
