@@ -34,7 +34,7 @@ async function open(theme: 'light' | 'dark', paths: readonly string[]) {
       </ApplicationManagerContext>
     </QueryClientProvider>,
   );
-  application.fileTree.deleteDialog.openWithPayload({ workspace: WORKSPACE, paths });
+  application.fileTree.deleteDialog.openWithPayload({ workspace: WORKSPACE, relativePaths: paths });
   await expect.element(page.getByRole('dialog')).toBeVisible();
   // The backdrop covers the page, so its shot holds the dialog.
   return page.elementLocator(document.querySelector('[data-slot="dialog-overlay"]') ?? document.body);

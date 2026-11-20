@@ -7,6 +7,7 @@ import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
 import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
+import { addFile } from '../../../dock';
 import { STUB_PANELS } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
@@ -22,6 +23,7 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
     >
       <WorkspaceDock
         onDockviewReady={(readyApi) => {
+          addFile(readyApi);
           api = readyApi;
         }}
         panels={STUB_PANELS}
@@ -46,7 +48,7 @@ test.each(THEMES)('workspace dock default layout (%s)', async (theme) => {
 });
 
 async function addEditorGroupTerminals(api: DockviewApi) {
-  const editorGroup = api.getPanel('editor:$workspace.tsx')?.group;
+  const editorGroup = api.getPanel('file:$workspace.tsx')?.group;
   if (!editorGroup) {
     throw new Error('no editor group');
   }
@@ -59,7 +61,7 @@ async function addEditorGroupTerminals(api: DockviewApi) {
       position: { referenceGroup: editorGroup },
     });
   }
-  api.getPanel('editor:$workspace.tsx')?.api.setActive();
+  api.getPanel('file:$workspace.tsx')?.api.setActive();
   await vi.waitFor(() => {
     if (editorGroup.element.querySelectorAll('.dv-tab').length !== 3) {
       throw new Error('terminal tabs not added');

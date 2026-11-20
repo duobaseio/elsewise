@@ -45,7 +45,7 @@ export interface DiffHeaderProps {
 export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
   const application = useApplicationManager();
   const commands = useCommandManager();
-  const subscribe = useCallback((listener: () => void) => diff.subscribe(listener), [diff]);
+  const subscribe = useCallback((listener: () => void) => diff.onChange(listener), [diff]);
   const layout = useSyncExternalStore(subscribe, () => diff.layout);
   const [controls, setControls] = useState<ReadonlyMap<string, Control>>(new Map());
 
@@ -86,7 +86,7 @@ export function DiffHeader({ view, base, target, diff }: DiffHeaderProps) {
     };
 
     evaluate();
-    const unsubscribe = diff.subscribe(evaluate);
+    const unsubscribe = diff.onChange(evaluate);
     return () => {
       unsubscribe();
     };

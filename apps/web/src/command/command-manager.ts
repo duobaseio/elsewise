@@ -79,6 +79,7 @@ import {
   EDITOR_UNIFIED_DIFF,
   EDITOR_UNSTAGED_DIFF,
 } from '@/editor/diff/commands';
+import { EDITOR_SAVE } from '@/editor/file';
 import { EDITOR_FORMAT } from '@/editor/format';
 import { EDITOR_SHOW_HOVER } from '@/editor/hover';
 import { EDITOR_GO_TO_DEFINITION } from '@/editor/lsp/definition';
@@ -94,6 +95,7 @@ import {
   FILE_TREE_DELETE,
   FILE_TREE_NEW_FILE,
   FILE_TREE_NEW_FOLDER,
+  FILE_TREE_OPEN_FILE,
   FILE_TREE_OPEN_FILE_MANAGER,
   FILE_TREE_PASTE,
   FILE_TREE_RENAME,
@@ -145,6 +147,7 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   WORKSPACE_MARK_READ,
   WORKSPACE_OPEN_FILE_MANAGER,
   // Editor
+  EDITOR_SAVE,
   EDITOR_CUT,
   EDITOR_COPY,
   EDITOR_PASTE,
@@ -221,6 +224,7 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   FILE_TREE_CANCEL_CUT,
   FILE_TREE_RENAME,
   FILE_TREE_DELETE,
+  FILE_TREE_OPEN_FILE,
   FILE_TREE_OPEN_FILE_MANAGER,
 ];
 
@@ -275,7 +279,7 @@ export class CommandManager implements Commands {
 
   onKeymapChange(listener: (keymap: ActiveKeymap) => void): Disposable {
     let last = this.keymap.commands;
-    return this.subscribe(() => {
+    return this.onChange(() => {
       if (this.keymap.commands === last) {
         return;
       }
@@ -478,7 +482,7 @@ export class CommandManager implements Commands {
     }
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -511,7 +515,7 @@ export function isWorkspace(
 export function isEditor(
   target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
 ): target is EditorView {
-  return !('absolutePath' in target) && !('paths' in target) && !('session' in target);
+  return !('absolutePath' in target) && !('relativePaths' in target) && !('session' in target);
 }
 
 export function isTerminalView(
@@ -523,13 +527,13 @@ export function isTerminalView(
 export function isFileTreeSelection(
   target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
 ): target is FileTreeSelection {
-  return 'paths' in target;
+  return 'relativePaths' in target;
 }
 
 export function useCommandManager(): CommandManager;
 export function useCommandManager<T>(select: (commands: CommandManager) => T): T;
 export function useCommandManager<T>(select?: (commands: CommandManager) => T): CommandManager | T {
   const commands = useApplicationManager().commands;
-  const subscribe = useCallback((listener: () => void) => commands.subscribe(listener), [commands]);
+  const subscribe = useCallback((listener: () => void) => commands.onChange(listener), [commands]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? commands : select(commands)));
 }

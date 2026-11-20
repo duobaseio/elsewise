@@ -34,6 +34,7 @@ import { completion } from '@/editor/completion';
 import { RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-menu/context-menu';
 import { diagnostics } from '@/editor/diagnostics';
 import { COMMANDS, useEditorManager } from '@/editor/editor-manager';
+import { editorFile } from '@/editor/file';
 import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
@@ -44,6 +45,7 @@ import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
 import { useThemeExtension } from '@/editor/theme';
 import { useToolbarExtension } from '@/editor/toolbar';
+import type { FileHandle } from '@/fs/file-handle';
 import { useEditorSettings, useSettings } from '@/settings/settings';
 
 export const PLUGINS = new Compartment();
@@ -98,7 +100,9 @@ export function sessionHistory(session: EditorSession | null): Extension {
   return session === null || session.history === undefined ? [] : historyField.init(() => session.history);
 }
 
-export type EditorSource = { readonly type: 'workingTree'; readonly root?: URL } | { readonly type: 'blob' };
+export type EditorSource =
+  | { readonly type: 'workingTree'; readonly root?: URL; readonly file?: FileHandle }
+  | { readonly type: 'blob' };
 
 export interface EditorExtensionsOptions {
   readonly source: EditorSource;
@@ -214,6 +218,7 @@ export function useEditorExtensions(
               hover(),
               actions(),
               format,
+              source.file === undefined ? [] : editorFile(source.file),
               closeBrackets(),
               bracketMatching(),
               // Has to be after lineNumbers to ensure the fold icon is to the right of it.

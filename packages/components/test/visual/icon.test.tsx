@@ -32,6 +32,7 @@ const ROLES = Object.keys({
   'folder-open': true,
   add: true,
   files: true,
+  terminal: true,
   settings: true,
   configure: true,
   compare: true,

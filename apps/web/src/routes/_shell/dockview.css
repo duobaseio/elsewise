@@ -13,11 +13,11 @@
   --dv-activegroup-visiblepanel-tab-background-color: var(--surface);
   --dv-activegroup-visiblepanel-tab-color: var(--foreground);
   --dv-activegroup-hiddenpanel-tab-background-color: var(--surface);
-  --dv-activegroup-hiddenpanel-tab-color: var(--text-3);
+  --dv-activegroup-hiddenpanel-tab-color: var(--foreground);
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--surface);
-  --dv-inactivegroup-visiblepanel-tab-color: var(--text-2);
+  --dv-inactivegroup-visiblepanel-tab-color: var(--foreground);
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--surface);
-  --dv-inactivegroup-hiddenpanel-tab-color: var(--text-3);
+  --dv-inactivegroup-hiddenpanel-tab-color: var(--foreground);
   --dv-tab-divider-color: var(--border);
   --dv-tabs-and-actions-container-height: 32px;
   --dv-tabs-and-actions-container-font-size: 13px;
@@ -43,6 +43,11 @@
  */
 .dockview-theme-elsewise :is(.dv-tab, .dv-void-container.dv-draggable) {
   cursor: default;
+}
+
+/* The tab components own their horizontal padding. */
+.dockview-theme-elsewise .dv-tab {
+  padding-inline: 0;
 }
 
 /* Seam between the tab bar and the panel content. No --dv-* variable exists for this edge. */

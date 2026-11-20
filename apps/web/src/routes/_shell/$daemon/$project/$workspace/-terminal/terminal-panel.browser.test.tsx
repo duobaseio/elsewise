@@ -302,7 +302,7 @@ test('reports exit of replayed program without running', async () => {
   const setup = setUp('npm');
   const { api } = await mount(setup);
   const states: string[] = [];
-  setup.manager.onChange((view) => states.push(view.session.state));
+  setup.manager.onSessionChange((view) => states.push(view.session.state));
   const id = await show(setup, api);
 
   setup.respond(

@@ -86,11 +86,13 @@ export function FileIcon({ name, className }: { name: string; className?: string
           style={{ '--icon-tint-light': data.tint.light, '--icon-tint-dark': data.tint.dark } as CSSProperties}
           className={cn(ICON_CLASS, 'fill-current', TINT_CLASS, className)}
         >
-          <use href={`${data.src}#glyph`} />
+          <use href={`${data.src}#glyph`} x="6.25%" y="6.25%" width="87.5%" height="87.5%" />
         </svg>
       );
     case 'brand':
-      return <img aria-hidden alt="" data-slot="file-icon" src={data.src} className={cn(ICON_CLASS, className)} />;
+      return (
+        <img aria-hidden alt="" data-slot="file-icon" src={data.src} className={cn(ICON_CLASS, 'p-px', className)} />
+      );
     case 'phosphor':
       return <PhosphorIcon name={data.name} tint={data.tint} className={className} />;
     case 'letters':

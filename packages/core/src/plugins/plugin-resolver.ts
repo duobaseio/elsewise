@@ -434,7 +434,7 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
     }
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);

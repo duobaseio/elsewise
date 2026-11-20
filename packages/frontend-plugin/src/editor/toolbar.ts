@@ -92,8 +92,8 @@ export interface EditorToolbarProps {
    *
    * Returns a function that unregisters the `listener`, which can be returned from an effect:
    * ```tsx
-   * useEffect(() => subscribe((update) => setLength(update.state.doc.length)), [subscribe]);
+   * useEffect(() => onChange((update) => setLength(update.state.doc.length)), [onChange]);
    * ```
    */
-  readonly subscribe: (listener: (update: ViewUpdate) => void) => () => void;
+  readonly onChange: (listener: (update: ViewUpdate) => void) => () => void;
 }

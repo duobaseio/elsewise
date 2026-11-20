@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf';
 import { toast } from '@elsewise/components/components/toast';
-import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
+import { DEFAULT_COMMANDS, DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -194,7 +194,43 @@ function nameColor(path: string): string | undefined {
   return name ? getComputedStyle(name).color : undefined;
 }
 
+// The paths that the open command ran with.
+function opened(application: ApplicationManager) {
+  const run = vi.spyOn(application.commands, 'run');
+  return () =>
+    run.mock.calls
+      .filter(([id]) => id === DEFAULT_COMMANDS.fileTree.open.file)
+      .map(([, target]) => (target !== undefined && 'relativePaths' in target ? target.relativePaths : []));
+}
+
 describe('FileTreePanel', () => {
+  test('opens double-clicked file', async () => {
+    const paths = opened(await mount());
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'a.ts' }));
+    expect(paths()).toEqual([]);
+    await userEvent.dblClick(page.getByRole('treeitem', { name: 'b.ts' }));
+
+    expect(paths()).toEqual([['b.ts']]);
+  });
+
+  test('skips double-clicked folder', async () => {
+    const paths = opened(await mount());
+
+    await userEvent.dblClick(page.getByRole('treeitem', { name: 'src' }));
+
+    expect(paths()).toEqual([]);
+  });
+
+  test('opens selected file on Enter', async () => {
+    const paths = opened(await mount());
+
+    await userEvent.click(page.getByRole('treeitem', { name: 'a.ts' }));
+    await userEvent.keyboard('{Enter}');
+
+    expect(paths()).toEqual([['a.ts']]);
+  });
+
   test('refocuses row after Escape', async () => {
     await mount();
     const row = page.getByRole('treeitem', { name: 'a.ts' });

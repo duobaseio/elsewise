@@ -3,7 +3,6 @@ import { Icon } from '@elsewise/components/components/icon';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
-import type { DiffLayout } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
@@ -12,15 +11,13 @@ import {
   type DockviewWillShowOverlayLocationEvent,
   type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
-  type IDockviewPanelProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
-import { DiffState } from '@/editor/diff/diff';
-import { Editor } from '@/editor/editor';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
-import { useSettings } from '@/settings/settings';
+import { FilePanel } from './-file/file-panel';
+import { FileTab } from './-file/file-tab';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
 import { FileTreePanel } from './-file-tree/file-tree-panel';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
@@ -28,17 +25,6 @@ import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
 import { TerminalPanel } from './-terminal/terminal-panel';
 import { TerminalTab } from './-terminal/terminal-tab';
-// TODO: Back this with the daemon.
-import FAKE_CODE from './route.tsx?raw';
-
-declare global {
-  interface ImportMetaEnv {
-    /**
-     * The repository that the dev server runs in, as a `file:` URL ending in `/`.
-     */
-    readonly ELSEWISE_REPOSITORY: string;
-  }
-}
 
 export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
   component: WorkspaceRoute,
@@ -47,11 +33,11 @@ export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
 
 type PanelKind = keyof typeof PANELS;
 
-const TOOL_TABS = { fileTree: FileTab };
-const TABS = { ...TOOL_TABS, terminal: TerminalTab };
+const TOOL_TABS = { fileTree: FileTreeTab };
+const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab };
 const TOOL_PANELS = new Set(['fileTree' satisfies PanelKind]);
 const PANELS = {
-  editor: EditorPanel,
+  file: FilePanel,
   terminal: TerminalPanel,
   fileTree: FileTreePanel,
 };
@@ -61,42 +47,40 @@ const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 function WorkspaceRoute() {
   const { daemon, project, workspace } = Route.useParams();
   const store = useWorkspaceStateStore();
-  const { dock } = useWorkspaceState({ daemon, project, workspace });
+  const { dock: layout } = useWorkspaceState({ daemon, project, workspace });
   const onLayoutChange = useCallback(
     (layout: SerializedDockview) => store.update({ daemon, project, workspace }, { dock: layout }),
     [store, daemon, project, workspace],
   );
-  const terminals = useApplicationManager().terminals;
-  const onDockviewReady = (api: DockviewApi) => {
-    if (dock === undefined) {
-      terminals.store
-        .add({ daemon, project, workspace })
-        .then((session) => {
-          // TODO: Place the terminal through the dock API once it has one.
-          api.addPanel({
-            id: `terminal:${session.id.session}`,
-            component: 'terminal' satisfies PanelKind,
-            tabComponent: 'terminal',
-            title: session.name,
-            params: { session: session.id.session },
-            position: api.activeGroup ? { referenceGroup: api.activeGroup, direction: 'below' } : undefined,
-            minimumWidth: 10,
-            minimumHeight: 10,
-            initialHeight: 200,
-          });
-        })
+
+  const { docks } = useApplicationManager();
+  const key = JSON.stringify([daemon, project, workspace]);
+  const [view, setView] = useState<{ key: string; api: DockviewApi } | null>(null);
+  useEffect(() => {
+    if (view?.key !== key) {
+      return undefined;
+    }
+
+    const dock = docks.attach({ daemon, project, workspace }, view.api);
+    const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
+    // TODO: Replace with default tab.
+    if (fileTree !== undefined && !dock.panels.some((panel) => panel.tab)) {
+      dock
+        .addTerminal({}, { group: 'left', of: fileTree })
         .catch((error: Error) =>
           toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
         );
     }
-  };
+
+    return () => docks.detach(dock);
+  }, [daemon, project, workspace, key, docks, view]);
 
   return (
     <>
       <WorkspaceDock
-        key={JSON.stringify([daemon, project, workspace])}
-        layout={dock}
-        onDockviewReady={onDockviewReady}
+        key={key}
+        layout={layout}
+        onDockviewReady={(api) => setView({ key, api })}
         onLayoutChange={onLayoutChange}
       />
       <NewEntryDialog />
@@ -109,11 +93,13 @@ function WorkspaceRoute() {
 
 export function WorkspaceDock({
   panels = PANELS,
+  tabs = TABS,
   layout,
   onDockviewReady,
   onLayoutChange,
 }: {
   panels?: typeof PANELS;
+  tabs?: typeof TABS;
   /**
    * The layout to restore, as the dock serialized it.
    */
@@ -181,28 +167,18 @@ export function WorkspaceDock({
     }
 
     event.api.addPanel({
-      id: 'editor:$workspace.tsx',
-      component: 'editor' satisfies PanelKind,
-      title: '$workspace.tsx',
-      params: { path: 'apps/web/src/routes/_shell/$daemon/$project/$workspace.tsx' },
-      minimumWidth: 10,
-      minimumHeight: 10,
-    });
-    event.api.addPanel({
       id: 'fileTree',
-      component: 'fileTree' satisfies PanelKind,
       tabComponent: 'fileTree' satisfies PanelKind,
+      component: 'fileTree' satisfies PanelKind,
       title: 'Files',
       params: { path: '/' },
-      position: { referencePanel: 'editor:$workspace.tsx', direction: 'right' },
       minimumWidth: 10,
       minimumHeight: 10,
+      // TODO: Add a default group beside the file tree, which balances this width. Until then the file tree fills the
+      // dock while it is alone.
       initialWidth: 350,
     });
     setDockview(event.api);
-
-    // TODO: Replace with actual active panel logic
-    event.api.getPanel('editor:$workspace.tsx')?.api.setActive();
     onDockviewReady?.(event.api);
   };
 
@@ -214,11 +190,11 @@ export function WorkspaceDock({
           defaultTabComponent={DefaultTab}
           leftHeaderActionsComponent={AddTabAction}
           onReady={onReady}
-          tabComponents={TABS}
+          tabComponents={tabs}
           theme={THEME}
         />
       </div>
-      <ToolStripe dockview={dockview} />
+      <ToolStripe />
     </div>
   );
 }
@@ -233,44 +209,53 @@ export function AddTabAction(props: IDockviewHeaderActionsProps) {
     return null;
   }
 
-  // TODO: Offer each kind of tab once the dock has an API for adding them, instead of always adding a terminal.
+  // TODO: Offer each kind of tab instead of always adding a terminal.
   const add = () => {
-    const workspace = application?.projects.workspaces.active;
-    if (application === null || workspace == null) {
+    const dock = application?.docks.active;
+    const last = dock?.get(props.panels.at(-1)?.id ?? '');
+    if (dock == null || last == null || !last.tab) {
       return;
     }
 
-    application.terminals.store
-      .add(workspace.id)
-      .then((session) => {
-        props.containerApi
-          .addPanel({
-            id: `terminal:${session.id.session}`,
-            component: 'terminal' satisfies PanelKind,
-            tabComponent: 'terminal',
-            title: session.name,
-            params: { session: session.id.session },
-            position: { referenceGroup: props.group },
-            minimumWidth: 10,
-            minimumHeight: 10,
-          })
-          .api.setActive();
-      })
+    dock
+      .addTerminal({}, { tab: 'last', with: last })
       .catch((error: Error) =>
         toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
       );
   };
 
   return (
-    <div className="flex h-full items-center px-0.5">
-      <Button aria-label="New tab" className="text-text-3" onClick={add} size="icon-xs" variant="ghost">
-        <Icon className="size-3.5" name="add" />
+    <div className="-ml-1 flex h-full py-1 pr-0.5 pl-px">
+      <Button
+        aria-label="New tab"
+        className="aspect-square size-auto text-text-3"
+        onClick={add}
+        size="icon-xs"
+        variant="ghost"
+      >
+        <Icon className="size-3" name="add" />
       </Button>
     </div>
   );
 }
 
-export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { onClose?: () => void }) {
+export function DefaultTab({
+  icon,
+  dirty = false,
+  onClose,
+  ...props
+}: IDockviewPanelHeaderProps & {
+  /**
+   * The icon before the tab's title.
+   */
+  icon?: ReactNode;
+  /**
+   * Whether the panel has unsaved changes, which marks the tab with a dot that turns into the close button on hover.
+   */
+  dirty?: boolean;
+  onClose?: () => void;
+}) {
+  const docks = useContext(ApplicationManagerContext)?.docks;
   // The dock's last remaining content tab is not closable.
   const [closable, setClosable] = useState(true);
 
@@ -290,26 +275,40 @@ export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { 
   }, [props.containerApi]);
 
   return (
-    <div className="flex h-full items-center gap-1.5 px-2 text-base">
+    <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
+      {icon}
       <span>{props.api.title}</span>
-      {closable && (
+      {closable ? (
         <Button
           aria-label={`Close ${props.api.title}`}
-          className="size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100"
+          className={cn(
+            '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
+            dirty && 'opacity-100',
+          )}
           onClick={(event) => {
             event.stopPropagation();
-            if (onClose === undefined) {
+            if (onClose !== undefined) {
+              onClose();
+              return;
+            }
+
+            const dock = docks?.active;
+            const panel = dock?.get(props.api.id);
+            if (dock == null || panel == null || !panel.closable) {
               props.api.close();
             } else {
-              onClose();
+              void dock.close(panel);
             }
           }}
           onPointerDown={(event) => event.stopPropagation()}
           size="icon-xs"
           variant="ghost"
         >
-          <Icon className="size-3" name="close" />
+          {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
+          <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
         </Button>
+      ) : (
+        dirty && <span aria-hidden className="size-2 rounded-full bg-text-3" />
       )}
     </div>
   );
@@ -319,30 +318,33 @@ export function DefaultTab({ onClose, ...props }: IDockviewPanelHeaderProps & { 
  * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tool` is the adapter CSS hook for
  * tool-specific state painting.
  */
-export function FileTab(props: IDockviewPanelHeaderProps) {
+export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
-    <div className="flex h-full items-center gap-1.5 px-2 text-base text-text-2" data-tool>
+    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tool>
       <span>{props.api.title}</span>
     </div>
   );
 }
 
-export function ToolStripe({ dockview }: { dockview: DockviewApi | null }) {
-  const [fileTreeVisible, setFileTreeVisible] = useState(true);
-
-  useEffect(() => {
-    // The group api goes stale if the tree ever changes groups; fine while the tool lock pins it in place.
-    const group = dockview?.getPanel('fileTree')?.group.api;
-    const disposable = group?.onDidVisibilityChange((event) => {
-      setFileTreeVisible(event.isVisible);
-    });
-    return () => disposable?.dispose();
-  }, [dockview]);
+export function ToolStripe() {
+  const docks = useContext(ApplicationManagerContext)?.docks;
+  const fileTreeVisible = useSyncExternalStore(
+    (listener) => docks?.onChange(listener) ?? (() => {}),
+    () =>
+      docks?.active?.groups.find((group) => group.panels.some((panel) => panel.type === 'fileTree'))?.shown !== null,
+  );
 
   const toggleFiles = () => {
-    const group = dockview?.getPanel('fileTree')?.group.api;
-    if (group) {
-      group.setVisible(!group.isVisible);
+    const dock = docks?.active;
+    const fileTree = dock?.panels.find((panel) => panel.type === 'fileTree');
+    if (dock == null || fileTree === undefined) {
+      return;
+    }
+
+    if (fileTreeVisible) {
+      dock.hide(fileTree);
+    } else {
+      dock.show(fileTree);
     }
   };
 
@@ -399,23 +401,4 @@ function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
   if (draggedTool || targetHasTool) {
     event.preventDefault();
   }
-}
-
-function EditorPanel(props: IDockviewPanelProps<{ path: string; diff?: string | null; layout?: DiffLayout }>) {
-  // TODO: Back this with the daemon.
-  const root = new URL(import.meta.env.ELSEWISE_REPOSITORY);
-  const defaultLayout = useSettings((settings) => settings.editor.diffLayout);
-  const [diff] = useState(() => new DiffState(props.params.diff ?? null, props.params.layout ?? defaultLayout));
-
-  // Keeps the comparison in the panel's parameters, so that it is restored with the dock.
-  useEffect(() => {
-    const dispose = diff.subscribe(() => props.api.updateParameters({ diff: diff.source, layout: diff.layout }));
-    return () => {
-      void dispose();
-    };
-  }, [diff, props.api]);
-
-  return (
-    <Editor content={{ label: 'Current', code: FAKE_CODE }} relativePath={props.params.path} root={root} diff={diff} />
-  );
 }

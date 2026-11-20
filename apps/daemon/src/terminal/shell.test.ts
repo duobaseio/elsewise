@@ -23,7 +23,7 @@ async function start(script: string, restore?: Restore): Promise<{ shell: Shell;
   });
   shells.push(shell);
   const events: ShellEvent[] = [];
-  shell.subscribe((event) => events.push(event));
+  shell.onEvent((event) => events.push(event));
   return { shell, events };
 }
 

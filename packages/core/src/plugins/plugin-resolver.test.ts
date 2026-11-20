@@ -825,11 +825,11 @@ describe('load', () => {
   });
 });
 
-describe('subscribe', () => {
+describe('onChange', () => {
   test('notifies of each change', async () => {
     const { resolver, enable } = setUp();
     const statuses: string[] = [];
-    resolver.subscribe(() => statuses.push(resolver.plugins[0]?.status ?? 'none'));
+    resolver.onChange(() => statuses.push(resolver.plugins[0]?.status ?? 'none'));
     await enable('a', RECORDING);
     await resolver.disable('a');
 

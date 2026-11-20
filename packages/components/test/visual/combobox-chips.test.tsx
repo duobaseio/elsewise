@@ -85,3 +85,36 @@ for (const content of CONTENTS) {
     await expect(page.getByTestId('sheet')).toMatchScreenshot(`combobox-chips-${content.key}-${theme}`);
   });
 }
+
+test.each(THEMES)('combobox chip remove hover (%s)', async (theme) => {
+  await render(
+    <Sheet theme={theme}>
+      <div className="grid w-max grid-cols-[max-content_max-content] items-center gap-x-5 gap-y-2">
+        {SIZES.map((size) => (
+          <Fragment key={size.key}>
+            <div className="text-muted-foreground text-xs">{size.label}</div>
+            <div className="w-48">
+              <Combobox defaultValue={['80', '120']} items={ITEMS} multiple>
+                <ComboboxChips size={size.size}>
+                  <ComboboxValue>
+                    {(value: string[]) => value.map((column) => <ComboboxChip key={column}>{column}</ComboboxChip>)}
+                  </ComboboxValue>
+                  <ComboboxChipsInput placeholder="Add column" />
+                </ComboboxChips>
+              </Combobox>
+            </div>
+          </Fragment>
+        ))}
+      </div>
+    </Sheet>,
+  );
+
+  await forcePseudoStates([
+    {
+      selector: '[data-slot="combobox-chip"]:first-child [data-slot="combobox-chip-remove"]',
+      pseudoClasses: ['hover'],
+    },
+  ]);
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`combobox-chip-remove-hover-${theme}`);
+});

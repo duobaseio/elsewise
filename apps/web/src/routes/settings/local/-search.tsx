@@ -1,4 +1,5 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react/combobox';
+import { Button } from '@elsewise/components/components/button';
 import {
   Combobox,
   ComboboxContent,
@@ -80,17 +81,19 @@ export function Search() {
           render={<Input className="h-7 rounded-[min(var(--radius-md),10px)] bg-background pr-7 pl-6.5 text-sm" />}
         />
         {query !== '' && (
-          <button
+          <Button
             aria-label="Clear search"
-            className="absolute top-2 right-4 flex h-7 w-4 cursor-default items-center justify-center rounded-sm text-text-3 outline-none hover:text-foreground focus-visible:outline-1 focus-visible:outline-solid focus-visible:outline-ring"
+            className="absolute top-3 right-3 size-5 text-text-3"
             onClick={() => {
               setQuery('');
               setOpen(false);
             }}
+            size="icon-xs"
             type="button"
+            variant="ghost"
           >
             <Icon className="size-3.5" name="close" />
-          </button>
+          </Button>
         )}
       </div>
       <ComboboxContent align="start">

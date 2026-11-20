@@ -2,11 +2,11 @@ import { DEFAULT_WORKSPACE_STATE } from '@elsewise/bridge';
 import { FileTree, type FileTreeModel, useFileTree } from '@elsewise/components/components/file-tree';
 import { toast } from '@elsewise/components/components/toast';
 import { PLATFORM } from '@elsewise/components/lib/platform';
-import type { FileTreeSelection, Workspace, WorkspaceId } from '@elsewise/frontend-plugin';
+import { DEFAULT_COMMANDS, type FileTreeSelection, type Workspace, type WorkspaceId } from '@elsewise/frontend-plugin';
 import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
-import { useEffect, useRef, useState } from 'react';
+import { type MouseEvent, useEffect, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { useCommandManager } from '@/command/command-manager';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
@@ -58,6 +58,25 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
     }
   }, [renaming, fileTree, model, daemon, project, workspaceId]);
 
+  const open = (event: MouseEvent) => {
+    const [origin] = event.nativeEvent.composedPath();
+    const path = rowPath(event.nativeEvent);
+    if (
+      workspace === undefined ||
+      path === undefined ||
+      path.endsWith('/') ||
+      event.shiftKey ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.altKey ||
+      (origin instanceof HTMLElement && origin.tagName === 'INPUT')
+    ) {
+      return;
+    }
+
+    commands.run(DEFAULT_COMMANDS.fileTree.open.file, { workspace, relativePaths: [path] });
+  };
+
   return (
     <CommandContextMenu
       menu={menu}
@@ -79,7 +98,7 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
           }
         }
         clicked.current = path ?? null;
-        target.current = { workspace, paths: [...paths] };
+        target.current = { workspace, relativePaths: [...paths] };
         return true;
       }}
       onClosed={() => {
@@ -92,9 +111,10 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
         // The tree ignores drags it did not start, so files dropped from outside are handled here.
         // biome-ignore lint/a11y/noStaticElementInteractions: the keys run commands on the tree's selection inside.
         <div
+          onDoubleClick={open}
           onKeyDown={(event) => {
             if (workspace !== undefined) {
-              runFileTreeKeys(commands, { workspace, paths: [...model.getSelectedPaths()] }, event.nativeEvent);
+              runFileTreeKeys(commands, { workspace, relativePaths: [...model.getSelectedPaths()] }, event.nativeEvent);
             }
           }}
           onDragOver={(event) => {

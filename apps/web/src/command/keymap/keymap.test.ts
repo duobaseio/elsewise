@@ -239,7 +239,7 @@ describe('runFileTreeKeys', () => {
       main: false,
       absolutePath: '/p/w',
     },
-    paths: ['src/'],
+    relativePaths: ['src/'],
   };
 
   // Returns commands with a file tree command bound to Ctrl-k that runs `run`.
@@ -283,7 +283,7 @@ describe('runFileTreeKeys', () => {
   test('skips empty selection', () => {
     const run = vi.fn<FileTreeCommand['run']>(() => true);
 
-    runFileTreeKeys(bound(run), { ...SELECTION, paths: [] }, press());
+    runFileTreeKeys(bound(run), { ...SELECTION, relativePaths: [] }, press());
 
     expect(run).not.toHaveBeenCalled();
   });

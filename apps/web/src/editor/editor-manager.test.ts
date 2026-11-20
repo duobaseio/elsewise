@@ -28,7 +28,7 @@ describe('activate', () => {
     const editor = new EditorManager();
     const listener = vi.fn();
     const a = view('a');
-    editor.subscribe(listener);
+    editor.onChange(listener);
     editor.activate(a);
     editor.activate(a);
 
@@ -42,7 +42,7 @@ describe('deactivate', () => {
     const listener = vi.fn();
     const a = view('a');
     editor.activate(a);
-    editor.subscribe(listener);
+    editor.onChange(listener);
     editor.deactivate(a);
 
     expect(editor.active).toBeNull();
@@ -54,7 +54,7 @@ describe('deactivate', () => {
     const listener = vi.fn();
     const a = view('a');
     editor.activate(a);
-    editor.subscribe(listener);
+    editor.onChange(listener);
     editor.deactivate(view('b'));
 
     expect(editor.active).toBe(a);

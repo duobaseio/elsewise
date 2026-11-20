@@ -24,7 +24,7 @@ await build({
 /** Installs the production dependencies into `dist/node_modules`. */
 async function installDependencies() {
   const staging = path.join('dist', 'deploy');
-  const args = ['--filter', manifest.name, 'deploy', '--prod', '--legacy', '--config.node-linker=hoisted', staging];
+  const args = ['--filter', manifest.name, 'deploy', '--prod', '--config.node-linker=hoisted', staging];
   const result = spawnSync('pnpm', args, {
     stdio: 'inherit',
     shell: process.platform === 'win32',

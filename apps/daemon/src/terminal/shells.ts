@@ -169,7 +169,7 @@ export class Shells {
     };
     entry.finished = shell.exited.then((exit) => this.#finish(entry, exit));
     this.#entries.set(terminal.id, entry);
-    shell.subscribe((event) => {
+    shell.onEvent((event) => {
       if (event.case === 'output') {
         entry.timer ??= setTimeout(() => {
           entry.timer = undefined;

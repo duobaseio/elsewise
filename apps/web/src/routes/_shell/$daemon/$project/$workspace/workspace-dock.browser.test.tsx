@@ -1,6 +1,7 @@
 import type { DockviewApi, SerializedDockview } from 'dockview-react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { addFile } from '../../../../../../test/dock';
 import { STUB_PANELS } from '../../../../../../test/dock-stubs';
 import { WorkspaceDock } from './route';
 
@@ -33,6 +34,7 @@ async function mount(layout?: unknown) {
 
 test('restores layout after remount', async () => {
   const first = await mount();
+  addFile(first.api);
   first.api.getPanel('fileTree')?.api.close();
   await vi.waitFor(() => expect(first.saved()).toBeDefined());
   const layout = first.saved();
@@ -40,7 +42,7 @@ test('restores layout after remount', async () => {
 
   const second = await mount(layout);
 
-  expect(second.api.panels.map((panel) => panel.id)).toEqual(['editor:$workspace.tsx']);
+  expect(second.api.panels.map((panel) => panel.id)).toEqual(['file:$workspace.tsx']);
 });
 
 test('builds default layout from invalid layout', async () => {
@@ -48,5 +50,5 @@ test('builds default layout from invalid layout', async () => {
 
   const { api } = await mount({ grid: 'invalid' });
 
-  expect(api.panels.map((panel) => panel.id).sort()).toEqual(['editor:$workspace.tsx', 'fileTree']);
+  expect(api.panels.map((panel) => panel.id).sort()).toEqual(['fileTree']);
 });

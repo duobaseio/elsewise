@@ -353,7 +353,7 @@ describe('addSources', () => {
   test('adds groups until disposed, notifying', () => {
     const { projects } = setup();
     const notify = vi.fn();
-    projects.subscribe(notify);
+    projects.onChange(notify);
     const a = source('test.a');
     const dispose = projects.addSources([{ id: 'test', sources: [a] }]);
 

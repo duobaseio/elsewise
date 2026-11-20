@@ -42,7 +42,7 @@ export class SidebarStore {
     this.notify();
   }
 
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -61,7 +61,7 @@ export class SidebarStore {
  */
 export function useRenaming(id: ProjectId | WorkspaceId): boolean {
   const { sidebar } = useApplicationManager();
-  const subscribe = useCallback((listener: () => void) => sidebar.subscribe(listener), [sidebar]);
+  const subscribe = useCallback((listener: () => void) => sidebar.onChange(listener), [sidebar]);
   return useSyncExternalStore(subscribe, () => {
     const renaming = sidebar.renaming;
     return (

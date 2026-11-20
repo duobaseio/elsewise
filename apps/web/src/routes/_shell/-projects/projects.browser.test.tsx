@@ -4,14 +4,19 @@ import { DEFAULT_COMMAND_GROUPS, type ProjectCommand, type WorkspaceCommand } fr
 import { afterEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { FILE_MANAGER } from '@/projects/commands';
+import { IMPORT_FOLDER } from '@/projects/default-sources';
 import { mount } from '../../../../test/projects';
 
 afterEach(() => {
   window.bridge = undefined;
+  localStorage.removeItem(IMPORT_FOLDER);
   vi.restoreAllMocks();
 });
 
 function pickFolder(absolutePath: string | null) {
+  const pickPaths = vi.fn<NonNullable<NonNullable<Window['bridge']>['window']>['pickPaths']>(async () =>
+    absolutePath === null ? [] : [absolutePath],
+  );
   window.bridge = {
     window: {
       cut() {},
@@ -19,12 +24,13 @@ function pickFolder(absolutePath: string | null) {
       paste() {},
       absolutePathOf: (file) => `/Users/me/${file.name}`,
       showPath: async () => {},
-      pickPaths: async () => (absolutePath === null ? [] : [absolutePath]),
+      pickPaths,
       setBrightness() {},
       setBackground() {},
       onClose() {},
     },
   };
+  return pickPaths;
 }
 
 // Drags the folders named `names` from the platform over `element`, then drops them unless `drop` is false.
@@ -1082,6 +1088,89 @@ describe('Projects', () => {
 
     await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
     await expect.poll(() => router.state.location.pathname).toBe('/local/notes/main');
+  });
+
+  test('starts at parent of last picked folder', async () => {
+    pickFolder('/Users/me/notes');
+    await mount('/local/elsewise/singapore');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.element(page.getByRole('treeitem', { name: 'notes', exact: true })).toBeVisible();
+
+    const pickPaths = pickFolder(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: '/Users/me' }]);
+  });
+
+  test('remembers folder when import fails', async () => {
+    pickFolder('/Users/me/downloads');
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.poll(() => added.mock.calls.length).toBe(1);
+
+    const pickPaths = pickFolder(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: '/Users/me' }]);
+  });
+
+  test('remembers folder of backslash path', async () => {
+    pickFolder('C:\\Users\\me\\downloads');
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.poll(() => added.mock.lastCall?.[0]).toMatchObject({ title: 'Could not import “downloads”' });
+
+    const pickPaths = pickFolder(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: 'C:\\Users\\me' }]);
+  });
+
+  test('remembers drive root', async () => {
+    pickFolder('C:\\downloads');
+    const { projects } = await mount('/local/elsewise/singapore');
+    vi.spyOn(projects, 'add').mockRejectedValue(new Error("the folder is not a repository's main working tree"));
+    const added = vi.spyOn(toast, 'add');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.poll(() => added.mock.calls.length).toBe(1);
+
+    const pickPaths = pickFolder(null);
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect.poll(() => pickPaths.mock.lastCall).toEqual([{ kind: 'folder', defaultPath: 'C:\\' }]);
+  });
+
+  test('keeps folder when picker is cancelled', async () => {
+    localStorage.setItem(IMPORT_FOLDER, '/Users/me');
+    const pickPaths = pickFolder(null);
+    await mount('/local/elsewise/singapore');
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+    await expect.poll(() => pickPaths.mock.calls.length).toBe(1);
+
+    await page.getByRole('button', { name: 'Add project' }).click();
+    await page.getByRole('menuitem', { name: 'Import project…' }).click();
+
+    await expect
+      .poll(() => pickPaths.mock.calls)
+      .toEqual([[{ kind: 'folder', defaultPath: '/Users/me' }], [{ kind: 'folder', defaultPath: '/Users/me' }]]);
   });
 
   test('ignores cancelled folder picker', async () => {

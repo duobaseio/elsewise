@@ -84,14 +84,15 @@ const SKELETONS = ['82%', '54%', '68%'] as const;
 test.each(THEMES)('sidebar (%s)', async (theme) => {
   await render(<SidebarSheet theme={theme} />);
 
-  await forcePseudoStates(
-    [...ROWS, ...COLLAPSIBLES, ...SUB_ROWS, { key: 'row-action-hover', forced: ['hover'] as const }]
+  await forcePseudoStates([
+    ...[...ROWS, ...COLLAPSIBLES, ...SUB_ROWS, { key: 'row-action-hover', forced: ['hover'] as const }]
       .filter((row) => 'forced' in row && row.forced)
       .map((row) => ({
         selector: `[data-visual-state="${row.key}"]`,
         pseudoClasses: ('forced' in row && row.forced) || [],
       })),
-  );
+    { selector: '[data-visual-state="row-action-hover"] [aria-label="More"]', pseudoClasses: ['hover'] },
+  ]);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`sidebar-${theme}`);
 });

@@ -26,9 +26,9 @@ const PRESENCE = {
  * The summary counts the diagnostics by severity, with a tick when there are none, and steps through them with the
  * previous and next diagnostic commands. The `scrollbarMarkers` setting turns it off along with the scrollbar markers.
  */
-export function DiagnosticsSummary({ view, subscribe }: EditorToolbarProps) {
+export function DiagnosticsSummary({ view, onChange }: EditorToolbarProps) {
   const shown = useSettings((settings) => settings.editor.scrollbarMarkers) && !view.state.readOnly;
-  const found = useSyncExternalStore(subscribe, () => view.state.field(diagnostics));
+  const found = useSyncExternalStore(onChange, () => view.state.field(diagnostics));
   const counts = useMemo(() => {
     const counts: Counts = { error: 0, warning: 0, info: 0 };
     for (const { severity } of found) {

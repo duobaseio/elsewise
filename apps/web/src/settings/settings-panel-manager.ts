@@ -175,7 +175,7 @@ export class SettingsPanelManager implements Settings {
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
@@ -200,6 +200,6 @@ export function useSettingsPanels(): SettingsPanelManager;
 export function useSettingsPanels<T>(select: (settings: SettingsPanelManager) => T): T;
 export function useSettingsPanels<T>(select?: (settings: SettingsPanelManager) => T): SettingsPanelManager | T {
   const settings = useApplicationManager().settings;
-  const subscribe = useCallback((listener: () => void) => settings.subscribe(listener), [settings]);
+  const subscribe = useCallback((listener: () => void) => settings.onChange(listener), [settings]);
   return useSyncExternalStore(subscribe, () => (select === undefined ? settings : select(settings)));
 }

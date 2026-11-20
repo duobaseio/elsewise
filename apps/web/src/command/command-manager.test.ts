@@ -182,7 +182,7 @@ describe('add', () => {
   test('notifies listeners', () => {
     const manager = commands();
     const listener = vi.fn();
-    manager.subscribe(listener);
+    manager.onChange(listener);
     const dispose = manager.add([{ id: 'rename', label: 'Rename', scope: 'editor', group: EDITOR, run: () => true }]);
     dispose();
 
@@ -275,7 +275,7 @@ describe('addGroups', () => {
   test('notifies listeners', () => {
     const manager = commands();
     const listener = vi.fn();
-    manager.subscribe(listener);
+    manager.onChange(listener);
     const dispose = manager.addGroups([{ id: 'a', label: 'A' }]);
     dispose();
 
@@ -389,7 +389,7 @@ describe('run', () => {
     const manager = commands();
     const run = vi.fn<FileTreeCommand['run']>(() => true);
     manager.add([{ id: 'c', label: 'C', scope: 'fileTree', group: APPLICATION, run }]);
-    const selection: FileTreeSelection = { workspace: WORKSPACE, paths: ['src/'] };
+    const selection: FileTreeSelection = { workspace: WORKSPACE, relativePaths: ['src/'] };
 
     expect(manager.run('c')).toBe(false);
     expect(run).not.toHaveBeenCalled();
@@ -412,7 +412,7 @@ describe('run', () => {
     expect(manager.run('project', WORKSPACE)).toBe(false);
     expect(manager.run('workspace', PROJECT)).toBe(false);
     expect(manager.run('editor', PROJECT)).toBe(false);
-    expect(manager.run('editor', { workspace: WORKSPACE, paths: [] })).toBe(false);
+    expect(manager.run('editor', { workspace: WORKSPACE, relativePaths: [] })).toBe(false);
     expect(manager.run('editor', { session: SESSION, terminal: new XTerm({ allowProposedApi: true }) })).toBe(false);
     expect(manager.run('terminal', view('a'))).toBe(false);
     expect(manager.run('fileTree', WORKSPACE)).toBe(false);

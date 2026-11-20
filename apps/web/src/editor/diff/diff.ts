@@ -83,7 +83,7 @@ export class DiffState {
    *
    * Returns a disposable that unregisters the `listener`.
    */
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);

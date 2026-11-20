@@ -20,7 +20,7 @@ describe('DiffState', () => {
   test('notifies on change', () => {
     const diff = new DiffState(null, 'unified');
     const listener = vi.fn();
-    diff.subscribe(listener);
+    diff.onChange(listener);
 
     diff.source = 'test.source';
     diff.source = 'test.source';
@@ -32,7 +32,7 @@ describe('DiffState', () => {
   test('notifies on added view', async () => {
     const diff = new DiffState('test.source', 'unified');
     const listener = vi.fn();
-    diff.subscribe(listener);
+    diff.onChange(listener);
 
     views.push(new EditorView({ state: EditorState.create({ extensions: diff.extension }), parent: document.body }));
 
@@ -47,7 +47,7 @@ describe('DiffState', () => {
     });
     views.push(view);
     const listener = vi.fn();
-    diff.subscribe(listener);
+    diff.onChange(listener);
 
     view.dispatch({ selection: { anchor: 1 } });
     expect(listener).not.toHaveBeenCalled();

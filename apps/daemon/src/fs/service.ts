@@ -128,7 +128,9 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
   writeFile(request: WriteFileRequest) {
     return attempt(async () => {
       const absoluteNativePath = toNativePath(request.root, request.relativePath);
-      if (request.baseHash.length === 0) {
+      if (request.overwrite) {
+        await replaceFile(absoluteNativePath, request.content);
+      } else if (request.baseHash.length === 0) {
         await createFile(absoluteNativePath, request.content);
       } else {
         const current = await hashFile(absoluteNativePath).catch((error) => {

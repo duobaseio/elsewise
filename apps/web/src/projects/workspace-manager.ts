@@ -309,21 +309,11 @@ export class WorkspaceManager implements Workspaces {
   /**
    * Calls `listener` when a workspace's status changes, or sidebar items or context menu groups are added or removed.
    */
-  subscribe(listener: () => void): Disposable {
+  onChange(listener: () => void): Disposable {
     this.listeners.add(listener);
     return () => {
       this.listeners.delete(listener);
     };
-  }
-
-  private notify() {
-    for (const listener of this.listeners) {
-      try {
-        listener();
-      } catch (error) {
-        console.error('Workspace listener failed', error);
-      }
-    }
   }
 
   private notifyActive() {
@@ -341,10 +331,26 @@ export class WorkspaceManager implements Workspaces {
       }
     }
   }
+
+  private notify() {
+    for (const listener of this.listeners) {
+      try {
+        listener();
+      } catch (error) {
+        console.error('Workspace listener failed', error);
+      }
+    }
+  }
 }
 
-export function sameWorkspace(a: WorkspaceId, b: WorkspaceId): boolean {
-  return a.daemon === b.daemon && a.project === b.project && a.workspace === b.workspace;
+export function sameWorkspace(a: WorkspaceId | undefined, b: WorkspaceId | undefined): boolean {
+  return (
+    a !== undefined &&
+    b !== undefined &&
+    a.daemon === b.daemon &&
+    a.project === b.project &&
+    a.workspace === b.workspace
+  );
 }
 
 // Returns the workspace in the URL.
@@ -413,7 +419,7 @@ export function useWorkspace(workspace: WorkspaceId): Workspace | undefined {
  */
 export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceAggregateStatus {
   const workspaces = useApplicationManager().projects.workspaces;
-  const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
+  const subscribe = useCallback((listener: () => void) => workspaces.onChange(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.status(workspace));
 }
 
@@ -422,7 +428,7 @@ export function useWorkspaceStatus(workspace: WorkspaceId): WorkspaceAggregateSt
  */
 export function useWorkspaceSidebarItems(): readonly WorkspaceSidebarItem[] {
   const workspaces = useApplicationManager().projects.workspaces;
-  const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
+  const subscribe = useCallback((listener: () => void) => workspaces.onChange(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.sidebarItems);
 }
 
@@ -431,6 +437,6 @@ export function useWorkspaceSidebarItems(): readonly WorkspaceSidebarItem[] {
  */
 export function useWorkspaceContextMenu(): readonly ContextMenuGroup[] {
   const workspaces = useApplicationManager().projects.workspaces;
-  const subscribe = useCallback((listener: () => void) => workspaces.subscribe(listener), [workspaces]);
+  const subscribe = useCallback((listener: () => void) => workspaces.onChange(listener), [workspaces]);
   return useSyncExternalStore(subscribe, () => workspaces.contextMenu);
 }

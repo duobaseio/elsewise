@@ -19,10 +19,12 @@ export function DeleteEntriesDialog() {
   const client = useQueryClient();
 
   const remove = useMutation({
-    mutationFn: async ({ workspace, paths }: FileTreeSelection) => {
+    mutationFn: async ({ workspace, relativePaths }: FileTreeSelection) => {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
-      const folders = paths.filter((path) => path.endsWith('/'));
-      const outermost = paths.filter((path) => !folders.some((folder) => folder !== path && path.startsWith(folder)));
+      const folders = relativePaths.filter((path) => path.endsWith('/'));
+      const outermost = relativePaths.filter(
+        (path) => !folders.some((folder) => folder !== path && path.startsWith(folder)),
+      );
       const { failures } = await daemon.fileSystem.deleteEntries({
         root: workspace.absolutePath,
         relativePaths: outermost.map((path) => path.replace(/\/$/, '')),
@@ -54,19 +56,20 @@ export function DeleteEntriesDialog() {
           return null;
         }
 
-        const folders = payload.paths.filter((path) => path.endsWith('/')).length;
-        const kinds = folders === 0 ? 'files' : folders === payload.paths.length ? 'folders' : 'files and folders';
+        const folders = payload.relativePaths.filter((path) => path.endsWith('/')).length;
+        const kinds =
+          folders === 0 ? 'files' : folders === payload.relativePaths.length ? 'folders' : 'files and folders';
         return (
           <DialogContent className="max-w-md" showCloseButton={false}>
             <DialogHeader>
               <DialogTitle>
-                {payload.paths.length === 1
-                  ? `Delete “${name(payload.paths[0] ?? '')}” ${payload.paths[0]?.endsWith('/') ? 'folder' : 'file'}?`
-                  : `Delete ${payload.paths.length} ${kinds}?`}
+                {payload.relativePaths.length === 1
+                  ? `Delete “${name(payload.relativePaths[0] ?? '')}” ${payload.relativePaths[0]?.endsWith('/') ? 'folder' : 'file'}?`
+                  : `Delete ${payload.relativePaths.length} ${kinds}?`}
               </DialogTitle>
               <DialogDescription>
                 {folders === 0
-                  ? `${payload.paths.length === 1 ? 'This file' : 'These files'} will be permanently deleted.`
+                  ? `${payload.relativePaths.length === 1 ? 'This file' : 'These files'} will be permanently deleted.`
                   : `${folders === 1 ? 'This folder’s' : 'These folders’'} files and subfolders will be permanently deleted.`}
               </DialogDescription>
             </DialogHeader>

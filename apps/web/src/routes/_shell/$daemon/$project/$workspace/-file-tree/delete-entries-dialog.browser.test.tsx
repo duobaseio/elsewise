@@ -20,7 +20,7 @@ const SELECTION: FileTreeSelection = {
     main: false,
     absolutePath: '/elsewise',
   },
-  paths: ['src/', 'src/main.ts', 'README.md'],
+  relativePaths: ['src/', 'src/main.ts', 'README.md'],
 };
 
 // Renders the dialog over a daemon whose deleteEntries is `deleteEntries`, and returns the application to open it with.
@@ -53,7 +53,7 @@ describe('DeleteEntriesDialog', () => {
 
   test('names single folder', async () => {
     const application = await mount(async () => create(DeleteEntriesResponseSchema));
-    application.fileTree.deleteDialog.openWithPayload({ ...SELECTION, paths: ['src/'] });
+    application.fileTree.deleteDialog.openWithPayload({ ...SELECTION, relativePaths: ['src/'] });
 
     await expect.element(page.getByRole('heading', { name: 'Delete “src” folder?' })).toBeVisible();
     await expect
@@ -64,7 +64,7 @@ describe('DeleteEntriesDialog', () => {
   test('deletes nothing on cancel', async () => {
     const deleteEntries = vi.fn<Daemon['fileSystem']['deleteEntries']>(async () => create(DeleteEntriesResponseSchema));
     const application = await mount(deleteEntries);
-    application.fileTree.deleteDialog.openWithPayload({ ...SELECTION, paths: ['README.md'] });
+    application.fileTree.deleteDialog.openWithPayload({ ...SELECTION, relativePaths: ['README.md'] });
 
     await expect.element(page.getByRole('heading', { name: 'Delete “README.md” file?' })).toBeVisible();
     await userEvent.click(page.getByRole('button', { name: 'Cancel' }));

@@ -35,7 +35,7 @@ service FileSystemService {
 
   // Writes a file's entire content and creates the file and its parent directories if required.
   //
-  // A file that no longer matches `base_hash` fails with FAILED_PRECONDITION.
+  // A file that no longer matches `base_hash` fails with FAILED_PRECONDITION, unless `overwrite` is set.
   rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
 
   // Creates a directory and its parent directories if required.
@@ -243,13 +243,16 @@ message WriteFileRequest {
   // The path.
   string relative_path = 2;
 
-  // The hash the file must currently have on disk.
+  // The hash the file must currently have on disk. Ignored if `overwrite` is set.
   //
   // Unset means the file must not exist yet and if one is present, it fails with ALREADY_EXISTS.
   bytes base_hash = 3;
 
   // The file's new content.
   bytes content = 4;
+
+  // Whether to overwrite a file already at the path.
+  bool overwrite = 5;
 }
 
 message WriteFileResponse {

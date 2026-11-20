@@ -78,7 +78,7 @@ export function useToolbarExtension(): { toolbar: Extension; portal: ReactNode }
         setMounted({
           view,
           dom,
-          subscribe: (listener) => {
+          onChange: (listener) => {
             listeners.add(listener);
             return () => {
               listeners.delete(listener);
@@ -108,14 +108,14 @@ export function useToolbarExtension(): { toolbar: Extension; portal: ReactNode }
     [],
   );
 
-  const portal = mounted && createPortal(<Toolbar view={mounted.view} subscribe={mounted.subscribe} />, mounted.dom);
+  const portal = mounted && createPortal(<Toolbar view={mounted.view} onChange={mounted.onChange} />, mounted.dom);
   return { toolbar, portal };
 }
 
 /**
  * The toolbar, whose tooltips are one group.
  */
-function Toolbar({ view, subscribe }: EditorToolbarProps) {
+function Toolbar({ view, onChange }: EditorToolbarProps) {
   const added = useEditorManager((editor) => editor.toolbarItems);
   const application = useApplicationManager();
   const commands = useCommandManager();
@@ -187,8 +187,8 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
     };
 
     evaluate();
-    return subscribe(evaluate);
-  }, [entries, application, view, subscribe]);
+    return onChange(evaluate);
+  }, [entries, application, view, onChange]);
 
   return (
     <TooltipProvider>
@@ -197,7 +197,7 @@ function Toolbar({ view, subscribe }: EditorToolbarProps) {
           if (entry.type === 'component') {
             return (
               <PluginBoundary key={`component:${entry.id}`} name={`Toolbar item ${entry.id}`}>
-                <entry.component view={view} subscribe={subscribe} />
+                <entry.component view={view} onChange={onChange} />
               </PluginBoundary>
             );
           }

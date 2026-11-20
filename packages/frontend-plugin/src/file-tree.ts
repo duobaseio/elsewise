@@ -28,5 +28,5 @@ export interface FileTreeSelection {
   /**
    * The selected files and folders, relative to the workspace, e.g. `src/` and `src/main.rs`. Folders end with `/`.
    */
-  readonly paths: readonly string[];
+  readonly relativePaths: readonly string[];
 }

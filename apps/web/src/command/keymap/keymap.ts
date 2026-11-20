@@ -351,7 +351,7 @@ export function runFileTreeKeys(commands: CommandManager, selection: FileTreeSel
   if (
     event.defaultPrevented ||
     event.isComposing ||
-    selection.paths.length === 0 ||
+    selection.relativePaths.length === 0 ||
     (origin !== undefined && 'tagName' in origin && origin.tagName === 'INPUT')
   ) {
     return;
