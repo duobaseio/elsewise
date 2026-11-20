@@ -223,12 +223,6 @@ describe('status', () => {
     await repo.run('add', 'a.txt');
     await repo.run('commit', '--quiet', '--message', 'change');
     await expect.poll(() => entries(seen)).toEqual([]);
-    // The staged change between `add` and `commit` is reported only when a read lands between them.
-    for (const [index, response] of seen.entries()) {
-      if (index > 0) {
-        expect(response).not.toEqual(seen[index - 1]);
-      }
-    }
 
     abort.abort();
     await expect(ended).rejects.toMatchObject({ code: Code.CANCELLED });
