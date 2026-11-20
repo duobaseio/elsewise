@@ -15,7 +15,9 @@ export interface Entry<Installed extends InstalledPlugin, Running> {
     | { readonly status: 'failed' }
     | { readonly status: 'incompatible'; readonly unsatisfied: Unsatisfied }
     | { readonly status: 'enabled'; readonly running?: Running };
-  /** The plugin's queued enable or disable. */
+  /**
+   * The plugin's queued enable or disable.
+   */
   pending: Promise<void>;
 }
 

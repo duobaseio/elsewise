@@ -37,7 +37,9 @@ function entries(seen: WatchStatusResponse[]): string[] | undefined {
   return seen.at(-1)?.status?.entries.map((entry) => `${entry.kind.case}:${entry.relativePath}`);
 }
 
-/** Makes `main` and a `feature` branch that both change `conflict.txt`. Leaves `main` checked out. */
+/**
+ * Makes `main` and a `feature` branch that both change `conflict.txt`. Leaves `main` checked out.
+ */
 async function diverge(): Promise<{ base: string; feature: string }> {
   const base = await repo.commit('conflict.txt', 'base\n', 'base');
   await repo.run('switch', '--quiet', '--create', 'feature');

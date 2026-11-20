@@ -23,13 +23,19 @@ import { type Outcome, Shells } from './shells';
 import type { TerminalRow, TerminalStore } from './store';
 
 export interface TerminalOptions {
-  /** The most rows a terminal keeps above its viewport. */
+  /**
+   * The most rows a terminal keeps above its viewport.
+   */
   scrollback: number;
 
-  /** How long after an output a running shell's buffer is saved in milliseconds. */
+  /**
+   * How long after an output a running shell's buffer is saved in milliseconds.
+   */
   saveDelayMs: number;
 
-  /** The most bytes of output held for a client that is not reading before the entire buffer is sent instead. */
+  /**
+   * The most bytes of output held for a client that is not reading before the entire buffer is sent instead.
+   */
   maxQueuedBytes: number;
 }
 
@@ -40,7 +46,9 @@ type AttachEvent = MessageInitShape<typeof AttachTerminalResponseSchema>;
 const DEFAULT_SIZE: Size = { columns: 80, rows: 24 };
 const MAX_CELLS = 65_535; // The most columns or rows a pseudoterminal's window size holds.
 
-/** The `TerminalService`. */
+/**
+ * The `TerminalService`.
+ */
 export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> {
   readonly #store: TerminalStore;
   readonly #shells: Shells;
@@ -52,12 +60,16 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     this.#options = options;
   }
 
-  /** Kills the shells of the workspace's terminals. */
+  /**
+   * Kills the shells of the workspace's terminals.
+   */
   killWorkspace(workspaceId: string, outcome: Exclude<Outcome, 'exited'>): Promise<() => void> {
     return this.#shells.killWorkspace(workspaceId, outcome);
   }
 
-  /** Gracefully closes every shell. */
+  /**
+   * Gracefully closes every shell.
+   */
   close(): Promise<void> {
     return this.#shells.close();
   }
@@ -273,7 +285,9 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     }
   }
 
-  /** Returns the terminal's shell and starts the shell if stopped. */
+  /**
+   * Returns the terminal's shell and starts the shell if stopped.
+   */
   async #openShell(terminalId: string, size: Size | undefined): Promise<Shell> {
     const terminal = await this.#refuseMissingTerminal(terminalId);
     const running = this.#shells.get(terminal.id);

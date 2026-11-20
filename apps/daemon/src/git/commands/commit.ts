@@ -17,7 +17,9 @@ const CHANGES: Record<string, Change> = {
   C: Change.COPIED,
 };
 
-/** Returns a commit. */
+/**
+ * Returns a commit.
+ */
 export async function readCommit(git: Git, revision: string): Promise<CommitInit> {
   const [commit] = await readCommits(git, ['--max-count=1', revision, '--']);
   if (!commit) {
@@ -26,7 +28,9 @@ export async function readCommit(git: Git, revision: string): Promise<CommitInit
   return commit;
 }
 
-/** Reads a page of the history of the revisions ( or HEAD). */
+/**
+ * Reads a page of the history of the revisions ( or HEAD).
+ */
 export async function readLog(
   git: Git,
   revisions: string[],
@@ -38,12 +42,16 @@ export async function readLog(
   return readCommits(git, [`--skip=${skip}`, `--max-count=${limit}`, ...revisions, '--', ...pathspecs]);
 }
 
-/** Returns the hash of the best common ancestor of two revisions or an empty string when they share no history. */
+/**
+ * Returns the hash of the best common ancestor of two revisions or an empty string when they share no history.
+ */
 export async function readMergeBase(git: Git, revision: string, otherRevision: string): Promise<string> {
   return (await git.text(['merge-base', revision, otherRevision], { exitCodes: [0, 1] })).trim();
 }
 
-/** Parses `git log -z` output in `COMMIT_FORMAT`. */
+/**
+ * Parses `git log -z` output in `COMMIT_FORMAT`.
+ */
 export function parseCommits(text: string): CommitInit[] {
   return text
     .split('\0')
@@ -61,7 +69,9 @@ export function parseCommits(text: string): CommitInit[] {
     });
 }
 
-/** Reads the entries a commit changed against its first parent. */
+/**
+ * Reads the entries a commit changed against its first parent.
+ */
 export async function readChangedEntries(git: Git, commit: CommitInit): Promise<ChangedEntryInit[]> {
   const args = ['diff-tree', '-r', '-z', '--name-status', '--find-renames', '--find-copies', '--no-commit-id'];
   const parent = commit.parentHashes?.[0];
@@ -69,7 +79,9 @@ export async function readChangedEntries(git: Git, commit: CommitInit): Promise<
   return parseNameStatus(await git.text(args));
 }
 
-/** Parses `git diff-tree --name-status -z` output. */
+/**
+ * Parses `git diff-tree --name-status -z` output.
+ */
 export function parseNameStatus(text: string): ChangedEntryInit[] {
   const tokens = text.split('\0');
   const entries: ChangedEntryInit[] = [];

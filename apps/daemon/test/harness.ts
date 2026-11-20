@@ -12,21 +12,33 @@ const TOKEN = 'test-token';
 
 type HarnessOptions = Omit<DaemonOptions, 'dataDirectory' | 'codeDirectory'>;
 
-/** A harness that starts the service with a client. */
+/**
+ * A harness that starts the service with a client.
+ */
 export class Harness<S extends DescService> {
-  /** A client of the service that is connected to the daemon. Replaced by a restart. */
+  /**
+   * A client of the service that is connected to the daemon. Replaced by a restart.
+   */
   client: Client<S>;
 
-  /** A fresh temporary directory as a protocol path. */
+  /**
+   * A fresh temporary directory as a protocol path.
+   */
   readonly protocolRoot: string;
 
-  /** A fresh temporary directory as a native path. */
+  /**
+   * A fresh temporary directory as a native path.
+   */
   readonly nativeRoot: string;
 
-  /** A fresh temporary daemon's data directory. */
+  /**
+   * A fresh temporary daemon's data directory.
+   */
   readonly data: DataDirectory;
 
-  /** A fresh temporary daemon's code directory. */
+  /**
+   * A fresh temporary daemon's code directory.
+   */
   readonly code: CodeDirectory;
 
   private daemon: Daemon;
@@ -58,7 +70,9 @@ export class Harness<S extends DescService> {
     this.options = options;
   }
 
-  /** Starts a daemon with the options and returns the harness. */
+  /**
+   * Starts a daemon with the options and returns the harness.
+   */
   protected static async connect<S extends DescService, T extends Harness<S>>(
     this: new (
       nativeRoot: string,
@@ -81,7 +95,9 @@ export class Harness<S extends DescService> {
     return new this(nativeRoot, data, code, daemon, server, channel, client, service, options);
   }
 
-  /** Restarts the daemon and reconnects the client. */
+  /**
+   * Restarts the daemon and reconnects the client.
+   */
   async restart(): Promise<void> {
     this.channel.close();
     await this.server.close();
@@ -93,12 +109,16 @@ export class Harness<S extends DescService> {
     this.client = started.client;
   }
 
-  /** Returns the native path of an entry in the root. */
+  /**
+   * Returns the native path of an entry in the root.
+   */
   nativeAt(...segments: string[]): string {
     return path.join(this.nativeRoot, ...segments);
   }
 
-  /** Closes this harness. */
+  /**
+   * Closes this harness.
+   */
   async close(): Promise<void> {
     this.channel.close();
     await this.server.close();
@@ -123,7 +143,9 @@ async function start<S extends DescService>(
   return { daemon, server, channel, client: createClient(channel, service) };
 }
 
-/** Gathers a stream's responses as they arrive. */
+/**
+ * Gathers a stream's responses as they arrive.
+ */
 export function collect<T>(responses: AsyncIterable<T>): { seen: T[]; ended: Promise<void> } {
   const seen: T[] = [];
   const ended = (async () => {

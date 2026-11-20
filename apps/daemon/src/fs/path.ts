@@ -12,7 +12,9 @@ export function toNativeAbsolutePath(absoluteProtocolPath: string): string {
   return path.resolve(absoluteProtocolPath);
 }
 
-/** Splits a `/`-separated path into its segments. */
+/**
+ * Splits a `/`-separated path into its segments.
+ */
 export function parseProtocolPath(relativeProtocolPath: string): string[] {
   if (relativeProtocolPath === '') {
     return [];
@@ -40,7 +42,9 @@ export function toNativePathOrRoot(protocolRoot: string, relativeProtocolPath: s
   return path.join(toNativeAbsolutePath(protocolRoot), ...parseProtocolPath(relativeProtocolPath));
 }
 
-/** Converts a protocol's root and path into the native absolute path. The `relativeProtocolPath` must be non-empty. */
+/**
+ * Converts a protocol's root and path into the native absolute path. The `relativeProtocolPath` must be non-empty.
+ */
 export function toNativePath(protocolRoot: string, relativeProtocolPath: string): string {
   if (relativeProtocolPath === '') {
     throw new TransportError(Code.INVALID_ARGUMENT, 'the path must not be empty');
@@ -48,7 +52,9 @@ export function toNativePath(protocolRoot: string, relativeProtocolPath: string)
   return toNativePathOrRoot(protocolRoot, relativeProtocolPath);
 }
 
-/** Converts a native path into its `/`-separated form. */
+/**
+ * Converts a native path into its `/`-separated form.
+ */
 export function toProtocolPath(nativePath: string): string {
   return path.sep === '/' ? nativePath : nativePath.replaceAll(path.sep, '/');
 }

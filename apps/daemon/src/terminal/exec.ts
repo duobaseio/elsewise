@@ -5,26 +5,40 @@ import { fsToTransportError } from '../fs/error';
 import type { Exit } from './shell';
 
 export interface ExecOptions {
-  /** The program to run. */
+  /**
+   * The program to run.
+   */
   program: string;
 
-  /** The arguments. */
+  /**
+   * The arguments.
+   */
   args: string[];
 
-  /** The native path the program starts in. */
+  /**
+   * The native path the program starts in.
+   */
   cwd: string;
 
-  /** The environment variables. */
+  /**
+   * The environment variables.
+   */
   env: Record<string, string>;
 
-  /** What the program reads from stdin. */
+  /**
+   * What the program reads from stdin.
+   */
   stdin: Uint8Array;
 
-  /** The most bytes of output held for a consumer that is not reading before the program's output is paused. */
+  /**
+   * The most bytes of output held for a consumer that is not reading before the program's output is paused.
+   */
   maxQueuedBytes: number;
 }
 
-/** What a program emits. */
+/**
+ * What a program emits.
+ */
 export type ExecEvent =
   | { case: 'stdout'; value: Uint8Array }
   | { case: 'stderr'; value: Uint8Array }

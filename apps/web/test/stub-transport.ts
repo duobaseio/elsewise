@@ -8,9 +8,13 @@ type Response = { result?: unknown; error?: { code: number; message: string } };
  * rejects sends the server's error.
  */
 export class StubTransport implements LanguageServerTransport {
-  /** The messages sent to the server, in order. */
+  /**
+   * The messages sent to the server, in order.
+   */
   readonly sent: { id?: number; method?: string; params?: unknown }[] = [];
-  /** Whether the connection was closed from this side. */
+  /**
+   * Whether the connection was closed from this side.
+   */
   closed = false;
 
   readonly #capabilities: object;
@@ -62,7 +66,9 @@ export class StubTransport implements LanguageServerTransport {
     }
   }
 
-  /** Sends a request from the server, and resolves with the client's response. */
+  /**
+   * Sends a request from the server, and resolves with the client's response.
+   */
   request(method: string, params: unknown): Promise<Response> {
     const id = ++this.#lastId;
     return new Promise((resolve) => {
@@ -83,7 +89,9 @@ export class StubTransport implements LanguageServerTransport {
     this.crash();
   }
 
-  /** Closes the connection as a server that crashed would. */
+  /**
+   * Closes the connection as a server that crashed would.
+   */
   crash(): void {
     for (const listener of this.#closeListeners) {
       listener();

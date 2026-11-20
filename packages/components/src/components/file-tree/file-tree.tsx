@@ -149,38 +149,66 @@ export function FileTree({
  * between renders.
  */
 export interface FileTreeOptions {
-  /** Every path in the tree. Folders end with `/`. */
+  /**
+   * Every path in the tree. Folders end with `/`.
+   */
   initialPaths: readonly string[];
-  /** Folders that start open. */
+  /**
+   * Folders that start open.
+   */
   initialExpandedPaths?: readonly string[];
-  /** Paths that start selected. */
+  /**
+   * Paths that start selected.
+   */
   initialSelectedPaths?: readonly string[];
-  /** Paths' git statuses. */
+  /**
+   * Paths' git statuses.
+   */
   initialGitStatus?: readonly FileTreeGitStatus[];
 
-  /** Called with every selected path whenever the selection changes. */
+  /**
+   * Called with every selected path whenever the selection changes.
+   */
   onSelectionChange?: (selectedPaths: readonly string[]) => void;
 
-  /** Return false to stop an item from being renamed. Defaults to allowing every item. */
+  /**
+   * Return false to stop an item from being renamed. Defaults to allowing every item.
+   */
   canRename?: (item: FileTreeRenamingItem) => boolean;
-  /** Called when an inline rename is committed with a new name, just before the tree moves the row. */
+  /**
+   * Called when an inline rename is committed with a new name, just before the tree moves the row.
+   */
   onRename?: (event: FileTreeRenameEvent, model: FileTreeModel) => void;
-  /** Called with a message when the tree rejects the new name. The row keeps its old name. */
+  /**
+   * Called with a message when the tree rejects the new name. The row keeps its old name.
+   */
   onRenameError?: (error: string, model: FileTreeModel) => void;
 
-  /** Return false to stop these paths from being dragged. Defaults to allowing every drag. */
+  /**
+   * Return false to stop these paths from being dragged. Defaults to allowing every drag.
+   */
   canDrag?: (paths: readonly string[]) => boolean;
-  /** Return false to reject a drop on this target. Defaults to allowing every drop. */
+  /**
+   * Return false to reject a drop on this target. Defaults to allowing every drop.
+   */
   canDrop?: (context: FileTreeDropContext) => boolean;
-  /** Called after a drop has moved the rows in the tree. */
+  /**
+   * Called after a drop has moved the rows in the tree.
+   */
   onDropComplete?: (event: FileTreeDropResult, model: FileTreeModel) => void;
-  /** Called with a message when the tree could not apply a drop. Nothing is moved. */
+  /**
+   * Called with a message when the tree could not apply a drop. Nothing is moved.
+   */
   onDropError?: (error: string, context: FileTreeDropContext, model: FileTreeModel) => void;
 }
 
-/** The git status of a file/folder. */
+/**
+ * The git status of a file/folder.
+ */
 export interface FileTreeGitStatus {
-  /** A path. Folders end with `/`. */
+  /**
+   * A path. Folders end with `/`.
+   */
   path: string;
   /**
    * The git status:
@@ -193,7 +221,9 @@ export interface FileTreeGitStatus {
   status: 'modified' | 'added' | 'untracked' | 'ignored' | 'conflict';
 }
 
-/** The file tree's model, which is used to read and mutate the tree after mount. */
+/**
+ * The file tree's model, which is used to read and mutate the tree after mount.
+ */
 export interface FileTreeModel extends PierreFileTreeModel {
   setGitStatus(statuses?: readonly FileTreeGitStatus[]): void;
   setGitStatus(statuses?: readonly GitStatusEntry[]): void;
@@ -211,7 +241,9 @@ export interface FileTreeModel extends PierreFileTreeModel {
   dropIntoRoot(paths: readonly string[]): void;
 }
 
-/** Creates the file tree's model. */
+/**
+ * Creates the file tree's model.
+ */
 export function useFileTree(options: FileTreeOptions): FileTreeModel {
   const latest = useRef(options);
   latest.current = options;

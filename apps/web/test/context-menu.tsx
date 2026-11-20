@@ -13,10 +13,14 @@ import { EditorContextMenu, RIGHT_CLICK_CONTEXT_MENU } from '@/editor/context-me
 import { EditorManager } from '@/editor/editor-manager';
 import { builtInApplication } from './commands';
 
-/** The Rust document that `mount` opens. */
+/**
+ * The Rust document that `mount` opens.
+ */
 export const DOC = 'fn main() {\n    let a = 1;\n}\n';
 
-/** Returns a view of `DOC` in Rust with the context menu of `editor` and `application`, and `extensions`. */
+/**
+ * Returns a view of `DOC` in Rust with the context menu of `editor` and `application`, and `extensions`.
+ */
 export async function mount(
   editor = new EditorManager(),
   application = builtInApplication({ editor }),
@@ -49,7 +53,9 @@ function Probe({ extensions, resolve }: { extensions: Extension; resolve: (view:
   return <EditorContextMenu render={<div ref={host} />} view={view} />;
 }
 
-/** Opens the context menu of `view` by right-clicking at `pos`. */
+/**
+ * Opens the context menu of `view` by right-clicking at `pos`.
+ */
 export async function open(view: EditorView, pos: number): Promise<void> {
   const rect = view.coordsAtPos(pos);
   if (rect === null) {
@@ -63,7 +69,9 @@ export async function open(view: EditorView, pos: number): Promise<void> {
   await expect.element(page.getByRole('menu').first()).toBeVisible();
 }
 
-/** Returns the menu item named `name`. The accessible name carries the shortcut too. */
+/**
+ * Returns the menu item named `name`. The accessible name carries the shortcut too.
+ */
 export const menuitem = (name: string) =>
   page
     .getByRole('menuitem', { name: new RegExp(`^${name}`) })
@@ -91,7 +99,9 @@ export function labels(root: ParentNode = document): (string | null | undefined)
   });
 }
 
-/** Returns the group `id` with `items` at `order`, or without one, in the submenu `in`, or in the menu itself. */
+/**
+ * Returns the group `id` with `items` at `order`, or without one, in the submenu `in`, or in the menu itself.
+ */
 export function group(
   id: string,
   items: readonly (ContextMenuItem | ContextMenuSubmenuItem)[],
@@ -101,12 +111,16 @@ export function group(
   return { id, ...(order === undefined ? {} : { order }), ...(in_ === undefined ? {} : { in: in_ }), items };
 }
 
-/** Returns an item that runs the command with `id` at `order`, or without one. */
+/**
+ * Returns an item that runs the command with `id` at `order`, or without one.
+ */
 export function item(id: string, order?: number): ContextMenuItem {
   return { ...(order === undefined ? {} : { order }), command: id };
 }
 
-/** Returns an item labelled `label` that opens the submenu with `id` at `order`, or without one. */
+/**
+ * Returns an item labelled `label` that opens the submenu with `id` at `order`, or without one.
+ */
 export function submenu(id: string, label: string, order?: number): ContextMenuSubmenuItem {
   return { ...(order === undefined ? {} : { order }), label, submenu: id };
 }

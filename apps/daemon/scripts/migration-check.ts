@@ -1,7 +1,9 @@
 import path from 'node:path';
 import { execa } from 'execa';
 
-/** Ensures there are no drift between the migrations and schema.s */
+/**
+ * Ensures there are no drift between the migrations and schema.sql.
+ */
 
 const database = path.resolve(import.meta.dirname, '..', 'database');
 

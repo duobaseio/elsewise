@@ -112,16 +112,24 @@ type PullEvent = MessageInitShape<typeof PullResponseSchema>;
 type PushEvent = MessageInitShape<typeof PushResponseSchema>;
 
 export interface GitOptions {
-  /** The size in bytes past which the output of a git command fails the call. */
+  /**
+   * The size in bytes past which the output of a git command fails the call.
+   */
   readLimitBytes: number;
 
-  /** The most commits a page of the log holds. */
+  /**
+   * The most commits a page of the log holds.
+   */
   logLimit: number;
 
-  /** How often a watched status is read again regardless of notified changes in milliseconds. */
+  /**
+   * How often a watched status is read again regardless of notified changes in milliseconds.
+   */
   pollIntervalMs: number;
 
-  /** How long notified changes are debounced in milliseconds. */
+  /**
+   * How long notified changes are debounced in milliseconds.
+   */
   debounceMs: number;
 }
 
@@ -137,7 +145,9 @@ const FAST_FORWARDS: Record<FastForward, string> = {
   [FastForward.ONLY]: '--ff-only',
 };
 
-/** The `GitService`. */
+/**
+ * The `GitService`.
+ */
 export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   readonly #watcher: DirectoryWatcher;
   readonly #options: GitOptions;
@@ -928,7 +938,9 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
   }
 }
 
-/** Runs a transfer and yields its progress as events. */
+/**
+ * Runs a transfer and yields its progress as events.
+ */
 async function* progressEvents(
   git: Git,
   args: string[],
@@ -939,7 +951,9 @@ async function* progressEvents(
   }
 }
 
-/** Runs a command that may stop on conflicts. Returns if a conflict occurred. */
+/**
+ * Runs a command that may stop on conflicts. Returns if a conflict occurred.
+ */
 async function runStoppingOnConflicts(git: Git, args: string[]): Promise<boolean> {
   let failure: TransportError | undefined;
   await git.run(args).catch((error: TransportError) => {
@@ -988,7 +1002,9 @@ async function currentBranch(git: Git): Promise<string> {
   return name;
 }
 
-/** Returns the command of the operation in progress. */
+/**
+ * Returns the command of the operation in progress.
+ */
 async function operationCommand(git: Git, action: 'continue' | 'skip' | 'abort'): Promise<string> {
   const operation = await readOperation(git);
   switch (operation?.case) {

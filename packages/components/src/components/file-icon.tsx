@@ -29,15 +29,23 @@ function lowercase(icons: Record<string, FileIconData>): Record<string, FileIcon
  * See {@link IconProvider} for system icons.
  */
 export type FileIcons = {
-  /** By whole filename, such as `Dockerfile`. */
+  /**
+   * By whole filename, such as `Dockerfile`.
+   */
   names: Record<string, FileIconData>;
-  /** By extension without its leading dot, such as `ts` or `d.ts`. */
+  /**
+   * By extension without its leading dot, such as `ts` or `d.ts`.
+   */
   extensions: Record<string, FileIconData>;
-  /** For a name that has no match. */
+  /**
+   * For a name that has no match.
+   */
   generic: FileIconData;
 };
 
-/** Elsewise's generated file icons, keyed in lowercase. */
+/**
+ * Elsewise's generated file icons, keyed in lowercase.
+ */
 export const DEFAULT_FILE_ICONS: FileIcons = {
   names: lowercase(FILENAME_ICONS),
   extensions: lowercase(EXTENSION_ICONS),

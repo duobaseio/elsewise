@@ -7,10 +7,14 @@ import { type Migration, migrate } from './migrate';
 export type Database = Kysely<DB>;
 
 export interface DatabaseHandle {
-  /** The open database. */
+  /**
+   * The open database.
+   */
   readonly database: Database;
 
-  /** Closes the database. */
+  /**
+   * Closes the database.
+   */
   close(): Promise<void>;
 }
 

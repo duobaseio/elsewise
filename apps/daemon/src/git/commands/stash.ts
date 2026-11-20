@@ -7,12 +7,16 @@ export type StashInit = MessageInitShape<typeof StashSchema>;
 
 const STASH_FORMAT = '%H%x1f%P%x1f%ct%x1f%s%x00';
 
-/** Returns every stash sorted by newest to oldest. */
+/**
+ * Returns every stash sorted by newest to oldest.
+ */
 export async function readStashes(git: Git): Promise<StashInit[]> {
   return parseStashes(await git.text(['stash', 'list', `--format=${STASH_FORMAT}`]));
 }
 
-/** Parses `git stash list` output in `STASH_FORMAT`. */
+/**
+ * Parses `git stash list` output in `STASH_FORMAT`.
+ */
 export function parseStashes(text: string): StashInit[] {
   const stashes: StashInit[] = [];
   for (const record of text.split('\0')) {

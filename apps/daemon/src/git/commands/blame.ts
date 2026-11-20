@@ -13,7 +13,9 @@ interface CommitInfo {
   relativePath: string;
 }
 
-/** Reads the blame of a file at a revision (falls back to the worktree on disk). */
+/**
+ * Reads the blame of a file at a revision (falls back to the worktree on disk).
+ */
 export async function readBlame(git: Git, revision: string, relativePath: string): Promise<RangeInit[]> {
   const args = ['blame', '--porcelain'];
   if (revision !== '') {
@@ -22,7 +24,9 @@ export async function readBlame(git: Git, revision: string, relativePath: string
   return parseBlame(await git.text([...args, '--', relativePath]));
 }
 
-/** Parses `git blame --porcelain` output into ranges of consecutive lines. */
+/**
+ * Parses `git blame --porcelain` output into ranges of consecutive lines.
+ */
 export function parseBlame(text: string): RangeInit[] {
   const ranges: RangeInit[] = [];
   const commits = new Map<string, CommitInfo>();

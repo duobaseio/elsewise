@@ -65,7 +65,9 @@ export class MemoryWire implements Wire {
   }
 }
 
-/** Creates a pair of `MemoryWire`. */
+/**
+ * Creates a pair of `MemoryWire`.
+ */
 export function wirePair(capacity?: number): [MemoryWire, MemoryWire] {
   const a = new MemoryWire(capacity);
   const b = new MemoryWire(capacity);

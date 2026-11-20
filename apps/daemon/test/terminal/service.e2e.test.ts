@@ -34,7 +34,9 @@ async function getTerminals(workspace = workspaceId): Promise<Terminal[]> {
   return (await harness.client.getTerminals({ workspaceId: workspace })).terminals;
 }
 
-/** Attaches to the terminal and gathers what arrives. */
+/**
+ * Attaches to the terminal and gathers what arrives.
+ */
 function attach(terminalId: string, size: typeof SIZE | null = SIZE) {
   const call = harness.client.attachTerminal();
   const { seen, ended } = collect(call.responses);

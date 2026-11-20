@@ -58,10 +58,14 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
   private readonly listeners = new Set<() => void>();
   private snapshot: readonly PluginSnapshot<Enabled>[] = [];
 
-  /** The plugin part the host runs. */
+  /**
+   * The plugin part the host runs.
+   */
   protected abstract readonly part: Part;
 
-  /** The host's version. If undefined, every plugin is compatible. */
+  /**
+   * The host's version. If undefined, every plugin is compatible.
+   */
   protected abstract readonly version: string | undefined;
 
   get plugins(): readonly PluginSnapshot<Enabled>[] {

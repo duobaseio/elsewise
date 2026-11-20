@@ -16,26 +16,40 @@ import { TransportError } from './error';
 import { Code } from './gen/elsewise/transport/v1/envelope_pb';
 
 export interface CallOptions {
-  /** Aborting the signal cancels the call. */
+  /**
+   * Aborting the signal cancels the call.
+   */
   signal?: AbortSignal;
 }
 
-/** A bidirectional-streaming call. */
+/**
+ * A bidirectional-streaming call.
+ */
 export interface BidiCall<In, Out> {
-  /** Sends one request message and resolves once it has been handed to the wire. */
+  /**
+   * Sends one request message and resolves once it has been handed to the wire.
+   */
   send(request: In): Promise<void>;
 
-  /** Half-closes the call: promises the responder no further messages. */
+  /**
+   * Half-closes the call: promises the responder no further messages.
+   */
   close(): void;
 
-  /** Abandons the call. */
+  /**
+   * Abandons the call.
+   */
   cancel(): void;
 
-  /** The response messages: ends on CODE_OK, throws a TransportError on any other outcome. */
+  /**
+   * The response messages: ends on CODE_OK, throws a TransportError on any other outcome.
+   */
   responses: AsyncIterable<Out>;
 }
 
-/** A service's calls, shaped by each rpc's streaming type. */
+/**
+ * A service's calls, shaped by each rpc's streaming type.
+ */
 export type Client<S extends DescService> = {
   [M in keyof S['method']]: ClientMethod<S['method'][M]>;
 };
@@ -54,7 +68,9 @@ type ClientMethod<M> =
           ? (options?: CallOptions) => BidiCall<MessageInitShape<I>, MessageShape<O>>
           : never;
 
-/** Builds the typed client for one service, carrying its calls over the channel. */
+/**
+ * Builds the typed client for one service, carrying its calls over the channel.
+ */
 export function createClient<S extends DescService>(channel: Channel, service: S): Client<S> {
   const client: Record<string, unknown> = {};
   for (const method of service.methods) {
@@ -118,7 +134,9 @@ function serverStreamCall<I extends DescMessage, O extends DescMessage>(
   return decodeResponses(stream, method.output);
 }
 
-/** Distinguishes stream death from an iterator result. */
+/**
+ * Distinguishes stream death from an iterator result.
+ */
 const FINISHED = Symbol('finished');
 
 async function clientStreamCall<I extends DescMessage, O extends DescMessage>(

@@ -2,7 +2,9 @@ import { type ProgressInit, ProgressParser } from './commands/progress';
 import { attempt } from './error';
 import type { Git } from './git';
 
-/** Runs a transfer and yields its progress. */
+/**
+ * Runs a transfer and yields its progress.
+ */
 export async function* transfer(git: Git, args: string[], signal: AbortSignal): AsyncGenerator<ProgressInit> {
   const queue: ProgressInit[] = [];
   let wake: (() => void) | undefined;

@@ -11,7 +11,9 @@ import {
 } from '../gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { errnoOf } from './error';
 
-/** Lists a directory. */
+/**
+ * Lists a directory.
+ */
 export async function listDirectory(
   absoluteNativePath: string,
   limit: number,
@@ -86,7 +88,9 @@ export async function isRespelling(absoluteNativePath: string, newAbsoluteNative
   );
 }
 
-/** Fails with ALREADY_EXISTS if an entry is at the path, unless `acceptable` is `'empty'` and it is an empty folder. */
+/**
+ * Fails with ALREADY_EXISTS if an entry is at the path, unless `acceptable` is `'empty'` and it is an empty folder.
+ */
 export async function refuseExisting(absoluteNativePath: string, acceptable: 'empty' | 'missing'): Promise<void> {
   const entries = await fs.readdir(absoluteNativePath).catch((error: unknown) => {
     if (errnoOf(error) === 'ENOENT') {

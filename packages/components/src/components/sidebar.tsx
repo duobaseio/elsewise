@@ -793,7 +793,9 @@ export function SidebarMenuSkeleton({
   ...props
 }: ComponentProps<'div'> & {
   showIcon?: boolean;
-  /** Ragged widths read as a list rather than a table; vary it per row. */
+  /**
+   * Ragged widths read as a list rather than a table; vary it per row.
+   */
   width?: string;
 }) {
   // Upstream rolled this per instance, which made the same list paint

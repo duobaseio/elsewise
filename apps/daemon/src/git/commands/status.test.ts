@@ -15,7 +15,9 @@ beforeEach(async () => {
 
 afterEach(() => repo.remove());
 
-/** Writes a file in the git directory. */
+/**
+ * Writes a file in the git directory.
+ */
 async function createGitFile(relativePath: string, content: string): Promise<void> {
   const absolutePath = path.join(repo.nativeRoot, '.git', relativePath);
   await fs.mkdir(path.dirname(absolutePath), { recursive: true });

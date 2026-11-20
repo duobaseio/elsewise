@@ -21,34 +21,52 @@ import { type TerminalOptions, TerminalServiceImpl } from './terminal/service';
 import { TerminalStore } from './terminal/store';
 
 export interface Daemon {
-  /** Serves daemon services on the given channel. */
+  /**
+   * Serves daemon services on the given channel.
+   */
   register(channel: Channel): void;
 
-  /** Closes the daemon. */
+  /**
+   * Closes the daemon.
+   */
   close(): Promise<void>;
 }
 
 export interface DaemonOptions {
-  /** The native path of the data directory. */
+  /**
+   * The native path of the data directory.
+   */
   dataDirectory: string;
 
-  /** The native path of the directory new projects and workspaces use. */
+  /**
+   * The native path of the directory new projects and workspaces use.
+   */
   codeDirectory: string;
 
-  /** Overrides for the file system service's defaults. */
+  /**
+   * Overrides for the file system service's defaults.
+   */
   fileSystem?: Partial<FileSystemOptions>;
 
-  /** Overrides for the git service's defaults. */
+  /**
+   * Overrides for the git service's defaults.
+   */
   git?: Partial<GitOptions>;
 
-  /** Overrides for the project service's defaults. */
+  /**
+   * Overrides for the project service's defaults.
+   */
   project?: Partial<ProjectOptions>;
 
-  /** Overrides for the terminal service's defaults. */
+  /**
+   * Overrides for the terminal service's defaults.
+   */
   terminal?: Partial<TerminalOptions>;
 }
 
-/** Bootstraps the daemon and starts enabling the plugins' daemon parts. */
+/**
+ * Bootstraps the daemon and starts enabling the plugins' daemon parts.
+ */
 export async function createDaemon(options: DaemonOptions): Promise<Daemon> {
   const data = dataDirectory(options.dataDirectory);
   fs.mkdirSync(data.root, { recursive: true });

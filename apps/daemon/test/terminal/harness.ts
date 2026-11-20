@@ -5,21 +5,29 @@ import type { TerminalOptions } from '../../src/terminal/service';
 import { isolateGit } from '../git/repo';
 import { Harness } from '../harness';
 
-/** A harness that starts the terminal service with a client. */
+/**
+ * A harness that starts the terminal service with a client.
+ */
 export class TerminalHarness extends Harness<typeof TerminalService> {
-  /** Starts a daemon with the options and returns the harness. */
+  /**
+   * Starts a daemon with the options and returns the harness.
+   */
   static async start(options?: Partial<TerminalOptions>): Promise<TerminalHarness> {
     const harness = await TerminalHarness.connect(TerminalService, { terminal: options });
     await isolateGit(harness.nativeRoot);
     return harness;
   }
 
-  /** A client of the project service on the same connection. */
+  /**
+   * A client of the project service on the same connection.
+   */
   get projects(): Client<typeof ProjectService> {
     return createClient(this.channel, ProjectService);
   }
 
-  /** Creates a project under the code directory and returns its main workspace. */
+  /**
+   * Creates a project under the code directory and returns its main workspace.
+   */
   async workspace(name = 'Demo'): Promise<{ id: string; projectId: string; absolutePath: string }> {
     const { project } = await this.projects.createProject({
       source: { case: 'new', value: { name, absolutePath: '' } },

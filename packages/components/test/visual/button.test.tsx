@@ -135,7 +135,9 @@ test('forced :hover renders identically to a real pointer hover', async () => {
   expect(real).toBe(forced);
 });
 
-/** Variants down, states across — one image per theme instead of one per cell. */
+/**
+ * Variants down, states across — one image per theme instead of one per cell.
+ */
 function ButtonMatrix({ states }: { states: readonly StateSpec[] }) {
   return (
     <div

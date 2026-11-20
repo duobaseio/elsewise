@@ -5,7 +5,9 @@ import type { DirectoryWatcher } from '../directory-watcher';
 import { errnoOf } from './error';
 import { parseProtocolPath, toNativeAbsolutePath } from './path';
 
-/** A watched path's state. */
+/**
+ * A watched path's state.
+ */
 export interface Snapshot<S> {
   /**
    * Identifies the state.
@@ -22,24 +24,38 @@ export interface Snapshot<S> {
   state: S;
 }
 
-/** Represents a request with the paths a stream watches. */
+/**
+ * Represents a request with the paths a stream watches.
+ */
 export interface WatchRequest {
-  /** The protocol root the paths are relative to. Subsequent requests may leave it empty. */
+  /**
+   * The protocol root the paths are relative to. Subsequent requests may leave it empty.
+   */
   root: string;
 
-  /** The relative protocol paths to watch. */
+  /**
+   * The relative protocol paths to watch.
+   */
   relativePaths: string[];
 }
 
-/** Represents the various options for `watchPaths`. */
+/**
+ * Represents the various options for `watchPaths`.
+ */
 export interface WatchOptions<S> {
-  /** The `DirectoryWatcher` used. */
+  /**
+   * The `DirectoryWatcher` used.
+   */
   watcher: DirectoryWatcher;
 
-  /** How often every watched path is polled in milliseconds. */
+  /**
+   * How often every watched path is polled in milliseconds.
+   */
   pollIntervalMs: number;
 
-  /** How long notified changes are debounced in milliseconds. */
+  /**
+   * How long notified changes are debounced in milliseconds.
+   */
   debounceMs: number;
 
   /**
@@ -52,19 +68,29 @@ export interface WatchOptions<S> {
    */
   includesChildren: boolean;
 
-  /** Takes a snapshot of a given entry. */
+  /**
+   * Takes a snapshot of a given entry.
+   */
   snapshot(absoluteNativePath: string): Promise<Snapshot<S>>;
 }
 
-/** A watched path state. */
+/**
+ * A watched path state.
+ */
 interface Tracked {
-  /** The native absolute path. */
+  /**
+   * The native absolute path.
+   */
   absoluteNativePath: string;
 
-  /** The entry's `stat` when its state was last read (e.g. `dev:ino:size:mtimeNs:ctimeNs` or `!<errno>`). */
+  /**
+   * The entry's `stat` when its state was last read (e.g. `dev:ino:size:mtimeNs:ctimeNs` or `!<errno>`).
+   */
   stat?: string;
 
-  /** The key of the snapshot last reported. */
+  /**
+   * The key of the snapshot last reported.
+   */
   key?: string;
 
   /**
@@ -75,11 +101,15 @@ interface Tracked {
    */
   running: boolean;
 
-  /** Whether the running check reads again once it finishes. */
+  /**
+   * Whether the running check reads again once it finishes.
+   */
   stale: boolean;
 }
 
-/** Watches the state of each path. */
+/**
+ * Watches the state of each path.
+ */
 export async function* watchPaths<S>(
   requests: AsyncIterable<WatchRequest>,
   signal: AbortSignal,
@@ -107,11 +137,15 @@ class Session<S> {
   #watch: { ready: Promise<void>; close(): void } | undefined;
   #pollTimer: NodeJS.Timeout | undefined;
 
-  /** The watched paths that notified changes touched and that have not been read again yet. */
+  /**
+   * The watched paths that notified changes touched and that have not been read again yet.
+   */
   readonly #debounceBuffer = new Set<string>(); // Relative protocol paths.
   #debounce: NodeJS.Timeout | undefined;
 
-  /** The states waiting to be sent, holding only the latest of each path. */
+  /**
+   * The states waiting to be sent, holding only the latest of each path.
+   */
   readonly #outbox = new Map<string, S>(); // Relative protocol path -> state
   #outboxWake: (() => void) | undefined;
 
@@ -122,7 +156,9 @@ class Session<S> {
     this.#options = options;
   }
 
-  /** Applies each request. Ends the session when the iterable closes. */
+  /**
+   * Applies each request. Ends the session when the iterable closes.
+   */
   consume(requests: AsyncIterable<WatchRequest>): void {
     void (async () => {
       try {
@@ -139,7 +175,9 @@ class Session<S> {
     })();
   }
 
-  /** Yields each state to send until the session ends. */
+  /**
+   * Yields each state to send until the session ends.
+   */
   async *states(): AsyncGenerator<{ relativePath: string; state: S }> {
     while (!this.#ended) {
       const [next] = this.#outbox;
@@ -158,7 +196,9 @@ class Session<S> {
     }
   }
 
-  /** Stops watching. */
+  /**
+   * Stops watching.
+   */
   end(): void {
     this.#tracked.clear();
     this.#watch?.close();
@@ -234,7 +274,9 @@ class Session<S> {
     }
   }
 
-  /** Reads a path's state and queues it if it differs from the previous state reported. */
+  /**
+   * Reads a path's state and queues it if it differs from the previous state reported.
+   */
   async #check(relativeProtocolPath: string, force: boolean): Promise<void> {
     const tracked = this.#tracked.get(relativeProtocolPath);
     if (!tracked) {
@@ -279,7 +321,9 @@ class Session<S> {
   }
 }
 
-/** Returns the entry's `stat` (e.g. `dev:ino:size:mtimeNs:ctimeNs` or `!<errno>`). */
+/**
+ * Returns the entry's `stat` (e.g. `dev:ino:size:mtimeNs:ctimeNs` or `!<errno>`).
+ */
 async function statOf(absoluteNativePath: string): Promise<string> {
   try {
     const stats = await fs.stat(absoluteNativePath, { bigint: true });
@@ -289,13 +333,17 @@ async function statOf(absoluteNativePath: string): Promise<string> {
   }
 }
 
-/** Returns the path of the directory holding the entry. */
+/**
+ * Returns the path of the directory holding the entry.
+ */
 function parentOf(relativeProtocolPath: string): string {
   const end = relativeProtocolPath.lastIndexOf('/');
   return end === -1 ? '' : relativeProtocolPath.slice(0, end);
 }
 
-/** Returns whether the entry lies below (or is equal) to any `relativeProtocolPaths`. */
+/**
+ * Returns whether the entry lies below (or is equal) to any `relativeProtocolPaths`.
+ */
 function isAtOrBelow(relativeProtocolPath: string, relativeProtocolPaths: Set<string>): boolean {
   let current = relativeProtocolPath;
   while (true) {

@@ -4,7 +4,9 @@ import { execa } from 'execa';
 import { whichCommand } from 'which-command';
 import { GitError } from './error';
 
-/** Overrides the daemon's own environment on git. */
+/**
+ * Overrides the daemon's own environment on git.
+ */
 const OVERRIDES: Record<string, string> = {
   GIT_TERMINAL_PROMPT: '0', // Fails instead of asking for credentials.
   GIT_EDITOR: 'true', // Keeps the message git would otherwise open an editor for.
@@ -13,16 +15,24 @@ const OVERRIDES: Record<string, string> = {
 };
 
 export interface RunOptions {
-  /** Aborting it kills the process and fails the run with CANCELLED. */
+  /**
+   * Aborting it kills the process and fails the run with CANCELLED.
+   */
   signal?: AbortSignal;
 
-  /** Environment variables. */
+  /**
+   * Environment variables.
+   */
   env?: Record<string, string>;
 
-  /** Receives what the process writes to stderr as it arrives. */
+  /**
+   * Receives what the process writes to stderr as it arrives.
+   */
   onStderr?: (chunk: Buffer) => void;
 
-  /** What the process reads. */
+  /**
+   * What the process reads.
+   */
   stdin?: string | Buffer;
 
   /**
@@ -33,12 +43,18 @@ export interface RunOptions {
   exitCodes?: number[];
 }
 
-/** Runs git in a directory. */
+/**
+ * Runs git in a directory.
+ */
 export class Git {
-  /** The native absolute path of the worktree root. */
+  /**
+   * The native absolute path of the worktree root.
+   */
   readonly root: string;
 
-  /** The size in bytes past which the output fails a run with RESOURCE_EXHAUSTED. */
+  /**
+   * The size in bytes past which the output fails a run with RESOURCE_EXHAUSTED.
+   */
   readonly limitBytes: number;
 
   constructor(root: string, limitBytes: number) {
@@ -46,7 +62,9 @@ export class Git {
     this.limitBytes = limitBytes;
   }
 
-  /** Runs git with the arguments and returns stdout. */
+  /**
+   * Runs git with the arguments and returns stdout.
+   */
   async run(args: string[], options: RunOptions = {}): Promise<Buffer> {
     const env = { ...OVERRIDES, GIT_CEILING_DIRECTORIES: path.dirname(this.root), ...options.env };
     const subprocess = execa('git', args, {
@@ -81,7 +99,9 @@ export class Git {
     return stdout;
   }
 
-  /** Runs git in a directory and returns a text. */
+  /**
+   * Runs git in a directory and returns a text.
+   */
   async text(args: string[], options?: RunOptions): Promise<string> {
     return (await this.run(args, options)).toString();
   }

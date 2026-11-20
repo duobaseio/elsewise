@@ -10,12 +10,16 @@ export type WorktreeInit = MessageInitShape<typeof WorktreeSchema>;
 
 const UNBORN = /^0+$/;
 
-/** Reads every worktree of the repository. */
+/**
+ * Reads every worktree of the repository.
+ */
 export async function readWorktrees(git: Git): Promise<WorktreeInit[]> {
   return parseWorktrees(await git.text(['worktree', 'list', '--porcelain', '-z']));
 }
 
-/** Reads the worktree at a native path and throws a `TransportError` if one is not found. */
+/**
+ * Reads the worktree at a native path and throws a `TransportError` if one is not found.
+ */
 export async function readWorktree(git: Git, absoluteNativePath: string): Promise<WorktreeInit> {
   const worktree = await findWorktree(await readWorktrees(git), absoluteNativePath);
   if (!worktree) {
@@ -24,7 +28,9 @@ export async function readWorktree(git: Git, absoluteNativePath: string): Promis
   return worktree;
 }
 
-/** Finds the worktree at a native path. */
+/**
+ * Finds the worktree at a native path.
+ */
 export async function findWorktree(
   worktrees: WorktreeInit[],
   absoluteNativePath: string,
@@ -39,7 +45,9 @@ export async function findWorktree(
   return undefined;
 }
 
-/** Parses `git worktree list --porcelain -z` output. */
+/**
+ * Parses `git worktree list --porcelain -z` output.
+ */
 export function parseWorktrees(text: string): WorktreeInit[] {
   const worktrees: WorktreeInit[] = [];
   for (const record of text.split('\0\0')) {
