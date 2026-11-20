@@ -113,7 +113,6 @@ as a fill is invisible against at least one other (the light ladder is 1.04:1 en
 - **Inactive selection (unfocused pane):** `rgba(95,90,76,.04)` / `rgba(233,228,216,.04)` — the active tab of an
   unfocused dock group
 - **Skeleton:** `rgba(95,90,76,.10)` / `rgba(233,228,216,.10)` — a mark, not a ground
-- **Drop target:** info wash + dashed info line
 - **Badge:** primary fill, inverse text; semantic badges use their quad
 - **Scrollbar thumb:** border at rest → strong on hover → disabled ink on drag
 

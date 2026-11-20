@@ -19,8 +19,8 @@
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--surface);
   --dv-inactivegroup-hiddenpanel-tab-color: var(--foreground);
   --dv-tab-divider-color: var(--border);
-  --dv-tabs-and-actions-container-height: 32px;
-  --dv-tabs-and-actions-container-font-size: 13px;
+  --dv-tabs-and-actions-container-height: calc(var(--text-base--line-height) + 12px);
+  --dv-tabs-and-actions-container-font-size: var(--text-base);
   /* Lines — deckle seams between groups; the active sash inks. */
   --dv-separator-border: var(--border);
   --dv-sash-color: transparent;
@@ -43,6 +43,22 @@
  */
 .dockview-theme-elsewise :is(.dv-tab, .dv-void-container.dv-draggable) {
   cursor: default;
+}
+
+/*
+ * A dragged tab is a lifted card, like a dragged row in the sidebar. The pill becomes the card: opaque and shadowed, so
+ * it moves behind the tab's content. The tab's own fill would show as a box around the card, and takes !important to
+ * remove, as dockview sets it with six classes.
+ */
+.dockview-theme-elsewise .dv-tab[data-dnd-dragging] {
+  isolation: isolate;
+  background-color: transparent !important;
+}
+
+.dockview-theme-elsewise .dv-tab[data-dnd-dragging]::before {
+  z-index: -1;
+  background-color: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
 /* The tab components own their horizontal padding. */
@@ -88,7 +104,7 @@
 .dockview-theme-elsewise .dv-tab::before {
   content: "";
   position: absolute;
-  inset: 4px 1px;
+  inset: 3px 1px;
   border-radius: var(--radius-md);
   pointer-events: none;
 }

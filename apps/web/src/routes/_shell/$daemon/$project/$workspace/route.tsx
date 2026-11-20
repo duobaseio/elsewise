@@ -16,6 +16,7 @@ import {
 import { type ReactNode, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
+import { DraggableDock, TabSortable } from './-drag/draggable-dock';
 import { FilePanel } from './-file/file-panel';
 import { FileTab } from './-file/file-tab';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
@@ -185,14 +186,17 @@ export function WorkspaceDock({
   return (
     <div className="flex h-full" ref={containerRef}>
       <div className="min-w-0 flex-1">
-        <DockviewReact
-          components={panels}
-          defaultTabComponent={DefaultTab}
-          leftHeaderActionsComponent={AddTabAction}
-          onReady={onReady}
-          tabComponents={tabs}
-          theme={THEME}
-        />
+        <DraggableDock dockview={dockview}>
+          <DockviewReact
+            components={panels}
+            defaultTabComponent={DefaultTab}
+            disableDnd
+            leftHeaderActionsComponent={AddTabAction}
+            onReady={onReady}
+            tabComponents={tabs}
+            theme={THEME}
+          />
+        </DraggableDock>
       </div>
       <ToolStripe />
     </div>
@@ -225,7 +229,7 @@ export function AddTabAction(props: IDockviewHeaderActionsProps) {
   };
 
   return (
-    <div className="-ml-1 flex h-full py-1 pr-0.5 pl-px">
+    <div className="-ml-1 flex h-full py-[3px] pr-0.5 pl-px">
       <Button
         aria-label="New tab"
         className="aspect-square size-auto text-text-3"
@@ -276,6 +280,7 @@ export function DefaultTab({
 
   return (
     <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
+      <TabSortable api={props.api} />
       {icon}
       <span>{props.api.title}</span>
       {closable ? (

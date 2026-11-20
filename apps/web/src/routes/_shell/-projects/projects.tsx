@@ -1,5 +1,3 @@
-import { type DragOperation, Modifier } from '@dnd-kit/abstract';
-import { AutoScroller, Feedback, PointerActivationConstraints, PointerSensor, PreventSelection } from '@dnd-kit/dom';
 import { isSortable } from '@dnd-kit/dom/sortable';
 import { DragDropProvider } from '@dnd-kit/react';
 import {
@@ -33,6 +31,7 @@ import {
 import { useMutation, useMutationState, useQuery } from '@tanstack/react-query';
 import { Fragment, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { DRAG_MODIFIERS, DRAG_PLUGINS, DRAG_SENSORS } from '@/components/drag';
 import { LOCAL_DAEMON_ID } from '@/daemon';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { projectsQuery, useProjectSourceGroups } from '@/projects/project-manager';
@@ -42,28 +41,6 @@ import { ImportWorkspaceDialog } from './import-workspace-dialog';
 import { NewProjectDialog } from './new-project-dialog';
 import { NewWorkspaceDialog } from './new-workspace-dialog';
 import { ProjectItem } from './project-item';
-
-// Moves the dragged item by whole device pixels. The pointer reports fractions of a pixel, which blurs the item.
-class SnapToPixels extends Modifier {
-  override apply({ shape, transform }: DragOperation) {
-    const ratio = window.devicePixelRatio;
-    const { left = 0, top = 0 } = shape?.initial.boundingRectangle ?? {};
-    return {
-      x: Math.round((left + transform.x) * ratio) / ratio - left,
-      y: Math.round((top + transform.y) * ratio) / ratio - top,
-    };
-  }
-}
-
-const MODIFIERS = [SnapToPixels];
-
-const PLUGINS = [AutoScroller, Feedback, PreventSelection];
-
-const SENSORS = [
-  PointerSensor.configure({
-    activationConstraints: () => [new PointerActivationConstraints.Distance({ value: 5 })],
-  }),
-];
 
 interface SourceGroup {
   readonly id: string;
@@ -202,9 +179,9 @@ function DaemonGroup({ daemonId }: { daemonId: string }) {
               moveWorkspace(String(source.group), String(source.id), source.index);
             }
           }}
-          modifiers={MODIFIERS}
-          plugins={PLUGINS}
-          sensors={SENSORS}
+          modifiers={DRAG_MODIFIERS}
+          plugins={DRAG_PLUGINS}
+          sensors={DRAG_SENSORS}
         >
           <SidebarMenu className="[&_[data-dnd-dragging]]:rounded-lg [&_[data-dnd-dragging]]:bg-surface! [&_[data-dnd-dragging]]:shadow-md [&_[data-dnd-dragging]>[data-sidebar=menu-row]]:overlay-hover [&_[data-dnd-dragging]>[data-sidebar=menu-sub-row]]:overlay-hover">
             {layout.projects(projects.data ?? []).map((project, index) => (
