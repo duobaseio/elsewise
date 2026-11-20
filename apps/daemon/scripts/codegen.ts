@@ -4,7 +4,9 @@ import { generate, SqliteDialect } from 'kysely-codegen';
 import { openDatabase } from '../src/database/database';
 import type { Migration } from '../src/database/migrate';
 
-/** Generates the migrations in `src/gen/migrations.ts` */
+/**
+ * Generates the migrations in `src/gen/migrations.ts`.
+ */
 
 const root = path.resolve(import.meta.dirname, '..');
 const migrationsDirectory = path.join(root, 'database', 'migrations');
@@ -39,7 +41,9 @@ await fs.writeFile(
   ].join('\n'),
 );
 
-/** Generate kysely types with kysely-codegen. Stored in `src/gen/database.ts`. */
+/**
+ * Generate kysely types with kysely-codegen. Stored in `src/gen/database.ts`.
+ */
 
 const db = openDatabase(':memory:', migrations);
 try {

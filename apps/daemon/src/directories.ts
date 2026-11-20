@@ -4,16 +4,24 @@ import path from 'node:path';
  * Where the directory where the application's state lives.
  */
 export interface DataDirectory {
-  /** The directory itself. */
+  /**
+   * The directory itself.
+   */
   root: string;
 
-  /** The SQLite database file. */
+  /**
+   * The SQLite database file.
+   */
   database: string;
 
-  /** The folder with one folder per installed plugin. */
+  /**
+   * The folder with one folder per installed plugin.
+   */
   plugins: string;
 
-  /** The file listing which plugins are enabled. */
+  /**
+   * The file listing which plugins are enabled.
+   */
   pluginsManifest: string;
 }
 
@@ -21,7 +29,9 @@ export interface DataDirectory {
  * Where the directory where the projects and workspaces are saved.
  */
 export interface CodeDirectory {
-  /** The directory itself. */
+  /**
+   * The directory itself.
+   */
   root: string;
 
   /**
@@ -30,7 +40,9 @@ export interface CodeDirectory {
   workspaces: string;
 }
 
-/** Returns the data directory under the root. */
+/**
+ * Returns the data directory under the root.
+ */
 export function dataDirectory(root: string): DataDirectory {
   return {
     root,
@@ -40,7 +52,9 @@ export function dataDirectory(root: string): DataDirectory {
   };
 }
 
-/** Returns the code directory under the root. */
+/**
+ * Returns the code directory under the root.
+ */
 export function codeDirectory(root: string): CodeDirectory {
   return {
     root,

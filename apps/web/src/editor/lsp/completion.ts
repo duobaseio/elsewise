@@ -61,7 +61,9 @@ const KINDS = {
  */
 interface Resolvable {
   item: CompletionItem;
-  /** The item once resolved, or the item itself when the server can't resolve it. */
+  /**
+   * The item once resolved, or the item itself when the server can't resolve it.
+   */
   resolved?: CompletionItem;
   resolve(): Promise<CompletionItem>;
 }

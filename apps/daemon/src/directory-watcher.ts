@@ -13,18 +13,28 @@ export interface DirectoryWatcherOptions {
   ignore: (string | RegExp)[];
 }
 
-/** Receives the `/`-separated relative paths of the entries that have changed. */
+/**
+ * Receives the `/`-separated relative paths of the entries that have changed.
+ */
 export type ChangeListener = (relativeProtocolPaths: string[]) => void;
 
-/** How a root is being watched. */
+/**
+ * How a root is being watched.
+ */
 export interface RootState {
-  /** The root's absolute path. */
+  /**
+   * The root's absolute path.
+   */
   root: string;
 
-  /** Whether changes are notified by the operating system or polled. */
+  /**
+   * Whether changes are notified by the operating system or polled.
+   */
   mode: 'notify' | 'poll';
 
-  /** Why is it in the polled mode. */
+  /**
+   * Why is it in the polled mode.
+   */
   reason?: 'watch-limit' | 'other';
 }
 
@@ -42,7 +52,9 @@ export class DirectoryWatcher {
     this.#ignore = options.ignore;
   }
 
-  /** Watches a root until the returned object is closed. */
+  /**
+   * Watches a root until the returned object is closed.
+   */
   watch(root: string, listener: ChangeListener): { ready: Promise<void>; close(): void } {
     const entry = this.#roots.get(root) ?? this.#open(root);
     const remove = entry.add(listener);
@@ -61,12 +73,16 @@ export class DirectoryWatcher {
     };
   }
 
-  /** Returns every root being watched. */
+  /**
+   * Returns every root being watched.
+   */
   roots(): RootState[] {
     return [...this.#roots.values()].flatMap(({ state }) => (state ? [state] : []));
   }
 
-  /** Calls the observer whenever `roots()` changes until the returned object is closed. */
+  /**
+   * Calls the observer whenever `roots()` changes until the returned object is closed.
+   */
   observeRoots(observer: () => void): { close(): void } {
     this.#observers.add(observer);
     return {
@@ -89,7 +105,9 @@ export class DirectoryWatcher {
   }
 }
 
-/** A watched root. */
+/**
+ * A watched root.
+ */
 class Root {
   readonly #root: string;
   readonly #ignore: (string | RegExp)[];
@@ -100,7 +118,9 @@ class Root {
   #subscription?: watcher.AsyncSubscription;
   #closed = false;
 
-  /** Starts watching the root, calling `onChange` whenever `state` changes before `close()`. */
+  /**
+   * Starts watching the root, calling `onChange` whenever `state` changes before `close()`.
+   */
   constructor(root: string, ignore: (string | RegExp)[], onStateChange: () => void) {
     this.#root = root;
     this.#ignore = ignore;
@@ -108,17 +128,23 @@ class Root {
     this.#ready = this.#subscribe();
   }
 
-  /** The state of this root. */
+  /**
+   * The state of this root.
+   */
   get state(): RootState | undefined {
     return this.#state;
   }
 
-  /** Settles once the root is watched or polled. */
+  /**
+   * Settles once the root is watched or polled.
+   */
   get ready(): Promise<void> {
     return this.#ready;
   }
 
-  /** Adds a listener. Returns a function that removes the listener and returns whether it was the last. */
+  /**
+   * Adds a listener. Returns a function that removes the listener and returns whether it was the last.
+   */
   add(listener: ChangeListener): () => boolean {
     // Prevents the set from deduplicating.
     const registered: ChangeListener = (relativeProtocolPaths) => listener(relativeProtocolPaths);
@@ -126,7 +152,9 @@ class Root {
     return () => this.#listeners.delete(registered) && this.#listeners.size === 0;
   }
 
-  /** Stop watching the root. */
+  /**
+   * Stop watching the root.
+   */
   close(): void {
     this.#closed = true;
     this.#ready
@@ -158,7 +186,9 @@ class Root {
     }
   }
 
-  /** Marks the root as polled after its subscription failed, dropping the subscription if it was established. */
+  /**
+   * Marks the root as polled after its subscription failed, dropping the subscription if it was established.
+   */
   #degrade(error: unknown): void {
     if (this.#closed) {
       return;
@@ -178,7 +208,9 @@ class Root {
   }
 }
 
-/** Returns the `/`-separated path or nothing for an entry outside the root. */
+/**
+ * Returns the `/`-separated path or nothing for an entry outside the root.
+ */
 function relativeTo(root: string, absoluteNativePath: string): string[] {
   const relativeNativePath = path.relative(root, absoluteNativePath);
   if (
@@ -191,7 +223,9 @@ function relativeTo(root: string, absoluteNativePath: string): string[] {
   return [toProtocolPath(relativeNativePath)];
 }
 
-/** Returns whether subscribing failed for running out of notifiers on the OS. */
+/**
+ * Returns whether subscribing failed for running out of notifiers on the OS.
+ */
 function isWatchLimit(error: unknown): boolean {
   return (
     error instanceof Error &&

@@ -43,7 +43,9 @@ function sha256(content: string | Uint8Array): Uint8Array {
   return new Uint8Array(createHash('sha256').update(content).digest());
 }
 
-/** Returns the names in the latest directory listing reported for the path or the reason it is unavailable. */
+/**
+ * Returns the names in the latest directory listing reported for the path or the reason it is unavailable.
+ */
 function directoryNames(
   seen: WatchDirectoriesResponse[],
   relativePath: string,
@@ -55,7 +57,9 @@ function directoryNames(
   return state?.value?.entries.map((entry) => entry.name);
 }
 
-/** Returns the latest hash reported for the path or the reason it is unavailable. */
+/**
+ * Returns the latest hash reported for the path or the reason it is unavailable.
+ */
 function fileHash(seen: WatchFilesResponse[], relativePath: string): Uint8Array | FileReason | undefined {
   const state = seen.findLast((response) => response.relativePath === relativePath)?.state;
   return state?.case === 'unavailable' ? state.value.reason : state?.value?.hash;

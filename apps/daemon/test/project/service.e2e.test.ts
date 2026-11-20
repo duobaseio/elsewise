@@ -19,7 +19,9 @@ afterEach(async () => {
   await harness.close();
 });
 
-/** Makes a repository under the root and adds it as a project. */
+/**
+ * Makes a repository under the root and adds it as a project.
+ */
 async function addRepo(name = 'repo'): Promise<{ project: Project; root: string }> {
   const repo = await harness.repo(name);
   const response = await harness.client.createProject({

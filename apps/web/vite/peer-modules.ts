@@ -161,7 +161,9 @@ function serve(prefixed: readonly string[]): Plugin {
   };
 }
 
-/** Replaces each specifier ending in `/` with the modules its package, under `root`, exports, except stylesheets. */
+/**
+ * Replaces each specifier ending in `/` with the modules its package, under `root`, exports, except stylesheets.
+ */
 function expand(specifiers: readonly string[], root: string): string[] {
   return specifiers.flatMap((specifier) => {
     if (!specifier.endsWith('/')) {
@@ -176,7 +178,9 @@ function expand(specifiers: readonly string[], root: string): string[] {
   });
 }
 
-/** Generates the code of a facade module that re-exports everything from `specifier`, whose source is `file`. */
+/**
+ * Generates the code of a facade module that re-exports everything from `specifier`, whose source is `file`.
+ */
 async function facade(specifier: string, file: string): Promise<string> {
   const quoted = JSON.stringify(specifier);
 

@@ -12,18 +12,26 @@ const ROOT = new URL('file:///worktree/');
 const URI = 'file:///worktree/main.toy';
 
 interface DiagnosticsTransport extends StubTransport {
-  /** The diagnostic requests sent to the server, in order. */
+  /**
+   * The diagnostic requests sent to the server, in order.
+   */
   readonly requests: DiagnosticRequest[];
 }
 
 interface DiagnosticRequest {
   readonly uri: string;
   readonly previousResultId: string | undefined;
-  /** Responds with diagnostics on the first line, each from `[from, to)` with a severity and tags, under `resultId`. */
+  /**
+   * Responds with diagnostics on the first line, each from `[from, to)` with a severity and tags, under `resultId`.
+   */
   respond(items: [from: number, to: number, severity: number, tags?: number[]][], resultId?: string): void;
-  /** Responds with `items` as they are. */
+  /**
+   * Responds with `items` as they are.
+   */
   reply(items: Diagnostic[]): void;
-  /** Responds that nothing changed since `resultId`. */
+  /**
+   * Responds that nothing changed since `resultId`.
+   */
   unchanged(resultId: string): void;
 }
 

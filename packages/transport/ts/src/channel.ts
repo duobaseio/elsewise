@@ -19,23 +19,35 @@ import type { Wire } from './wire';
  */
 export const MAX_FRAGMENT_BYTES = 16 * 1024 - 64;
 
-/** The largest message a channel reassembles. */
+/**
+ * The largest message a channel reassembles.
+ */
 export const MAX_MESSAGE_BYTES = 16 * 1024 * 1024;
 
 export interface ChannelOptions {
-  /** Which stream ids this side mints: the frontend mints odd ids and the daemon even ones. Defaults to odd. */
+  /**
+   * Which stream ids this side mints: the frontend mints odd ids and the daemon even ones. Defaults to odd.
+   */
   parity?: 'odd' | 'even';
 }
 
-/** A requester's live call. */
+/**
+ * A requester's live call.
+ */
 export interface RequesterStream {
-  /** Sends one request message. */
+  /**
+   * Sends one request message.
+   */
   send(message: Uint8Array): Promise<void>;
 
-  /** Half-closes the call: promises the responder no further messages. */
+  /**
+   * Half-closes the call: promises the responder no further messages.
+   */
   close(): void;
 
-  /** Abandons the call: reads of `responses` reject with CODE_CANCELLED. */
+  /**
+   * Abandons the call: reads of `responses` reject with CODE_CANCELLED.
+   */
   cancel(): void;
 
   /**
@@ -44,32 +56,46 @@ export interface RequesterStream {
    */
   responses: AsyncIterable<Uint8Array>;
 
-  /** Settles once the stream is finished: the responder ended it, this side cancelled, or the channel died. */
+  /**
+   * Settles once the stream is finished: the responder ended it, this side cancelled, or the channel died.
+   */
   finished: Promise<void>;
 }
 
-/** An incoming call. */
+/**
+ * An incoming call.
+ */
 export interface ResponderStream {
   method: string;
 
-  /** The request messages: ends when the requester half-closes, throws CODE_CANCELLED if it cancels. */
+  /**
+   * The request messages: ends when the requester half-closes, throws CODE_CANCELLED if it cancels.
+   */
   requests: AsyncIterable<Uint8Array>;
 
-  /** Sends one response message. */
+  /**
+   * Sends one response message.
+   */
   send(message: Uint8Array): Promise<void>;
 
-  /** Aborted when the requester cancels or the channel dies. */
+  /**
+   * Aborted when the requester cancels or the channel dies.
+   */
   signal: AbortSignal;
 }
 
-/** Serves one incoming call: resolving ends it with CODE_OK, throwing with the thrown error's code. */
+/**
+ * Serves one incoming call: resolving ends it with CODE_OK, throwing with the thrown error's code.
+ */
 export type StreamHandler = (stream: ResponderStream) => Promise<void>;
 
 type RequestBody = NonNullable<MessageInitShape<typeof RequestEnvelopeSchema>['body']>;
 type ResponseBody = NonNullable<MessageInitShape<typeof ResponseEnvelopeSchema>['body']>;
 type Frame = MessageInitShape<typeof EnvelopeSchema>;
 
-/** Slices one message into fragments no larger than MAX_FRAGMENT_BYTES. */
+/**
+ * Slices one message into fragments no larger than MAX_FRAGMENT_BYTES.
+ */
 function eachFragment(message: Uint8Array, emit: (data: Uint8Array, last: boolean) => void): void {
   let offset = 0;
   do {
@@ -85,7 +111,9 @@ function eachFragment(message: Uint8Array, emit: (data: Uint8Array, last: boolea
 class Outbound {
   #queue: { frame: Frame; settle?: (sent: boolean) => void }[] = [];
   readonly #schedule: (outbound: Outbound) => void;
-  /** Whether the channel's round-robin holds this queue. */
+  /**
+   * Whether the channel's round-robin holds this queue.
+   */
   scheduled = false;
 
   constructor(schedule: (outbound: Outbound) => void) {
@@ -101,14 +129,18 @@ class Outbound {
     this.#schedule(this);
   }
 
-  /** Queues one message as fragments and resolves once the last fragment has been handed to the wire. */
+  /**
+   * Queues one message as fragments and resolves once the last fragment has been handed to the wire.
+   */
   pushMessage(message: Uint8Array, frame: (data: Uint8Array, last: boolean) => Frame): Promise<void> {
     return new Promise((resolve) => {
       eachFragment(message, (data, last) => this.push(frame(data, last), last ? () => resolve() : undefined));
     });
   }
 
-  /** Hands the oldest frame to the given sender. */
+  /**
+   * Hands the oldest frame to the given sender.
+   */
   shift(send: (frame: Frame) => void): void {
     const next = this.#queue.shift();
     if (!next) {
@@ -118,7 +150,9 @@ class Outbound {
     next.settle?.(true);
   }
 
-  /** Drops every waiting frame and settling outstanding sends. */
+  /**
+   * Drops every waiting frame and settling outstanding sends.
+   */
   clear(): void {
     const queue = this.#queue;
     this.#queue = [];
@@ -128,7 +162,9 @@ class Outbound {
   }
 }
 
-/** Reassembles one stream's consecutive fragments back into a whole message. */
+/**
+ * Reassembles one stream's consecutive fragments back into a whole message.
+ */
 class Reassembler {
   #parts: Uint8Array[] = [];
   #size = 0;
@@ -166,10 +202,14 @@ class Requester implements RequesterStream {
   readonly #queue = new AsyncQueue<Uint8Array>();
   readonly #reassembler = new Reassembler();
   readonly #onFinished: () => void;
-  /** Set once nothing more travels on the stream: the responder ended it, this side cancelled, or the channel died. */
+  /**
+   * Set once nothing more travels on the stream: the responder ended it, this side cancelled, or the channel died.
+   */
   #finished = false;
   #halfClosed = false;
-  /** Set once Open has reached the wire: before that a cancel has nothing to abandon on the peer. */
+  /**
+   * Set once Open has reached the wire: before that a cancel has nothing to abandon on the peer.
+   */
   #opened = false;
   #settleFinished!: () => void;
 
@@ -183,7 +223,9 @@ class Requester implements RequesterStream {
     });
   }
 
-  /** Queues the Open naming the rpc; the channel calls it once the stream is registered. */
+  /**
+   * Queues the Open naming the rpc; the channel calls it once the stream is registered.
+   */
   open(method: string): void {
     this.#outbound.push(this.#frame({ case: 'open', value: { method } }), (sent) => {
       this.#opened = sent;
@@ -219,7 +261,9 @@ class Requester implements RequesterStream {
     this.#abandon(new TransportError(Code.CANCELLED, 'cancelled by this requester'));
   }
 
-  /** Called by the channel with each incoming fragment; delivers the response message the last one completes. */
+  /**
+   * Called by the channel with each incoming fragment; delivers the response message the last one completes.
+   */
   onPayload(fragment: Fragment): void {
     let message: Uint8Array | null;
     try {
@@ -233,7 +277,9 @@ class Requester implements RequesterStream {
     }
   }
 
-  /** Called by the channel when the responder's End arrives or the channel dies. */
+  /**
+   * Called by the channel when the responder's End arrives or the channel dies.
+   */
   finish(error?: TransportError): void {
     if (this.#finished) {
       return;
@@ -249,7 +295,9 @@ class Requester implements RequesterStream {
     this.#settleFinished();
   }
 
-  /** Abandons the call with the given error. */
+  /**
+   * Abandons the call with the given error.
+   */
   #abandon(error: TransportError): void {
     if (this.#finished) {
       return;
@@ -310,7 +358,9 @@ class Responder implements ResponderStream {
     return this.#outbound.pushMessage(message, (data, last) => this.#frame({ case: 'payload', value: { data, last } }));
   }
 
-  /** Sends this side's End. */
+  /**
+   * Sends this side's End.
+   */
   end(error?: TransportError): void {
     if (this.#finished) {
       return;
@@ -325,7 +375,9 @@ class Responder implements ResponderStream {
     );
   }
 
-  /** Called by the channel with each incoming fragment; delivers the request message the last one completes. */
+  /**
+   * Called by the channel with each incoming fragment; delivers the request message the last one completes.
+   */
   onPayload(fragment: Fragment): void {
     let message: Uint8Array | null;
     try {
@@ -339,12 +391,16 @@ class Responder implements ResponderStream {
     }
   }
 
-  /** Called by the channel when the requester half-closes: ends the request messages. */
+  /**
+   * Called by the channel when the requester half-closes: ends the request messages.
+   */
   onClose(): void {
     this.#requests.end();
   }
 
-  /** Ends the call and aborts. */
+  /**
+   * Ends the call and aborts.
+   */
   abort(error: TransportError): void {
     if (!this.#finished) {
       this.#outbound.clear();
@@ -368,9 +424,13 @@ export class Channel {
   readonly #requesters = new Map<bigint, Requester>();
   readonly #responders = new Map<bigint, Responder>();
   readonly #handlers = new Map<string, StreamHandler>();
-  /** The queues with frames waiting. */
+  /**
+   * The queues with frames waiting.
+   */
   readonly #pendingOutbounds: Outbound[] = [];
-  /** Frames belonging to no live stream. */
+  /**
+   * Frames belonging to no live stream.
+   */
   readonly #streamlessOutbound = new Outbound((outbound) => this.#schedule(outbound));
   #nextStreamId: bigint;
   #closed: TransportError | undefined;
@@ -399,12 +459,16 @@ export class Channel {
     return stream;
   }
 
-  /** Registers the handler serving a fully qualified method name for streams the peer opens. */
+  /**
+   * Registers the handler serving a fully qualified method name for streams the peer opens.
+   */
   handle(method: string, handler: StreamHandler): void {
     this.#handlers.set(method, handler);
   }
 
-  /** Closes the channel and its wire. */
+  /**
+   * Closes the channel and its wire.
+   */
   close(): void {
     this.#teardown(new TransportError(Code.CANCELLED, 'channel closed'));
   }
@@ -435,7 +499,9 @@ export class Channel {
     return new Outbound((outbound) => this.#schedule(outbound));
   }
 
-  /** Gives an outbound a turn in the round-robin. */
+  /**
+   * Gives an outbound a turn in the round-robin.
+   */
   #schedule(outbound: Outbound): void {
     if (this.#closed) {
       outbound.clear();

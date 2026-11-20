@@ -12,13 +12,17 @@ const CODES: Record<string, Code> = {
   ENAMETOOLONG: Code.INVALID_ARGUMENT,
 };
 
-/** Returns the system error code a thrown value carries (e.g. `ENOENT`). */
+/**
+ * Returns the system error code a thrown value carries (e.g. `ENOENT`).
+ */
 export function errnoOf(error: unknown): string | undefined {
   const code = (error as NodeJS.ErrnoException | undefined)?.code;
   return typeof code === 'string' ? code : undefined;
 }
 
-/** Converts a thrown value into a transport error. */
+/**
+ * Converts a thrown value into a transport error.
+ */
 export function fsToTransportError(error: unknown): TransportError {
   if (error instanceof TransportError) {
     return error;
@@ -27,7 +31,9 @@ export function fsToTransportError(error: unknown): TransportError {
   return new TransportError(code, error instanceof Error ? error.message : String(error));
 }
 
-/** Attempts a file system operation and throws a `TransportError` if it fails. */
+/**
+ * Attempts a file system operation and throws a `TransportError` if it fails.
+ */
 export async function attempt<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();

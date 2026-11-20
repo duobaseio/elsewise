@@ -38,7 +38,9 @@ afterEach(async () => {
 
 type Server = { wss: WebSocketServer; url: string };
 
-/** A listening ws server over loopback and its url. */
+/**
+ * A listening ws server over loopback and its url.
+ */
 async function createServer(options: { verifyClient?: () => boolean } = {}): Promise<Server> {
   const wss = new WebSocketServer({ host: '127.0.0.1', port: 0, ...options });
   servers.push(wss);
@@ -50,7 +52,9 @@ async function createServer(options: { verifyClient?: () => boolean } = {}): Pro
   return { wss, url: `ws://127.0.0.1:${address.port}` };
 }
 
-/** Connects to the given server and returns the client and server sockets. */
+/**
+ * Connects to the given server and returns the client and server sockets.
+ */
 async function connect({ wss, url }: Server): Promise<{ client: WebSocket; server: ServerSocket }> {
   const client = new WebSocket(url);
   const [[server]] = await Promise.all([once(wss, 'connection'), once(client, 'open')]);

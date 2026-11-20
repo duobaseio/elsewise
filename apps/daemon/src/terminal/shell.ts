@@ -5,16 +5,22 @@ import serialize from '@xterm/addon-serialize';
 import type { Terminal } from '@xterm/headless';
 import xterm from '@xterm/headless';
 
-/** The size of a terminal in cells. */
+/**
+ * The size of a terminal in cells.
+ */
 export interface Size {
   columns: number;
   rows: number;
 }
 
-/** Represents a process ended. */
+/**
+ * Represents a process ended.
+ */
 export type Exit = { case: 'code'; value: number } | { case: 'signal'; value: string };
 
-/** Represents what a shell emits. */
+/**
+ * Represents what a shell emits.
+ */
 export type ShellEvent =
   | { case: 'output'; value: Uint8Array }
   | { case: 'size'; value: Size }
@@ -23,36 +29,56 @@ export type ShellEvent =
   | { case: 'exit'; value: Exit };
 
 export interface ShellOptions {
-  /** The program to run. */
+  /**
+   * The program to run.
+   */
   program: string;
 
-  /** The arguments. */
+  /**
+   * The arguments.
+   */
   args: string[];
 
-  /** The native path the shell starts in. */
+  /**
+   * The native path the shell starts in.
+   */
   cwd: string;
 
-  /** The environment. */
+  /**
+   * The environment.
+   */
   env: Record<string, string | undefined>;
 
-  /** The size the shell starts at. */
+  /**
+   * The size the shell starts at.
+   */
   size: Size;
 
-  /** The number of rows the buffer keeps above the viewport. */
+  /**
+   * The number of rows the buffer keeps above the viewport.
+   */
   scrollback: number;
 
-  /** The buffer of the last shell, restored before the new shell's output. */
+  /**
+   * The buffer of the last shell, restored before the new shell's output.
+   */
   restore?: Restore;
 }
 
 export interface Restore {
-  /** The escape sequences that reproduce the last shell's buffer. */
+  /**
+   * The escape sequences that reproduce the last shell's buffer.
+   */
   buffer: Uint8Array;
 
-  /** The size the buffer was serialized at. */
+  /**
+   * The size the buffer was serialized at.
+   */
   size: Size;
 
-  /** The line written between the restored buffer and the new shell's output. */
+  /**
+   * The line written between the restored buffer and the new shell's output.
+   */
   marker: string;
 }
 
@@ -84,7 +110,9 @@ const KILL_TIMEOUT_MS = 1_000;
  * the buffer has applied it and a snapshot of the buffer is consistent with the output around it.
  */
 export class Shell {
-  /** Represents how the shell exited. */
+  /**
+   * Represents how the shell exited.
+   */
   readonly exited: Promise<Exit>;
 
   readonly #terminal: Terminal;
@@ -115,7 +143,9 @@ export class Shell {
     });
   }
 
-  /** Starts a shell and restores the last shell's buffer if it exists. */
+  /**
+   * Starts a shell and restores the last shell's buffer if it exists.
+   */
   static async start(options: ShellOptions): Promise<Shell> {
     const { restore, size } = options;
     const terminal = new xterm.Terminal({
@@ -151,28 +181,38 @@ export class Shell {
     }
   }
 
-  /** The size of the terminal. */
+  /**
+   * The size of the terminal.
+   */
   get size(): Size {
     return { columns: this.#terminal.cols, rows: this.#terminal.rows };
   }
 
-  /** The number of clients attached. */
+  /**
+   * The number of clients attached.
+   */
   get clients(): number {
     return this.#clients;
   }
 
-  /** How the shell exited. Returns undefined if the shell has not exited. */
+  /**
+   * How the shell exited. Returns undefined if the shell has not exited.
+   */
   get exit(): Exit | undefined {
     return this.#exit;
   }
 
-  /** Adds a listener. Returns a function that clears the listener. */
+  /**
+   * Adds a listener. Returns a function that clears the listener.
+   */
   onEvent(listener: (event: ShellEvent) => void): () => void {
     this.#listeners.add(listener);
     return () => this.#listeners.delete(listener);
   }
 
-  /** Adds a client's listener. Returns a function that detaches the client. */
+  /**
+   * Adds a client's listener. Returns a function that detaches the client.
+   */
   attach(listener: (event: ShellEvent) => void): Promise<() => void> {
     return new Promise((resolve) => {
       this.#terminal.write('', () => {
@@ -194,19 +234,25 @@ export class Shell {
     });
   }
 
-  /** Sends the listener a snapshot of the buffer. */
+  /**
+   * Sends the listener a snapshot of the buffer.
+   */
   resync(listener: (event: ShellEvent) => void): void {
     this.#terminal.write('', () => listener({ case: 'buffer', value: this.#serialize() }));
   }
 
-  /** Returns the escape sequences that reproduce the buffer. */
+  /**
+   * Returns the escape sequences that reproduce the buffer.
+   */
   snapshot(): Promise<Buffer> {
     return new Promise((resolve) => {
       this.#terminal.write('', () => resolve(this.#serialize()));
     });
   }
 
-  /** Writes to the shell's input. */
+  /**
+   * Writes to the shell's input.
+   */
   write(input: Uint8Array): void {
     if (this.#exit) {
       return;
@@ -214,7 +260,9 @@ export class Shell {
     this.#process.write(Buffer.from(input.buffer, input.byteOffset, input.byteLength) as unknown as string);
   }
 
-  /** Resizes the terminal and pseudoterminal. */
+  /**
+   * Resizes the terminal and pseudoterminal.
+   */
   resize(size: Size): void {
     if (size.columns === this.#terminal.cols && size.rows === this.#terminal.rows) {
       return;
@@ -226,7 +274,9 @@ export class Shell {
     this.#emit({ case: 'size', value: this.size });
   }
 
-  /** Kills the shell. */
+  /**
+   * Kills the shell.
+   */
   kill(): Promise<Exit> {
     if (!this.#exit) {
       this.#process.kill();
@@ -238,7 +288,9 @@ export class Shell {
     return this.exited;
   }
 
-  /** Releases the buffer. Throws if the shell has not exited. */
+  /**
+   * Releases the buffer. Throws if the shell has not exited.
+   */
   dispose(): void {
     if (!this.#exit) {
       throw new Error('the shell has not exited');
@@ -281,7 +333,9 @@ export class Shell {
   }
 }
 
-/** Writes to the terminal and settles once the buffer has applied it. */
+/**
+ * Writes to the terminal and settles once the buffer has applied it.
+ */
 function apply(terminal: Terminal, data: string | Uint8Array): Promise<void> {
   return new Promise((resolve) => terminal.write(data, resolve));
 }

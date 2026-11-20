@@ -4,33 +4,47 @@ import type { TerminalOptions } from './service';
 import { type Exit, Shell, type Size } from './shell';
 import type { TerminalRow, TerminalStore } from './store';
 
-/** The state of a terminal's shell. */
+/**
+ * The state of a terminal's shell.
+ */
 export type ShellState = { case: 'running' } | { case: 'exited'; value: Exit } | { case: 'stopped' };
 
-/** Represents what the terminal is once its shell is gone. */
+/**
+ * Represents what the terminal is once its shell is gone.
+ */
 export type Outcome =
   | 'exited' // The shell ended with an exit code.
   | 'stopped' // The terminal is closed gracefully.
   | 'deleted'; // Terminal is deleted and nothing needs to be saved.
 
-/** A running shell. */
+/**
+ * A running shell.
+ */
 interface Entry {
   terminal: Pick<TerminalRow, 'id' | 'workspace_id'>;
   shell: Shell;
 
-  /** Settles once the shell has exited and its last state is saved. */
+  /**
+   * Settles once the shell has exited and its last state is saved.
+   */
   finished: Promise<void>;
 
-  /** The save in flight. */
+  /**
+   * The save in flight.
+   */
   saving: Promise<void>;
 
-  /** The pending save after an output. */
+  /**
+   * The pending save after an output.
+   */
   timer: NodeJS.Timeout | undefined;
 
   outcome: Outcome;
 }
 
-/** The shells the daemon runs, one per terminal at most, saving their state to the store. */
+/**
+ * The shells the daemon runs, one per terminal at most, saving their state to the store.
+ */
 export class Shells {
   readonly #store: TerminalStore;
   readonly #options: TerminalOptions;
@@ -43,13 +57,17 @@ export class Shells {
     this.#options = options;
   }
 
-  /** Returns the terminal's shell. */
+  /**
+   * Returns the terminal's shell.
+   */
   get(terminalId: string): Shell | undefined {
     const entry = this.#entries.get(terminalId);
     return entry && !entry.shell.exit ? entry.shell : undefined;
   }
 
-  /** Returns the state of the terminal's shell. */
+  /**
+   * Returns the state of the terminal's shell.
+   */
   stateOf(terminal: Pick<TerminalRow, 'id' | 'exit_code' | 'exit_signal'>): ShellState {
     const entry = this.#entries.get(terminal.id);
     if (entry) {
@@ -64,7 +82,9 @@ export class Shells {
     return { case: 'stopped' };
   }
 
-  /** Returns the terminal, once an exited shell has saved its buffer and exit to it. */
+  /**
+   * Returns the terminal, once an exited shell has saved its buffer and exit to it.
+   */
   async saved(terminalId: string): Promise<TerminalRow | undefined> {
     const entry = this.#entries.get(terminalId);
     if (entry?.shell.exit) {
@@ -74,12 +94,16 @@ export class Shells {
     return this.#store.getTerminal(terminalId);
   }
 
-  /** Returns the number of clients attached to the terminal's shell. */
+  /**
+   * Returns the number of clients attached to the terminal's shell.
+   */
   clientsOf(terminalId: string): number {
     return this.#entries.get(terminalId)?.shell.clients ?? 0;
   }
 
-  /** Starts the terminal's program, or its login shell, in the given directory. */
+  /**
+   * Starts the terminal's program, or its login shell, in the given directory.
+   */
   start(terminalId: string, cwd: string, size: Size | undefined): Promise<Shell> {
     // Ensures concurrent starts can't race each other.
     let starting = this.#starting.get(terminalId);
@@ -90,7 +114,9 @@ export class Shells {
     return starting;
   }
 
-  /** Kills the terminal's shell. */
+  /**
+   * Kills the terminal's shell.
+   */
   async kill(terminalId: string, outcome: Exclude<Outcome, 'exited'>): Promise<() => void> {
     this.#deleting.add(terminalId);
     try {
@@ -106,7 +132,9 @@ export class Shells {
     return () => this.#deleting.delete(terminalId);
   }
 
-  /** Kills the shells of the workspace's terminals. */
+  /**
+   * Kills the shells of the workspace's terminals.
+   */
   async killWorkspace(workspaceId: string, outcome: Exclude<Outcome, 'exited'>): Promise<() => void> {
     this.#deleting.add(workspaceId);
     try {
@@ -120,13 +148,17 @@ export class Shells {
     return () => this.#deleting.delete(workspaceId);
   }
 
-  /** Kills every shell and saves it's buffer. Used to clean up this shells. */
+  /**
+   * Kills every shell and saves it's buffer. Used to clean up this shells.
+   */
   async close(): Promise<void> {
     await Promise.allSettled(this.#starting.values());
     await Promise.all([...this.#entries.values()].map((entry) => this.#close(entry, 'stopped')));
   }
 
-  /** Starts the shell or returns a shell if it already exists. */
+  /**
+   * Starts the shell or returns a shell if it already exists.
+   */
   async #start(terminalId: string, cwd: string, requestedSize: Size | undefined): Promise<Shell> {
     const running = this.get(terminalId);
     if (running) {
@@ -186,14 +218,18 @@ export class Shells {
     return shell;
   }
 
-  /** Ends the shell. */
+  /**
+   * Ends the shell.
+   */
   async #close(entry: Entry, outcome: Exclude<Outcome, 'exited'>): Promise<void> {
     entry.outcome = outcome;
     await entry.shell.kill();
     await entry.finished;
   }
 
-  /** Runs once the shell ends and save the state. */
+  /**
+   * Runs once the shell ends and save the state.
+   */
   async #finish(entry: Entry, exit: Exit): Promise<void> {
     clearTimeout(entry.timer);
     try {
@@ -214,7 +250,9 @@ export class Shells {
     }
   }
 
-  /** Saves the shell's size and buffer. */
+  /**
+   * Saves the shell's size and buffer.
+   */
   #save(entry: Entry, state: { exit_code?: number | null; exit_signal?: string | null }): Promise<void> {
     entry.saving = entry.saving
       .then(async () => {
@@ -229,7 +267,9 @@ export class Shells {
   }
 }
 
-/** Returns the machine's login shell. The user's on Unix and PowerShell on Windows. */
+/**
+ * Returns the machine's login shell. The user's on Unix and PowerShell on Windows.
+ */
 async function loginShell(): Promise<{ program: string; args: string[] }> {
   if (process.platform === 'win32') {
     const program = (await whichCommand('pwsh')) ?? (await whichCommand('powershell')) ?? 'powershell.exe';
@@ -238,7 +278,9 @@ async function loginShell(): Promise<{ program: string; args: string[] }> {
   return { program: process.env.SHELL || '/bin/sh', args: ['-l'] };
 }
 
-/** Returns the line that separates the terminal's last buffer from the next shell. */
+/**
+ * Returns the line that separates the terminal's last buffer from the next shell.
+ */
 function markerOf(terminal: Pick<TerminalRow, 'exit_code' | 'exit_signal'>): string {
   if (terminal.exit_code !== null) {
     return `shell exited with code ${terminal.exit_code}`;

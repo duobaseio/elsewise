@@ -10,7 +10,9 @@ afterEach(async () => {
   }
 });
 
-/** Starts node running the script. */
+/**
+ * Starts node running the script.
+ */
 async function start(script: string, restore?: Restore): Promise<{ shell: Shell; events: ShellEvent[] }> {
   const shell = await Shell.start({
     program: process.execPath,

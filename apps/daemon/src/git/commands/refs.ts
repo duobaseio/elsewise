@@ -42,7 +42,9 @@ const TAG_FORMAT =
     '%(contents)',
   ].join(SEPARATOR) + TERMINATOR;
 
-/** Returns the branches matching the patterns sorted by local followed by its name. */
+/**
+ * Returns the branches matching the patterns sorted by local followed by its name.
+ */
 export async function readBranches(git: Git, patterns = ['refs/heads', 'refs/remotes']): Promise<BranchInit[]> {
   const [text, remotes] = await Promise.all([
     git.text(['for-each-ref', `--format=${BRANCH_FORMAT}`, '--sort=refname', ...patterns]),
@@ -51,7 +53,9 @@ export async function readBranches(git: Git, patterns = ['refs/heads', 'refs/rem
   return parseBranches(text, remotes);
 }
 
-/** Returns a local branch. */
+/**
+ * Returns a local branch.
+ */
 export async function readBranch(git: Git, name: string): Promise<BranchInit> {
   const [branch] = await readBranches(git, [`refs/heads/${name}`]);
   if (!branch) {
@@ -60,22 +64,30 @@ export async function readBranch(git: Git, name: string): Promise<BranchInit> {
   return branch;
 }
 
-/** Whether a commit is checked out. */
+/**
+ * Whether a commit is checked out.
+ */
 export async function hasHead(git: Git): Promise<boolean> {
   return hasRef(git, 'HEAD');
 }
 
-/** Whether a local branch exists. */
+/**
+ * Whether a local branch exists.
+ */
 export async function hasBranch(git: Git, name: string): Promise<boolean> {
   return hasRef(git, `refs/heads/${name}`);
 }
 
-/** Whether a ref exists. */
+/**
+ * Whether a ref exists.
+ */
 export async function hasRef(git: Git, name: string): Promise<boolean> {
   return (await git.run(['rev-parse', '--verify', '--quiet', name], { exitCodes: [0, 1] })).length > 0;
 }
 
-/** Parses `git for-each-ref` output in `BRANCH_FORMAT`. */
+/**
+ * Parses `git for-each-ref` output in `BRANCH_FORMAT`.
+ */
 export function parseBranches(text: string, remotes: string[]): BranchInit[] {
   const branches: BranchInit[] = [];
   for (const record of records(text)) {
@@ -120,12 +132,16 @@ export function parseBranches(text: string, remotes: string[]): BranchInit[] {
   return branches;
 }
 
-/** Returns every tag sorted by name. */
+/**
+ * Returns every tag sorted by name.
+ */
 export async function readTags(git: Git, patterns = ['refs/tags']): Promise<TagInit[]> {
   return parseTags(await git.text(['for-each-ref', `--format=${TAG_FORMAT}`, '--sort=refname', ...patterns]));
 }
 
-/** Returns one tag. */
+/**
+ * Returns one tag.
+ */
 export async function readTag(git: Git, name: string): Promise<TagInit> {
   const [tag] = await readTags(git, [`refs/tags/${name}`]);
   if (!tag) {
@@ -134,7 +150,9 @@ export async function readTag(git: Git, name: string): Promise<TagInit> {
   return tag;
 }
 
-/** Parses `git for-each-ref` output in `TAG_FORMAT`. */
+/**
+ * Parses `git for-each-ref` output in `TAG_FORMAT`.
+ */
 export function parseTags(text: string): TagInit[] {
   const tags: TagInit[] = [];
   for (const record of records(text)) {
@@ -153,12 +171,16 @@ export function parseTags(text: string): TagInit[] {
   return tags;
 }
 
-/** Returns every remote sorted by name. */
+/**
+ * Returns every remote sorted by name.
+ */
 export async function readRemotes(git: Git): Promise<RemoteInit[]> {
   return parseRemotes(await git.text(['remote', '--verbose']));
 }
 
-/** Returns a remote. */
+/**
+ * Returns a remote.
+ */
 export async function readRemote(git: Git, name: string): Promise<RemoteInit> {
   const remote = (await readRemotes(git)).find((candidate) => candidate.name === name);
   if (!remote) {
@@ -167,13 +189,17 @@ export async function readRemote(git: Git, name: string): Promise<RemoteInit> {
   return remote;
 }
 
-/** Returns the remote of a branch's upstream. */
+/**
+ * Returns the remote of a branch's upstream.
+ */
 export async function upstreamRemote(git: Git, branch: string): Promise<string | undefined> {
   const remote = (await git.text(['config', '--get', `branch.${branch}.remote`], { exitCodes: [0, 1] })).trim();
   return remote === '' || remote === '.' ? undefined : remote;
 }
 
-/** Parses `git remote --verbose` output. */
+/**
+ * Parses `git remote --verbose` output.
+ */
 export function parseRemotes(text: string): RemoteInit[] {
   const remotes = new Map<string, RemoteInit>();
   for (const line of text.split('\n')) {
@@ -197,7 +223,9 @@ async function readRemoteNames(git: Git): Promise<string[]> {
   return (await git.text(['remote'])).split('\n').filter((name) => name !== '');
 }
 
-/** Returns the remote a remote branch belongs to (e.g. `origin` for `origin/main`). */
+/**
+ * Returns the remote a remote branch belongs to (e.g. `origin` for `origin/main`).
+ */
 function remoteOf(branch: string, remotes: string[]): string {
   let found = '';
   for (const remote of remotes) {

@@ -2,10 +2,14 @@ import { create, toBinary } from '@bufbuild/protobuf';
 import { EnvelopeSchema } from '../gen/elsewise/transport/v1/envelope_pb';
 import type { Wire } from './index';
 
-/** The outbound bytes a socket may buffer before the wire stops being writable. */
+/**
+ * The outbound bytes a socket may buffer before the wire stops being writable.
+ */
 export const DEFAULT_HIGH_WATER_MARK = 256 * 1024;
 
-/** WebSocket and an RTCDataChannel shared interface. */
+/**
+ * WebSocket and an RTCDataChannel shared interface.
+ */
 export interface Socket {
   binaryType: string;
   // WebSocket counts its states (0 to 3), RTCDataChannel names them ('connecting' to 'closed').
@@ -53,7 +57,9 @@ function equals(a: Uint8Array, b: Uint8Array): boolean {
   return true;
 }
 
-/** Resolves once the socket is open, or rejects with the close reason if it closes first. */
+/**
+ * Resolves once the socket is open, or rejects with the close reason if it closes first.
+ */
 export function opened<S extends Socket>(socket: S): Promise<S> {
   return new Promise((resolve, reject) => {
     switch (socket.readyState) {
@@ -125,7 +131,9 @@ export abstract class SocketWire implements Wire {
    */
   protected abstract watchDrain(): void;
 
-  /** Reports the drain, unless the wire closed meanwhile. */
+  /**
+   * Reports the drain, unless the wire closed meanwhile.
+   */
   protected drained(): void {
     if (this.#open) {
       this.onDrain?.();

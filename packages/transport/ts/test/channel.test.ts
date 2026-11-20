@@ -53,7 +53,9 @@ function pair(): { front: Channel; daemon: Channel } {
   return { front: new Channel(a), daemon: new Channel(b, { parity: 'even' }) };
 }
 
-/** Labels one recorded frame as `<stream id>:<body>` for asserting on the order frames reached the wire. */
+/**
+ * Labels one recorded frame as `<stream id>:<body>` for asserting on the order frames reached the wire.
+ */
 function label(envelope: Envelope): string {
   const value = envelope.kind.value;
   if (!value || !('streamId' in value)) {
@@ -62,7 +64,9 @@ function label(envelope: Envelope): string {
   return `${value.streamId}:${value.body.case}`;
 }
 
-/** Lets microtasks run and resolves to whether the promise has already settled. */
+/**
+ * Lets microtasks run and resolves to whether the promise has already settled.
+ */
 function settled(promise: Promise<void>): Promise<boolean> {
   return Promise.race([promise.then(() => true), Promise.resolve().then(() => false)]);
 }

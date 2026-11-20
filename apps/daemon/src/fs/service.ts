@@ -35,20 +35,30 @@ type DirectoryState = Exclude<MessageInitShape<typeof WatchDirectoriesResponseSc
 type FileState = Exclude<MessageInitShape<typeof WatchFilesResponseSchema>['state'], undefined>;
 
 export interface FileSystemOptions {
-  /** The size in bytes of the largest file `ReadFile` returns. */
+  /**
+   * The size in bytes of the largest file `ReadFile` returns.
+   */
   readLimitBytes: number;
 
-  /** The most entries a directory listing holds. */
+  /**
+   * The most entries a directory listing holds.
+   */
   listingLimit: number;
 
-  /** How often every watched path is polled for changes, in milliseconds. */
+  /**
+   * How often every watched path is polled for changes, in milliseconds.
+   */
   pollIntervalMs: number;
 
-  /** How long notified changes are debounced, in milliseconds. */
+  /**
+   * How long notified changes are debounced, in milliseconds.
+   */
   debounceMs: number;
 }
 
-/** The `FileSystemService`. */
+/**
+ * The `FileSystemService`.
+ */
 export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemService> {
   readonly #watcher: DirectoryWatcher;
   readonly #options: FileSystemOptions;

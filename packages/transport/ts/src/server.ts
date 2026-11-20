@@ -16,11 +16,15 @@ import { TransportError } from './error';
 import { Code } from './gen/elsewise/transport/v1/envelope_pb';
 
 export interface HandlerContext {
-  /** Aborted when the requester cancels the call or the channel dies. */
+  /**
+   * Aborted when the requester cancels the call or the channel dies.
+   */
   signal: AbortSignal;
 }
 
-/** A service's method implementation, shaped by each rpc's streaming type. */
+/**
+ * A service's method implementation, shaped by each rpc's streaming type.
+ */
 export type ServiceImpl<S extends DescService> = {
   [M in keyof S['method']]: MethodImpl<S['method'][M]>;
 };
@@ -45,7 +49,9 @@ type ServerStreamImpl = MethodImpl<DescMethodServerStreaming>;
 type ClientStreamImpl = MethodImpl<DescMethodClientStreaming>;
 type BidiImpl = MethodImpl<DescMethodBiDiStreaming>;
 
-/** Registers an implementation of every method of the service on the channel. */
+/**
+ * Registers an implementation of every method of the service on the channel.
+ */
 export function serve<S extends DescService>(channel: Channel, service: S, impl: ServiceImpl<S>): void {
   const methods = impl as Record<string, unknown>;
   for (const method of service.methods) {
@@ -97,10 +103,14 @@ export function serve<S extends DescService>(channel: Channel, service: S, impl:
   }
 }
 
-/** Distinguishes an abort signal from an iterator result. */
+/**
+ * Distinguishes an abort signal from an iterator result.
+ */
 const ABORTED = Symbol('aborted');
 
-/** Sends each of the impl's responses until the iterable ends or the stream dies. */
+/**
+ * Sends each of the impl's responses until the iterable ends or the stream dies.
+ */
 async function relayResponses(
   stream: ResponderStream,
   responses: AsyncIterable<AnyInit>,

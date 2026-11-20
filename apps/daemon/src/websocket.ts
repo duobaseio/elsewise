@@ -17,19 +17,27 @@ export interface WebSocketServerOptions {
    */
   port: number;
 
-  /** The token for authentication. */
+  /**
+   * The token for authentication.
+   */
   token: string;
 }
 
 export interface WebSocketServerHandle {
-  /** The port the daemon is listening on. */
+  /**
+   * The port the daemon is listening on.
+   */
   port: number;
 
-  /** Stops listening and drops every connection. */
+  /**
+   * Stops listening and drops every connection.
+   */
   close(): Promise<void>;
 }
 
-/** Serves the daemon to WebSocket clients on loopback. */
+/**
+ * Serves the daemon to WebSocket clients on loopback.
+ */
 export async function startWebSocketServer(
   daemon: Daemon,
   { port, token }: WebSocketServerOptions,
@@ -61,7 +69,9 @@ export async function startWebSocketServer(
   };
 }
 
-/** Authenticate the client. */
+/**
+ * Authenticate the client.
+ */
 function authenticate(request: IncomingMessage, token: string): boolean {
   const offered = (request.headers['sec-websocket-protocol'] ?? '').split(',').map((protocol) => protocol.trim());
   const expected = Buffer.from(TOKEN_PREFIX + token);

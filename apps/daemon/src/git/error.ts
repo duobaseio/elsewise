@@ -1,7 +1,9 @@
 import { Code, TransportError } from '@elsewise/transport';
 import { fsToTransportError } from '../fs/error';
 
-/** A git process that exited with a code the run did not accept. */
+/**
+ * A git process that exited with a code the run did not accept.
+ */
 export class GitError extends Error {
   readonly exitCode: number | null;
 
@@ -12,7 +14,9 @@ export class GitError extends Error {
   }
 }
 
-/** Converts a failure thrown while running git into a transport error. */
+/**
+ * Converts a failure thrown while running git into a transport error.
+ */
 export function gitToTransportError(error: unknown): TransportError {
   if (error instanceof TransportError) {
     return error;
@@ -23,7 +27,9 @@ export function gitToTransportError(error: unknown): TransportError {
   return fsToTransportError(error); // File system errors could occur as git uses it to a limited extend.
 }
 
-/** Attempts a git operation and throws a `TransportError` if it fails. */
+/**
+ * Attempts a git operation and throws a `TransportError` if it fails.
+ */
 export async function attempt<T>(operation: () => Promise<T>): Promise<T> {
   try {
     return await operation();

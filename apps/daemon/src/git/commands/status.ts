@@ -33,7 +33,9 @@ const CONFLICTS: Record<string, Type> = {
   UU: Type.BOTH_MODIFIED,
 };
 
-/** Reads the status of the worktree. */
+/**
+ * Reads the status of the worktree.
+ */
 export async function readStatus(git: Git, includeIgnored: boolean): Promise<StatusInit> {
   const args = ['status', '--porcelain=v2', '--branch', '-z', '--untracked-files=all'];
   if (includeIgnored) {
@@ -48,7 +50,9 @@ export async function readStatus(git: Git, includeIgnored: boolean): Promise<Sta
   return { ...parseStatus(output.toString()), operation };
 }
 
-/** Parses `git status --porcelain=v2 --branch -z`. */
+/**
+ * Parses `git status --porcelain=v2 --branch -z`.
+ */
 export function parseStatus(text: string): Omit<StatusInit, 'operation'> {
   const status: Omit<StatusInit, 'operation'> = {
     branch: '',
@@ -137,7 +141,9 @@ export function parseStatus(text: string): Omit<StatusInit, 'operation'> {
   return status;
 }
 
-/** Reads the operation in progress. */
+/**
+ * Reads the operation in progress.
+ */
 export async function readOperation(git: Git): Promise<OperationInit | undefined> {
   const args = ['rev-parse', '--path-format=absolute', ...OPERATION_FILES.flatMap((name) => ['--git-path', name])];
   const paths = (await git.text(args)).split('\n');
@@ -188,7 +194,9 @@ export async function readOperation(git: Git): Promise<OperationInit | undefined
   return undefined;
 }
 
-/** Reads whether any staged entry is unmerged. */
+/**
+ * Reads whether any staged entry is unmerged.
+ */
 export async function hasConflicts(git: Git): Promise<boolean> {
   return (await git.run(['ls-files', '--unmerged', '-z'])).length > 0;
 }

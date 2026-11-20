@@ -1,4 +1,6 @@
-/** Converts a display name into kebab case (e.g. lowercase words joined by `-`). */
+/**
+ * Converts a display name into kebab case (e.g. lowercase words joined by `-`).
+ */
 export function kebabCase(name: string): string {
   return name
     .normalize('NFKD')
@@ -27,12 +29,16 @@ export function repositoryName(url: string): string {
   return name === '.' || name === '..' ? '' : name;
 }
 
-/** Returns a random animal name. */
+/**
+ * Returns a random animal name.
+ */
 export function randomAnimal(): string {
   return ANIMALS[Math.floor(Math.random() * ANIMALS.length)] ?? 'fox';
 }
 
-/** Common land animal names. */
+/**
+ * Common land animal names.
+ */
 export const ANIMALS: readonly string[] = [
   'armadillo',
   'badger',

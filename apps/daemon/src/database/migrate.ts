@@ -1,19 +1,29 @@
 import { createHash } from 'node:crypto';
 import type { DatabaseSync } from 'node:sqlite';
 
-/** Represents a migration. */
+/**
+ * Represents a migration.
+ */
 export interface Migration {
-  /** The timestamp prefixed to the file's name (e.g. `20261024064553`). */
+  /**
+   * The timestamp prefixed to the file's name (e.g. `20261024064553`).
+   */
   version: string;
 
-  /** The rest of the file's name (e.g. `v0_1_0`). */
+  /**
+   * The rest of the file's name (e.g. `v0_1_0`).
+   */
   description: string;
 
-  /** The statements. */
+  /**
+   * The statements.
+   */
   sql: string;
 }
 
-/** Applies missing migrations to the database. */
+/**
+ * Applies missing migrations to the database.
+ */
 export function migrate(database: DatabaseSync, migrations: readonly Migration[]): string[] {
   database.exec(`
     create table if not exists schema_revision (

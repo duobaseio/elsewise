@@ -1,6 +1,8 @@
 export type Platform = 'mac' | 'windows' | 'linux';
 
-/** The current detected platform. */
+/**
+ * The current detected platform.
+ */
 export const PLATFORM: Platform = platformFrom(
   (navigator as Navigator & { userAgentData?: { platform: string } }).userAgentData?.platform ?? navigator.platform,
 );

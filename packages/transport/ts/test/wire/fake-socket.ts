@@ -1,6 +1,8 @@
 import type { DataChannel, Socket } from '../../src';
 
-/** Represents a fake socket. */
+/**
+ * Represents a fake socket.
+ */
 export class FakeSocket implements Socket {
   binaryType = '';
   readyState = 1;
@@ -35,7 +37,9 @@ export class FakeSocket implements Socket {
   }
 }
 
-/** Represents a fake RTCDataChannel socket. */
+/**
+ * Represents a fake RTCDataChannel socket.
+ */
 export class FakeDataChannel extends FakeSocket implements DataChannel {
   bufferedAmountLowThreshold = 0;
 }

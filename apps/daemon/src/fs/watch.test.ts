@@ -63,7 +63,9 @@ interface Stream {
   ended: Promise<void>;
 }
 
-/** Reads a file's content as its state. Returns `missing` if an error occurred. */
+/**
+ * Reads a file's content as its state. Returns `missing` if an error occurred.
+ */
 async function readContent(absoluteNativePath: string): Promise<Snapshot<string>> {
   const content = await fs.readFile(absoluteNativePath, 'utf8').catch(() => 'missing');
   return { key: content, state: content };

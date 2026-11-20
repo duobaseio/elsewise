@@ -4,20 +4,30 @@ import type { StatusInit } from './commands/status';
 import type { Git } from './git';
 
 export interface WatchStatusOptions {
-  /** The `DirectoryWatcher`. */
+  /**
+   * The `DirectoryWatcher`.
+   */
   watcher: DirectoryWatcher;
 
-  /** How often the status is polled in milliseconds. */
+  /**
+   * How often the status is polled in milliseconds.
+   */
   pollIntervalMs: number;
 
-  /** How long notified changes are debounced in milliseconds. */
+  /**
+   * How long notified changes are debounced in milliseconds.
+   */
   debounceMs: number;
 
-  /** Reads the status. */
+  /**
+   * Reads the status.
+   */
   read(): Promise<StatusInit>;
 }
 
-/** Yields the status whenever it changes. */
+/**
+ * Yields the status whenever it changes.
+ */
 export async function* watchStatus(
   git: Git,
   signal: AbortSignal,
@@ -73,7 +83,9 @@ export async function* watchStatus(
   }
 }
 
-/** Returns the git root and the main git directory (for a linked worktree). */
+/**
+ * Returns the git root and the main git directory (for a linked worktree).
+ */
 async function watchedDirectories(git: Git): Promise<string[]> {
   const gitDir = path.normalize((await git.text(['rev-parse', '--path-format=absolute', '--git-dir'])).trim());
   const relative = path.relative(git.root, gitDir);

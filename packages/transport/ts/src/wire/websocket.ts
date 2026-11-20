@@ -21,7 +21,9 @@ export class WebSocketWire extends SocketWire {
   #heard = true; // Whether any message arrived since the last probe.
   #drainPoll: ReturnType<typeof setInterval> | undefined;
 
-  /** Resolves to a wire once the socket is open. */
+  /**
+   * Resolves to a wire once the socket is open.
+   */
   static open(socket: Socket, options?: WebSocketWireOptions): Promise<WebSocketWire> {
     return opened(socket).then((socket) => new WebSocketWire(socket, options));
   }
@@ -31,7 +33,9 @@ export class WebSocketWire extends SocketWire {
     this.#startHeartbeat(options?.heartbeat ?? DEFAULT_HEARTBEAT_MS);
   }
 
-  /** Notes that the peer is alive, then lets the base handle the frame. */
+  /**
+   * Notes that the peer is alive, then lets the base handle the frame.
+   */
   protected override receive(frame: Uint8Array): void {
     this.#heard = true;
     super.receive(frame);

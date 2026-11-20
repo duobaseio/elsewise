@@ -15,7 +15,9 @@ const PHASES: Record<string, Phase> = {
   checking: Phase.CHECKING_OUT,
 };
 
-/** Reads the progress git writes to stderr during a transfer and reports each change. */
+/**
+ * Reads the progress git writes to stderr during a transfer and reports each change.
+ */
 export class ProgressParser {
   readonly #emit: (progress: ProgressInit) => void;
   #pending = '';
@@ -25,7 +27,9 @@ export class ProgressParser {
     this.#emit = emit;
   }
 
-  /** Feeds a chunk of stderr. */
+  /**
+   * Feeds a chunk of stderr.
+   */
   push(chunk: Buffer | string): void {
     const lines = (this.#pending + chunk.toString()).split(/\r\n|\r|\n/);
     this.#pending = lines.pop() ?? '';

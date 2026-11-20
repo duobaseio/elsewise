@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
 
-/** Waits for a rendered file tree's rows and its sprite's icon assets, so a screenshot has no blank icon lanes. */
+/**
+ * Waits for a rendered file tree's rows and its sprite's icon assets, so a screenshot has no blank icon lanes.
+ */
 export async function settleTree(expectedRows: number): Promise<void> {
   const shadowRoot = await vi.waitFor(() => {
     const host = document.querySelector('file-tree-container');

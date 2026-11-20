@@ -93,7 +93,9 @@ export async function forcePseudoStates(forces: readonly PseudoForce[]): Promise
   }
 }
 
-/** Single-selector convenience over {@link forcePseudoStates}. */
+/**
+ * Single-selector convenience over {@link forcePseudoStates}.
+ */
 export function forcePseudoState(selector: string, pseudoClasses: readonly ForcedPseudoClass[]): Promise<void> {
   return forcePseudoStates([{ selector, pseudoClasses }]);
 }

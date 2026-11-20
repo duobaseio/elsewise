@@ -14,7 +14,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
   #failure: Error | undefined;
   #waiters: (() => void)[] = [];
 
-  /** Delivers one value. */
+  /**
+   * Delivers one value.
+   */
   push(value: T): void {
     if (this.#done) {
       return;
@@ -23,7 +25,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
     this.#wake();
   }
 
-  /** Ends the queue normally. */
+  /**
+   * Ends the queue normally.
+   */
   end(): void {
     if (this.#done) {
       return;
@@ -32,7 +36,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
     this.#wake();
   }
 
-  /** Ends the queue with an error, thrown to the consumer once the buffered values have drained. */
+  /**
+   * Ends the queue with an error, thrown to the consumer once the buffered values have drained.
+   */
   fail(error: Error): void {
     if (this.#done) {
       return;
@@ -42,7 +48,9 @@ export class AsyncQueue<T> implements AsyncIterable<T> {
     this.#wake();
   }
 
-  /** Ends the queue with an error thrown immediately: buffered values are discarded, not drained. */
+  /**
+   * Ends the queue with an error thrown immediately: buffered values are discarded, not drained.
+   */
   abort(error: Error): void {
     if (this.#done) {
       return;

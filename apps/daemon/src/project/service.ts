@@ -45,17 +45,23 @@ type CloneEvent = MessageInitShape<typeof CloneProjectResponseSchema>;
 const WORKSPACE_NAME_ATTEMPTS = 5;
 
 export interface ProjectOptions {
-  /** The size in bytes past which the output of a git command fails the call. */
+  /**
+   * The size in bytes past which the output of a git command fails the call.
+   */
   readLimitBytes: number;
 }
 
-/** Represents a repository along with its corresponding git instance. */
+/**
+ * Represents a repository along with its corresponding git instance.
+ */
 interface Repository {
   git: Git;
   worktrees: WorktreeInit[];
 }
 
-/** The `ProjectService`. */
+/**
+ * The `ProjectService`.
+ */
 export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
   readonly #store: ProjectStore;
   readonly #terminals: TerminalServiceImpl;
@@ -331,7 +337,9 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     return toWorkspace(workspace, worktreeState(worktree));
   }
 
-  /** Generates a name for a workspace. */
+  /**
+   * Generates a name for a workspace.
+   */
   async #generateWorkspaceName(project: ProjectRow, repository: Repository): Promise<string> {
     const taken = new Set((await this.#store.getWorkspaces(project.id)).map((row) => row.name));
     const free = async (name: string): Promise<boolean> =>
@@ -373,7 +381,9 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     return { folder, mainWorkspaceNativePath };
   }
 
-  /** Allocates a project's folder under the code directory. */
+  /**
+   * Allocates a project's folder under the code directory.
+   */
   async #allocateProjectFolder(name: string): Promise<string> {
     const base = kebabCase(name);
     if (base === '') {
@@ -387,7 +397,9 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     }
   }
 
-  /** Stores a project along with the repository's main worktree. */
+  /**
+   * Stores a project along with the repository's main worktree.
+   */
   async #storeProject(name: string, folder: string, mainWorkspaceNativePath: string): Promise<ProjectInit> {
     const { project } = await this.#store.createProject({
       name,
@@ -427,7 +439,9 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     return repository;
   }
 
-  /** Verify the state of a project. */
+  /**
+   * Verify the state of a project.
+   */
   async #inspectProject(project: ProjectRow): Promise<{ state: ProjectState; repository?: Repository }> {
     const mainWorkspaceNativePath = path.resolve(project.absolute_path);
     const kind = await kindOf(mainWorkspaceNativePath);
@@ -458,7 +472,9 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     return toWorkspace(workspace, await workspaceState(workspace, repository));
   }
 
-  /** Deletes a project's repository from disk including every linked worktree. */
+  /**
+   * Deletes a project's repository from disk including every linked worktree.
+   */
   async #deleteProjectFiles(project: ProjectRow): Promise<void> {
     const { repository } = await this.#inspectProject(project);
     const workspaces = await this.#store.getWorkspaces(project.id);
@@ -479,7 +495,9 @@ export class ProjectServiceImpl implements ServiceImpl<typeof ProjectService> {
     await fs.rm(path.join(this.#code.workspaces, project.folder), { recursive: true, force: true });
   }
 
-  /** Deletes a linked worktree from disk and optionally the branch. */
+  /**
+   * Deletes a linked worktree from disk and optionally the branch.
+   */
   async #deleteWorkspaceFiles(project: ProjectRow, workspace: WorkspaceRow, deleteBranch: boolean): Promise<void> {
     const { repository } = await this.#inspectProject(project);
     const workspaceNativePath = path.resolve(workspace.absolute_path);
@@ -528,7 +546,9 @@ function worktreeState(worktree: WorktreeInit): WorkspaceState {
   return branch === '' ? { case: 'detached', value: {} } : { case: 'ok', value: { branch } };
 }
 
-/** Deletes the folder the daemon made for the project's workspaces once the last workspace is deleted. */
+/**
+ * Deletes the folder the daemon made for the project's workspaces once the last workspace is deleted.
+ */
 async function deleteProjectFolder(projectFolderNativePath: string): Promise<void> {
   try {
     await fs.rmdir(projectFolderNativePath);
@@ -571,7 +591,9 @@ async function exists(nativePath: string): Promise<boolean> {
   return (await kindOf(nativePath)) !== 'missing';
 }
 
-/** Returns if a native path is a directory. */
+/**
+ * Returns if a native path is a directory.
+ */
 async function kindOf(nativePath: string): Promise<'directory' | 'other' | 'missing'> {
   try {
     return (await fs.stat(nativePath)).isDirectory() ? 'directory' : 'other';
