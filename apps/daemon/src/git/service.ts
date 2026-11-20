@@ -11,19 +11,22 @@ import { toNativeAbsolutePath, toNativePath } from '../fs/path';
 import { FastForward } from '../gen/elsewise/daemon/git/v1/git_pb';
 import {
   type AbortOperationRequest,
-  type AddRemoteRequest,
-  type AddWorktreeRequest,
   type ApplyStashRequest,
   type CheckoutRequest,
   type CherryPickRequest,
   type CommitRequest,
   type ContinueOperationRequest,
   type CreateBranchRequest,
+  type CreateRemoteRequest,
   type CreateTagRequest,
-  type DeleteBranchRequest,
-  type DeleteTagRequest,
+  type CreateWorktreeRequest,
+  type DeleteBranchesRequest,
+  DeleteBranchesResponse_Failure_Reason as DeleteBranchReason,
+  type DeleteRemoteRequest,
+  type DeleteTagsRequest,
+  type DeleteWorktreeRequest,
   type DiscardRequest,
-  type DropStashRequest,
+  type DropStashesRequest,
   type FetchRequest,
   type FetchResponseSchema,
   type GetBlameRequest,
@@ -55,8 +58,6 @@ import {
   PushStashRequest_Scope,
   type ReadFileAtRevisionRequest,
   type RebaseRequest,
-  type RemoveRemoteRequest,
-  type RemoveWorktreeRequest,
   type RenameBranchRequest,
   type ResetRequest,
   ResetRequest_Mode,
@@ -453,15 +454,27 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  deleteBranch(request: DeleteBranchRequest) {
+  deleteBranches(request: DeleteBranchesRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       const args = ['branch', '--delete'];
       if (request.force) {
         args.push('--force');
       }
-      await git.run([...args, guardOperand(request.name, 'branch name')]);
-      return {};
+      const failures = await attemptEach(
+        request.names,
+        async (name) => {
+          await git.run([...args, guardOperand(name, 'branch name')]);
+        },
+        gitToTransportError,
+      );
+      return {
+        failures: failures.map(({ item, error }) => ({
+          name: item,
+          reason: deleteBranchReason(error.message),
+          message: error.message,
+        })),
+      };
     });
   }
 
@@ -489,7 +502,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  addWorktree(request: AddWorktreeRequest) {
+  createWorktree(request: CreateWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       const newPath = toNativeAbsolutePath(request.newAbsolutePath);
@@ -548,7 +561,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  removeWorktree(request: RemoveWorktreeRequest) {
+  deleteWorktree(request: DeleteWorktreeRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       const worktree = toNativeAbsolutePath(request.worktreeAbsolutePath);
@@ -594,11 +607,17 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  deleteTag(request: DeleteTagRequest) {
+  deleteTags(request: DeleteTagsRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      await git.run(['tag', '--delete', guardOperand(request.name, 'tag name')]);
-      return {};
+      const failures = await attemptEach(
+        request.names,
+        async (name) => {
+          await git.run(['tag', '--delete', guardOperand(name, 'tag name')]);
+        },
+        gitToTransportError,
+      );
+      return { failures: failures.map(({ item, error }) => ({ name: item, message: error.message })) };
     });
   }
 
@@ -725,7 +744,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  addRemote(request: AddRemoteRequest) {
+  createRemote(request: CreateRemoteRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       const name = guardOperand(request.name, 'remote name');
@@ -754,7 +773,7 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  removeRemote(request: RemoveRemoteRequest) {
+  deleteRemote(request: DeleteRemoteRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
       await git.run(['remote', 'remove', guardOperand(request.name, 'remote name')]);
@@ -893,11 +912,19 @@ export class GitServiceImpl implements ServiceImpl<typeof GitService> {
     });
   }
 
-  dropStash(request: DropStashRequest) {
+  dropStashes(request: DropStashesRequest) {
     return attempt(async () => {
       const git = await this.#open(request.absolutePath);
-      await git.run(['stash', 'drop', '--quiet', `stash@{${request.index}}`]);
-      return {};
+      // Dropping a stash shifts every stash above it down, so the highest index goes first.
+      const indexes = [...new Set(request.indexes)].sort((a, b) => b - a);
+      const failures = await attemptEach(
+        indexes,
+        async (index) => {
+          await git.run(['stash', 'drop', '--quiet', `stash@{${index}}`]);
+        },
+        gitToTransportError,
+      );
+      return { failures: failures.map(({ item, error }) => ({ index: item, message: error.message })) };
     });
   }
 
@@ -992,6 +1019,20 @@ async function refuseMainWorktree(git: Git, absoluteNativePath: string): Promise
   if ((await readWorktree(git, absoluteNativePath)).main) {
     throw new TransportError(Code.INVALID_ARGUMENT, 'the main worktree cannot be changed');
   }
+}
+
+/**
+ * Returns why git refused to delete a branch, read from its message.
+ */
+function deleteBranchReason(message: string): DeleteBranchReason {
+  // Git before 2.40 says "checked out at" instead.
+  if (/^cannot delete branch '.*' (?:used by worktree|checked out) at /im.test(message)) {
+    return DeleteBranchReason.CHECKED_OUT;
+  }
+  if (/^the branch '.*' is not fully merged/im.test(message)) {
+    return DeleteBranchReason.NOT_MERGED;
+  }
+  return DeleteBranchReason.OTHER;
 }
 
 async function currentBranch(git: Git): Promise<string> {

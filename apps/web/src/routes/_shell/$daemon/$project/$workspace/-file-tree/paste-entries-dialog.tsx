@@ -303,7 +303,7 @@ function FolderInput({
     queryKey: ['daemons', workspace.id.daemon, 'directories', workspace.absolutePath, parent],
     queryFn: async ({ client }) => {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
-      return daemon.fileSystem.listDirectory({ root: workspace.absolutePath, relativePath: parent.replace(/\/$/, '') });
+      return daemon.fileSystem.getDirectory({ root: workspace.absolutePath, relativePath: parent.replace(/\/$/, '') });
     },
     select: (response) => response.listing,
     retry: false,

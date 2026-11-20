@@ -1,10 +1,12 @@
 import type { TerminalOptions, TerminalSession, TerminalSessionId, WorkspaceId } from '@elsewise/frontend-plugin';
-import { Code, TransportError } from '@elsewise/transport';
 import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import { KeyedMap } from '@/collections/keyed-map';
 
 import { daemonQuery } from '@/daemon';
-import type { Terminal as TerminalMessage } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
+import {
+  DeleteTerminalsResponse_Failure_Reason as DeleteReason,
+  type Terminal as TerminalMessage,
+} from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 
 function keyOf(id: TerminalSessionId): readonly unknown[] {
   return [id.daemon, id.session];
@@ -89,13 +91,11 @@ export class SessionStore {
   }
 
   async delete(session: TerminalSessionId): Promise<void> {
-    try {
-      const daemon = await this.client.query(daemonQuery(session.daemon));
-      await daemon.terminals.deleteTerminal({ terminalId: session.session });
-    } catch (error) {
-      if (!(error instanceof TransportError && error.code === Code.NOT_FOUND)) {
-        throw error;
-      }
+    const daemon = await this.client.query(daemonQuery(session.daemon));
+    const { failures } = await daemon.terminals.deleteTerminals({ terminalIds: [session.session] });
+    const failure = failures.find((failure) => failure.reason !== DeleteReason.NOT_FOUND);
+    if (failure) {
+      throw new Error(failure.message);
     }
     this.sessions.delete(session);
   }

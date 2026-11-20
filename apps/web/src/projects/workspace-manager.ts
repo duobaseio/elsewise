@@ -180,12 +180,15 @@ export class WorkspaceManager implements Workspaces {
     }
 
     const daemon = await this.client.query(daemonQuery(workspace.daemon));
-    await daemon.projects.deleteWorkspace({
+    const { failures } = await daemon.projects.deleteWorkspaces({
       projectId: workspace.project,
-      workspaceId: workspace.workspace,
+      workspaceIds: [workspace.workspace],
       deleteFiles,
       deleteBranch,
     });
+    if (failures[0]) {
+      throw new Error(failures[0].message);
+    }
 
     await this.close(
       workspace,

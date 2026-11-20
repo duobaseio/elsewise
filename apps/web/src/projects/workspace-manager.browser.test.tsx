@@ -15,11 +15,11 @@ function setup() {
     create(WorkspaceSchema, { projectId: 'elsewise', id: 'singapore', name: 'Singapore', main: true }),
     create(WorkspaceSchema, { projectId: 'elsewise', id: 'dhaka', name: 'Dhaka' }),
   ];
-  const deleteWorkspace = vi.fn(async () => ({}));
+  const deleteWorkspaces = vi.fn(async () => ({ failures: [] as { message: string }[] }));
   const getWorkspaces = vi.fn(async () => ({ workspaces: workspaceMessages }));
   const client = new QueryClient();
   client.setQueryData(daemonQuery('local').queryKey, {
-    projects: { deleteWorkspace, getWorkspaces },
+    projects: { deleteWorkspaces, getWorkspaces },
   } as unknown as Daemon);
   client.setQueryData(workspacesQuery('local', 'elsewise').queryKey, workspaceMessages);
   const root = createRootRoute();
@@ -33,7 +33,7 @@ function setup() {
     await router.load();
     await vi.waitFor(() => expect(workspaces.active?.id).toEqual(workspace));
   };
-  return { workspaces, client, router, show, deleteWorkspace };
+  return { workspaces, client, router, show, deleteWorkspaces };
 }
 
 describe('get', () => {
@@ -240,7 +240,7 @@ describe('onActiveChange', () => {
 
 describe('delete', () => {
   test('navigates to main workspace and removes statuses', async () => {
-    const { workspaces, router, show, deleteWorkspace } = setup();
+    const { workspaces, router, show, deleteWorkspaces } = setup();
     await show(DHAKA);
     workspaces.addStatus(DHAKA, 'running');
 
@@ -248,26 +248,26 @@ describe('delete', () => {
 
     expect(router.state.location.pathname).toBe('/local/elsewise/singapore');
     expect(workspaces.status(DHAKA)).toBe('idle');
-    expect(deleteWorkspace).toHaveBeenCalledExactlyOnceWith({
+    expect(deleteWorkspaces).toHaveBeenCalledExactlyOnceWith({
       projectId: 'elsewise',
-      workspaceId: 'dhaka',
+      workspaceIds: ['dhaka'],
       deleteFiles: true,
       deleteBranch: false,
     });
   });
 
   test('refuses main workspace before closing it', async () => {
-    const { workspaces, router, show, deleteWorkspace } = setup();
+    const { workspaces, router, show, deleteWorkspaces } = setup();
     await show(MAIN);
 
     await expect(workspaces.delete(MAIN)).rejects.toThrow('The main workspace cannot be deleted.');
     expect(router.state.location.pathname).toBe('/local/elsewise/singapore');
-    expect(deleteWorkspace).not.toHaveBeenCalled();
+    expect(deleteWorkspaces).not.toHaveBeenCalled();
   });
 
-  test('keeps workspace shown when daemon rejects', async () => {
-    const { workspaces, router, show, deleteWorkspace } = setup();
-    deleteWorkspace.mockRejectedValue(new Error('Busy'));
+  test('keeps workspace shown when daemon fails to delete it', async () => {
+    const { workspaces, router, show, deleteWorkspaces } = setup();
+    deleteWorkspaces.mockResolvedValue({ failures: [{ message: 'Busy' }] });
     await show(DHAKA);
     workspaces.addStatus(DHAKA, 'running');
 

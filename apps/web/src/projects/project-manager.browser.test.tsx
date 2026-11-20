@@ -42,7 +42,7 @@ function setup() {
     updateProject: vi.fn(async () =>
       create(UpdateProjectResponseSchema, { project: { ...elsewise, name: 'Elsewise' } }),
     ),
-    deleteProject: vi.fn(async () => ({})),
+    deleteProjects: vi.fn(async () => ({ failures: [] as { message: string }[] })),
     getWorkspaces: vi.fn(() => new Promise<never>(() => {})),
   };
   const client = new QueryClient();
@@ -193,7 +193,7 @@ describe('delete', () => {
 
     expect(router.state.location.pathname).toBe('/');
     expect(projects.workspaces.status(DHAKA)).toBe('idle');
-    expect(daemon.deleteProject).toHaveBeenCalledExactlyOnceWith({ projectId: 'elsewise', deleteFiles: true });
+    expect(daemon.deleteProjects).toHaveBeenCalledExactlyOnceWith({ projectIds: ['elsewise'], deleteFiles: true });
   });
 
   test('navigates away from loading project', async () => {
@@ -228,9 +228,9 @@ describe('delete', () => {
     expect(client.getQueryData(workspacesQuery('local', 'elsewise').queryKey)).toBeUndefined();
   });
 
-  test('keeps project shown when daemon rejects', async () => {
+  test('keeps project shown when daemon fails to delete it', async () => {
     const { projects, router, daemon, show } = setup();
-    daemon.deleteProject.mockRejectedValue(new Error('Busy'));
+    daemon.deleteProjects.mockResolvedValue({ failures: [{ message: 'Busy' }] });
     await show(DHAKA);
     projects.workspaces.addStatus(DHAKA, 'running');
 

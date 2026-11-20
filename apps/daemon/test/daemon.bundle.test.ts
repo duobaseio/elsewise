@@ -89,7 +89,7 @@ describe('@lydell/node-pty', () => {
     await expect.poll(() => textOf(seen)).toContain('hello');
 
     call.cancel();
-    await terminals.deleteTerminal({ terminalId });
+    await terminals.deleteTerminals({ terminalIds: [terminalId] });
   });
 });
 

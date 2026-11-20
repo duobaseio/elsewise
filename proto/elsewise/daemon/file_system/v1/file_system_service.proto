@@ -26,7 +26,7 @@ service FileSystemService {
   rpc WatchRoots(WatchRootsRequest) returns (stream WatchRootsResponse);
 
   // Lists a directory.
-  rpc ListDirectory(ListDirectoryRequest) returns (ListDirectoryResponse);
+  rpc GetDirectory(GetDirectoryRequest) returns (GetDirectoryResponse);
 
   // Reads a file.
   //
@@ -88,7 +88,8 @@ message WatchDirectoriesResponse {
     Reason reason = 1;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
       REASON_NOT_FOUND = 2;
       REASON_NOT_A_DIRECTORY = 3;
@@ -120,8 +121,12 @@ message DirectoryListing {
     bool symlink = 3;
 
     enum Type {
-      TYPE_UNSPECIFIED = 0; // Never sent.
-      TYPE_OTHER = 1; // Anything else, such as a socket or a broken symbolic link.
+      // Never sent.
+      TYPE_UNSPECIFIED = 0;
+
+      // Anything else, such as a socket or a broken symbolic link.
+      TYPE_OTHER = 1;
+
       TYPE_DIRECTORY = 2;
       TYPE_FILE = 3;
     }
@@ -164,7 +169,8 @@ message WatchFilesResponse {
     Reason reason = 1;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
       REASON_NOT_FOUND = 2;
       REASON_NOT_A_FILE = 3;
@@ -191,20 +197,22 @@ message WatchRootsResponse {
     Reason reason = 3;
 
     enum Mode {
-      MODE_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      MODE_UNSPECIFIED = 0;
       MODE_NOTIFY = 1;
       MODE_POLL = 2;
     }
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Sent when the root is not degraded.
+      // Sent when the root is not degraded.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
       REASON_WATCH_LIMIT = 2;
     }
   }
 }
 
-message ListDirectoryRequest {
+message GetDirectoryRequest {
   // The root of the directory.
   string root = 1;
 
@@ -212,7 +220,7 @@ message ListDirectoryRequest {
   string relative_path = 2;
 }
 
-message ListDirectoryResponse {
+message GetDirectoryResponse {
   // The directory's listing.
   DirectoryListing listing = 1;
 }
@@ -245,7 +253,7 @@ message WriteFileRequest {
 
   // The hash the file must currently have on disk. Ignored if `overwrite` is set.
   //
-  // Unset means the file must not exist yet and if one is present, it fails with ALREADY_EXISTS.
+  // Empty means the file must not exist yet and if one is present, it fails with ALREADY_EXISTS.
   bytes base_hash = 3;
 
   // The file's new content.
@@ -304,9 +312,12 @@ message CopyEntriesResponse {
     string message = 3;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
-      REASON_ALREADY_EXISTS = 2; // An entry is already at the new path, and `overwrite` is not set.
+
+      // An entry is already at the new path, and `overwrite` is not set.
+      REASON_ALREADY_EXISTS = 2;
     }
   }
 }
@@ -345,9 +356,12 @@ message MoveEntriesResponse {
     string message = 3;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
-      REASON_ALREADY_EXISTS = 2; // An entry is already at the new path, and `overwrite` is not set.
+
+      // An entry is already at the new path, and `overwrite` is not set.
+      REASON_ALREADY_EXISTS = 2;
     }
   }
 }

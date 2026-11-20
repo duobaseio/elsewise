@@ -2,10 +2,11 @@ import { mkdir, realpath, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { Code } from '@elsewise/transport';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import type {
-  AttachTerminalResponse,
-  ExecResponse,
-  Terminal,
+import {
+  type AttachTerminalResponse,
+  DeleteTerminalsResponse_Failure_Reason as DeleteReason,
+  type ExecResponse,
+  type Terminal,
 } from '../../src/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { collect } from '../harness';
 import { TerminalHarness } from './harness';
@@ -149,21 +150,23 @@ describe('UpdateTerminal', () => {
   });
 });
 
-describe('DeleteTerminal', () => {
-  test('deletes the terminal', async () => {
+describe('DeleteTerminals', () => {
+  test('deletes the terminals and reports each one that fails', async () => {
     const terminal = await create();
-    await harness.client.deleteTerminal({ terminalId: terminal.id });
-    expect(await getTerminals()).toEqual([]);
-    await expect(harness.client.deleteTerminal({ terminalId: terminal.id })).rejects.toMatchObject({
-      code: Code.NOT_FOUND,
+    const other = await create();
+    await expect(
+      harness.client.deleteTerminals({ terminalIds: [terminal.id, 'missing', other.id] }),
+    ).resolves.toMatchObject({
+      failures: [{ terminalId: 'missing', reason: DeleteReason.NOT_FOUND, message: 'the terminal does not exist' }],
     });
+    expect(await getTerminals()).toEqual([]);
   });
 
   test('kills the shell and ends the streams attached to it', async () => {
     const terminal = await create();
     const attached = attach(terminal.id);
     await expect.poll(() => getTerminals()).toMatchObject([{ state: { case: 'running' } }]);
-    await harness.client.deleteTerminal({ terminalId: terminal.id });
+    await harness.client.deleteTerminals({ terminalIds: [terminal.id] });
     await attached.ended;
     expect(attached.exit()).toBeDefined();
   });

@@ -124,7 +124,8 @@ message Status {
       Type type = 1;
 
       enum Type {
-        TYPE_UNSPECIFIED = 0; // Never sent.
+        // Never sent.
+        TYPE_UNSPECIFIED = 0;
         TYPE_OTHER = 1;
         TYPE_BOTH_MODIFIED = 2;
         TYPE_BOTH_ADDED = 3;
@@ -140,7 +141,8 @@ message Status {
 
 // How an entry differs between two states of the repository.
 enum Change {
-  CHANGE_UNSPECIFIED = 0; // Sent when the two states match.
+  // Sent when the two states match.
+  CHANGE_UNSPECIFIED = 0;
   CHANGE_OTHER = 1;
   CHANGE_ADDED = 2;
   CHANGE_MODIFIED = 3;
@@ -299,9 +301,14 @@ message Stash {
 
 // Whether a merge may move the branch forward without a merge commit.
 enum FastForward {
-  FAST_FORWARD_UNSPECIFIED = 0; // Sent to fast-forward when possible, and merge otherwise.
-  FAST_FORWARD_NEVER = 1; // Always create a merge commit.
-  FAST_FORWARD_ONLY = 2; // Fast-forward or fail with FAILED_PRECONDITION.
+  // Sent to fast-forward when possible, and merge otherwise.
+  FAST_FORWARD_UNSPECIFIED = 0;
+
+  // Always create a merge commit.
+  FAST_FORWARD_NEVER = 1;
+
+  // Fast-forward or fail with FAILED_PRECONDITION.
+  FAST_FORWARD_ONLY = 2;
 }
 
 // The progress of a transfer.
@@ -313,15 +320,32 @@ message Progress {
   uint32 percent = 2;
 
   enum Phase {
-    PHASE_UNSPECIFIED = 0; // Never sent.
+    // Never sent.
+    PHASE_UNSPECIFIED = 0;
     PHASE_OTHER = 1;
-    PHASE_ENUMERATING = 2; // Enumerating objects to send.
-    PHASE_COUNTING = 3; // Counting objects.
-    PHASE_COMPRESSING = 4; // Compressing objects.
-    PHASE_WRITING = 5; // Writing objects to the remote.
-    PHASE_RECEIVING = 6; // Receiving objects.
-    PHASE_RESOLVING = 7; // Resolving deltas.
-    PHASE_UNPACKING = 8; // Unpacking objects (instead of receiving and resolving), for a small transfer.
-    PHASE_CHECKING_OUT = 9; // Checking out files.
+
+    // Enumerating objects to send.
+    PHASE_ENUMERATING = 2;
+
+    // Counting objects.
+    PHASE_COUNTING = 3;
+
+    // Compressing objects.
+    PHASE_COMPRESSING = 4;
+
+    // Writing objects to the remote.
+    PHASE_WRITING = 5;
+
+    // Receiving objects.
+    PHASE_RECEIVING = 6;
+
+    // Resolving deltas.
+    PHASE_RESOLVING = 7;
+
+    // Unpacking objects (instead of receiving and resolving), for a small transfer.
+    PHASE_UNPACKING = 8;
+
+    // Checking out files.
+    PHASE_CHECKING_OUT = 9;
   }
 }

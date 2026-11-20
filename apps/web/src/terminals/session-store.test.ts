@@ -1,12 +1,12 @@
 import { create } from '@bufbuild/protobuf';
 import type { WorkspaceId } from '@elsewise/frontend-plugin';
-import { Code, TransportError } from '@elsewise/transport';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { type Daemon, daemonQuery } from '@/daemon';
 import {
   CreateTerminalResponseSchema,
-  DeleteTerminalResponseSchema,
+  DeleteTerminalsResponse_Failure_Reason as DeleteReason,
+  DeleteTerminalsResponseSchema,
   GetTerminalsResponseSchema,
   UpdateTerminalResponseSchema,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
@@ -25,7 +25,7 @@ function setUp() {
   const updateTerminal = vi.fn(async ({ name }: { name: string }) =>
     create(UpdateTerminalResponseSchema, { terminal: { ...terminal, name } }),
   );
-  const deleteTerminal = vi.fn(async () => create(DeleteTerminalResponseSchema));
+  const deleteTerminals = vi.fn(async () => create(DeleteTerminalsResponseSchema));
   const attachTerminal = () => ({
     send: async () => {},
     close() {},
@@ -34,9 +34,9 @@ function setUp() {
   });
   const client = new QueryClient();
   client.setQueryData(daemonQuery('local').queryKey, {
-    terminals: { createTerminal, getTerminals, updateTerminal, deleteTerminal, attachTerminal },
+    terminals: { createTerminal, getTerminals, updateTerminal, deleteTerminals, attachTerminal },
   } as unknown as Daemon);
-  return { store: new SessionStore(client), createTerminal, getTerminals, updateTerminal, deleteTerminal };
+  return { store: new SessionStore(client), createTerminal, getTerminals, updateTerminal, deleteTerminals };
 }
 
 describe('add', () => {
@@ -126,26 +126,36 @@ describe('rename', () => {
 
 describe('delete', () => {
   test('deletes session', async () => {
-    const { store, deleteTerminal } = setUp();
+    const { store, deleteTerminals } = setUp();
     await store.add(SINGAPORE);
 
     await store.delete(TOKYO);
 
-    expect(deleteTerminal).toHaveBeenCalledExactlyOnceWith({ terminalId: 'tokyo-1' });
+    expect(deleteTerminals).toHaveBeenCalledExactlyOnceWith({ terminalIds: ['tokyo-1'] });
     expect(store.sessions.get(TOKYO)).toBeUndefined();
   });
 
   test('ignores session another client deleted', async () => {
-    const { store, deleteTerminal } = setUp();
-    deleteTerminal.mockRejectedValue(new TransportError(Code.NOT_FOUND, 'the terminal does not exist'));
+    const { store, deleteTerminals } = setUp();
+    await store.add(SINGAPORE);
+    deleteTerminals.mockResolvedValue(
+      create(DeleteTerminalsResponseSchema, {
+        failures: [{ terminalId: 'tokyo-1', reason: DeleteReason.NOT_FOUND, message: 'the terminal does not exist' }],
+      }),
+    );
 
     await expect(store.delete(TOKYO)).resolves.toBeUndefined();
+    expect(store.sessions.get(TOKYO)).toBeUndefined();
   });
 
   test('keeps session the daemon failed to delete', async () => {
-    const { store, deleteTerminal } = setUp();
+    const { store, deleteTerminals } = setUp();
     const session = await store.add(SINGAPORE);
-    deleteTerminal.mockRejectedValue(new TransportError(Code.UNAVAILABLE, 'the daemon is busy'));
+    deleteTerminals.mockResolvedValue(
+      create(DeleteTerminalsResponseSchema, {
+        failures: [{ terminalId: 'tokyo-1', reason: DeleteReason.OTHER, message: 'the daemon is busy' }],
+      }),
+    );
 
     await expect(store.delete(TOKYO)).rejects.toThrow('the daemon is busy');
     expect(store.sessions.get(TOKYO)).toEqual(session);

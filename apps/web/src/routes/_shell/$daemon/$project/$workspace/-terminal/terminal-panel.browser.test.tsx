@@ -17,7 +17,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import {
   CreateTerminalResponseSchema,
-  DeleteTerminalResponseSchema,
+  DeleteTerminalsResponseSchema,
   GetTerminalsResponseSchema,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
@@ -36,17 +36,17 @@ const SINGAPORE: WorkspaceId = { daemon: LOCAL_DAEMON_ID, project: 'elsewise', w
 // The daemon of Singapore, which creates tokyo-1 running `program`.
 function setUp(program = '') {
   const terminal = { workspaceId: 'singapore', id: 'tokyo-1', name: 'Terminal', program };
-  const deleteTerminal = vi.fn(async () => create(DeleteTerminalResponseSchema));
+  const deleteTerminals = vi.fn(async () => create(DeleteTerminalsResponseSchema));
   const getTerminals = vi.fn(async () => create(GetTerminalsResponseSchema, { terminals: [terminal] }));
   const fake = terminals({
     createTerminal: async () => create(CreateTerminalResponseSchema, { terminal }),
     getTerminals,
-    deleteTerminal,
+    deleteTerminals,
   });
   const client = new QueryClient();
   client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, { terminals: fake.client } as unknown as Daemon);
   client.setQueryData(settingsQuery.queryKey, SETTINGS);
-  return { ...fake, client, deleteTerminal, getTerminals, manager: new TerminalManager(client) };
+  return { ...fake, client, deleteTerminals, getTerminals, manager: new TerminalManager(client) };
 }
 
 // Renders the dock of Singapore with real terminal panels, restoring `layout` if given.
@@ -145,7 +145,7 @@ test('keeps terminal across remount', async () => {
   await expect.poll(() => xterm?.element?.isConnected).toBe(true);
   expect(setup.manager.get(id)?.terminal).toBe(xterm);
   expect(setup.sent.filter((request) => request.event?.case === 'open')).toHaveLength(1);
-  expect(setup.deleteTerminal).not.toHaveBeenCalled();
+  expect(setup.deleteTerminals).not.toHaveBeenCalled();
 });
 
 test('closes shell on exit', async () => {
@@ -156,7 +156,7 @@ test('closes shell on exit', async () => {
   setup.respond({ case: 'exit', value: { cause: { case: 'code', value: 0 } } });
 
   await expect.poll(() => api.getPanel('terminal:tokyo-1')).toBeUndefined();
-  expect(setup.deleteTerminal).toHaveBeenCalledExactlyOnceWith({ terminalId: 'tokyo-1' });
+  expect(setup.deleteTerminals).toHaveBeenCalledExactlyOnceWith({ terminalIds: ['tokyo-1'] });
 });
 
 test('keeps program open on exit', async () => {
@@ -168,7 +168,7 @@ test('keeps program open on exit', async () => {
 
   await expect.poll(() => setup.manager.get(id)?.session.exit).toEqual({ code: 0 });
   expect(api.getPanel('terminal:tokyo-1')).toBeDefined();
-  expect(setup.deleteTerminal).not.toHaveBeenCalled();
+  expect(setup.deleteTerminals).not.toHaveBeenCalled();
 });
 
 test('adds addons once shown', async () => {
