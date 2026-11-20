@@ -275,14 +275,14 @@ describe('UpdateProject', () => {
   });
 });
 
-describe('DeleteProject', () => {
+describe('DeleteProjects', () => {
   test('deletes the stored project and its workspaces', async () => {
     const { project, root } = await addRepo();
     await harness.client.createWorkspace({
       projectId: project.id,
       source: { case: 'new', value: { name: 'Feature', branch: '', base: '' } },
     });
-    await harness.client.deleteProject({ projectId: project.id, deleteFiles: false });
+    await harness.client.deleteProjects({ projectIds: [project.id], deleteFiles: false });
     expect(await harness.client.getProjects({})).toMatchObject({ projects: [] });
     await expect(getWorkspaces(project.id)).rejects.toMatchObject({ code: Code.NOT_FOUND });
     expect(await exists(root)).toBe(true);
@@ -296,16 +296,18 @@ describe('DeleteProject', () => {
       source: { case: 'new', value: { name: 'Feature', branch: '', base: '' } },
     });
     await harness.open(root).run('worktree', 'add', '--quiet', harness.nativeAt('unstored'), '-b', 'unstored');
-    await harness.client.deleteProject({ projectId: project.id, deleteFiles: true });
+    await harness.client.deleteProjects({ projectIds: [project.id], deleteFiles: true });
     expect(await exists(root)).toBe(false);
     expect(await exists(path.join(harness.code.workspaces, 'repo'))).toBe(false);
     expect(await exists(harness.nativeAt('unstored'))).toBe(false);
   });
 
-  test('refuses an unknown project', async () => {
-    await expect(harness.client.deleteProject({ projectId: 'unknown', deleteFiles: false })).rejects.toMatchObject({
-      code: Code.NOT_FOUND,
-    });
+  test('carries on past an unknown project and reports it', async () => {
+    const { project } = await addRepo();
+    await expect(
+      harness.client.deleteProjects({ projectIds: ['unknown', project.id], deleteFiles: false }),
+    ).resolves.toMatchObject({ failures: [{ projectId: 'unknown', message: 'the project does not exist' }] });
+    expect(await harness.client.getProjects({})).toMatchObject({ projects: [] });
   });
 });
 
@@ -515,14 +517,14 @@ describe('UpdateWorkspace', () => {
   });
 });
 
-describe('DeleteWorkspace', () => {
+describe('DeleteWorkspaces', () => {
   test('deletes the stored workspace and leaves the worktree alone', async () => {
     const { project, root } = await addRepo();
     const { workspace } = await harness.client.createWorkspace({
       projectId: project.id,
       source: { case: 'new', value: { name: 'Feature' } },
     });
-    await harness.client.deleteWorkspace({ projectId: project.id, workspaceId: workspace?.id ?? '' });
+    await harness.client.deleteWorkspaces({ projectId: project.id, workspaceIds: [workspace?.id ?? ''] });
     expect(await getWorkspaces(project.id)).toHaveLength(1);
     expect(await exists(path.resolve(workspace?.absolutePath ?? ''))).toBe(true);
     expect(await harness.open(root).run('worktree', 'list')).toContain('feature');
@@ -536,14 +538,14 @@ describe('DeleteWorkspace', () => {
     const dropped = await create('Dropped');
     await fs.writeFile(path.join(path.resolve(dropped.workspace?.absolutePath ?? ''), 'dirty.txt'), '');
 
-    await harness.client.deleteWorkspace({
+    await harness.client.deleteWorkspaces({
       projectId: project.id,
-      workspaceId: kept.workspace?.id ?? '',
+      workspaceIds: [kept.workspace?.id ?? ''],
       deleteFiles: true,
     });
-    await harness.client.deleteWorkspace({
+    await harness.client.deleteWorkspaces({
       projectId: project.id,
-      workspaceId: dropped.workspace?.id ?? '',
+      workspaceIds: [dropped.workspace?.id ?? ''],
       deleteFiles: true,
       deleteBranch: true,
     });
@@ -562,9 +564,9 @@ describe('DeleteWorkspace', () => {
       source: { case: 'new', value: { name: 'Gone' } },
     });
     await fs.rm(path.resolve(workspace?.absolutePath ?? ''), { recursive: true });
-    await harness.client.deleteWorkspace({
+    await harness.client.deleteWorkspaces({
       projectId: project.id,
-      workspaceId: workspace?.id ?? '',
+      workspaceIds: [workspace?.id ?? ''],
       deleteFiles: true,
       deleteBranch: true,
     });
@@ -573,21 +575,40 @@ describe('DeleteWorkspace', () => {
     expect(await harness.open(root).run('branch', '--list', 'gone')).toBe('');
   });
 
-  test('refuses the main workspace, a branch deletion without the files and an unknown workspace', async () => {
+  test('carries on past the main workspace and an unknown one and reports them', async () => {
     const { project } = await addRepo();
     const [main] = await getWorkspaces(project.id);
-    await expect(
-      harness.client.deleteWorkspace({ projectId: project.id, workspaceId: main?.id ?? '' }),
-    ).rejects.toMatchObject({ code: Code.INVALID_ARGUMENT });
     const { workspace } = await harness.client.createWorkspace({
       projectId: project.id,
       source: { case: 'new', value: { name: 'Feature' } },
     });
     await expect(
-      harness.client.deleteWorkspace({ projectId: project.id, workspaceId: workspace?.id ?? '', deleteBranch: true }),
-    ).rejects.toMatchObject({ code: Code.INVALID_ARGUMENT });
+      harness.client.deleteWorkspaces({
+        projectId: project.id,
+        workspaceIds: [main?.id ?? '', 'unknown', workspace?.id ?? ''],
+      }),
+    ).resolves.toMatchObject({
+      failures: [
+        { workspaceId: main?.id, message: 'the main workspace cannot be deleted' },
+        { workspaceId: 'unknown', message: 'the workspace does not exist' },
+      ],
+    });
+    expect(await getWorkspaces(project.id)).toHaveLength(1);
+  });
+
+  test('refuses a branch deletion without the files and an unknown project', async () => {
+    const { project } = await addRepo();
+    const { workspace } = await harness.client.createWorkspace({
+      projectId: project.id,
+      source: { case: 'new', value: { name: 'Feature' } },
+    });
+    const workspaceIds = [workspace?.id ?? ''];
     await expect(
-      harness.client.deleteWorkspace({ projectId: project.id, workspaceId: 'unknown' }),
-    ).rejects.toMatchObject({ code: Code.NOT_FOUND });
+      harness.client.deleteWorkspaces({ projectId: project.id, workspaceIds, deleteBranch: true }),
+    ).rejects.toMatchObject({ code: Code.INVALID_ARGUMENT });
+    await expect(harness.client.deleteWorkspaces({ projectId: 'unknown', workspaceIds })).rejects.toMatchObject({
+      code: Code.NOT_FOUND,
+    });
+    expect(await getWorkspaces(project.id)).toHaveLength(2);
   });
 });

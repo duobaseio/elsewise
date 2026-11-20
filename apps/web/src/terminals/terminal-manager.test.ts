@@ -5,7 +5,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { type Daemon, daemonQuery } from '@/daemon';
 import {
   CreateTerminalResponseSchema,
-  DeleteTerminalResponseSchema,
+  DeleteTerminalsResponseSchema,
   GetTerminalsResponseSchema,
   UpdateTerminalResponseSchema,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
@@ -17,10 +17,10 @@ const TOKYO = { ...SINGAPORE, session: 'tokyo-1' };
 const OSAKA = { ...SINGAPORE, session: 'osaka-1' };
 
 // A manager over a daemon that has tokyo-1 in Singapore, lists it once `listed` resolves, and deletes it with
-// `deleteTerminal`.
+// `deleteTerminals`.
 function setUp(
   listed: Promise<void> = Promise.resolve(),
-  deleteTerminal: () => Promise<unknown> = async () => create(DeleteTerminalResponseSchema),
+  deleteTerminals: () => Promise<unknown> = async () => create(DeleteTerminalsResponseSchema),
 ) {
   const terminal = { workspaceId: 'singapore', id: 'tokyo-1', name: 'Terminal' };
   const client = new QueryClient();
@@ -33,7 +33,7 @@ function setUp(
       },
       updateTerminal: async ({ name }: { name: string }) =>
         create(UpdateTerminalResponseSchema, { terminal: { ...terminal, name } }),
-      deleteTerminal,
+      deleteTerminals,
     },
   } as unknown as Daemon);
   return new TerminalManager(client);

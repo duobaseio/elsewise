@@ -135,8 +135,20 @@ message DeleteTerminalsResponse {
     // The terminal's id.
     string terminal_id = 1;
 
+    // Why the terminal failed.
+    Reason reason = 2;
+
     // What failed.
-    string message = 2;
+    string message = 3;
+
+    enum Reason {
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
+      REASON_OTHER = 1;
+
+      // The terminal does not exist.
+      REASON_NOT_FOUND = 2;
+    }
   }
 }
 

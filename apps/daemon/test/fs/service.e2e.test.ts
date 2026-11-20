@@ -222,13 +222,13 @@ describe('WatchRoots', () => {
   });
 });
 
-describe('ListDirectory', () => {
+describe('GetDirectory', () => {
   test('lists the entries sorted by name', async () => {
     await fs.mkdir(harness.nativeAt('src'));
     await fs.writeFile(harness.nativeAt('b.txt'), '');
     await fs.writeFile(harness.nativeAt('a.txt'), '');
 
-    const { listing } = await harness.client.listDirectory({ root, relativePath: '' });
+    const { listing } = await harness.client.getDirectory({ root, relativePath: '' });
 
     expect(listing).toMatchObject({
       entries: [
@@ -246,7 +246,7 @@ describe('ListDirectory', () => {
       await fs.writeFile(harness.nativeAt(name), '');
     }
 
-    const { listing } = await harness.client.listDirectory({ root, relativePath: '' });
+    const { listing } = await harness.client.getDirectory({ root, relativePath: '' });
 
     expect(listing?.entries.map((entry) => entry.name)).toEqual(['a', 'b', 'c']);
     expect(listing?.truncated).toBe(2);
@@ -255,9 +255,9 @@ describe('ListDirectory', () => {
   test('fails for a missing directory and file', async () => {
     await fs.writeFile(harness.nativeAt('a.txt'), '');
 
-    const missing = harness.client.listDirectory({ root, relativePath: 'missing' });
+    const missing = harness.client.getDirectory({ root, relativePath: 'missing' });
     await expect(missing).rejects.toMatchObject({ code: Code.NOT_FOUND });
-    const file = harness.client.listDirectory({ root, relativePath: 'a.txt' });
+    const file = harness.client.getDirectory({ root, relativePath: 'a.txt' });
     await expect(file).rejects.toMatchObject({ code: Code.FAILED_PRECONDITION });
   });
 });

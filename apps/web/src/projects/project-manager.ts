@@ -129,7 +129,10 @@ export class ProjectManager implements Projects {
 
   async delete(project: ProjectId, { deleteFiles = false } = {}): Promise<void> {
     const daemon = await this.client.query(daemonQuery(project.daemon));
-    await daemon.projects.deleteProject({ projectId: project.project, deleteFiles });
+    const { failures } = await daemon.projects.deleteProjects({ projectIds: [project.project], deleteFiles });
+    if (failures[0]) {
+      throw new Error(failures[0].message);
+    }
 
     await this.workspaces.close(project, DEFAULT_ROUTES.home);
     await this.states.delete(project);

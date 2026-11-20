@@ -30,7 +30,8 @@ awk 'length($0) > 120 { print FILENAME ":" FNR " (" length($0) ")" }' elsewise/d
 
 - An empty response carries no comment at all. `message CreateEntryResponse {}` already says the rpc answers with
   nothing, and the rpc above it says what it did.
-- Full sentences, ending in a period, directly above the item — never trailing on the same line.- Lead with what the thing *is*; put protocol rules (ordering, caps, what an empty value means) in a following
+- Full sentences, ending in a period, directly above the item — never trailing on the same line.
+- Lead with what the thing *is*; put protocol rules (ordering, caps, what an empty value means) in a following
   paragraph after a blank `//` line.
 - Name an error status only where it changes what the caller does — an `ALREADY_EXISTS` the creation form surfaces, a
   `FAILED_PRECONDITION` that means re-reading before retrying. Never write that failures arrive as error statuses;

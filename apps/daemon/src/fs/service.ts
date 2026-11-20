@@ -12,7 +12,7 @@ import {
   WatchDirectoriesResponse_Unavailable_Reason as DirectoryReason,
   WatchFilesResponse_Unavailable_Reason as FileReason,
   type FileSystemService,
-  type ListDirectoryRequest,
+  type GetDirectoryRequest,
   type MoveEntriesRequest,
   MoveEntriesResponse_Failure_Reason as MoveReason,
   type ReadFileRequest,
@@ -114,7 +114,7 @@ export class FileSystemServiceImpl implements ServiceImpl<typeof FileSystemServi
     }
   }
 
-  listDirectory(request: ListDirectoryRequest) {
+  getDirectory(request: GetDirectoryRequest) {
     return attempt(async () => {
       const absoluteNativePath = toNativePathOrRoot(request.root, request.relativePath);
       return { listing: await listDirectory(absoluteNativePath, this.#options.listingLimit) };

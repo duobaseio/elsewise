@@ -31,8 +31,8 @@ import {
   CloneProjectResponseSchema,
   CreateProjectResponseSchema,
   CreateWorkspaceResponseSchema,
-  DeleteProjectResponseSchema,
-  DeleteWorkspaceResponseSchema,
+  DeleteProjectsResponseSchema,
+  DeleteWorkspacesResponseSchema,
   GetNewWorkspaceNameResponseSchema,
   GetProjectsResponseSchema,
   GetWorkspacesResponseSchema,
@@ -143,12 +143,14 @@ function fakeDaemon(
       projects[index] = project;
       return create(UpdateProjectResponseSchema, { project });
     },
-    deleteProject: async ({ projectId }) => {
-      projects.splice(
-        projects.findIndex((project) => project.id === projectId),
-        1,
-      );
-      return create(DeleteProjectResponseSchema);
+    deleteProjects: async ({ projectIds }) => {
+      for (const projectId of projectIds ?? []) {
+        const index = projects.findIndex((project) => project.id === projectId);
+        if (index !== -1) {
+          projects.splice(index, 1);
+        }
+      }
+      return create(DeleteProjectsResponseSchema);
     },
     updateWorkspace: async ({ workspaceId, name }) => {
       const index = workspaces.findIndex((workspace) => workspace.id === workspaceId);
@@ -156,18 +158,20 @@ function fakeDaemon(
       workspaces[index] = workspace;
       return create(UpdateWorkspaceResponseSchema, { workspace });
     },
-    deleteWorkspace: async ({ workspaceId, deleteFiles, deleteBranch }) => {
+    deleteWorkspaces: async ({ workspaceIds, deleteFiles, deleteBranch }) => {
       await deletion.until;
       if (deletion.error) {
         throw deletion.error;
       }
 
-      deleted.push({ workspaceId, deleteFiles, deleteBranch });
-      workspaces.splice(
-        workspaces.findIndex((workspace) => workspace.id === workspaceId),
-        1,
-      );
-      return create(DeleteWorkspaceResponseSchema);
+      for (const workspaceId of workspaceIds ?? []) {
+        deleted.push({ workspaceId, deleteFiles, deleteBranch });
+        const index = workspaces.findIndex((workspace) => workspace.id === workspaceId);
+        if (index !== -1) {
+          workspaces.splice(index, 1);
+        }
+      }
+      return create(DeleteWorkspacesResponseSchema);
     },
     getProjects: async () => create(GetProjectsResponseSchema, { projects }),
     getWorkspaces: async ({ projectId }) =>
@@ -208,7 +212,7 @@ function fakeDaemon(
     watchDirectories: unused,
     watchFiles: unused,
     watchRoots: unused,
-    listDirectory: unused,
+    getDirectory: unused,
     readFile: unused,
     writeFile: unused,
     createDirectory: unused,

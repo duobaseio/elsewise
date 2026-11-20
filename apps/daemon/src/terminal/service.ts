@@ -2,20 +2,21 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
-import { attempt, errnoOf } from '../fs/error';
+import { attempt, attemptEach, errnoOf } from '../fs/error';
 import { toNativeAbsolutePath, toNativePathOrRoot } from '../fs/path';
-import type {
-  AttachTerminalRequest,
-  AttachTerminalResponseSchema,
-  CreateTerminalRequest,
-  DeleteTerminalRequest,
-  ExecRequest,
-  ExecResponseSchema,
-  GetTerminalsRequest,
-  Size as SizeMessage,
-  TerminalSchema,
-  TerminalService,
-  UpdateTerminalRequest,
+import {
+  type AttachTerminalRequest,
+  type AttachTerminalResponseSchema,
+  type CreateTerminalRequest,
+  DeleteTerminalsResponse_Failure_Reason as DeleteReason,
+  type DeleteTerminalsRequest,
+  type ExecRequest,
+  type ExecResponseSchema,
+  type GetTerminalsRequest,
+  type Size as SizeMessage,
+  type TerminalSchema,
+  type TerminalService,
+  type UpdateTerminalRequest,
 } from '../gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { exec } from './exec';
 import type { Shell, ShellEvent, Size } from './shell';
@@ -159,16 +160,24 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     });
   }
 
-  deleteTerminal(request: DeleteTerminalRequest) {
+  deleteTerminals(request: DeleteTerminalsRequest) {
     return attempt(async () => {
-      const terminal = await this.#refuseMissingTerminal(request.terminalId);
-      const release = await this.#shells.kill(terminal.id, 'deleted');
-      try {
-        await this.#store.deleteTerminal(terminal.id);
-      } finally {
-        release();
-      }
-      return {};
+      const failures = await attemptEach(request.terminalIds, async (terminalId) => {
+        const terminal = await this.#refuseMissingTerminal(terminalId);
+        const release = await this.#shells.kill(terminal.id, 'deleted');
+        try {
+          await this.#store.deleteTerminal(terminal.id);
+        } finally {
+          release();
+        }
+      });
+      return {
+        failures: failures.map(({ item, error }) => ({
+          terminalId: item,
+          reason: error.code === Code.NOT_FOUND ? DeleteReason.NOT_FOUND : DeleteReason.OTHER,
+          message: error.message,
+        })),
+      };
     });
   }
 

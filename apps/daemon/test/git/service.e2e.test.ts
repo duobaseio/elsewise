@@ -4,6 +4,7 @@ import { Code } from '@elsewise/transport';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { Change, FastForward, Status_Entry_Conflicted_Type as Type } from '../../src/gen/elsewise/daemon/git/v1/git_pb';
 import {
+  DeleteBranchesResponse_Failure_Reason as DeleteBranchReason,
   MoveResponse_Failure_Reason as MoveReason,
   PullRequest_Mode,
   PushRequest_Force,
@@ -111,27 +112,26 @@ describe('common fields', () => {
       'setBranchUpstream.branch': () => client.setBranchUpstream({ absolutePath: root, branch: option }),
       'setBranchUpstream.upstream': () =>
         client.setBranchUpstream({ absolutePath: root, branch: 'main', upstream: option }),
-      'deleteBranch.name': () => client.deleteBranch({ absolutePath: root, name: option }),
       'checkout.branch': () => client.checkout({ absolutePath: root, target: { case: 'branch', value: option } }),
       'checkout.revision': () => client.checkout({ absolutePath: root, target: { case: 'revision', value: option } }),
-      'addWorktree.branch': () => client.addWorktree({ absolutePath: root, newAbsolutePath: wt, branch: option }),
-      'addWorktree.revision': () => client.addWorktree({ absolutePath: root, newAbsolutePath: wt, revision: option }),
+      'createWorktree.branch': () => client.createWorktree({ absolutePath: root, newAbsolutePath: wt, branch: option }),
+      'createWorktree.revision': () =>
+        client.createWorktree({ absolutePath: root, newAbsolutePath: wt, revision: option }),
       'createTag.name': () => client.createTag({ absolutePath: root, name: option }),
       'createTag.revision': () => client.createTag({ absolutePath: root, name: 'x', revision: option }),
-      'deleteTag.name': () => client.deleteTag({ absolutePath: root, name: option }),
       'merge.revision': () => client.merge({ absolutePath: root, revision: option }),
       'rebase.revision': () => client.rebase({ absolutePath: root, revision: option }),
       'cherryPick.revisions': () => client.cherryPick({ absolutePath: root, revisions: [option] }),
       'revert.revisions': () => client.revert({ absolutePath: root, revisions: [option] }),
       'resolveConflicts.relativePaths': () =>
         client.resolveConflicts({ absolutePath: root, side: Side.OURS, relativePaths: [outside] }),
-      'addRemote.name': () => client.addRemote({ absolutePath: root, name: option, url: 'u' }),
-      'addRemote.url': () => client.addRemote({ absolutePath: root, name: 'x', url: option }),
+      'createRemote.name': () => client.createRemote({ absolutePath: root, name: option, url: 'u' }),
+      'createRemote.url': () => client.createRemote({ absolutePath: root, name: 'x', url: option }),
       'updateRemote.remote': () => client.updateRemote({ absolutePath: root, remote: option }),
       'updateRemote.name': () => client.updateRemote({ absolutePath: root, remote: 'x', name: option }),
       'updateRemote.fetchUrl': () => client.updateRemote({ absolutePath: root, remote: 'x', fetchUrl: option }),
       'updateRemote.pushUrl': () => client.updateRemote({ absolutePath: root, remote: 'x', pushUrl: option }),
-      'removeRemote.name': () => client.removeRemote({ absolutePath: root, name: option }),
+      'deleteRemote.name': () => client.deleteRemote({ absolutePath: root, name: option }),
       'fetch.remote': () => collect(client.fetch({ absolutePath: root, remote: option })).ended,
       'pull.remote': () => collect(client.pull({ absolutePath: root, remote: option })).ended,
       'pull.branch': () => collect(client.pull({ absolutePath: root, remote: 'x', branch: option })).ended,
@@ -815,16 +815,36 @@ describe('branches', () => {
     expect(cleared.branch?.upstream).toBe('');
     await harness.client.setBranchUpstream({ absolutePath: root, branch: 'main', upstream: '' }); // Already cleared.
 
-    await expect(harness.client.deleteBranch({ absolutePath: root, name: 'main' })).rejects.toMatchObject({
-      code: Code.FAILED_PRECONDITION,
-    });
     await repo.run('switch', '--quiet', 'renamed');
-    await expect(harness.client.deleteBranch({ absolutePath: root, name: 'main' })).rejects.toMatchObject({
-      code: Code.FAILED_PRECONDITION, // Has an unmerged commit.
-    });
-    await harness.client.deleteBranch({ absolutePath: root, name: 'main', force: true });
+    await harness.client.deleteBranches({ absolutePath: root, names: ['main'], force: true });
     const after = await harness.client.getBranches({ absolutePath: root });
     expect(after.branches.map((candidate) => candidate.name)).toEqual(['renamed']);
+  });
+
+  test('deletes branches and reports each one that fails', async () => {
+    await repo.commit('a.txt', 'a\n');
+    await repo.run('branch', 'merged');
+    await repo.run('branch', 'other');
+    await repo.run('switch', '--quiet', '--create', 'unmerged');
+    await repo.commit('b.txt', 'b\n');
+    await repo.run('switch', '--quiet', 'main');
+
+    const names = ['main', 'unmerged', 'missing', '--all', 'merged'];
+    const { failures } = await harness.client.deleteBranches({ absolutePath: root, names });
+    expect(failures).toMatchObject([
+      { name: 'main', reason: DeleteBranchReason.CHECKED_OUT, message: expect.stringContaining("'main'") },
+      { name: 'unmerged', reason: DeleteBranchReason.NOT_MERGED, message: expect.stringContaining('not fully merged') },
+      { name: 'missing', reason: DeleteBranchReason.OTHER, message: expect.stringContaining('not found') },
+      { name: '--all', reason: DeleteBranchReason.OTHER },
+    ]);
+    let { branches } = await harness.client.getBranches({ absolutePath: root });
+    expect(branches.map((branch) => branch.name)).toEqual(['main', 'other', 'unmerged']);
+
+    await expect(
+      harness.client.deleteBranches({ absolutePath: root, names: ['unmerged', 'other'], force: true }),
+    ).resolves.toMatchObject({ failures: [] });
+    ({ branches } = await harness.client.getBranches({ absolutePath: root }));
+    expect(branches.map((branch) => branch.name)).toEqual(['main']);
   });
 
   test('creates a branch and checks it out', async () => {
@@ -868,7 +888,7 @@ describe('branches', () => {
 describe('worktrees', () => {
   test('adds, lists, locks, moves, removes and prunes worktrees', async () => {
     const first = await repo.commit('a.txt', 'a\n');
-    const added = await harness.client.addWorktree({
+    const added = await harness.client.createWorktree({
       absolutePath: root,
       newAbsolutePath: `${harness.protocolRoot}/wt`,
       branch: 'feature',
@@ -880,7 +900,7 @@ describe('worktrees', () => {
       main: false,
     });
     await expect(
-      harness.client.addWorktree({
+      harness.client.createWorktree({
         absolutePath: root,
         newAbsolutePath: `${harness.protocolRoot}/wt2`,
         branch: 'feature',
@@ -889,7 +909,7 @@ describe('worktrees', () => {
       code: Code.FAILED_PRECONDITION, // Checked out in `wt`.
     });
     await expect(
-      harness.client.addWorktree({
+      harness.client.createWorktree({
         absolutePath: root,
         newAbsolutePath: `${harness.protocolRoot}/wt2`,
         branch: 'main',
@@ -899,11 +919,11 @@ describe('worktrees', () => {
       code: Code.FAILED_PRECONDITION, // Exists, so a revision does not apply.
     });
     await expect(
-      harness.client.addWorktree({ absolutePath: root, newAbsolutePath: root, branch: '' }),
+      harness.client.createWorktree({ absolutePath: root, newAbsolutePath: root, branch: '' }),
     ).rejects.toMatchObject({
       code: Code.ALREADY_EXISTS,
     });
-    const detached = await harness.client.addWorktree({
+    const detached = await harness.client.createWorktree({
       absolutePath: root,
       newAbsolutePath: `${harness.protocolRoot}/detached`,
     });
@@ -967,11 +987,11 @@ describe('worktrees', () => {
 
     await harness.open('moved').write('dirty.txt', '');
     await expect(
-      harness.client.removeWorktree({ absolutePath: root, worktreeAbsolutePath: `${harness.protocolRoot}/moved` }),
+      harness.client.deleteWorktree({ absolutePath: root, worktreeAbsolutePath: `${harness.protocolRoot}/moved` }),
     ).rejects.toMatchObject({
       code: Code.FAILED_PRECONDITION,
     });
-    await harness.client.removeWorktree({
+    await harness.client.deleteWorktree({
       absolutePath: root,
       worktreeAbsolutePath: `${harness.protocolRoot}/moved`,
       force: true,
@@ -1010,10 +1030,12 @@ describe('tags', () => {
 
     const { tags } = await harness.client.getTags({ absolutePath: root });
     expect(tags.map((tag) => tag.name)).toEqual(['annotated', 'light']);
-    await harness.client.deleteTag({ absolutePath: root, name: 'light' });
-    await expect(harness.client.deleteTag({ absolutePath: root, name: 'light' })).rejects.toMatchObject({
-      code: Code.FAILED_PRECONDITION,
+    await expect(
+      harness.client.deleteTags({ absolutePath: root, names: ['light', 'missing', '--all', 'annotated'] }),
+    ).resolves.toMatchObject({
+      failures: [{ name: 'missing', message: expect.stringContaining("'missing' not found") }, { name: '--all' }],
     });
+    expect((await harness.client.getTags({ absolutePath: root })).tags).toEqual([]);
   });
 });
 
@@ -1177,7 +1199,7 @@ describe('operations', () => {
 
 describe('remotes', () => {
   test('adds, lists, updates and removes remotes', async () => {
-    const added = await harness.client.addRemote({
+    const added = await harness.client.createRemote({
       absolutePath: root,
       name: 'origin',
       url: 'https://example.com/a.git',
@@ -1187,7 +1209,7 @@ describe('remotes', () => {
       fetchUrl: 'https://example.com/a.git',
       pushUrl: 'https://example.com/a.git',
     });
-    await expect(harness.client.addRemote({ absolutePath: root, name: 'origin', url: 'x' })).rejects.toMatchObject({
+    await expect(harness.client.createRemote({ absolutePath: root, name: 'origin', url: 'x' })).rejects.toMatchObject({
       code: Code.ALREADY_EXISTS,
     });
 
@@ -1202,12 +1224,12 @@ describe('remotes', () => {
       fetchUrl: 'https://example.com/a.git',
       pushUrl: 'https://example.com/push.git',
     });
-    await harness.client.addRemote({ absolutePath: root, name: 'alpha', url: 'https://example.com/b.git' });
+    await harness.client.createRemote({ absolutePath: root, name: 'alpha', url: 'https://example.com/b.git' });
     const { remotes } = await harness.client.getRemotes({ absolutePath: root });
     expect(remotes.map((remote) => remote.name)).toEqual(['alpha', 'upstream']);
 
-    await harness.client.removeRemote({ absolutePath: root, name: 'alpha' });
-    await expect(harness.client.removeRemote({ absolutePath: root, name: 'alpha' })).rejects.toMatchObject({
+    await harness.client.deleteRemote({ absolutePath: root, name: 'alpha' });
+    await expect(harness.client.deleteRemote({ absolutePath: root, name: 'alpha' })).rejects.toMatchObject({
       code: Code.FAILED_PRECONDITION,
     });
   });
@@ -1379,9 +1401,8 @@ describe('stashes', () => {
     ]);
     expect((await harness.client.getStashes({ absolutePath: root })).stashes).toHaveLength(2);
 
-    await harness.client.dropStash({ absolutePath: root, index: 1 });
-    await expect(harness.client.dropStash({ absolutePath: root, index: 5 })).rejects.toMatchObject({
-      code: Code.FAILED_PRECONDITION,
+    await expect(harness.client.dropStashes({ absolutePath: root, indexes: [1, 5] })).resolves.toMatchObject({
+      failures: [{ index: 5, message: expect.stringContaining('only has 2 entries') }],
     });
     await expect(harness.client.applyStash({ absolutePath: root, index: 0, drop: true })).resolves.toMatchObject({
       conflicted: false,
@@ -1389,6 +1410,20 @@ describe('stashes', () => {
     ({ status } = await harness.client.getStatus({ absolutePath: root }));
     expect(status?.entries.map((entry) => entry.relativePath)).toEqual(['a.txt', 'b.txt', 'new.txt']);
     expect((await harness.client.getStashes({ absolutePath: root })).stashes).toEqual([]);
+  });
+
+  test('drops stashes by the index each had before the call', async () => {
+    await repo.commit('a.txt', 'a\n');
+    for (const message of ['third', 'second', 'first', 'newest']) {
+      await repo.write('a.txt', `${message}\n`);
+      await repo.run('stash', 'push', '--quiet', '--message', message);
+    }
+
+    await expect(harness.client.dropStashes({ absolutePath: root, indexes: [0, 2, 0] })).resolves.toMatchObject({
+      failures: [],
+    });
+    const { stashes } = await harness.client.getStashes({ absolutePath: root });
+    expect(stashes.map((stash) => stash.message)).toEqual(['first', 'third']);
   });
 
   test('keeps a stash that stops on conflicts', async () => {

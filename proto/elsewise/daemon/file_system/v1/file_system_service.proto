@@ -26,7 +26,7 @@ service FileSystemService {
   rpc WatchRoots(WatchRootsRequest) returns (stream WatchRootsResponse);
 
   // Lists a directory.
-  rpc ListDirectory(ListDirectoryRequest) returns (ListDirectoryResponse);
+  rpc GetDirectory(GetDirectoryRequest) returns (GetDirectoryResponse);
 
   // Reads a file.
   //
@@ -204,7 +204,7 @@ message WatchRootsResponse {
   }
 }
 
-message ListDirectoryRequest {
+message GetDirectoryRequest {
   // The root of the directory.
   string root = 1;
 
@@ -212,7 +212,7 @@ message ListDirectoryRequest {
   string relative_path = 2;
 }
 
-message ListDirectoryResponse {
+message GetDirectoryResponse {
   // The directory's listing.
   DirectoryListing listing = 1;
 }

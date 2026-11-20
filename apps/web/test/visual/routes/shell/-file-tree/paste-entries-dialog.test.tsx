@@ -12,7 +12,7 @@ import {
   CopyEntriesResponseSchema,
   CopyEntriesResponse_Failure_Reason as CopyReason,
   DirectoryListing_Entry_Type,
-  ListDirectoryResponseSchema,
+  GetDirectoryResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { MoveResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { PasteEntriesDialog } from '@/routes/_shell/$daemon/$project/$workspace/-file-tree/paste-entries-dialog';
@@ -52,12 +52,12 @@ async function open(
   });
   await page.viewport(560, 480);
   const client = new QueryClient();
-  const listDirectory: Daemon['fileSystem']['listDirectory'] = async ({ relativePath }) => {
+  const getDirectory: Daemon['fileSystem']['getDirectory'] = async ({ relativePath }) => {
     const names = FOLDERS[relativePath ?? ''];
     if (names === undefined) {
       throw new TransportError(Code.NOT_FOUND, 'missing');
     }
-    return create(ListDirectoryResponseSchema, {
+    return create(GetDirectoryResponseSchema, {
       listing: {
         entries: names.map((name) => ({
           name: name.replace(/\/$/, ''),
@@ -67,7 +67,7 @@ async function open(
     });
   };
   client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, {
-    fileSystem: { copyEntries, listDirectory },
+    fileSystem: { copyEntries, getDirectory },
     git: { move: async () => create(MoveResponseSchema) },
   } as unknown as Daemon);
   const application = builtInApplication();
