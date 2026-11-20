@@ -272,9 +272,12 @@ message MoveResponse {
     string message = 3;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
-      REASON_ALREADY_EXISTS = 2; // An entry is already at the new path, and `overwrite` is not set.
+
+      // An entry is already at the new path, and `overwrite` is not set.
+      REASON_ALREADY_EXISTS = 2;
     }
   }
 }
@@ -551,10 +554,17 @@ message ResetRequest {
   Mode mode = 3;
 
   enum Mode {
-    MODE_UNSPECIFIED = 0; // Fails with INVALID_ARGUMENT.
-    MODE_SOFT = 1; // Moves the branch and keeps every change, staged and unstaged.
-    MODE_MIXED = 2; // Moves the branch and unstages every change, keeping the files on disk.
-    MODE_HARD = 3; // Moves the branch and discards every change, staged and unstaged.
+    // Fails with INVALID_ARGUMENT.
+    MODE_UNSPECIFIED = 0;
+
+    // Moves the branch and keeps every change, staged and unstaged.
+    MODE_SOFT = 1;
+
+    // Moves the branch and unstages every change, keeping the files on disk.
+    MODE_MIXED = 2;
+
+    // Moves the branch and discards every change, staged and unstaged.
+    MODE_HARD = 3;
   }
 }
 
@@ -661,10 +671,15 @@ message DeleteBranchesResponse {
     string message = 3;
 
     enum Reason {
-      REASON_UNSPECIFIED = 0; // Never sent.
+      // Never sent.
+      REASON_UNSPECIFIED = 0;
       REASON_OTHER = 1;
-      REASON_CHECKED_OUT = 2; // The branch is checked out in a worktree.
-      REASON_NOT_MERGED = 3; // The branch has commits not merged into its upstream or HEAD, and `force` is not set.
+
+      // The branch is checked out in a worktree.
+      REASON_CHECKED_OUT = 2;
+
+      // The branch has commits not merged into its upstream or HEAD, and `force` is not set.
+      REASON_NOT_MERGED = 3;
     }
   }
 }
@@ -974,9 +989,14 @@ message ResolveConflictsRequest {
   Side side = 3;
 
   enum Side {
-    SIDE_UNSPECIFIED = 0; // Never sent.
-    SIDE_OURS = 1; // The side HEAD is on, which during a rebase is the branch rebased onto.
-    SIDE_THEIRS = 2; // The side being brought in, which during a rebase is the commit replayed.
+    // Never sent.
+    SIDE_UNSPECIFIED = 0;
+
+    // The side HEAD is on, which during a rebase is the branch rebased onto.
+    SIDE_OURS = 1;
+
+    // The side being brought in, which during a rebase is the commit replayed.
+    SIDE_THEIRS = 2;
   }
 }
 
@@ -1090,9 +1110,14 @@ message PullRequest {
   FastForward fast_forward = 5;
 
   enum Mode {
-    MODE_UNSPECIFIED = 0; // Sent to merge the fetched branch into the current one.
-    MODE_REBASE = 1; // Rebase the current branch onto the fetched one.
-    MODE_REBASE_MERGES = 2; // Rebase, keeping the merge commits of the current branch.
+    // Sent to merge the fetched branch into the current one.
+    MODE_UNSPECIFIED = 0;
+
+    // Rebase the current branch onto the fetched one.
+    MODE_REBASE = 1;
+
+    // Rebase, keeping the merge commits of the current branch.
+    MODE_REBASE_MERGES = 2;
   }
 }
 
@@ -1143,9 +1168,14 @@ message PushRequest {
   bool delete = 6;
 
   enum Force {
-    FORCE_UNSPECIFIED = 0; // Sent to fail with FAILED_PRECONDITION.
-    FORCE_WITH_LEASE = 1; // Overwrite what the last fetch saw, and fail with FAILED_PRECONDITION past that.
-    FORCE_ALWAYS = 2; // Overwrite whatever is there.
+    // Sent to fail with FAILED_PRECONDITION.
+    FORCE_UNSPECIFIED = 0;
+
+    // Overwrite what the last fetch saw, and fail with FAILED_PRECONDITION past that.
+    FORCE_WITH_LEASE = 1;
+
+    // Overwrite whatever is there.
+    FORCE_ALWAYS = 2;
   }
 }
 
@@ -1183,9 +1213,14 @@ message PushStashRequest {
   repeated string relative_paths = 4;
 
   enum Scope {
-    SCOPE_UNSPECIFIED = 0; // Sent to stash tracked entries only.
-    SCOPE_UNTRACKED = 1; // Tracked and untracked entries.
-    SCOPE_ALL = 2; // Tracked, untracked and ignored entries.
+    // Sent to stash tracked entries only.
+    SCOPE_UNSPECIFIED = 0;
+
+    // Tracked and untracked entries.
+    SCOPE_UNTRACKED = 1;
+
+    // Tracked, untracked and ignored entries.
+    SCOPE_ALL = 2;
   }
 }
 
@@ -1271,8 +1306,11 @@ message SetIdentityRequest {
   Scope scope = 4;
 
   enum Scope {
-    SCOPE_UNSPECIFIED = 0; // Sent to set it for this repository.
-    SCOPE_GLOBAL = 1; // Set it for every repository on the daemon's machine.
+    // Sent to set it for this repository.
+    SCOPE_UNSPECIFIED = 0;
+
+    // Set it for every repository on the daemon's machine.
+    SCOPE_GLOBAL = 1;
   }
 }
 

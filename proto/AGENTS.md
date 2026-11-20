@@ -79,7 +79,7 @@ two apart, and no handler calls it.
 - "Unset" is written only on a message field or a `oneof`, which read as `undefined`.
 - A plain value whose default is a real value the caller must be able to send gets an explicit third state, as an enum
   whose `_UNSPECIFIED` leaves things as they are. This is the one case where `_UNSPECIFIED` is sent, and its comment
-  says what it does: `READ_STATE_UNSPECIFIED = 0; // Leaves the session as it is.`
+  says what it does: `// Leaves the session as it is.` above `READ_STATE_UNSPECIFIED = 0;`.
 
 ## Single and bulk rpcs
 
