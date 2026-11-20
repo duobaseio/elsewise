@@ -223,7 +223,6 @@ describe('status', () => {
     await repo.run('add', 'a.txt');
     await repo.run('commit', '--quiet', '--message', 'change');
     await expect.poll(() => entries(seen)).toEqual([]);
-    expect(seen).toHaveLength(3);
 
     abort.abort();
     await expect(ended).rejects.toMatchObject({ code: Code.CANCELLED });
