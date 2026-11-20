@@ -79,7 +79,8 @@ export class FileHandle {
       return;
     }
 
-    // TODO: Watch the file again once the connection to the daemon reconnects. Until then the file is no longer followed.
+    // TODO: Watch the file again once the connection to the daemon reconnects. Until then the file is no longer
+    // followed.
     console.error(`Watching ${this.relativePath} stopped`, failure);
     if (this.currentState.type === 'loading') {
       this.currentState = { type: 'unavailable', message: failure.message };

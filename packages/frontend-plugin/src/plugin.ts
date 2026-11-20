@@ -136,8 +136,8 @@ export interface Plugin {
   onPanelClose?(app: Application, dock: Dock, panel: Panel): void;
 
   /**
-   * Called with the dock of the workspace shown when another workspace is shown, or it changes, e.g. when a panel opens,
-   * closes or moves, or another becomes active.
+   * Called with the dock of the workspace shown when another workspace is shown, or it changes, e.g. when a panel
+   * opens, closes or moves, or another becomes active.
    *
    * It is called after `onPanelOpen` and `onPanelClose`.
    */

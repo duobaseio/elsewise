@@ -140,7 +140,7 @@ describe('FilePanel', () => {
     expect(updateParameters).toHaveBeenCalledWith({ view: { type: 'editor', diff: null, layout: 'unified' } });
   });
 
-  test('adds handle of its file while mounted', async () => {
+  test('adds handle of file while mounted', async () => {
     const { application, screen } = await mount('let a;\n');
     await expect.element(page.getByText('let a;')).toBeVisible();
     const workspace = { daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' };

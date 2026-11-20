@@ -78,7 +78,7 @@ describe('addFile', () => {
 });
 
 describe('addTerminal', () => {
-  test('adds terminal and activates its panel', async () => {
+  test('adds terminal and activates panel', async () => {
     const { dock, created } = await mount();
 
     await expect(dock.addTerminal({ name: 'x' }, { tab: 'last', with: OTHER })).resolves.toEqual(ADDED);
