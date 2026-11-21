@@ -15,6 +15,7 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/daemon <script>`.
 | `src/websocket.ts`           | The WebSocket server: one `Channel` per connection, token checked before the upgrade.   |
 | `src/directory-watcher.ts`   | The directory watcher the services share: one recursive subscription per watched root.  |
 | `src/directories.ts`         | The data directory, `elsewise.db`, and the code directory, `workspaces/<project>/`.     |
+| `src/environment.ts`         | The login shell's environment, taken on at start-up, and how environments are merged.   |
 | `src/plugins/`               | The plugin store: reads `plugins/` and `plugins.json` in the data directory, runs them. |
 | `src/database/`              | The SQLite database: a Kysely dialect over `node:sqlite`, migrations, `openDatabase`.   |
 | `src/<feature>/`             | One folder per service: its `ServiceImpl` in `service.ts`, beside what it is built on.  |

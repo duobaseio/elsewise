@@ -1,5 +1,6 @@
 import { Code, TransportError } from '@elsewise/transport';
 import { whichCommand } from 'which-command';
+import { mergeEnvironment } from '../environment';
 import type { TerminalOptions } from './service';
 import { type Exit, Shell, type Size } from './shell';
 import type { TerminalRow, TerminalStore } from './store';
@@ -180,7 +181,7 @@ export class Shells {
         ? await loginShell()
         : { program: terminal.program, args: JSON.parse(terminal.args) }),
       cwd,
-      env: { ...process.env, COLORTERM: 'truecolor', ...env },
+      env: mergeEnvironment([process.env, { COLORTERM: 'truecolor' }, env]),
       size,
       scrollback: this.#options.scrollback,
       restore: terminal.buffer

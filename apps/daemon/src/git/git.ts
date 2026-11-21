@@ -2,6 +2,7 @@ import path from 'node:path';
 import { Code, TransportError } from '@elsewise/transport';
 import { execa } from 'execa';
 import { whichCommand } from 'which-command';
+import { mergeEnvironment, pathOf } from '../environment';
 import { GitError } from './error';
 
 /**
@@ -66,10 +67,16 @@ export class Git {
    * Runs git with the arguments and returns stdout.
    */
   async run(args: string[], options: RunOptions = {}): Promise<Buffer> {
-    const env = { ...OVERRIDES, GIT_CEILING_DIRECTORIES: path.dirname(this.root), ...options.env };
+    const env = mergeEnvironment([
+      process.env,
+      OVERRIDES,
+      { GIT_CEILING_DIRECTORIES: path.dirname(this.root) },
+      options.env ?? {},
+    ]);
     const subprocess = execa('git', args, {
       cwd: this.root,
       env,
+      extendEnv: false,
       input: options.stdin,
       cancelSignal: options.signal,
       maxBuffer: { stdout: this.limitBytes },
@@ -117,5 +124,5 @@ function view(bytes: Uint8Array): Buffer {
  * Execa on Windows returns exit code 1 instead of ENOENT.
  */
 async function missingOnWindows(env: Record<string, string>): Promise<boolean> {
-  return process.platform === 'win32' && (await whichCommand('git', { path: env.PATH })) === undefined;
+  return process.platform === 'win32' && (await whichCommand('git', { path: pathOf(env) })) === undefined;
 }
