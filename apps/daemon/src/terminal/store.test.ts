@@ -50,6 +50,13 @@ describe('getTerminals', () => {
     await create('b', other.workspace.id);
     expect((await store.getTerminals()).map((terminal) => terminal.name)).toEqual(['a', 'b']);
   });
+
+  test('returns every column but the buffer', async () => {
+    const terminal = await create('a');
+    await store.updateTerminal(terminal.id, { buffer: Buffer.from('hello') });
+    const { buffer, ...summary } = terminal;
+    expect(await store.getTerminals(workspaceId)).toEqual([summary]);
+  });
 });
 
 describe('getTerminal', () => {

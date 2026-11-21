@@ -57,9 +57,6 @@ export async function loginEnvironment(
 
 /**
  * Merges the environments with a later one taking precedence.
- *
- * As Windows environment variable names are not case-sensitive, every name is convert to the upper case variant (e.g.
- * `Path=xxx` -> `PATH=xxx`).
  */
 export function mergeEnvironment(layers: Environment[]): Record<string, string> {
   const merged: Record<string, string> = {};
@@ -69,6 +66,7 @@ export function mergeEnvironment(layers: Environment[]): Record<string, string> 
       if (value === undefined) {
         continue;
       }
+      // As Windows environment variable names are not case-sensitive, we need to compare it in the same case.
       const key = process.platform === 'win32' ? name.toUpperCase() : name;
       const previous = names.get(key);
       if (previous !== undefined && previous !== name) {
