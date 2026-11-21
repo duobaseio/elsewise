@@ -21,7 +21,7 @@ import {
 import { exec } from './exec';
 import type { Shell, ShellEvent, Size } from './shell';
 import { type Outcome, Shells } from './shells';
-import type { TerminalRow, TerminalStore } from './store';
+import type { TerminalRow, TerminalStore, TerminalSummaryRow } from './store';
 
 export interface TerminalOptions {
   /**
@@ -341,7 +341,7 @@ export class TerminalServiceImpl implements ServiceImpl<typeof TerminalService> 
     return row;
   }
 
-  #terminalOf(terminal: TerminalRow): TerminalInit {
+  #terminalOf(terminal: TerminalSummaryRow): TerminalInit {
     const state = this.#shells.stateOf(terminal);
     return {
       workspaceId: terminal.workspace_id,

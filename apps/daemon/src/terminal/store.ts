@@ -9,9 +9,31 @@ import type { Terminal, Workspace } from '../gen/database';
 export type TerminalRow = Selectable<Terminal>;
 
 /**
+ * A row of the `terminal` table without its buffer (as the buffer can be huge).
+ */
+export type TerminalSummaryRow = Omit<TerminalRow, 'buffer'>;
+
+/**
  * A row of the `workspace` table with the name of its project.
  */
 export type WorkspaceRow = Selectable<Workspace> & { project_name: string };
+
+// Every column of a terminal except its buffer (as the buffer can be huge).
+const SUMMARY_COLUMNS = [
+  'id',
+  'workspace_id',
+  'name',
+  'relative_path',
+  'env',
+  'program',
+  'args',
+  'restore',
+  'columns',
+  'rows',
+  'exit_code',
+  'exit_signal',
+  'created_at',
+] as const satisfies readonly (keyof TerminalSummaryRow)[];
 
 // Breaks the tie between rows created in the same millisecond.
 const TERMINAL_ROWID = sql`terminal.rowid`;
@@ -27,12 +49,12 @@ export class TerminalStore {
   }
 
   /**
-   * Returns the terminals of the workspace sorted by oldest to newest.
+   * Returns the terminals of the workspace, without their buffers, sorted by oldest to newest.
    *
    * No `workspaceId` returns all terminals.
    */
-  getTerminals(workspaceId?: string): Promise<TerminalRow[]> {
-    let query = this.#db.selectFrom('terminal').selectAll();
+  getTerminals(workspaceId?: string): Promise<TerminalSummaryRow[]> {
+    let query = this.#db.selectFrom('terminal').select(SUMMARY_COLUMNS);
     if (workspaceId !== undefined) {
       query = query.where('workspace_id', '=', workspaceId);
     }

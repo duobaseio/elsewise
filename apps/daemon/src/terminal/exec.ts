@@ -1,6 +1,7 @@
 import { Code, TransportError } from '@elsewise/transport';
 import { execa } from 'execa';
 import { whichCommand } from 'which-command';
+import { mergeEnvironment, pathOf } from '../environment';
 import { fsToTransportError } from '../fs/error';
 import type { Exit } from './shell';
 
@@ -57,9 +58,11 @@ export async function* exec(options: ExecOptions, signal: AbortSignal): AsyncGen
   let wake: (() => void) | undefined;
   let done = false;
 
+  const env = mergeEnvironment([process.env, options.env]);
   const subprocess = execa(options.program, options.args, {
     cwd: options.cwd,
-    env: options.env,
+    env,
+    extendEnv: false,
     ...(options.stdin.byteLength > 0 ? { input: Buffer.from(options.stdin) } : { stdin: 'ignore' }),
     cancelSignal: signal,
     buffer: false,
@@ -133,7 +136,7 @@ export async function* exec(options: ExecOptions, signal: AbortSignal): AsyncGen
   if (result.isCanceled) {
     throw new TransportError(Code.CANCELLED, 'the call was cancelled');
   }
-  if (result.code === 'ENOENT' || (result.failed && (await missingOnWindows(options)))) {
+  if (result.code === 'ENOENT' || (result.failed && (await missingOnWindows(options, env)))) {
     throw new TransportError(Code.NOT_FOUND, `${options.program} cannot be found on the daemon's machine`);
   }
   if (result.signal !== undefined) {
@@ -150,10 +153,9 @@ export async function* exec(options: ExecOptions, signal: AbortSignal): AsyncGen
  *
  * Execa on Windows returns exit code 1 instead of ENOENT.
  */
-async function missingOnWindows(options: ExecOptions): Promise<boolean> {
+async function missingOnWindows(options: ExecOptions, env: Record<string, string>): Promise<boolean> {
   if (process.platform !== 'win32') {
     return false;
   }
-  const path = options.env.PATH ?? process.env.PATH;
-  return (await whichCommand(options.program, { cwd: options.cwd, path })) === undefined;
+  return (await whichCommand(options.program, { cwd: options.cwd, path: pathOf(env) })) === undefined;
 }
