@@ -16,7 +16,8 @@ import {
 import { type ReactNode, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
-import { DraggableDock, TabSortable } from './-drag/draggable-dock';
+import { DraggableDock } from './-drag/draggable-dock';
+import { DraggableTab } from './-drag/draggable-tab';
 import { FilePanel } from './-file/file-panel';
 import { FileTab } from './-file/file-tab';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
@@ -280,7 +281,7 @@ export function DefaultTab({
 
   return (
     <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
-      <TabSortable api={props.api} />
+      <DraggableTab api={props.api} />
       {icon}
       <span>{props.api.title}</span>
       {closable ? (

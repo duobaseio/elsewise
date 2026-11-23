@@ -61,6 +61,20 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Tints the content of the group that a dragged tab will drop into. */
+.dockview-theme-elsewise .dv-content-container[data-drop-target] {
+  position: relative;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: var(--layer-selected);
+  pointer-events: none;
+}
+
 /* The tab components own their horizontal padding. */
 .dockview-theme-elsewise .dv-tab {
   padding-inline: 0;
@@ -131,6 +145,16 @@
   background-image:
     linear-gradient(var(--layer-hover), var(--layer-hover)),
     linear-gradient(var(--layer-selected-inactive), var(--layer-selected-inactive));
+}
+
+/* The dragged tab's placeholder slides in from the group it left, which overflows the strip it joins. */
+.dockview-theme-elsewise .dv-tab[data-dnd-placeholder] {
+  translate: none !important;
+}
+
+/* A dragged tab keeps its fill in an inactive group. */
+.dockview-theme-elsewise .dv-groupview .dv-tab.dv-active-tab[data-dnd-dragging]::before {
+  background-image: linear-gradient(var(--layer-selected), var(--layer-selected));
 }
 
 /*

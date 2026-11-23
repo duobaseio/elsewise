@@ -46,14 +46,15 @@ async function mount() {
   add('d', { referencePanel: 'a', direction: 'below' });
   add('e', { referencePanel: 'd', direction: 'within' });
   add('f', { referencePanel: 'd', direction: 'right' });
-  await new Promise((resolve) => setTimeout(resolve, 150));
+  await frames();
   return dockview;
 }
 
+// The ids of each group's panels in order, as the dock has them.
 const model = (dockview: DockviewApi) =>
   dockview.groups.map((group) => group.panels.map((panel) => panel.id).join()).sort();
 
-// Every tab element in every strip, placeholders and leftovers included.
+// The panel ids of every tab element in each strip, placeholders and leftovers included.
 const shown = () =>
   [...document.querySelectorAll('.dv-tabs-container')]
     .map((strip) =>
@@ -61,15 +62,33 @@ const shown = () =>
     )
     .sort();
 
+const tab = (id: string) => document.querySelector(`.dv-tab[data-tab-panel-id="${id}"]`) as HTMLElement;
 
-function pointer(type: string, target: EventTarget, x: number, y: number) {
+// The space after the tabs of the group that has the tab `id`.
+const strip = (id: string) => tab(id).closest('.dv-groupview')?.querySelector('.dv-void-container') as HTMLElement;
+
+const content = (id: string) => tab(id).closest('.dv-groupview')?.querySelector('.dv-content-container') as HTMLElement;
+
+const fills = () => document.querySelectorAll('[data-drop-target]').length;
+
+// The drag follows the pointer once a frame, and each tab that slides aside takes a few more.
+async function frames() {
+  for (let frame = 0; frame < 6; frame++) {
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+let pointer = { x: 0, y: 0 };
+
+function dispatch(type: string, target: EventTarget) {
   target.dispatchEvent(
     new PointerEvent(type, {
       bubbles: true,
       cancelable: true,
       composed: true,
-      clientX: x,
-      clientY: y,
+      clientX: pointer.x,
+      clientY: pointer.y,
       pointerId: 1,
       isPrimary: true,
       pointerType: 'mouse',
@@ -79,122 +98,374 @@ function pointer(type: string, target: EventTarget, x: number, y: number) {
   );
 }
 
-const frames = () => new Promise((resolve) => setTimeout(resolve, 150));
-
-// Drags the tab `from` over the tab `to` and holds it there.
-async function hold(from: string, to: string) {
-  const source = document.querySelector(`.dv-tab[data-tab-panel-id="${from}"]`) as HTMLElement;
-  const target = document.querySelector(`.dv-tab[data-tab-panel-id="${to}"]`) as HTMLElement;
-  const start = source.getBoundingClientRect();
-  const end = target.getBoundingClientRect();
-  pointer('pointerdown', source, start.x + start.width / 2, start.y + start.height / 2);
-  await frames();
+// Moves the pressed pointer to the middle of `to`, or as far across it as `across` and down it as `down`.
+async function move(to: Element, across = 0.5, down = 0.5) {
+  const { x, y, width, height } = to.getBoundingClientRect();
+  const from = pointer;
   for (let step = 1; step <= 5; step++) {
-    pointer(
-      'pointermove',
-      document,
-      start.x + start.width / 2 + ((end.x + end.width / 2 - start.x - start.width / 2) * step) / 5,
-      start.y + start.height / 2 + ((end.y + end.height / 2 - start.y - start.height / 2) * step) / 5,
-    );
+    pointer = {
+      x: from.x + ((x + width * across - from.x) * step) / 5,
+      y: from.y + ((y + height * down - from.y) * step) / 5,
+    };
+    dispatch('pointermove', document);
     await frames();
   }
 }
 
+// Drags the tab `id` over `to` and holds it there.
+async function hold(id: string, to: Element) {
+  const { x, y, width, height } = tab(id).getBoundingClientRect();
+  pointer = { x: x + width / 2, y: y + height / 2 };
+  dispatch('pointerdown', tab(id));
+  await frames();
+  await move(to);
+}
+
+// Waits for the dropped or cancelled tab to settle, and expects the strips to show the dock's tabs.
 async function settled(dockview: DockviewApi) {
   await expect.poll(() => document.querySelectorAll('[data-dnd-placeholder], [data-dnd-dragging]').length).toBe(0);
   await frames();
   expect(shown()).toEqual(model(dockview));
 }
 
-describe('spike', () => {
-  test('reorders within group', async () => {
+async function drop(dockview: DockviewApi) {
+  // A tab that slid aside is only found under the pointer once the pointer moves again.
+  dispatch('pointermove', document);
+  await frames();
+  dispatch('pointerup', document.body);
+  await settled(dockview);
+}
+
+async function cancel(dockview: DockviewApi) {
+  document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+  await settled(dockview);
+}
+
+describe('DraggableDock', () => {
+  test('reorders tab within group', async () => {
     const dockview = await mount();
 
-    await hold('a', 'c');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('a', tab('c'));
+    await drop(dockview);
 
-    expect(model(dockview)).toContain('b,c,a');
+    expect(model(dockview)).toEqual(['b,c,a', 'd,e', 'f', 'fileTree']);
   });
 
-  test('moves into other group at position', async () => {
+  test('moves tab among other group tabs', async () => {
     const dockview = await mount();
 
-    await hold('a', 'd');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('a', tab('d'));
+    expect(shown()).toContain('a,a,d,e');
+    await drop(dockview);
 
-    expect(model(dockview)).toContain('b,c');
-    expect(model(dockview).some((group) => group.split(',').length === 3 && group.includes('a'))).toBe(true);
+    expect(model(dockview)).toEqual(['a,d,e', 'b,c', 'f', 'fileTree']);
   });
 
-  test('shows moved tab in other strip while held', async () => {
+  test('removes group left empty', async () => {
     const dockview = await mount();
 
-    await hold('a', 'e');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('f', tab('d'));
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'f,d,e', 'fileTree']);
   });
 
-  test('restores cancelled move from single tab group', async () => {
+  test('appends tab dropped after other group tabs', async () => {
     const dockview = await mount();
-    const before = model(dockview);
 
-    await hold('f', 'd');
-    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('f', content('f'));
+    await move(strip('d'));
+    await drop(dockview);
 
-    expect(model(dockview)).toEqual(before);
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e,f', 'fileTree']);
   });
 
-  test('moves sole tab into other group', async () => {
+  test('appends tab dropped on other group content', async () => {
     const dockview = await mount();
 
-    await hold('f', 'd');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('f', content('f'));
+    await move(content('d'));
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e,f', 'fileTree']);
   });
 
-  test('restores cancelled move of last tab', async () => {
+  test('fills content of group that held tab joins', async () => {
     const dockview = await mount();
-    const before = model(dockview);
 
-    await hold('c', 'd');
-    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('f', content('f'));
+    await move(content('d'));
+    expect(content('d').hasAttribute('data-drop-target')).toBe(true);
+    expect(getComputedStyle(content('d'), '::after').backgroundColor).toBe(
+      getComputedStyle(content('d'), '::after').getPropertyValue('--layer-selected'),
+    );
 
-    expect(model(dockview)).toEqual(before);
+    await drop(dockview);
+    expect(fills()).toBe(0);
   });
 
-  test('restores cancelled reorder', async () => {
+  test('shows tab held after other group tabs as last tab', async () => {
     const dockview = await mount();
-    const before = model(dockview);
 
-    await hold('a', 'c');
-    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('f', content('f'));
+    await move(strip('d'));
+    expect(fills()).toBe(0);
+    expect(shown()).toContain('d,e,f,f');
+    await cancel(dockview);
 
-    expect(model(dockview)).toEqual(before);
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
   });
 
-  test('drags again after move and cancel', async () => {
+  test('keeps tab among tabs it was dragged over', async () => {
     const dockview = await mount();
 
-    await hold('a', 'd');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
-    await hold('f', 'e');
-    document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true }));
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
-    await hold('b', 'c');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
-    await hold('e', 'b');
-    pointer('pointerup', document.body, 0, 0);
-    await settled(dockview);
+    await hold('a', tab('d'));
+    await move(content('d'));
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,d,e', 'b,c', 'f', 'fileTree']);
+  });
+
+  test('keeps tab dropped on own group content', async () => {
+    const dockview = await mount();
+
+    await hold('a', content('a'));
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('keeps tab dropped on file tree', async () => {
+    const dockview = await mount();
+
+    await hold('a', document.querySelector('.dv-groupview:has([data-tool]) .dv-content-container') as Element);
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('keeps tab dropped near content edge', async () => {
+    const dockview = await mount();
+
+    await hold('a', tab('b'));
+    await move(content('d'), 0.1, 0.5);
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('slides tabs left by tab held after other group tabs', async () => {
+    const dockview = await mount();
+
+    await hold('a', content('a'));
+    expect(tab('b').getAnimations()).toHaveLength(0);
+    const { x, y, width, height } = strip('d').getBoundingClientRect();
+    pointer = { x: x + width / 2, y: y + height / 2 };
+    dispatch('pointermove', document);
+    await expect.poll(() => tab('b').getAnimations().length).toBeGreaterThan(0);
+    await cancel(dockview);
+  });
+
+  test('keeps tab in group while pointer is in its strip', async () => {
+    const dockview = await mount();
+    const groups = () => shown().join(' ');
+
+    await hold('e', strip('d'));
+    const held = groups();
+    const { right } = strip('d').getBoundingClientRect();
+    for (let x = right - 30; x < right; x++) {
+      pointer = { x, y: pointer.y };
+      dispatch('pointermove', document);
+      await frames();
+      expect(groups()).toBe(held);
+    }
+
+    // The padding before the tabs of the group beside it.
+    pointer = { x: tab('f').getBoundingClientRect().left - 2, y: pointer.y };
+    dispatch('pointermove', document);
+    await frames();
+    expect(groups()).toBe(held);
+    await cancel(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('moves tab whose centre is over other group tab', async () => {
+    const dockview = await mount();
+
+    const { x, y, height } = tab('e').getBoundingClientRect();
+    pointer = { x: x + 3, y: y + height / 2 };
+    dispatch('pointerdown', tab('e'));
+    await frames();
+    const to = tab('f').getBoundingClientRect();
+    const held = tab('e').getBoundingClientRect().width / 2 - 3;
+    // The pointer stays in the strip that the tab leaves.
+    for (const at of [to.left - 30, to.left + 4 - held]) {
+      pointer = { x: at, y: pointer.y };
+      dispatch('pointermove', document);
+      await frames();
+    }
+    expect(pointer.x).toBeLessThan(strip('d').getBoundingClientRect().right);
+    await drop(dockview);
+
+    expect(model(dockview)).toContain('d');
+    expect(model(dockview).some((group) => group.includes('e') && group.includes('f'))).toBe(true);
+  });
+
+  test('keeps fill of dragged tab in other group', async () => {
+    const dockview = await mount();
+    const fill = () =>
+      getComputedStyle(document.querySelector('.dv-tab[data-dnd-dragging]') as Element, '::before').backgroundImage;
+
+    await hold('f', content('f'));
+    const held = fill();
+    expect(held).toContain('gradient');
+    await move(tab('d'));
+    expect(shown()).toContain('f,f,d,e');
+    expect(fill()).toBe(held);
+    await cancel(dockview);
+  });
+
+  test('resizes strip with tabs that slide', async () => {
+    const dockview = await mount();
+    const left = tab('b').closest('.dv-scrollable') as HTMLElement;
+    const joined = tab('d').closest('.dv-scrollable') as HTMLElement;
+    const actions = left.parentElement?.querySelector('.dv-left-actions-container') as HTMLElement;
+    const widths = [left.getBoundingClientRect().width, joined.getBoundingClientRect().width];
+    const from = actions.getBoundingClientRect().left;
+
+    await hold('a', content('a'));
+    const { x, y, width, height } = tab('d').getBoundingClientRect();
+    pointer = { x: x + width / 2, y: y + height / 2 };
+    dispatch('pointermove', document);
+    await expect.poll(() => left.getAnimations().length + joined.getAnimations().length).toBe(2);
+    for (let frame = 0; frame < 6; frame++) {
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      // No tab slides out of the strip, and no strip is narrower than its tabs.
+      expect(tab('c').getBoundingClientRect().right).toBeLessThanOrEqual(left.getBoundingClientRect().right);
+      expect(tab('e').getBoundingClientRect().right).toBeLessThanOrEqual(joined.getBoundingClientRect().right);
+      for (const strip of [left, joined]) {
+        expect(strip.querySelector('.dv-tabs-container')?.scrollWidth).toBeLessThanOrEqual(strip.clientWidth);
+      }
+    }
+    expect(actions.getBoundingClientRect().left).toBeLessThan(from);
+    expect(left.getBoundingClientRect().width).toBeGreaterThan(widths[1]);
+    expect(document.querySelector('[class*="overflow-dropdown"]')).toBeNull();
+
+    await drop(dockview);
+    expect(left.getBoundingClientRect().width).toBeCloseTo(widths[1], 0);
+    expect(joined.getBoundingClientRect().width).toBeCloseTo(widths[0], 0);
+    for (const scrollbar of document.querySelectorAll<HTMLElement>('.dv-scrollbar')) {
+      expect(scrollbar.style.width).toBe('0px');
+    }
+  });
+
+  test('shows no tab beside dropped tab', async () => {
+    const dockview = await mount();
+    const joined = tab('d').closest('.dv-scrollable') as HTMLElement;
+
+    await hold('a', tab('d'));
+    await frames();
+    await frames();
+    const { width } = joined.getBoundingClientRect();
+    let widest = width;
+    const observer = new MutationObserver(() => {
+      widest = Math.max(widest, joined.getBoundingClientRect().width);
+    });
+    observer.observe(joined, { childList: true, subtree: true });
+    await drop(dockview);
+    observer.disconnect();
+
+    expect(widest).toBe(width);
+  });
+
+  test('fits strip to tab that returns when cancelled', async () => {
+    const dockview = await mount();
+    const left = tab('b').closest('.dv-scrollable') as HTMLElement;
+    const { width } = left.getBoundingClientRect();
+
+    // The strip is still narrowing.
+    await hold('a', tab('d'));
+    await cancel(dockview);
+
+    expect(left.getBoundingClientRect().width).toBe(width);
+  });
+
+  test('fits tab that joins from group beside', async () => {
+    const dockview = await mount();
+    const joined = tab('b').closest('.dv-scrollable') as HTMLElement;
+    const tabs = joined.querySelector('.dv-tabs-container') as HTMLElement;
+
+    await hold('f', content('f'));
+    const { x, y, width, height } = tab('b').getBoundingClientRect();
+    pointer = { x: x + width / 2, y: y + height / 2 };
+    dispatch('pointermove', document);
+    await expect.poll(() => shown()).toContain('a,f,f,b,c');
+    for (let frame = 0; frame < 8; frame++) {
+      expect(tabs.scrollWidth).toBeLessThanOrEqual(joined.clientWidth);
+      expect(tabs.scrollHeight).toBeLessThanOrEqual(joined.clientHeight);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    await drop(dockview);
+
+    expect((joined.querySelector('.dv-scrollbar') as HTMLElement).style.width).toBe('0px');
+  });
+
+  test('restores sole tab of group when cancelled', async () => {
+    const dockview = await mount();
+
+    await hold('f', tab('d'));
+    await cancel(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('restores last tab of group when cancelled', async () => {
+    const dockview = await mount();
+
+    await hold('c', tab('d'));
+    await cancel(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('restores reordered tab when cancelled', async () => {
+    const dockview = await mount();
+
+    await hold('a', tab('c'));
+    await cancel(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('clears fill when cancelled', async () => {
+    const dockview = await mount();
+
+    await hold('f', content('f'));
+    await move(content('d'));
+    expect(fills()).toBe(1);
+    await cancel(dockview);
+
+    expect(fills()).toBe(0);
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('moves tabs after earlier move and cancel', async () => {
+    const dockview = await mount();
+
+    await hold('a', tab('d'));
+    await drop(dockview);
+    await hold('f', tab('e'));
+    await cancel(dockview);
+    await hold('b', tab('c'));
+    await drop(dockview);
+    await hold('e', tab('b'));
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,d', 'c,e,b', 'f', 'fileTree']);
   });
 });
