@@ -57,9 +57,7 @@ jobs:
       - run: pnpm --filter @elsewise/desktop typecheck
       - run: pnpm --filter @elsewise/desktop test
       - run: pnpm --filter @elsewise/desktop build
-      # Ubuntu blocks the unprivileged user namespaces that Electron's sandbox needs.
-      - if: runner.os == 'Linux'
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # The runner has no display for Electron's window.
       - if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum pnpm --filter @elsewise/desktop test:electron
       - if: runner.os != 'Linux'
