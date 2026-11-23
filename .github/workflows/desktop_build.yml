@@ -56,7 +56,6 @@ jobs:
       - run: pnpm --filter @elsewise/desktop check
       - run: pnpm --filter @elsewise/desktop typecheck
       - run: pnpm --filter @elsewise/desktop test
-      # The Electron tests start the packaged app, which loads the built renderer and daemon.
       - run: pnpm --filter @elsewise/desktop build
       # Ubuntu blocks the unprivileged user namespaces that Electron's sandbox needs.
       - if: runner.os == 'Linux'
