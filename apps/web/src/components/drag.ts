@@ -39,7 +39,7 @@ export const DRAG_MODIFIERS = [SnapToPixels];
 
 export const DRAG_PLUGINS = [AutoScroller, Feedback, PreventSelection];
 
-export const DRAG_INSTANT_PLUGINS = [AutoScroller, Feedback.configure({ dropAnimation: null }), PreventSelection];
+export const DRAG_INSTANT_PLUGINS = [Feedback.configure({ dropAnimation: null }), PreventSelection];
 
 export const DRAG_SENSORS = [
   PointerSensor.configure({

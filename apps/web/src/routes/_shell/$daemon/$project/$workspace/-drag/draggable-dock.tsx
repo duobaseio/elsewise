@@ -28,34 +28,41 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
   const preview = useRef<Element | null>(null);
   const dragging = useRef(false);
 
-  // The group that the dragged tab would join as its last tab.
-  const destination = ({ source, target, position, shape }: DragOperation<Draggable, Droppable>) => {
+  // The group that the dragged tab would join as its last tab, or split on a side.
+  const destination = (
+    { source, target, position, shape }: DragOperation<Draggable, Droppable>,
+    pointer = position.current,
+  ) => {
     if (target?.type !== 'group' || target.element === undefined || !isSortable(source)) {
       return null;
     }
 
-    // Already shown in this group.
     const { group, part } = target.data as GroupTarget;
-    if (group === source.group) {
-      return null;
-    }
-
+    let side: 'left' | 'right' | 'above' | 'below' | undefined;
     if (part === 'strip') {
       // Only the space after the tabs.
       const tabs = target.element.querySelector('.dv-tabs-container');
-      if (tabs !== null && (shape?.current.center.x ?? position.current.x) < tabs.getBoundingClientRect().right) {
+      if (tabs !== null && (shape?.current.center.x ?? pointer.x) < tabs.getBoundingClientRect().right) {
         return null;
       }
     } else {
       const { left, top, width, height } = target.element.getBoundingClientRect();
-      const x = (position.current.x - left) / width;
-      const y = (position.current.y - top) / height;
-      // TODO: Split the group on the nearest side.
-      if (Math.min(x, 1 - x, y, 1 - y) < 0.2) {
-        return null;
+      const x = (pointer.x - left) / width;
+      const y = (pointer.y - top) / height;
+      const nearest = Math.min(x, 1 - x, y, 1 - y);
+      if (nearest < 0.2) {
+        // A group's only tab has no tab to split from.
+        if (dockview?.groups.find(({ id }) => id === group)?.panels.some(({ id }) => id !== source.id) !== true) {
+          return null;
+        }
+        side = nearest === x ? 'left' : nearest === 1 - x ? 'right' : nearest === y ? 'above' : 'below';
       }
     }
-    return { group, part, element: target.element };
+    // Already shown in this group.
+    if (side === undefined && group === source.group) {
+      return null;
+    }
+    return { group, part, side, element: target.element };
   };
 
   // Shows the dragged tab as the group's last tab.
@@ -80,9 +87,10 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
     source.sortable.index = group.panels.length;
   };
 
-  const show = (manager: DragDropManager) => {
+  // A move is reported before the drag takes its pointer.
+  const show = (manager: DragDropManager, pointer?: { x: number; y: number }) => {
     const operation = manager.dragOperation;
-    const to = destination(operation);
+    const to = destination(operation, pointer);
     if (to?.part === 'strip') {
       // Tabs slide only after the drag has rendered.
       void manager.renderer.rendering.then(() => {
@@ -96,9 +104,9 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
     const element = to?.part === 'content' ? to.element : null;
     if (preview.current !== element) {
       preview.current?.removeAttribute('data-drop-target');
-      element?.setAttribute('data-drop-target', '');
       preview.current = element;
     }
+    element?.setAttribute('data-drop-target', to?.side ?? '');
   };
 
   useEffect(() => {
@@ -124,7 +132,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
       onDragStart={() => {
         dragging.current = true;
       }}
-      onDragMove={(_, manager) => show(manager)}
+      onDragMove={({ to }, manager) => show(manager, to)}
       onDragOver={(_, manager) => show(manager)}
       onDragEnd={({ canceled, operation }, manager) => {
         const { source, target: dropped } = operation;
@@ -132,7 +140,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
         preview.current?.removeAttribute('data-drop-target');
         preview.current = null;
         // Drops where the tab shows.
-        if (to !== null) {
+        if (to !== null && to.side === undefined) {
           append(manager, to.group);
         }
 
@@ -153,7 +161,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
 
         let target = { group: open.group.id, index: open.group.panels.indexOf(open) };
         if (
-          to !== null ||
+          (to !== null && to.side === undefined) ||
           (!canceled && dropped !== null && (isSortable(dropped) || dropped.data.group === source.group))
         ) {
           target = { group: String(source.group), index: source.index };
@@ -166,6 +174,18 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
           }
 
           observer.disconnect();
+          const beside = dockview.groups
+            .find((group) => group.id === to?.group)
+            ?.panels.map((panel) => dock.get(panel.id))
+            .find((panel) => panel !== null && panel.id !== moved.id);
+
+          if (to?.side !== undefined && beside != null) {
+            dock.move(moved, { group: to.side, of: beside });
+            setMonotonic((monotonic) => monotonic + 1);
+            dragging.current = false;
+            return;
+          }
+
           // The group may have closed.
           const group = dockview.groups.find((group) => group.id === target.group) ?? open.group;
           const tabs = group.panels

@@ -75,6 +75,23 @@
   pointer-events: none;
 }
 
+/* A tab that will split the group takes half of it. */
+.dockview-theme-elsewise .dv-content-container[data-drop-target="left"]::after {
+  right: 50%;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target="right"]::after {
+  left: 50%;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target="above"]::after {
+  bottom: 50%;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target="below"]::after {
+  top: 50%;
+}
+
 /* The tab components own their horizontal padding. */
 .dockview-theme-elsewise .dv-tab {
   padding-inline: 0;

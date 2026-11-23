@@ -69,6 +69,8 @@ const strip = (id: string) => tab(id).closest('.dv-groupview')?.querySelector('.
 
 const content = (id: string) => tab(id).closest('.dv-groupview')?.querySelector('.dv-content-container') as HTMLElement;
 
+const group = (id: string) => tab(id).closest('.dv-groupview') as HTMLElement;
+
 const fills = () => document.querySelectorAll('[data-drop-target]').length;
 
 // The drag follows the pointer once a frame, and each tab that slides aside takes a few more.
@@ -247,14 +249,96 @@ describe('DraggableDock', () => {
     expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
   });
 
-  test('keeps tab dropped near content edge', async () => {
+  test.each([
+    ['left', 0.1, 0.5],
+    ['right', 0.9, 0.5],
+    ['above', 0.5, 0.1],
+    ['below', 0.5, 0.9],
+  ] as const)('splits group on %s side that tab is dropped near', async (side, across, down) => {
+    const dockview = await mount();
+    const whole = group('d').getBoundingClientRect();
+
+    await hold('a', tab('b'));
+    await move(content('d'), across, down);
+    expect(content('d').getAttribute('data-drop-target')).toBe(side);
+    const fill = getComputedStyle(content('d'), '::after');
+    const filled = content('d').getBoundingClientRect();
+    expect(Number.parseFloat(side === 'left' || side === 'right' ? fill.width : fill.height)).toBeCloseTo(
+      (side === 'left' || side === 'right' ? filled.width : filled.height) / 2,
+      0,
+    );
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a', 'b,c', 'd,e', 'f', 'fileTree']);
+    const split = group('a').getBoundingClientRect();
+    const beside = group('d').getBoundingClientRect();
+    expect({
+      left: split.right <= beside.left + 1,
+      right: split.left >= beside.right - 1,
+      above: split.bottom <= beside.top + 1,
+      below: split.top >= beside.bottom - 1,
+    }).toMatchObject({ [side]: true });
+    // The split group takes the half that was filled.
+    if (side === 'left' || side === 'right') {
+      expect(split.width).toBeCloseTo(whole.width / 2, -1);
+    } else {
+      expect(split.height).toBeCloseTo(whole.height / 2, -1);
+    }
+    expect(fills()).toBe(0);
+  });
+
+  test('keeps content that tab is held over where it was scrolled', async () => {
+    const dockview = await mount();
+    const scrolled = document.createElement('div');
+    scrolled.style.cssText = 'position: absolute; inset: 0; overflow: auto;';
+    scrolled.innerHTML = '<div style="height: 4000px"></div>';
+    content('d').append(scrolled);
+    scrolled.scrollTop = 500;
+
+    await hold('a', tab('b'));
+    await move(content('d'), 0.5, 0.95);
+    for (let held = 0; held < 5; held++) {
+      dispatch('pointermove', document);
+      await frames();
+    }
+    expect(scrolled.scrollTop).toBe(500);
+    await cancel(dockview);
+  });
+
+  test('splits own group', async () => {
+    const dockview = await mount();
+
+    await hold('a', content('a'));
+    await move(content('a'), 0.9, 0.5);
+    expect(content('a').getAttribute('data-drop-target')).toBe('right');
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a', 'b,c', 'd,e', 'f', 'fileTree']);
+    expect(group('a').getBoundingClientRect().left).toBeGreaterThanOrEqual(
+      group('b').getBoundingClientRect().right - 1,
+    );
+  });
+
+  test('keeps sole tab dropped near own content edge', async () => {
+    const dockview = await mount();
+
+    await hold('f', content('f'));
+    await move(content('f'), 0.9, 0.5);
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('clears half fill when cancelled', async () => {
     const dockview = await mount();
 
     await hold('a', tab('b'));
     await move(content('d'), 0.1, 0.5);
-    expect(fills()).toBe(0);
-    await drop(dockview);
+    expect(fills()).toBe(1);
+    await cancel(dockview);
 
+    expect(fills()).toBe(0);
     expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
   });
 
