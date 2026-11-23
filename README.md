@@ -35,6 +35,14 @@ The daemon is a Node project in the pnpm workspace (`apps/daemon/`).
 pnpm --filter @elsewise/daemon dev      # also: build, test
 ```
 
+### CLI
+
+The `elsewise` command is a Node project in the pnpm workspace (`apps/cli/`).
+
+```bash
+pnpm --filter @elsewise/cli dev hello   # also: build, test
+```
+
 ## Conventions
 
 - **Package manager:** pnpm only, workspace rooted at the repo root. Settings live in
