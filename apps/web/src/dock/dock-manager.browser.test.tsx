@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import type { Panel, TerminalPanel } from '@elsewise/frontend-plugin';
 import { describe, expect, test, vi } from 'vitest';
 import { ProjectManager } from '@/projects/project-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
@@ -302,5 +303,148 @@ describe('activate', () => {
     dock.activate({ ...OTHER, id: 'closed' });
 
     expect(dock.activePanel).toEqual(FILE);
+  });
+});
+
+describe('sizes', () => {
+  const A = { ...TERMINAL, id: 'terminal:a', session: { ...WORKSPACE, session: 'a' } };
+  const B = { ...TERMINAL, id: 'terminal:b', session: { ...WORKSPACE, session: 'b' } };
+  const C = { ...TERMINAL, id: 'terminal:c', session: { ...WORKSPACE, session: 'c' } };
+
+  // A dock whose row has the files 500 wide, a 120 wide, b 150 wide and the file tree.
+  async function mountRow() {
+    const mounted = await mount();
+    const { dockview } = mounted;
+    dockview.getPanel(TERMINAL.id)?.api.close();
+
+    const add = (panel: TerminalPanel, reference: Panel, direction: 'right' | 'below') =>
+      dockview.addPanel({
+        id: panel.id,
+        component: 'terminal',
+        params: { session: panel.session.session },
+        position: { referencePanel: reference.id, direction },
+      });
+    const width = (panel: Panel) => dockview.getPanel(panel.id)?.group.api.width;
+    const height = (panel: Panel) => dockview.getPanel(panel.id)?.group.api.height;
+    const resize = async (panel: Panel, size: { width?: number; height?: number }) => {
+      dockview.getPanel(panel.id)?.group.api.setSize(size);
+      await new Promise((resolve) => setTimeout(resolve));
+    };
+
+    add(A, FILE, 'right');
+    add(B, A, 'right');
+    await resize(FILE, { width: 500 });
+    await resize(A, { width: 120 });
+    await resize(B, { width: 150 });
+    return { ...mounted, add, width, height, resize, fileTree: width(FILE_TREE) };
+  }
+
+  test('gives width of closed group to previous group', async () => {
+    const { dock, width, fileTree } = await mountRow();
+
+    await dock.close(A);
+
+    expect([width(FILE), width(B), width(FILE_TREE)]).toEqual([620, 150, fileTree]);
+  });
+
+  test('gives width of closed first group to next group', async () => {
+    const { dock, width, fileTree } = await mountRow();
+    await dock.close(OTHER);
+
+    await dock.close(FILE);
+
+    expect([width(A), width(B), width(FILE_TREE)]).toEqual([620, 150, fileTree]);
+  });
+
+  test('gives width of closed group to tab group over tabless panel', async () => {
+    const { dock, width, resize } = await mountRow();
+    dock.move(FILE_TREE, { edge: 'left' });
+    await resize(FILE_TREE, { width: 300 });
+    await resize(FILE, { width: 400 });
+    await resize(A, { width: 120 });
+    const b = width(B);
+    await dock.close(OTHER);
+
+    await dock.close(FILE);
+
+    expect([width(FILE_TREE), width(A), width(B)]).toEqual([300, 520, b]);
+  });
+
+  test('keeps equal groups equal when group closes', async () => {
+    const { dock, dockview, width, resize } = await mountRow();
+    const quarter = dockview.width / 4;
+    await resize(FILE, { width: quarter });
+    await resize(A, { width: quarter });
+    await resize(B, { width: quarter });
+
+    await dock.close(A);
+
+    const widths = [width(FILE) ?? 0, width(B) ?? 0, width(FILE_TREE) ?? 0];
+    expect(Math.max(...widths) - Math.min(...widths)).toBeLessThanOrEqual(2);
+  });
+
+  test('gives height of closed group to previous group', async () => {
+    const { dock, add, height, resize } = await mountRow();
+    add(C, B, 'below');
+    add(TERMINAL, C, 'below');
+    await resize(B, { height: 400 });
+    await resize(C, { height: 100 });
+
+    await dock.close(C);
+
+    expect([height(B), height(TERMINAL)]).toEqual([500, 200]);
+  });
+
+  test('keeps width of stack beside closed group', async () => {
+    const { dock, add, width, fileTree } = await mountRow();
+    add(C, B, 'below');
+
+    await dock.close(A);
+
+    expect([width(FILE), width(B), width(C), width(FILE_TREE)]).toEqual([620, 150, 150, fileTree]);
+  });
+
+  test('keeps widths of other groups when last tab moves to another group', async () => {
+    const { dock, width, fileTree } = await mountRow();
+
+    dock.move(A, { tab: 'last', with: B });
+
+    expect([width(FILE), width(B), width(FILE_TREE)]).toEqual([620, 150, fileTree]);
+  });
+
+  test('keeps widths of other groups when last tab moves to group of its own', async () => {
+    const { dock, width, fileTree } = await mountRow();
+
+    dock.move(A, { group: 'below', of: B });
+
+    expect([width(FILE), width(A), width(B), width(FILE_TREE)]).toEqual([620, 150, 150, fileTree]);
+  });
+
+  test('keeps widths of other groups when last tab moves along bottom edge', async () => {
+    const { dock, width, fileTree } = await mountRow();
+
+    dock.move(A, { edge: 'bottom' });
+
+    expect([width(FILE), width(B), width(FILE_TREE)]).toEqual([620, 150, fileTree]);
+  });
+
+  test('shrinks other groups alike when last tab moves along left edge', async () => {
+    const { dock, dockview, width, fileTree } = await mountRow();
+
+    dock.move(A, { edge: 'left' });
+
+    const scale = (dockview.width - (width(A) ?? 0)) / dockview.width;
+    expect(width(FILE)).toBeCloseTo(620 * scale, -1);
+    expect(width(B)).toBeCloseTo(150 * scale, -1);
+    expect(width(FILE_TREE)).toBeCloseTo((fileTree ?? 0) * scale, -1);
+  });
+
+  test('restores widths before next frame', async () => {
+    const { dock, width } = await mountRow();
+    const frame = new Promise((resolve) => requestAnimationFrame(() => resolve([width(FILE), width(B)])));
+
+    dock.move(A, { tab: 'last', with: B });
+
+    await expect(frame).resolves.toEqual([620, 150]);
   });
 });
