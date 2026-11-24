@@ -297,6 +297,8 @@ export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   );
 }
 
+// TODO: The stripe is clipped  for a frame while the window resizes as Chromium shows a resized window with the page's
+//  previous frame. We need something like https://github.com/electron/electron/pull/55415 for macOS.
 export function ToolStripe() {
   const docks = useContext(ApplicationManagerContext)?.docks;
   const fileTreeVisible = useSyncExternalStore(

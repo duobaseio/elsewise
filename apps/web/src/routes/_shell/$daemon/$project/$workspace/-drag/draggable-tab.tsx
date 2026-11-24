@@ -6,7 +6,7 @@ import { CENTERED } from '@/components/drag';
 import { DragMonotonicContext } from './draggable-dock';
 
 /**
- * Makes the tab sortable. Does nothing outside an active dock.
+ * Makes the panel draggable by its tab or by the entire strip if tabless. Does nothing outside an active dock.
  */
 export function DraggableTab({ api }: { api: DockviewPanelApi }) {
   const monotonic = useContext(DragMonotonicContext);
@@ -29,7 +29,7 @@ function DraggableTabRegistration({ api }: { api: DockviewPanelApi }) {
     type: tab ? 'tab' : 'tabless',
     accept: tab ? 'tab' : () => false,
     collisionDetector: CENTERED,
-    element: marker?.closest('.dv-tab'),
+    element: marker?.closest(tab ? '.dv-tab' : '.dv-tabs-and-actions-container'),
   });
   return <span hidden ref={setMarker} />;
 }

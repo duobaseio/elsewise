@@ -59,6 +59,18 @@
   box-shadow: var(--shadow-md);
 }
 
+/* A tabless panel is dragged by its whole strip, which is the card. */
+.dockview-theme-elsewise .dv-tabs-and-actions-container[data-dnd-dragging] {
+  border-radius: var(--radius-md);
+  background-color: var(--surface) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* The tab's own fill would square the card's corners. */
+.dockview-theme-elsewise .dv-tabs-and-actions-container[data-dnd-dragging] .dv-tab {
+  background-color: transparent !important;
+}
+
 /* Tints the content of the group that a dragged tab will drop into. */
 .dockview-theme-elsewise :is(.dv-content-container, .dv-dockview)[data-drop-target] {
   position: relative;
@@ -120,7 +132,7 @@
 
 /*
  * Tool groups (marked by their tab's data-tool) fuse the tab bar with the panel: same fill, no seam, and no
- * hover/selected painting on the tab. The tab itself stays — it is the group's only drag handle.
+ * hover/selected painting on the tab. The strip is the group's drag handle.
  */
 .dockview-theme-elsewise .dv-groupview:has([data-tool]) .dv-tabs-and-actions-container {
   background-color: var(--background);
@@ -136,8 +148,8 @@
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--background);
 }
 
-/* A tool tab is only painted while it is dragged, as a card. */
-.dockview-theme-elsewise .dv-tab:has([data-tool]):not([data-dnd-dragging])::before {
+/* A tool tab is never painted. */
+.dockview-theme-elsewise .dv-tab:has([data-tool])::before {
   content: none;
 }
 
@@ -184,10 +196,6 @@
 /* A dragged tab keeps its fill in an inactive group. */
 .dockview-theme-elsewise .dv-groupview .dv-tab.dv-active-tab[data-dnd-dragging]::before {
   background-image: linear-gradient(var(--layer-selected), var(--layer-selected));
-}
-
-.dockview-theme-elsewise .dv-groupview .dv-tab:has([data-tool])[data-dnd-dragging]::before {
-  background-image: none;
 }
 
 /*

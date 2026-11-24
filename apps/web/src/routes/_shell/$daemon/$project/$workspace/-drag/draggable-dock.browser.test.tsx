@@ -415,12 +415,30 @@ describe('DraggableDock', () => {
     const dockview = await mount();
 
     await hold('fileTree', tab('b'));
-    expect(shown()).toEqual(['a,b,c', 'd,e', 'f', 'fileTree,fileTree']);
+    expect(shown()).toEqual(['a,b,c', 'd,e', 'f', 'fileTree', 'fileTree']);
     await move(strip('a'));
-    expect(shown()).toEqual(['a,b,c', 'd,e', 'f', 'fileTree,fileTree']);
+    expect(shown()).toEqual(['a,b,c', 'd,e', 'f', 'fileTree', 'fileTree']);
     await drop(dockview);
 
     expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('drags tabless panel by space after its tab', async () => {
+    const dockview = await mount();
+    const { x, y, width, height } = strip('fileTree').getBoundingClientRect();
+    Object.assign(pointer, { x: x + width / 2, y: y + height / 2 });
+
+    dispatch('pointerdown', strip('fileTree'));
+    await frames();
+    await move(content('a'));
+    const dragged = document.querySelector('[data-dnd-dragging]')?.getBoundingClientRect();
+    expect(dragged?.width).toBeCloseTo(group('fileTree').getBoundingClientRect().width, -1);
+    await move(content('d'), 0.1, 0.5);
+    await drop(dockview);
+
+    expect(group('fileTree').getBoundingClientRect().right).toBeLessThanOrEqual(
+      group('d').getBoundingClientRect().left + 1,
+    );
   });
 
   test('sizes tabless panel anew when moved from below groups to beside one', async () => {
