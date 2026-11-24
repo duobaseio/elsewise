@@ -62,11 +62,11 @@
 }
 
 /* Tints the content of the group that a dragged tab will drop into. */
-.dockview-theme-elsewise .dv-content-container[data-drop-target] {
+.dockview-theme-elsewise :is(.dv-content-container, .dv-dockview)[data-drop-target] {
   position: relative;
 }
 
-.dockview-theme-elsewise .dv-content-container[data-drop-target]::after {
+.dockview-theme-elsewise :is(.dv-content-container, .dv-dockview)[data-drop-target]::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -75,7 +75,7 @@
   pointer-events: none;
 }
 
-/* A tab that will split the group takes half of it. */
+/* A split fills the half that the new group will occupy. */
 .dockview-theme-elsewise .dv-content-container[data-drop-target="left"]::after {
   right: 50%;
 }
@@ -90,6 +90,19 @@
 
 .dockview-theme-elsewise .dv-content-container[data-drop-target="below"]::after {
   top: 50%;
+}
+
+/* An edge drop fills the quarter of the dock that the new group will occupy. */
+.dockview-theme-elsewise .dv-dockview[data-drop-target="left"]::after {
+  right: 75%;
+}
+
+.dockview-theme-elsewise .dv-dockview[data-drop-target="right"]::after {
+  left: 75%;
+}
+
+.dockview-theme-elsewise .dv-dockview[data-drop-target="bottom"]::after {
+  top: 75%;
 }
 
 /* The tab components own their horizontal padding. */

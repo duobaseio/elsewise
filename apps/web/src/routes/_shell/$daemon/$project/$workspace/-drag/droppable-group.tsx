@@ -56,7 +56,7 @@ export function DroppableGroup({ group, dragging }: { group: DockviewGroupPanel;
     type: 'group',
     accept: 'tab',
     collisionDetector: CENTERED,
-    collisionPriority: CollisionPriority.Low,
+    collisionPriority: CollisionPriority.Normal,
     data: { group: group.id, part: 'strip' } satisfies GroupTarget,
     element: group.element.querySelector('.dv-tabs-and-actions-container'),
   });
