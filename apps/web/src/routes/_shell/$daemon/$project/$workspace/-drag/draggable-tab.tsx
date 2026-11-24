@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/react/sortable';
 import type { DockviewPanelApi } from 'dockview-react';
 import { useContext, useState } from 'react';
+import { ApplicationManagerContext } from '@/application-context';
 import { CENTERED } from '@/components/drag';
 import { DragMonotonicContext } from './draggable-dock';
 
@@ -19,13 +20,14 @@ export function DraggableTab({ api }: { api: DockviewPanelApi }) {
 
 function DraggableTabRegistration({ api }: { api: DockviewPanelApi }) {
   const [marker, setMarker] = useState<HTMLElement | null>(null);
+  const tab = useContext(ApplicationManagerContext)?.docks.active?.get(api.id)?.tab ?? true;
 
   useSortable({
     id: api.id,
     index: api.group.panels.findIndex((panel) => panel.id === api.id),
     group: api.group.id,
-    type: 'tab',
-    accept: 'tab',
+    type: tab ? 'tab' : 'tabless',
+    accept: tab ? 'tab' : () => false,
     collisionDetector: CENTERED,
     element: marker?.closest('.dv-tab'),
   });

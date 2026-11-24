@@ -327,6 +327,7 @@ export function DefaultTab({
 export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
     <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tool>
+      <DraggableTab api={props.api} />
       <span>{props.api.title}</span>
     </div>
   );

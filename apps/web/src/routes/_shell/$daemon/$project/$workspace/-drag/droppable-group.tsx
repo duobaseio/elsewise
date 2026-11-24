@@ -63,7 +63,7 @@ export function DroppableGroup({ group, dragging }: { group: DockviewGroupPanel;
   useDroppable({
     id: `content:${group.id}`,
     type: 'group',
-    accept: 'tab',
+    accept: ['tab', 'tabless'],
     collisionDetector: pointerIntersection,
     collisionPriority: CollisionPriority.Lowest,
     data: { group: group.id, part: 'content' } satisfies GroupTarget,

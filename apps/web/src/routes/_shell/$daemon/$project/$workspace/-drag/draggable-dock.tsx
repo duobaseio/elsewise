@@ -2,8 +2,8 @@ import type { DragOperation } from '@dnd-kit/abstract';
 import type { DragDropManager, Draggable, Droppable } from '@dnd-kit/dom';
 import { isSortable } from '@dnd-kit/dom/sortable';
 import { DragDropProvider } from '@dnd-kit/react';
-import type { TabPanel } from '@elsewise/frontend-plugin';
-import type { DockviewApi } from 'dockview-react';
+import type { Dock, GroupPlacement, Panel, TabPanel, TabPlacement } from '@elsewise/frontend-plugin';
+import type { DockviewApi, DockviewGroupPanel } from 'dockview-react';
 import {
   createContext,
   type ReactNode,
@@ -38,7 +38,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
   const [monotonic, setMonotonic] = useState(0);
   const preview = useRef<Element | null>(null);
   const dragging = useRef(false);
-  const tabbableGroups =
+  const tabGroups =
     dock === null || dockview === null
       ? []
       : dockview.groups.filter((group) => group.panels.every((panel) => dock.get(panel.id)?.tab === true));
@@ -53,11 +53,8 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
     }
 
     if (target.type === 'dock') {
-      const at = edge(
-        pointer,
-        target.element,
-        tabbableGroups.map((group) => group.element),
-      );
+      const own = dockview?.getPanel(String(source.id))?.group.element;
+      const at = edge(pointer, target.element, [...tabGroups.map((group) => group.element), ...(own ? [own] : [])]);
       return at === null ? null : { part: 'dock', edge: at, element: target.element };
     }
 
@@ -80,7 +77,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
     const y = (pointer.y - top) / height;
     const nearest = Math.min(x, 1 - x, y, 1 - y);
     if (nearest >= 0.2) {
-      return group === source.group ? null : { part, group, element: target.element };
+      return group === source.group || source.type === 'tabless' ? null : { part, group, element: target.element };
     }
 
     // A group's only tab has no tab to split from.
@@ -186,7 +183,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
         if (
           dock === null ||
           dockview === null ||
-          !moved?.tab ||
+          moved === null ||
           open === undefined ||
           element == null ||
           !isSortable(source)
@@ -195,52 +192,34 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
           return;
         }
 
-        let target = { group: open.group.id, index: open.group.panels.indexOf(open) };
-        if (
-          joined !== null ||
-          (!canceled && dropped !== null && (isSortable(dropped) || dropped.data.group === source.group))
-        ) {
-          target = { group: String(source.group), index: source.index };
+        const newGroup = newGroupPlacement(dockview, dock, moved, to);
+
+        let move: (() => void) | null;
+        if (moved.tab) {
+          const shown =
+            canceled || dropped === null ? undefined : dockview.groups.find((group) => group.id === source.group);
+          const placement =
+            newGroup ??
+            tabPlacement(
+              dock,
+              moved,
+              shown ?? open.group,
+              shown === undefined ? open.group.panels.indexOf(open) : source.index,
+            );
+          move = () => dock.move(moved, placement);
+        } else {
+          move = newGroup && (() => dock.move(moved, newGroup));
         }
+
         // TODO: Move at once when dnd kit ends a drop before it reports it. Until then, a tab that dockview rebuilds
         // shows beside the placeholder of the dragged one.
         const observer = new MutationObserver(() => {
-          if (element.hasAttribute('data-dnd-dragging')) {
-            return;
+          if (!element.hasAttribute('data-dnd-dragging')) {
+            observer.disconnect();
+            move?.();
+            setMonotonic((monotonic) => monotonic + 1);
+            dragging.current = false;
           }
-
-          observer.disconnect();
-          const beside =
-            to?.part === 'content' && to.side !== undefined
-              ? dockview.groups
-                  .find((group) => group.id === to.group)
-                  ?.panels.map((panel) => dock.get(panel.id))
-                  .find((panel) => panel !== null && panel.id !== moved.id)
-              : null;
-
-          if (to?.part === 'dock') {
-            const { width, height } = to.element.getBoundingClientRect();
-            dock.move(
-              moved,
-              to.edge === 'bottom' ? { edge: 'bottom', height: height / 4 } : { edge: to.edge, width: width / 4 },
-            );
-          } else if (to?.part === 'content' && to.side !== undefined && beside != null) {
-            dock.move(moved, { group: to.side, of: beside });
-          } else {
-            // The group may have closed.
-            const group = dockview.groups.find((group) => group.id === target.group) ?? open.group;
-            const tabs = group.panels
-              .map((panel) => dock.get(panel.id))
-              .filter((panel): panel is TabPanel => panel?.tab === true && panel.id !== moved.id);
-            const next = tabs[group.id === target.group ? target.index : group.panels.indexOf(open)];
-            dock.move(
-              moved,
-              next === undefined ? { tab: 'last', with: tabs.at(-1) ?? moved } : { tab: 'before', of: next },
-            );
-          }
-
-          setMonotonic((monotonic) => monotonic + 1);
-          dragging.current = false;
         });
         observer.observe(element, { attributes: true, attributeFilter: ['data-dnd-dragging'] });
       }}
@@ -249,12 +228,61 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
       sensors={DRAG_SENSORS}
     >
       <DragMonotonicContext value={dock === null ? null : monotonic}>{children}</DragMonotonicContext>
-      {tabbableGroups.map((group) => (
+      {tabGroups.map((group) => (
         <DroppableGroup group={group} dragging={dragging} key={group.id} />
       ))}
-      {dock !== null && root != null && (
-        <DroppableEdges dock={root} groups={tabbableGroups.map((group) => group.element)} />
-      )}
+      {dock !== null && root != null && <DroppableEdges dock={root} groups={tabGroups.map((group) => group.element)} />}
     </DragDropProvider>
   );
+}
+
+// The placement of `panel` in a group of its own.
+function newGroupPlacement(
+  dockview: DockviewApi,
+  dock: Dock,
+  panel: Panel,
+  to: Destination | null,
+): GroupPlacement | null {
+  const group = dockview.getPanel(panel.id)?.group;
+  if (group === undefined) {
+    return null;
+  }
+
+  // A tabless panel in a row keeps its width when it moves to a row, and one in a column keeps its height.
+  const row = group.element.closest('.dv-split-view-container')?.classList.contains('dv-horizontal');
+  const width = !panel.tab && row === true ? group.width : undefined;
+  const height = !panel.tab && row === false ? group.height : undefined;
+
+  if (to?.part === 'dock') {
+    const box = to.element.getBoundingClientRect();
+    return to.edge === 'bottom'
+      ? { edge: 'bottom', height: height ?? box.height / 4 }
+      : { edge: to.edge, width: width ?? box.width / 4 };
+  }
+
+  if (to?.part !== 'content' || to.side === undefined) {
+    return null;
+  }
+
+  const beside = dockview.groups
+    .find(({ id }) => id === to.group)
+    ?.panels.map(({ id }) => dock.get(id))
+    .find((other) => other !== null && other.id !== panel.id);
+  if (beside == null) {
+    return null;
+  }
+
+  return to.side === 'left' || to.side === 'right'
+    ? { group: to.side, of: beside, width }
+    : { group: to.side, of: beside, height };
+}
+
+// The placement of `panel` among the `group`'s tabs, before the tab at `index`.
+function tabPlacement(dock: Dock, panel: TabPanel, group: DockviewGroupPanel, index: number): TabPlacement {
+  const tabs = group.panels
+    .map(({ id }) => dock.get(id))
+    .filter((tab): tab is TabPanel => tab?.tab === true && tab.id !== panel.id);
+  const next = tabs[index];
+
+  return next === undefined ? { tab: 'last', with: tabs.at(-1) ?? panel } : { tab: 'before', of: next };
 }

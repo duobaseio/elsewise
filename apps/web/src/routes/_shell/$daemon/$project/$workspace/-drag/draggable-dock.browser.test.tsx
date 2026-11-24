@@ -380,4 +380,79 @@ describe('DraggableDock', () => {
 
     expect(model(dockview)).toEqual(['a,d', 'c,e,b', 'f', 'fileTree']);
   });
+
+  test('splits group beside tabless panel dropped near its content edge', async () => {
+    const dockview = await mount();
+    const { width } = group('fileTree').getBoundingClientRect();
+
+    await hold('fileTree', content('a'));
+    await move(content('d'), 0.1, 0.5);
+    expect(content('d').getAttribute('data-drop-target')).toBe('left');
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+    const moved = group('fileTree').getBoundingClientRect();
+    expect(moved.right).toBeLessThanOrEqual(group('d').getBoundingClientRect().left + 1);
+    expect(moved.height).toBeCloseTo(group('d').getBoundingClientRect().height, -1);
+    // It keeps its width.
+    expect(moved.width).toBeCloseTo(width, -1);
+  });
+
+  test('keeps tabless panel dropped on centre of group content', async () => {
+    const dockview = await mount();
+    const { left } = group('fileTree').getBoundingClientRect();
+
+    await hold('fileTree', content('a'));
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+    expect(group('fileTree').getBoundingClientRect().left).toBe(left);
+  });
+
+  test('keeps tabless panel dropped among tabs', async () => {
+    const dockview = await mount();
+
+    await hold('fileTree', tab('b'));
+    expect(shown()).toEqual(['a,b,c', 'd,e', 'f', 'fileTree,fileTree']);
+    await move(strip('a'));
+    expect(shown()).toEqual(['a,b,c', 'd,e', 'f', 'fileTree,fileTree']);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+  });
+
+  test('sizes tabless panel anew when moved from below groups to beside one', async () => {
+    const dockview = await mount();
+    const root = tab('a').closest('.dv-dockview') as HTMLElement;
+    await hold('fileTree', content('a'));
+    await move(root, 0.25, 0.99);
+    await drop(dockview);
+    expect(group('fileTree').getBoundingClientRect().width).toBeCloseTo(root.getBoundingClientRect().width, -1);
+    const { width } = group('a').getBoundingClientRect();
+
+    await hold('fileTree', content('fileTree'));
+    await move(content('a'), 0.1, 0.5);
+    await drop(dockview);
+
+    expect(group('fileTree').getBoundingClientRect().width).toBeCloseTo(width / 2, -1);
+  });
+
+  test('keeps height of tabless panel moved from below groups to above one', async () => {
+    const dockview = await mount();
+    const root = tab('a').closest('.dv-dockview') as HTMLElement;
+    await hold('fileTree', content('a'));
+    await move(root, 0.25, 0.99);
+    await drop(dockview);
+    const { height } = group('fileTree').getBoundingClientRect();
+
+    await hold('fileTree', content('fileTree'));
+    await move(content('d'), 0.5, 0.1);
+    await drop(dockview);
+
+    expect(group('fileTree').getBoundingClientRect().bottom).toBeLessThanOrEqual(
+      group('d').getBoundingClientRect().top + 1,
+    );
+    expect(group('fileTree').getBoundingClientRect().height).toBeCloseTo(height, -1);
+  });
 });

@@ -145,4 +145,37 @@ describe('DroppableEdges', () => {
     expect(fills()).toBe(0);
     expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
   });
+
+  test('adds tabless panel along edge of dock', async () => {
+    const dockview = await mount();
+    const root = tab('a').closest('.dv-dockview') as HTMLElement;
+    const dock = root.getBoundingClientRect();
+    const { width } = group('fileTree').getBoundingClientRect();
+
+    await hold('fileTree', content('a'));
+    await move(root, 10 / dock.width, 0.75);
+    expect(root.getAttribute('data-drop-target')).toBe('left');
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+    const moved = group('fileTree').getBoundingClientRect();
+    expect(moved.left).toBeCloseTo(dock.left, -1);
+    expect(moved.height).toBeCloseTo(dock.height, -1);
+    // It keeps its width.
+    expect(moved.width).toBeCloseTo(width, -1);
+  });
+
+  test('keeps tabless panel dropped on edge it is along', async () => {
+    const dockview = await mount();
+    const root = tab('a').closest('.dv-dockview') as HTMLElement;
+    const before = group('fileTree').getBoundingClientRect();
+
+    await hold('fileTree', content('a'));
+    await move(root, 0.995, 0.5);
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
+    expect(group('fileTree').getBoundingClientRect()).toEqual(before);
+  });
 });

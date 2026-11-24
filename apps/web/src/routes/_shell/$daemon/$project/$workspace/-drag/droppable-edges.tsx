@@ -10,7 +10,7 @@ export function DroppableEdges({ dock, groups }: { dock: Element; groups: readon
   useDroppable({
     id: 'dock',
     type: 'dock',
-    accept: 'tab',
+    accept: ['tab', 'tabless'],
     collisionDetector: ({ dragOperation, droppable }) =>
       edge(dragOperation.position.current, dock, groups) === null
         ? null
@@ -22,9 +22,11 @@ export function DroppableEdges({ dock, groups }: { dock: Element; groups: readon
 }
 
 /**
- * Returns the edge of the dock that a tab dropped at `pointer` is placed along, or null.
+ * Returns the edge of `dock` that `pointer` is within 24 pixels of.
  *
- * A group among `groups` that spans the edge is split to the same end, so the tab splits it.
+ * Returns null if `pointer` is:
+ * * near no edge
+ * * inside one of `groups` that runs the whole length of that edge
  */
 export function edge(pointer: { x: number; y: number }, dock: Element, groups: readonly Element[]): Edge | null {
   const { x, y } = pointer;
