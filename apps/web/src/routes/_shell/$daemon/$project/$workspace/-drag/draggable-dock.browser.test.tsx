@@ -10,6 +10,7 @@ import {
   hold,
   model,
   mount,
+  mouse,
   move,
   pointer,
   shown,
@@ -454,5 +455,31 @@ describe('DraggableDock', () => {
       group('d').getBoundingClientRect().top + 1,
     );
     expect(group('fileTree').getBoundingClientRect().height).toBeCloseTo(height, -1);
+  });
+
+  test('keeps sole tab among tabs it shows in when dropped near own content edge', async () => {
+    const dockview = await mount();
+    const own = content('f');
+
+    await hold('f', tab('d'));
+    await move(own, 0.9, 0.5);
+    expect(fills()).toBe(0);
+    await drop(dockview);
+
+    expect(model(dockview)).toEqual(['a,b,c', 'f,d,e', 'fileTree']);
+  });
+
+  test('leaves group that is dragged by space after its tabs', async () => {
+    const dockview = await mount();
+    await mouse('mouseMoved', strip('a'), false);
+    await mouse('mousePressed', strip('a'), true);
+    await mouse('mouseMoved', content('a'), true);
+    await mouse('mouseMoved', content('d'), true);
+    await frames();
+    expect(document.querySelector('.dv-drop-target-dropzone, [data-dnd-dragging]')).toBeNull();
+    await mouse('mouseReleased', content('d'), false);
+    await frames();
+
+    expect(model(dockview)).toEqual(['a,b,c', 'd,e', 'f', 'fileTree']);
   });
 });

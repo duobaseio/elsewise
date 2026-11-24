@@ -26,8 +26,6 @@
   --dv-sash-color: transparent;
   --dv-active-sash-color: var(--border);
   /* State layers */
-  --dv-drag-over-background-color: var(--layer-selected);
-  --dv-drag-over-border-color: transparent;
   --dv-icon-hover-background-color: var(--layer-hover);
   --dv-scrollbar-background-color: var(--layer-selection);
   --dv-tabs-container-scrollbar-color: var(--disabled);
@@ -39,9 +37,9 @@
  */
 
 /*
- * The constant cursor changes is extremely distracting. Furthermore, we have disabled dragging of entire groups.
+ * The constant cursor changes is extremely distracting.
  */
-.dockview-theme-elsewise :is(.dv-tab, .dv-void-container.dv-draggable) {
+.dockview-theme-elsewise .dv-tab {
   cursor: default;
 }
 
@@ -138,7 +136,8 @@
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--background);
 }
 
-.dockview-theme-elsewise .dv-tab:has([data-tool])::before {
+/* A tool tab is only painted while it is dragged, as a card. */
+.dockview-theme-elsewise .dv-tab:has([data-tool]):not([data-dnd-dragging])::before {
   content: none;
 }
 
@@ -185,6 +184,10 @@
 /* A dragged tab keeps its fill in an inactive group. */
 .dockview-theme-elsewise .dv-groupview .dv-tab.dv-active-tab[data-dnd-dragging]::before {
   background-image: linear-gradient(var(--layer-selected), var(--layer-selected));
+}
+
+.dockview-theme-elsewise .dv-groupview .dv-tab:has([data-tool])[data-dnd-dragging]::before {
+  background-image: none;
 }
 
 /*

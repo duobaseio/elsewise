@@ -8,12 +8,11 @@ import {
   type DockviewApi,
   DockviewReact,
   type DockviewReadyEvent,
-  type DockviewWillShowOverlayLocationEvent,
   type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { type ReactNode, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-drag/draggable-dock';
@@ -109,42 +108,7 @@ export function WorkspaceDock({
   onDockviewReady?: (api: DockviewApi) => void;
   onLayoutChange?: (layout: SerializedDockview) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
-
-  // Disable group drags. Cancelling in capture phase beats onWillDragGroup, which fires only after dockview has painted
-  // a ghost frame.
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      const onDragStart = (event: DragEvent) => {
-        if ((event.target as HTMLElement).closest('.dv-void-container')) {
-          event.preventDefault();
-        }
-      };
-
-      container.addEventListener('dragstart', onDragStart, { capture: true });
-      return () =>
-        container.removeEventListener('dragstart', onDragStart, {
-          capture: true,
-        });
-    }
-    return undefined;
-  }, []);
-
-  useEffect(() => {
-    if (dockview) {
-      lock(dockview);
-      const disposables = [dockview.onDidLayoutChange(() => lock(dockview)), dockview.onWillShowOverlay(preventMerge)];
-
-      return () => {
-        for (const disposable of disposables) {
-          disposable.dispose();
-        }
-      };
-    }
-    return undefined;
-  }, [dockview]);
 
   useEffect(() => {
     if (dockview && onLayoutChange) {
@@ -185,7 +149,7 @@ export function WorkspaceDock({
   };
 
   return (
-    <div className="flex h-full" ref={containerRef}>
+    <div className="flex h-full">
       <div className="min-w-0 flex-1">
         <DraggableDock dockview={dockview}>
           <DockviewReact
@@ -376,36 +340,4 @@ export function ToolStripe() {
       </Tooltip>
     </div>
   );
-}
-
-/**
- * Locked panels split but never merge: `locked: true` blocks the header drop surfaces, the overlay veto the rest.
- * Drags recreate groups, so the lock is re-enforced on every mutation.
- */
-function lock(api: DockviewApi) {
-  for (const panel of api.panels) {
-    if (TOOL_PANELS.has(panel.view.contentComponent) && panel.group.api.locked !== true) {
-      panel.group.api.locked = true;
-    }
-  }
-}
-
-function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
-  const merging =
-    event.kind === 'tab' || event.kind === 'header_space' || (event.kind === 'content' && event.position === 'center');
-  if (!merging) {
-    return;
-  }
-
-  // The transfer carries an id, never the panel, so the kind needs a lookup. A group drag has no panel id at all.
-  const draggedId = event.getData()?.panelId;
-  const dragged = draggedId == null ? undefined : event.api.getPanel(draggedId);
-  const draggedTool = dragged != null && TOOL_PANELS.has(dragged.view.contentComponent);
-  const targetHasTool =
-    event.group != null &&
-    event.api.panels.some((panel) => panel.group === event.group && TOOL_PANELS.has(panel.view.contentComponent));
-
-  if (draggedTool || targetHasTool) {
-    event.preventDefault();
-  }
 }

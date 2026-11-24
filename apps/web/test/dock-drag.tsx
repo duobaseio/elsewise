@@ -1,5 +1,7 @@
+/// <reference types="@vitest/browser-playwright" />
 import type { AddPanelOptions, DockviewApi } from 'dockview-react';
 import { expect, vi } from 'vitest';
+import { cdp } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
@@ -15,8 +17,10 @@ const TABS = { fileTree: FileTreeTab, file: DefaultTab, terminal: DefaultTab };
 
 /**
  * Mounts an active dock with a, b and c in one group, d and e in a group below, and f alone in a group beside them.
+ *
+ * With a `theme`, the dock is a sheet in that theme, for a screenshot.
  */
-export async function mount() {
+export async function mount(theme?: 'light' | 'dark') {
   const { client, router } = workspaceRouter();
   const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
   await showWorkspace(router);
@@ -25,7 +29,12 @@ export async function mount() {
   let api: DockviewApi | undefined;
   await render(
     <ApplicationManagerContext value={application}>
-      <div style={{ width: 1100, height: 700 }}>
+      <div
+        className={theme && 'dockview-theme-elsewise bg-background font-sans text-foreground'}
+        data-brightness={theme}
+        data-testid={theme && 'sheet'}
+        style={{ width: 1100, height: 700 }}
+      >
         <WorkspaceDock
           panels={STUB_PANELS}
           tabs={TABS}
@@ -160,4 +169,20 @@ export async function drop(dockview: DockviewApi) {
 export async function cancel(dockview: DockviewApi) {
   document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
   await settled(dockview);
+}
+
+/**
+ * Sends a real mouse event at the middle of `to`, which a native drag needs.
+ */
+export async function mouse(type: 'mouseMoved' | 'mousePressed' | 'mouseReleased', to: Element, pressed: boolean) {
+  const frame = window.frameElement?.getBoundingClientRect();
+  const { x, y, width, height } = to.getBoundingClientRect();
+  await cdp().send('Input.dispatchMouseEvent', {
+    type,
+    x: (frame?.left ?? 0) + x + width / 2,
+    y: (frame?.top ?? 0) + y + height / 2,
+    button: 'left',
+    buttons: pressed ? 1 : 0,
+    clickCount: 1,
+  });
 }
