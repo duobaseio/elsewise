@@ -1,5 +1,5 @@
-import { QueryClient } from '@tanstack/react-query';
 import type { Panel, TerminalPanel } from '@elsewise/frontend-plugin';
+import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
 import { ProjectManager } from '@/projects/project-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
@@ -446,5 +446,80 @@ describe('sizes', () => {
     dock.move(A, { tab: 'last', with: B });
 
     await expect(frame).resolves.toEqual([620, 150]);
+  });
+});
+
+describe('placeholder', () => {
+  const PLACEHOLDER = { id: 'placeholder', type: 'placeholder', tab: true, closable: false } as const;
+  const LAYOUTS = ['one tool', 'stacked tools', 'tools in grid', 'stacked tools on left'] as const;
+
+  // A dock without a tab, whose tools are 350 wide beside the placeholder.
+  async function mountEmpty(layout: (typeof LAYOUTS)[number]) {
+    const mounted = await mount();
+    const { dock, dockview } = mounted;
+    const tool = (id: string, referencePanel: string, direction: 'below' | 'right') =>
+      dockview.addPanel({
+        id,
+        component: 'fileTree',
+        tabComponent: 'fileTree',
+        position: { referencePanel, direction },
+      });
+    if (layout !== 'one tool') {
+      tool('tool:c', FILE_TREE.id, 'below');
+    }
+    if (layout === 'tools in grid') {
+      tool('tool:b', FILE_TREE.id, 'right');
+      tool('tool:d', 'tool:c', 'right');
+      dockview.getPanel(FILE_TREE.id)?.group.api.setSize({ width: 100 });
+    }
+    if (layout === 'stacked tools on left') {
+      dock.move(FILE, { edge: 'right', width: 714 });
+      dock.move(OTHER, { tab: 'last', with: FILE });
+      dock.move(TERMINAL, { tab: 'last', with: FILE });
+    }
+    await new Promise((resolve) => setTimeout(resolve));
+
+    const sizes = () =>
+      Object.fromEntries(dockview.groups.map((group) => [group.panels[0]?.id, [group.api.width, group.api.height]]));
+    const tools = Object.fromEntries(
+      Object.entries(sizes()).filter(([id]) => id === FILE_TREE.id || id.startsWith('tool:')),
+    );
+    for (const panel of [FILE, OTHER, TERMINAL]) {
+      await dock.close(panel);
+    }
+    return { ...mounted, sizes, tools };
+  }
+
+  test.each(LAYOUTS)('takes place of last tab panel beside %s', async (layout) => {
+    const { dock, sizes, tools } = await mountEmpty(layout);
+
+    expect(sizes()).toEqual({ ...tools, [PLACEHOLDER.id]: [714, 700] });
+    expect(dock.activeTabPanel).toEqual(PLACEHOLDER);
+  });
+
+  test.each(LAYOUTS)('leaves its place to tab panel beside %s', async (layout) => {
+    const { dock, sizes, tools } = await mountEmpty(layout);
+
+    const panel = dock.addFile('src/new.ts', { tab: 'last', with: PLACEHOLDER });
+
+    expect(sizes()).toEqual({ ...tools, [panel?.id ?? '']: [714, 700] });
+    expect(dock.get(PLACEHOLDER.id)).toBeNull();
+  });
+
+  test('closes when tab panel opens in group of its own', async () => {
+    const { dock } = await mountEmpty('one tool');
+
+    const panel = dock.addFile('src/new.ts', { edge: 'bottom' });
+
+    expect(dock.panels).toEqual([FILE_TREE, panel]);
+  });
+
+  test('stays while tab panel is open', async () => {
+    const { dock } = await mount();
+
+    await dock.close(OTHER);
+    await dock.close(TERMINAL);
+
+    expect(dock.get(PLACEHOLDER.id)).toBeNull();
   });
 });

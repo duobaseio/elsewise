@@ -45,6 +45,9 @@ export class DockManager implements Dock {
     this.disposables = [
       dockview.onDidAddPanel((added) => {
         this.update();
+        if (this.panels.some((panel) => panel.tab && panel.type !== 'placeholder')) {
+          dockview.getPanel('placeholder')?.api.close();
+        }
         const panel = this.get(added.id);
         if (panel !== null) {
           onOpen(panel);
@@ -54,6 +57,17 @@ export class DockManager implements Dock {
         const panel = this.get(removed.id);
         this.grid = dockview.toJSON().grid;
         this.update();
+        // The placeholder takes the place of the last tab panel.
+        if (!this.panels.some((panel) => panel.tab)) {
+          dockview.addPanel({
+            id: 'placeholder',
+            tabComponent: 'placeholder',
+            component: 'placeholder',
+            position: { referenceGroup: removed.group.id },
+            minimumWidth: 10,
+            minimumHeight: 10,
+          });
+        }
         if (panel !== null) {
           onClose(panel);
         }

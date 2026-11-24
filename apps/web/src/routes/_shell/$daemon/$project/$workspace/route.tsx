@@ -24,6 +24,7 @@ import { FileTreePanel } from './-file-tree/file-tree-panel';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
+import { Placeholder, PlaceholderTab } from './-placeholder/placeholder';
 import { TerminalPanel } from './-terminal/terminal-panel';
 import { TerminalTab } from './-terminal/terminal-tab';
 
@@ -35,12 +36,13 @@ export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
 type PanelKind = keyof typeof PANELS;
 
 const TOOL_TABS = { fileTree: FileTreeTab };
-const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab };
+const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab, placeholder: PlaceholderTab };
 const TOOL_PANELS = new Set(['fileTree' satisfies PanelKind]);
 const PANELS = {
   file: FilePanel,
   terminal: TerminalPanel,
   fileTree: FileTreePanel,
+  placeholder: Placeholder,
 };
 
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
@@ -63,16 +65,6 @@ function WorkspaceRoute() {
     }
 
     const dock = docks.attach({ daemon, project, workspace }, view.api);
-    const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
-    // TODO: Replace with default tab.
-    if (fileTree !== undefined && !dock.panels.some((panel) => panel.tab)) {
-      dock
-        .addTerminal({}, { group: 'left', of: fileTree })
-        .catch((error: Error) =>
-          toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
-        );
-    }
-
     return () => docks.detach(dock);
   }, [daemon, project, workspace, key, docks, view]);
 
@@ -140,10 +132,16 @@ export function WorkspaceDock({
       params: { path: '/' },
       minimumWidth: 10,
       minimumHeight: 10,
-      // TODO: Add a default group beside the file tree, which balances this width. Until then the file tree fills the
-      // dock while it is alone.
-      initialWidth: 350,
     });
+    event.api.addPanel({
+      id: 'placeholder',
+      tabComponent: 'placeholder' satisfies PanelKind,
+      component: 'placeholder' satisfies PanelKind,
+      position: { referencePanel: 'fileTree', direction: 'left' },
+      minimumWidth: 10,
+      minimumHeight: 10,
+    });
+    event.api.getPanel('fileTree')?.group.api.setSize({ width: 350 });
     setDockview(event.api);
     onDockviewReady?.(event.api);
   };
@@ -225,72 +223,51 @@ export function DefaultTab({
   onClose?: () => void;
 }) {
   const docks = useContext(ApplicationManagerContext)?.docks;
-  // The dock's last remaining content tab is not closable.
-  const [closable, setClosable] = useState(true);
-
-  useEffect(() => {
-    const recompute = () => {
-      const contentPanels = props.containerApi.panels.filter((panel) => !TOOL_PANELS.has(panel.view.contentComponent));
-      setClosable(contentPanels.length > 1);
-    };
-
-    recompute();
-    const disposables = [props.containerApi.onDidAddPanel(recompute), props.containerApi.onDidRemovePanel(recompute)];
-    return () => {
-      for (const disposable of disposables) {
-        disposable.dispose();
-      }
-    };
-  }, [props.containerApi]);
 
   return (
     <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
       <DraggableTab api={props.api} />
       {icon}
       <span>{props.api.title}</span>
-      {closable ? (
-        <Button
-          aria-label={`Close ${props.api.title}`}
-          className={cn(
-            '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
-            dirty && 'opacity-100',
-          )}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (onClose !== undefined) {
-              onClose();
-              return;
-            }
+      <Button
+        aria-label={`Close ${props.api.title}`}
+        className={cn(
+          '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
+          dirty && 'opacity-100',
+        )}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (onClose !== undefined) {
+            onClose();
+            return;
+          }
 
-            const dock = docks?.active;
-            const panel = dock?.get(props.api.id);
-            if (dock == null || panel == null || !panel.closable) {
-              props.api.close();
-            } else {
-              void dock.close(panel);
-            }
-          }}
-          onPointerDown={(event) => event.stopPropagation()}
-          size="icon-xs"
-          variant="ghost"
-        >
-          {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
-          <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
-        </Button>
-      ) : (
-        dirty && <span aria-hidden className="size-2 rounded-full bg-text-3" />
-      )}
+          const dock = docks?.active;
+          const panel = dock?.get(props.api.id);
+          if (dock == null || panel == null || !panel.closable) {
+            props.api.close();
+          } else {
+            void dock.close(panel);
+          }
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        size="icon-xs"
+        variant="ghost"
+      >
+        {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
+        <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
+      </Button>
     </div>
   );
 }
 
 /**
- * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tool` is the adapter CSS hook for
+ * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tabless` is the adapter CSS hook for
  * tool-specific state painting.
  */
 export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
-    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tool>
+    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tabless>
       <DraggableTab api={props.api} />
       <span>{props.api.title}</span>
     </div>

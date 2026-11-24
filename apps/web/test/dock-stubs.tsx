@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 
+import { Placeholder, PlaceholderTab } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 import type { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 
 type DockPanels = NonNullable<ComponentProps<typeof WorkspaceDock>['panels']>;
@@ -11,6 +12,7 @@ export const STUB_PANELS: DockPanels = {
   file: () => <p className="p-2 text-base text-text-3">editor stub</p>,
   terminal: () => <p className="p-2 text-base text-text-3">terminal stub</p>,
   fileTree: () => <p className="p-2 text-base text-text-3">tree stub</p>,
+  placeholder: Placeholder,
 };
 
 // Stand-ins for the tabs, which otherwise need the workspace's route and the application around the dock.
@@ -18,4 +20,5 @@ export const STUB_TABS: DockTabs = {
   fileTree: () => <span className="px-2 text-base">Files</span>,
   file: (props) => <span className="px-2 text-base">{props.api.title}</span>,
   terminal: (props) => <span className="px-2 text-base">{props.api.title}</span>,
+  placeholder: PlaceholderTab,
 };

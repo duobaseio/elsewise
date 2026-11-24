@@ -5,6 +5,7 @@ import { cdp } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
+import { PlaceholderTab } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 import { DefaultTab, FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from './commands';
 import { showWorkspace, WORKSPACE, workspaceRouter } from './dock';
@@ -13,7 +14,7 @@ import { STUB_PANELS } from './dock-stubs';
 import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
-const TABS = { fileTree: FileTreeTab, file: DefaultTab, terminal: DefaultTab };
+const TABS = { fileTree: FileTreeTab, file: DefaultTab, terminal: DefaultTab, placeholder: PlaceholderTab };
 
 /**
  * Mounts an active dock with a, b and c in one group, d and e in a group below, and f alone in a group beside them.
@@ -51,7 +52,7 @@ export async function mount(theme?: 'light' | 'dark') {
   const dockview = api as DockviewApi;
   const add = (id: string, position: AddPanelOptions['position']) =>
     dockview.addPanel({ id, component: 'file', tabComponent: 'file', title: id, position });
-  add('a', { referencePanel: 'fileTree', direction: 'left' });
+  add('a', { referencePanel: 'placeholder' });
   add('b', { referencePanel: 'a', direction: 'within' });
   add('c', { referencePanel: 'a', direction: 'within' });
   add('d', { referencePanel: 'a', direction: 'below' });

@@ -117,7 +117,7 @@ describe('DraggableDock', () => {
   test('keeps tab dropped on file tree', async () => {
     const dockview = await mount();
 
-    await hold('a', document.querySelector('.dv-groupview:has([data-tool]) .dv-content-container') as Element);
+    await hold('a', document.querySelector('.dv-groupview:has([data-tabless]) .dv-content-container') as Element);
     expect(fills()).toBe(0);
     await drop(dockview);
 

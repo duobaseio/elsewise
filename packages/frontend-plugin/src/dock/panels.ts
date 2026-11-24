@@ -3,7 +3,7 @@ import type { TerminalSessionId } from '../terminal';
 /**
  * A panel.
  */
-export type Panel = FilePanel | TerminalPanel | FileTreePanel;
+export type Panel = PlaceholderPanel | FilePanel | TerminalPanel | FileTreePanel;
 
 /**
  * A panel that can share its group with others.
@@ -29,7 +29,7 @@ export interface BasePanel {
    */
   readonly id: string;
 
-  readonly type: 'file' | 'terminal' | 'fileTree';
+  readonly type: 'placeholder' | 'file' | 'terminal' | 'fileTree';
 
   /**
    * Whether the panel sits among a group's tabs.
@@ -40,6 +40,15 @@ export interface BasePanel {
    * Whether the panel can be closed.
    */
   readonly closable: boolean;
+}
+
+/**
+ * The panel that a dock has while no other tab panel is open.
+ */
+export interface PlaceholderPanel extends BasePanel {
+  readonly type: 'placeholder';
+  readonly tab: true;
+  readonly closable: false;
 }
 
 /**

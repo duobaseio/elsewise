@@ -38,7 +38,7 @@ test('restores layout after remount', async () => {
   first.api.getPanel('fileTree')?.api.close();
   await vi.waitFor(() => expect(first.saved()).toBeDefined());
   const layout = first.saved();
-  first.unmount();
+  await first.unmount();
 
   const second = await mount(layout);
 
@@ -50,5 +50,16 @@ test('builds default layout from invalid layout', async () => {
 
   const { api } = await mount({ grid: 'invalid' });
 
-  expect(api.panels.map((panel) => panel.id).sort()).toEqual(['fileTree']);
+  expect(api.panels.map((panel) => panel.id).sort()).toEqual(['fileTree', 'placeholder']);
+});
+
+test('restores placeholder beside file tree', async () => {
+  const first = await mount();
+
+  const { api } = await mount(first.api.toJSON());
+
+  expect(api.groups.map((group) => [group.panels[0]?.id, group.api.width]).sort()).toEqual([
+    ['fileTree', 350],
+    ['placeholder', 714],
+  ]);
 });
