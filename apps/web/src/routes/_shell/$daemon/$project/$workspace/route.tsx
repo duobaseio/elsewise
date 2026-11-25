@@ -152,6 +152,7 @@ export function WorkspaceDock({
             components={panels}
             defaultTabComponent={DefaultTab}
             disableDnd
+            disableFloatingGroups
             disableTabsOverflowList
             leftHeaderActionsComponent={TabActions}
             onReady={onReady}
