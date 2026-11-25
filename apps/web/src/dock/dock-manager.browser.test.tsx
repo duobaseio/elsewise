@@ -453,7 +453,7 @@ describe('placeholder', () => {
   const PLACEHOLDER = { id: 'placeholder', type: 'placeholder', tab: true, closable: false } as const;
   const LAYOUTS = ['one tool', 'stacked tools', 'tools in grid', 'stacked tools on left'] as const;
 
-  // A dock without a tab, whose tools are 350 wide beside the placeholder.
+  // A dock without a tab, whose tools are 266 wide beside the placeholder.
   async function mountEmpty(layout: (typeof LAYOUTS)[number]) {
     const mounted = await mount();
     const { dock, dockview } = mounted;
@@ -473,7 +473,7 @@ describe('placeholder', () => {
       dockview.getPanel(FILE_TREE.id)?.group.api.setSize({ width: 100 });
     }
     if (layout === 'stacked tools on left') {
-      dock.move(FILE, { edge: 'right', width: 714 });
+      dock.move(FILE, { edge: 'right', width: 798 });
       dock.move(OTHER, { tab: 'last', with: FILE });
       dock.move(TERMINAL, { tab: 'last', with: FILE });
     }
@@ -493,7 +493,7 @@ describe('placeholder', () => {
   test.each(LAYOUTS)('takes place of last tab panel beside %s', async (layout) => {
     const { dock, sizes, tools } = await mountEmpty(layout);
 
-    expect(sizes()).toEqual({ ...tools, [PLACEHOLDER.id]: [714, 700] });
+    expect(sizes()).toEqual({ ...tools, [PLACEHOLDER.id]: [798, 700] });
     expect(dock.activeTabPanel).toEqual(PLACEHOLDER);
   });
 
@@ -502,7 +502,7 @@ describe('placeholder', () => {
 
     const panel = dock.addFile('src/new.ts', { tab: 'last', with: PLACEHOLDER });
 
-    expect(sizes()).toEqual({ ...tools, [panel?.id ?? '']: [714, 700] });
+    expect(sizes()).toEqual({ ...tools, [panel?.id ?? '']: [798, 700] });
     expect(dock.get(PLACEHOLDER.id)).toBeNull();
   });
 

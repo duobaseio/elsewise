@@ -7,11 +7,11 @@ import { WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 
-async function mount(layout?: unknown) {
+async function mount(layout?: unknown, width = 1100) {
   let api: DockviewApi | undefined;
   let saved: SerializedDockview | undefined;
   const screen = await render(
-    <div style={{ width: 1100, height: 700 }}>
+    <div style={{ width, height: 700 }}>
       <WorkspaceDock
         panels={STUB_PANELS}
         layout={layout}
@@ -59,9 +59,21 @@ test('restores placeholder beside file tree', async () => {
   const { api } = await mount(first.api.toJSON());
 
   expect(api.groups.map((group) => [group.panels[0]?.id, group.api.width]).sort()).toEqual([
-    ['fileTree', 350],
-    ['placeholder', 714],
+    ['fileTree', 266],
+    ['placeholder', 798],
   ]);
+});
+
+test('gives file tree quarter of dock', async () => {
+  const { api } = await mount();
+
+  expect(api.getPanel('fileTree')?.group.api.width).toBe(266);
+});
+
+test('limits file tree to 350 pixels', async () => {
+  const { api } = await mount(undefined, 1800);
+
+  expect(api.getPanel('fileTree')?.group.api.width).toBe(350);
 });
 
 test('shows no tab actions outside active dock', async () => {

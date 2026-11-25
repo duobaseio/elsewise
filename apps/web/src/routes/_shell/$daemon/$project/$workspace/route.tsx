@@ -139,7 +139,7 @@ export function WorkspaceDock({
       minimumWidth: 10,
       minimumHeight: 10,
     });
-    event.api.getPanel('fileTree')?.group.api.setSize({ width: 350 });
+    event.api.getPanel('fileTree')?.group.api.setSize({ width: Math.min(350, Math.floor(event.api.width / 4)) });
     setDockview(event.api);
     onDockviewReady?.(event.api);
   };
