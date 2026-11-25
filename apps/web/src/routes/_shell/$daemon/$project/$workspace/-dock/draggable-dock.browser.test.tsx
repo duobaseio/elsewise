@@ -28,6 +28,61 @@ describe('DraggableDock', () => {
     expect(model(dockview)).toEqual(['b,c,a', 'd,e', 'f', 'fileTree']);
   });
 
+  test('keeps strip where it is scrolled to when tab is reordered', async () => {
+    const dockview = await mount();
+    for (let index = 0; index < 14; index++) {
+      dockview.addPanel({
+        id: `x${index}`,
+        component: 'file',
+        tabComponent: 'file',
+        title: `x${index}`,
+        position: { referencePanel: 'a', direction: 'within' },
+      });
+    }
+    dockview.getPanel('a')?.api.setActive();
+    await frames();
+    const tabs = tab('a').closest('.dv-tabs-container') as HTMLElement;
+    tabs.scrollLeft = tabs.scrollWidth;
+    tabs.dispatchEvent(new Event('scroll'));
+    await frames();
+    const scrolled = tabs.scrollLeft;
+    expect(scrolled).toBeGreaterThan(0);
+
+    await hold('x2', tab('x3'));
+    await drop(dockview);
+    await frames();
+
+    expect(model(dockview)).toContain('a,b,c,x0,x1,x3,x2,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13');
+    expect(tabs.scrollLeft).toBe(scrolled);
+  });
+
+  test('keeps strip where it is scrolled to when drag is cancelled', async () => {
+    const dockview = await mount();
+    for (let index = 0; index < 14; index++) {
+      dockview.addPanel({
+        id: `x${index}`,
+        component: 'file',
+        tabComponent: 'file',
+        title: `x${index}`,
+        position: { referencePanel: 'a', direction: 'within' },
+      });
+    }
+    dockview.getPanel('a')?.api.setActive();
+    await frames();
+    const tabs = tab('a').closest('.dv-tabs-container') as HTMLElement;
+    tabs.scrollLeft = tabs.scrollWidth;
+    tabs.dispatchEvent(new Event('scroll'));
+    await frames();
+    const scrolled = tabs.scrollLeft;
+
+    await hold('x2', tab('x3'));
+    await cancel(dockview);
+    await frames();
+
+    expect(model(dockview)).toContain('a,b,c,x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13');
+    expect(tabs.scrollLeft).toBe(scrolled);
+  });
+
   test('moves tab among other group tabs', async () => {
     const dockview = await mount();
 

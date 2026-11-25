@@ -216,7 +216,19 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
         const observer = new MutationObserver(() => {
           if (!element.hasAttribute('data-dnd-dragging')) {
             observer.disconnect();
+
+            // Dockview treats moving tabs as removal + addition internally. Consequently, dockview activates another
+            // tab in the intermission and scrolls to it.
+            //
+            // We work around this by saving the scroll positions before a move and restoring them afterward.
+            const strips = [...(root?.querySelectorAll('.dv-tabs-container') ?? [])].map(
+              (strip) => [strip, strip.scrollLeft] as const,
+            );
             move?.();
+            for (const [strip, left] of strips) {
+              strip.scrollLeft = left;
+            }
+
             setMonotonic((monotonic) => monotonic + 1);
             dragging.current = false;
           }
@@ -224,6 +236,7 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
         observer.observe(element, { attributes: true, attributeFilter: ['data-dnd-dragging'] });
       }}
       modifiers={DRAG_MODIFIERS}
+      // TODO: Scroll a strip while a tab is held once dockview exposes it.
       plugins={DRAG_INSTANT_PLUGINS}
       sensors={DRAG_SENSORS}
     >
