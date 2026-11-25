@@ -24,10 +24,12 @@ import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
-import { STUB_PANELS } from '../../../../../../../test/dock-stubs';
+import { stubComponents } from '../../../../../../../test/dock-stubs';
 import { SETTINGS, terminals } from '../../../../../../../test/terminal';
-import { WorkspaceDock } from '../route';
+import { FileTab } from '../-file/file-tab';
+import { FileTreeTab, WorkspaceDock } from '../route';
 import { TerminalPanel } from './terminal-panel';
+import { TerminalTab } from './terminal-tab';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -60,7 +62,6 @@ async function mount({ client, manager }: ReturnType<typeof setUp>, layout?: unk
     component: () => (
       <div style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
-          panels={{ ...STUB_PANELS, terminal: TerminalPanel }}
           layout={layout}
           onDockviewReady={(ready) => {
             api = ready;
@@ -76,7 +77,17 @@ async function mount({ client, manager }: ReturnType<typeof setUp>, layout?: unk
   const screen = await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <ApplicationManagerContext value={builtInApplication({ router, terminals: manager })}>
+        <ApplicationManagerContext
+          value={builtInApplication({
+            router,
+            terminals: manager,
+            panelComponents: stubComponents({
+              fileTree: { tab: FileTreeTab },
+              file: { tab: FileTab },
+              terminal: { tab: TerminalTab, panel: TerminalPanel },
+            }),
+          })}
+        >
           <RouterProvider router={router} />
         </ApplicationManagerContext>
       </PluginStoreContext>

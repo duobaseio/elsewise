@@ -11,6 +11,7 @@ import { StrictMode } from 'react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
+import { DEFAULT_PANEL_COMPONENTS } from '@/dock/panel-component';
 import { WorkspaceSchema } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { ProjectManager } from '@/projects/project-manager';
 import { workspacesQuery } from '@/projects/workspace-manager';
@@ -40,7 +41,11 @@ test('reattaches dock when effects rerun', async () => {
       initialEntries: [`/${WORKSPACE.daemon}/${WORKSPACE.project}/${WORKSPACE.workspace}`],
     }),
   });
-  const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
+  const application = builtInApplication({
+    router,
+    projects: new ProjectManager(client, router),
+    panelComponents: DEFAULT_PANEL_COMPONENTS,
+  });
 
   await render(
     <StrictMode>

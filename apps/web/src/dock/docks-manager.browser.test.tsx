@@ -47,6 +47,30 @@ async function mount(shown = true) {
   return { docks, api, attached: attached as DockManager, opened, closed, changed };
 }
 
+describe('addPanelComponents', () => {
+  const FILE_COMPONENT = { type: 'file', tab: () => null, panel: () => null } as const;
+  const TERMINAL_COMPONENT = { type: 'terminal', tab: () => null, panel: () => null } as const;
+
+  test('lists components in order of addition', async () => {
+    const docks = await docksOf(false);
+
+    docks.addPanelComponents([FILE_COMPONENT]);
+    docks.addPanelComponents([TERMINAL_COMPONENT]);
+
+    expect(docks.panelComponents).toEqual([FILE_COMPONENT, TERMINAL_COMPONENT]);
+  });
+
+  test('removes components when disposed', async () => {
+    const docks = await docksOf(false);
+    docks.addPanelComponents([FILE_COMPONENT]);
+
+    const dispose = docks.addPanelComponents([TERMINAL_COMPONENT]);
+    void dispose();
+
+    expect(docks.panelComponents).toEqual([FILE_COMPONENT]);
+  });
+});
+
 describe('active', () => {
   test('returns dock of shown workspace', async () => {
     const { docks } = await mount();

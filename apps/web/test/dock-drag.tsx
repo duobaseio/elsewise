@@ -5,16 +5,19 @@ import { cdp } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
-import { PlaceholderTab } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 import { DefaultTab, FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from './commands';
 import { showWorkspace, WORKSPACE, workspaceRouter } from './dock';
-import { STUB_PANELS } from './dock-stubs';
+import { stubComponents } from './dock-stubs';
 
 import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
-const TABS = { fileTree: FileTreeTab, file: DefaultTab, terminal: DefaultTab, placeholder: PlaceholderTab };
+const COMPONENTS = stubComponents({
+  fileTree: { tab: FileTreeTab },
+  file: { tab: DefaultTab },
+  terminal: { tab: DefaultTab },
+});
 
 /**
  * Mounts an active dock with a, b and c in one group, d and e in a group below, and f alone in a group beside them.
@@ -23,7 +26,11 @@ const TABS = { fileTree: FileTreeTab, file: DefaultTab, terminal: DefaultTab, pl
  */
 export async function mount(theme?: 'light' | 'dark') {
   const { client, router } = workspaceRouter();
-  const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
+  const application = builtInApplication({
+    router,
+    projects: new ProjectManager(client, router),
+    panelComponents: COMPONENTS,
+  });
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
 
@@ -37,8 +44,6 @@ export async function mount(theme?: 'light' | 'dark') {
         style={{ width: 1100, height: 700 }}
       >
         <WorkspaceDock
-          panels={STUB_PANELS}
-          tabs={TABS}
           onDockviewReady={(ready) => {
             api = ready;
             application.docks.attach(WORKSPACE, ready);

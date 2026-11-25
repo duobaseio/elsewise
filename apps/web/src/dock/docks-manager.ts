@@ -3,6 +3,7 @@ import type { DockviewApi } from 'dockview-react';
 import { sameWorkspace, type WorkspaceManager } from '@/projects/workspace-manager';
 import type { TerminalManager } from '@/terminals/terminal-manager';
 import { DockManager } from './dock-manager';
+import type { PanelComponent } from './panel-component';
 
 /**
  * The docks, of which only the shown workspace's exists.
@@ -13,12 +14,31 @@ export class DocksManager implements Docks {
   private readonly closeListeners = new Set<(dock: Dock, panel: Panel) => void>();
   private readonly changeListeners = new Set<(dock: Dock | null) => void>();
   private attached: DockManager | null = null;
+  private addedComponents: readonly (readonly PanelComponent[])[] = [];
+  private currentComponents: readonly PanelComponent[] = [];
 
   constructor(
     private readonly workspaces: WorkspaceManager,
     private readonly terminals: TerminalManager,
   ) {
     workspaces.onActiveChange(() => this.update());
+  }
+
+  /**
+   * The panel components, in order of addition.
+   */
+  get panelComponents(): readonly PanelComponent[] {
+    return this.currentComponents;
+  }
+
+  addPanelComponents(components: readonly PanelComponent[]): Disposable {
+    const added = [...components];
+    this.addedComponents = [...this.addedComponents, added];
+    this.currentComponents = this.addedComponents.flat();
+    return () => {
+      this.addedComponents = this.addedComponents.filter((other) => other !== added);
+      this.currentComponents = this.addedComponents.flat();
+    };
   }
 
   /**

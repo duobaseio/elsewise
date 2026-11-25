@@ -11,10 +11,11 @@ import {
 import type { DockviewApi } from 'dockview-react';
 import { vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { ApplicationManagerContext } from '@/application-context';
 import { WorkspaceSchema } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { workspacesQuery } from '@/projects/workspace-manager';
 import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
-import { STUB_PANELS, STUB_TABS } from './dock-stubs';
+import { builtInApplication } from './commands';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -73,17 +74,17 @@ export function addFile(dockview: DockviewApi) {
 export async function mount(onReady?: (dockview: DockviewApi) => void): Promise<DockviewApi> {
   let api: DockviewApi | undefined;
   await render(
-    <div style={{ width: 1100, height: 700 }}>
-      <WorkspaceDock
-        panels={STUB_PANELS}
-        tabs={STUB_TABS}
-        onDockviewReady={(ready) => {
-          addFile(ready);
-          api = ready;
-          onReady?.(ready);
-        }}
-      />
-    </div>,
+    <ApplicationManagerContext value={builtInApplication()}>
+      <div style={{ width: 1100, height: 700 }}>
+        <WorkspaceDock
+          onDockviewReady={(ready) => {
+            addFile(ready);
+            api = ready;
+            onReady?.(ready);
+          }}
+        />
+      </div>
+    </ApplicationManagerContext>,
   );
   await vi.waitFor(() => {
     if (api === undefined) {

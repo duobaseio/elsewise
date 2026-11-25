@@ -6,7 +6,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
 import { builtInApplication } from '../../../../../../test/commands';
 import { addFile, FILE, FILE_TREE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../test/dock';
-import { STUB_PANELS, STUB_TABS } from '../../../../../../test/dock-stubs';
+import { stubComponents } from '../../../../../../test/dock-stubs';
 import { DefaultTab, WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
@@ -14,7 +14,11 @@ import 'dockview-react/dist/styles/dockview.css';
 // A dock attached to an application that shows its workspace.
 async function mount() {
   const { client, router } = workspaceRouter();
-  const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
+  const application = builtInApplication({
+    router,
+    projects: new ProjectManager(client, router),
+    panelComponents: stubComponents({ file: { tab: DefaultTab } }),
+  });
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
 
@@ -22,8 +26,6 @@ async function mount() {
     <ApplicationManagerContext value={application}>
       <div style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
-          panels={STUB_PANELS}
-          tabs={{ ...STUB_TABS, file: DefaultTab }}
           onDockviewReady={(ready) => {
             addFile(ready);
             application.docks.attach(WORKSPACE, ready);

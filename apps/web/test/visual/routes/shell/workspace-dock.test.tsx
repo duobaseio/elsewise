@@ -8,16 +8,26 @@ import '@/routes/_shell/dockview.css';
 
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
-import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
+import { FileTab } from '@/routes/_shell/$daemon/$project/$workspace/-file/file-tab';
+import { TerminalTab } from '@/routes/_shell/$daemon/$project/$workspace/-terminal/terminal-tab';
+import { FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../../commands';
 import { addFile, showWorkspace, WORKSPACE, workspaceRouter } from '../../../dock';
-import { STUB_PANELS } from '../../../dock-stubs';
+import { stubComponents } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
 
 async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
   const { client, router } = workspaceRouter();
-  const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
+  const application = builtInApplication({
+    router,
+    projects: new ProjectManager(client, router),
+    panelComponents: stubComponents({
+      fileTree: { tab: FileTreeTab },
+      file: { tab: FileTab },
+      terminal: { tab: TerminalTab },
+    }),
+  });
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
 
@@ -44,7 +54,6 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
             application.docks.attach(WORKSPACE, readyApi);
             api = readyApi;
           }}
-          panels={STUB_PANELS}
         />
       </div>
     </ApplicationManagerContext>,
