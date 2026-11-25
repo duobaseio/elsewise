@@ -5,6 +5,7 @@ import * as z from 'zod';
 export type Manifest = z.infer<typeof Manifest>;
 export type FrontendManifestPart = z.infer<typeof FrontendManifestPart>;
 export type DaemonManifestPart = z.infer<typeof DaemonManifestPart>;
+export type DaemonTarget = z.infer<typeof DaemonTarget>;
 
 const Version = z.string().refine((version) => valid(version) === version, { error: 'Not a version' });
 
@@ -20,6 +21,20 @@ const HttpUrl = z.url({ protocol: /^https?$/ });
  * A plugin's id, typically reverse domain name notation (e.g. `io.duobase.elsewise`).
  */
 export const PluginId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
+
+/**
+ * A platform a daemon part's bundle runs on.
+ *
+ * From node's `process.platform` and `process.arch`, joined by a hyphen (e.g. `darwin-arm64`).
+ */
+export const DaemonTarget = z.enum([
+  'darwin-arm64',
+  'darwin-x64',
+  'linux-arm64',
+  'linux-x64',
+  'win32-arm64',
+  'win32-x64',
+]);
 
 /**
  * A plugin's `manifest.json`.
@@ -160,4 +175,15 @@ export const DaemonManifestPart = z.object({
    */
   // TODO: Check against the other part's version, once the daemon reports its plugins to the app.
   frontend: VersionRange.optional(),
+
+  /**
+   * The platforms the daemon part runs on (e.g. `["darwin-arm64", "linux-x64"]`), for a part with native code.
+   *
+   * If left undefined, it refers to a universal binary.
+   */
+  targets: z
+    .array(DaemonTarget)
+    .min(1)
+    .refine((targets) => new Set(targets).size === targets.length, { error: 'A target should only appear once.' })
+    .optional(),
 });

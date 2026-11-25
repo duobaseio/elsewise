@@ -48,6 +48,15 @@ const INVALID: [string, unknown][] = [
   ['has a topic over 50 characters', { ...MINIMAL, topics: ['a'.repeat(51)], frontend: {} }],
   ['has over 20 topics', { ...MINIMAL, topics: Array.from({ length: 21 }, (_, i) => `topic-${i}`), frontend: {} }],
   ['has a topic twice', { ...MINIMAL, topics: ['git', 'git'], frontend: {} }],
+  ['has daemon targets that is not an array', { ...MINIMAL, frontend: {}, daemon: { targets: 'linux-x64' } }],
+  ['has no daemon targets in the list', { ...MINIMAL, frontend: {}, daemon: { targets: [] } }],
+  ['has a daemon target twice', { ...MINIMAL, frontend: {}, daemon: { targets: ['linux-x64', 'linux-x64'] } }],
+  [
+    'has a daemon target on an unknown architecture',
+    { ...MINIMAL, frontend: {}, daemon: { targets: ['linux-riscv64'] } },
+  ],
+  ['has a universal daemon target', { ...MINIMAL, frontend: {}, daemon: { targets: ['universal'] } }],
+  ['has a daemon target in uppercase', { ...MINIMAL, frontend: {}, daemon: { targets: ['Darwin-arm64'] } }],
 ];
 
 const RANGES = [
@@ -91,6 +100,20 @@ describe('Manifest', () => {
       frontend,
       daemon: { main: 'main.js', ...daemon },
     });
+  });
+
+  test('keeps daemon targets', () => {
+    const targets = ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-arm64', 'win32-x64'];
+
+    expect(Manifest.parse({ ...MINIMAL, frontend: {}, daemon: { targets } })).toEqual({
+      ...MINIMAL,
+      frontend: {},
+      daemon: { main: 'main.js', targets },
+    });
+  });
+
+  test('drops targets of frontend part', () => {
+    expect(Manifest.parse({ ...MINIMAL, frontend: { targets: ['linux-x64'] } })).toEqual({ ...MINIMAL, frontend: {} });
   });
 
   test('keeps listing metadata', () => {

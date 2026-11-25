@@ -31,6 +31,11 @@ Write them once, in the root `package.json`: `build` adds the ones it finds ther
 written in `manifest.json` wins over `package.json`'s. The URLs are plain `http` or `https` URLs, so npm's object form
 of `repository` is not accepted: `build` fails on a malformed manifest.
 
+A daemon part with native code lists the platforms it runs on in `daemon.targets`, e.g.
+`["darwin-arm64", "linux-x64"]`, and ships one bundle per target. A target is Node's `process.platform` and
+`process.arch` joined by a hyphen, one of `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-x64`, `win32-arm64` and
+`win32-x64`, each listed once. Without `targets`, the daemon part is one bundle that runs on any platform.
+
 See [`Manifest`](../../packages/plugin/src/manifest.ts) in `@elsewise/plugin` for a detailed description.
 
 ## Frontend
