@@ -53,6 +53,7 @@ function browserProject(
         '@dnd-kit/collision',
         '@dnd-kit/dom',
         '@dnd-kit/dom/sortable',
+        '@dnd-kit/dom/utilities',
         '@dnd-kit/react',
         '@dnd-kit/react/sortable',
         '@codemirror/autocomplete',

@@ -1,34 +1,53 @@
 import type { DockviewApi } from 'dockview-react';
-import { expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { expect, onTestFinished, test, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
+import { ApplicationManagerContext } from '@/application-context';
+import { ProjectManager } from '@/projects/project-manager';
 import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
-import { addFile } from '../../../dock';
+import { builtInApplication } from '../../../commands';
+import { addFile, showWorkspace, WORKSPACE, workspaceRouter } from '../../../dock';
 import { STUB_PANELS } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
 
 async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
+  const { client, router } = workspaceRouter();
+  const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
+  await showWorkspace(router);
+  await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
+
   let api: DockviewApi | undefined;
   render(
-    <div
-      className="dockview-theme-elsewise bg-background font-sans text-foreground"
-      data-brightness={theme}
-      data-testid="sheet"
-      style={{ width: 1100, height: 700 }}
-    >
-      <WorkspaceDock
-        onDockviewReady={(readyApi) => {
-          addFile(readyApi);
-          api = readyApi;
-        }}
-        panels={STUB_PANELS}
-      />
-    </div>,
+    <ApplicationManagerContext value={application}>
+      <div
+        className="dockview-theme-elsewise bg-background font-sans text-foreground"
+        data-brightness={theme}
+        data-testid="sheet"
+        style={{ width: 1100, height: 700 }}
+      >
+        <WorkspaceDock
+          onDockviewReady={(readyApi) => {
+            addFile(readyApi);
+            readyApi.addPanel({
+              id: 'terminal:1',
+              component: 'terminal',
+              title: 'Terminal',
+              params: { session: '1' },
+              position: { referencePanel: 'file:$workspace.tsx', direction: 'below' },
+              initialHeight: 200,
+            });
+            application.docks.attach(WORKSPACE, readyApi);
+            api = readyApi;
+          }}
+          panels={STUB_PANELS}
+        />
+      </div>
+    </ApplicationManagerContext>,
   );
   await vi.waitFor(() => {
     if (document.querySelectorAll('.dv-groupview').length !== 3) {
@@ -45,6 +64,16 @@ test.each(THEMES)('workspace dock default layout (%s)', async (theme) => {
   await mount(theme);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-default-${theme}`);
+});
+
+test.each(THEMES)('workspace dock without tab (%s)', async (theme) => {
+  const api = await mount(theme);
+
+  api.getPanel('file:$workspace.tsx')?.api.close();
+  api.getPanel('terminal:1')?.api.close();
+  await expect.element(page.getByText('Placeholder for Agent chat')).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-placeholder-${theme}`);
 });
 
 async function addEditorGroupTerminals(api: DockviewApi) {
@@ -86,7 +115,7 @@ test.each(THEMES)('workspace dock tab hover states (%s)', async (theme) => {
       selector: '.dv-inactive-group .dv-tab.dv-active-tab',
       pseudoClasses: ['hover'],
     },
-    { selector: '.dv-tab:has([data-tool])', pseudoClasses: ['hover'] },
+    { selector: '.dv-tab:has([data-tabless])', pseudoClasses: ['hover'] },
   ]);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-hover-${theme}`);
@@ -104,6 +133,32 @@ test.each(THEMES)('workspace dock tab focus states (%s)', async (theme) => {
   ]);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-focus-${theme}`);
+});
+
+test.each(THEMES)('workspace dock tab overflow (%s)', async (theme) => {
+  const api = await mount(theme);
+  await addEditorGroupTerminals(api);
+  api.getPanel('fileTree')?.group.api.setSize({ width: 800 });
+  await expect.element(page.getByRole('button', { name: 'New tab' }).first()).toBeVisible();
+  await expect.element(page.getByRole('button', { name: 'Show hidden tabs' })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-overflow-${theme}`);
+});
+
+test.each(THEMES)('workspace dock overflowing tabs menu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  const api = await mount(theme);
+  await addEditorGroupTerminals(api);
+  api.getPanel('fileTree')?.group.api.setSize({ width: 800 });
+
+  await userEvent.click(page.getByRole('button', { name: 'Show hidden tabs' }));
+  await expect.element(page.getByRole('menuitem').first()).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-overflowing-tabs-menu-${theme}`);
 });
 
 test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {

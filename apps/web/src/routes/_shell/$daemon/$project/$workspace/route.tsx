@@ -1,6 +1,5 @@
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
-import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import { createFileRoute } from '@tanstack/react-router';
@@ -8,14 +7,15 @@ import {
   type DockviewApi,
   DockviewReact,
   type DockviewReadyEvent,
-  type DockviewWillShowOverlayLocationEvent,
-  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { type ReactNode, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
+import { DraggableDock } from './-dock/draggable-dock';
+import { DraggableTab } from './-dock/draggable-tab';
+import { TabActions } from './-dock/tab-actions';
 import { FilePanel } from './-file/file-panel';
 import { FileTab } from './-file/file-tab';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
@@ -23,6 +23,7 @@ import { FileTreePanel } from './-file-tree/file-tree-panel';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
+import { Placeholder, PlaceholderTab } from './-placeholder/placeholder';
 import { TerminalPanel } from './-terminal/terminal-panel';
 import { TerminalTab } from './-terminal/terminal-tab';
 
@@ -34,12 +35,12 @@ export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
 type PanelKind = keyof typeof PANELS;
 
 const TOOL_TABS = { fileTree: FileTreeTab };
-const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab };
-const TOOL_PANELS = new Set(['fileTree' satisfies PanelKind]);
+const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab, placeholder: PlaceholderTab };
 const PANELS = {
   file: FilePanel,
   terminal: TerminalPanel,
   fileTree: FileTreePanel,
+  placeholder: Placeholder,
 };
 
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
@@ -62,16 +63,6 @@ function WorkspaceRoute() {
     }
 
     const dock = docks.attach({ daemon, project, workspace }, view.api);
-    const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
-    // TODO: Replace with default tab.
-    if (fileTree !== undefined && !dock.panels.some((panel) => panel.tab)) {
-      dock
-        .addTerminal({}, { group: 'left', of: fileTree })
-        .catch((error: Error) =>
-          toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
-        );
-    }
-
     return () => docks.detach(dock);
   }, [daemon, project, workspace, key, docks, view]);
 
@@ -107,42 +98,7 @@ export function WorkspaceDock({
   onDockviewReady?: (api: DockviewApi) => void;
   onLayoutChange?: (layout: SerializedDockview) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
-
-  // Disable group drags. Cancelling in capture phase beats onWillDragGroup, which fires only after dockview has painted
-  // a ghost frame.
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container) {
-      const onDragStart = (event: DragEvent) => {
-        if ((event.target as HTMLElement).closest('.dv-void-container')) {
-          event.preventDefault();
-        }
-      };
-
-      container.addEventListener('dragstart', onDragStart, { capture: true });
-      return () =>
-        container.removeEventListener('dragstart', onDragStart, {
-          capture: true,
-        });
-    }
-    return undefined;
-  }, []);
-
-  useEffect(() => {
-    if (dockview) {
-      lock(dockview);
-      const disposables = [dockview.onDidLayoutChange(() => lock(dockview)), dockview.onWillShowOverlay(preventMerge)];
-
-      return () => {
-        for (const disposable of disposables) {
-          disposable.dispose();
-        }
-      };
-    }
-    return undefined;
-  }, [dockview]);
 
   useEffect(() => {
     if (dockview && onLayoutChange) {
@@ -174,67 +130,38 @@ export function WorkspaceDock({
       params: { path: '/' },
       minimumWidth: 10,
       minimumHeight: 10,
-      // TODO: Add a default group beside the file tree, which balances this width. Until then the file tree fills the
-      // dock while it is alone.
-      initialWidth: 350,
     });
+    event.api.addPanel({
+      id: 'placeholder',
+      tabComponent: 'placeholder' satisfies PanelKind,
+      component: 'placeholder' satisfies PanelKind,
+      position: { referencePanel: 'fileTree', direction: 'left' },
+      minimumWidth: 10,
+      minimumHeight: 10,
+    });
+    event.api.getPanel('fileTree')?.group.api.setSize({ width: Math.min(350, Math.floor(event.api.width / 4)) });
     setDockview(event.api);
     onDockviewReady?.(event.api);
   };
 
   return (
-    <div className="flex h-full" ref={containerRef}>
+    <div className="flex h-full">
       <div className="min-w-0 flex-1">
-        <DockviewReact
-          components={panels}
-          defaultTabComponent={DefaultTab}
-          leftHeaderActionsComponent={AddTabAction}
-          onReady={onReady}
-          tabComponents={tabs}
-          theme={THEME}
-        />
+        <DraggableDock dockview={dockview}>
+          <DockviewReact
+            components={panels}
+            defaultTabComponent={DefaultTab}
+            disableDnd
+            disableFloatingGroups
+            disableTabsOverflowList
+            leftHeaderActionsComponent={TabActions}
+            onReady={onReady}
+            tabComponents={tabs}
+            theme={THEME}
+          />
+        </DraggableDock>
       </div>
       <ToolStripe />
-    </div>
-  );
-}
-
-/**
- * The + after the last tab of every content group.
- */
-export function AddTabAction(props: IDockviewHeaderActionsProps) {
-  const application = useContext(ApplicationManagerContext);
-  const isToolGroup = props.panels.some((panel) => TOOL_PANELS.has(panel.view.contentComponent));
-  if (isToolGroup) {
-    return null;
-  }
-
-  // TODO: Offer each kind of tab instead of always adding a terminal.
-  const add = () => {
-    const dock = application?.docks.active;
-    const last = dock?.get(props.panels.at(-1)?.id ?? '');
-    if (dock == null || last == null || !last.tab) {
-      return;
-    }
-
-    dock
-      .addTerminal({}, { tab: 'last', with: last })
-      .catch((error: Error) =>
-        toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
-      );
-  };
-
-  return (
-    <div className="-ml-1 flex h-full py-1 pr-0.5 pl-px">
-      <Button
-        aria-label="New tab"
-        className="aspect-square size-auto text-text-3"
-        onClick={add}
-        size="icon-xs"
-        variant="ghost"
-      >
-        <Icon className="size-3" name="add" />
-      </Button>
     </div>
   );
 }
@@ -256,76 +183,59 @@ export function DefaultTab({
   onClose?: () => void;
 }) {
   const docks = useContext(ApplicationManagerContext)?.docks;
-  // The dock's last remaining content tab is not closable.
-  const [closable, setClosable] = useState(true);
-
-  useEffect(() => {
-    const recompute = () => {
-      const contentPanels = props.containerApi.panels.filter((panel) => !TOOL_PANELS.has(panel.view.contentComponent));
-      setClosable(contentPanels.length > 1);
-    };
-
-    recompute();
-    const disposables = [props.containerApi.onDidAddPanel(recompute), props.containerApi.onDidRemovePanel(recompute)];
-    return () => {
-      for (const disposable of disposables) {
-        disposable.dispose();
-      }
-    };
-  }, [props.containerApi]);
 
   return (
     <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
+      <DraggableTab api={props.api} />
       {icon}
       <span>{props.api.title}</span>
-      {closable ? (
-        <Button
-          aria-label={`Close ${props.api.title}`}
-          className={cn(
-            '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
-            dirty && 'opacity-100',
-          )}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (onClose !== undefined) {
-              onClose();
-              return;
-            }
+      <Button
+        aria-label={`Close ${props.api.title}`}
+        className={cn(
+          '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
+          dirty && 'opacity-100',
+        )}
+        onClick={(event) => {
+          event.stopPropagation();
+          if (onClose !== undefined) {
+            onClose();
+            return;
+          }
 
-            const dock = docks?.active;
-            const panel = dock?.get(props.api.id);
-            if (dock == null || panel == null || !panel.closable) {
-              props.api.close();
-            } else {
-              void dock.close(panel);
-            }
-          }}
-          onPointerDown={(event) => event.stopPropagation()}
-          size="icon-xs"
-          variant="ghost"
-        >
-          {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
-          <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
-        </Button>
-      ) : (
-        dirty && <span aria-hidden className="size-2 rounded-full bg-text-3" />
-      )}
+          const dock = docks?.active;
+          const panel = dock?.get(props.api.id);
+          if (dock == null || panel == null || !panel.closable) {
+            props.api.close();
+          } else {
+            void dock.close(panel);
+          }
+        }}
+        onPointerDown={(event) => event.stopPropagation()}
+        size="icon-xs"
+        variant="ghost"
+      >
+        {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
+        <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
+      </Button>
     </div>
   );
 }
 
 /**
- * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tool` is the adapter CSS hook for
+ * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tabless` is the adapter CSS hook for
  * tool-specific state painting.
  */
 export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
-    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tool>
+    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tabless>
+      <DraggableTab api={props.api} />
       <span>{props.api.title}</span>
     </div>
   );
 }
 
+// TODO: The stripe is clipped  for a frame while the window resizes as Chromium shows a resized window with the page's
+//  previous frame. We need something like https://github.com/electron/electron/pull/55415 for macOS.
 export function ToolStripe() {
   const docks = useContext(ApplicationManagerContext)?.docks;
   const fileTreeVisible = useSyncExternalStore(
@@ -369,36 +279,4 @@ export function ToolStripe() {
       </Tooltip>
     </div>
   );
-}
-
-/**
- * Locked panels split but never merge: `locked: true` blocks the header drop surfaces, the overlay veto the rest.
- * Drags recreate groups, so the lock is re-enforced on every mutation.
- */
-function lock(api: DockviewApi) {
-  for (const panel of api.panels) {
-    if (TOOL_PANELS.has(panel.view.contentComponent) && panel.group.api.locked !== true) {
-      panel.group.api.locked = true;
-    }
-  }
-}
-
-function preventMerge(event: DockviewWillShowOverlayLocationEvent) {
-  const merging =
-    event.kind === 'tab' || event.kind === 'header_space' || (event.kind === 'content' && event.position === 'center');
-  if (!merging) {
-    return;
-  }
-
-  // The transfer carries an id, never the panel, so the kind needs a lookup. A group drag has no panel id at all.
-  const draggedId = event.getData()?.panelId;
-  const dragged = draggedId == null ? undefined : event.api.getPanel(draggedId);
-  const draggedTool = dragged != null && TOOL_PANELS.has(dragged.view.contentComponent);
-  const targetHasTool =
-    event.group != null &&
-    event.api.panels.some((panel) => panel.group === event.group && TOOL_PANELS.has(panel.view.contentComponent));
-
-  if (draggedTool || targetHasTool) {
-    event.preventDefault();
-  }
 }

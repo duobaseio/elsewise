@@ -1,6 +1,6 @@
 .settings-split-page {
   --dv-sash-color: transparent;
-  --dv-active-sash-color: var(--border);
+  --dv-active-sash-color: transparent;
 }
 
 /*

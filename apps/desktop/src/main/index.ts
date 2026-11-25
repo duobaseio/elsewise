@@ -108,8 +108,9 @@ function createWindow(background: boolean) {
   });
   // Without this, a link the renderer opens (a terminal URL) becomes a bare BrowserWindow.
   main.webContents.setWindowOpenHandler(({ url }) => {
-    const protocol = URL.parse(url)?.protocol;
-    if (protocol === 'http:' || protocol === 'https:') {
+    const target = URL.parse(url);
+    const own = target?.protocol === home.protocol && target.host === home.host;
+    if (!own && (target?.protocol === 'http:' || target?.protocol === 'https:')) {
       void shell.openExternal(url);
     }
 

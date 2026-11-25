@@ -9,6 +9,7 @@
   --dv-floating-border: 1px solid var(--border);
   --dv-context-menu-background-color: var(--popover);
   --dv-context-menu-color: var(--foreground);
+  --dv-overlay-z-index: 999;
   /* Tabs — every tab sits on the pane; state is carried by overlays (see the rules below), not fills. */
   --dv-activegroup-visiblepanel-tab-background-color: var(--surface);
   --dv-activegroup-visiblepanel-tab-color: var(--foreground);
@@ -19,17 +20,15 @@
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--surface);
   --dv-inactivegroup-hiddenpanel-tab-color: var(--foreground);
   --dv-tab-divider-color: var(--border);
-  --dv-tabs-and-actions-container-height: 32px;
-  --dv-tabs-and-actions-container-font-size: 13px;
+  --dv-tabs-and-actions-container-height: calc(var(--text-base--line-height) + 12px);
+  --dv-tabs-and-actions-container-font-size: var(--text-base);
   /* Lines — deckle seams between groups; the active sash inks. */
   --dv-separator-border: var(--border);
   --dv-sash-color: transparent;
   --dv-active-sash-color: var(--border);
   /* State layers */
-  --dv-drag-over-background-color: var(--layer-selected);
-  --dv-drag-over-border-color: transparent;
   --dv-icon-hover-background-color: var(--layer-hover);
-  --dv-scrollbar-background-color: var(--layer-selection);
+  --dv-scrollbar-background-color: var(--border);
   --dv-tabs-container-scrollbar-color: var(--disabled);
 }
 
@@ -39,10 +38,87 @@
  */
 
 /*
- * The constant cursor changes is extremely distracting. Furthermore, we have disabled dragging of entire groups.
+ * The constant cursor changes is extremely distracting.
  */
-.dockview-theme-elsewise :is(.dv-tab, .dv-void-container.dv-draggable) {
+.dockview-theme-elsewise .dv-tab {
   cursor: default;
+}
+
+/*
+ * A dragged tab is a lifted card, like a dragged row in the sidebar. The pill becomes the card: opaque and shadowed, so
+ * it moves behind the tab's content. The tab's own fill would show as a box around the card, and takes !important to
+ * remove, as dockview sets it with six classes.
+ */
+.dockview-theme-elsewise .dv-tab[data-dnd-dragging] {
+  isolation: isolate;
+  background-color: transparent !important;
+}
+
+.dockview-theme-elsewise .dv-tab[data-dnd-dragging]::before {
+  z-index: -1;
+  background-color: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+/* A tabless panel is dragged by its whole strip, which is the card. */
+.dockview-theme-elsewise .dv-tabs-and-actions-container[data-dnd-dragging] {
+  border-radius: var(--radius-md);
+  background-color: var(--surface) !important;
+  box-shadow: var(--shadow-md);
+}
+
+/* The tab's own fill would square the card's corners. */
+.dockview-theme-elsewise .dv-tabs-and-actions-container[data-dnd-dragging] .dv-tab {
+  background-color: transparent !important;
+}
+
+/* The placeholder has no tab. */
+.dockview-theme-elsewise .dv-tab:has([data-placeholder]) {
+  display: none;
+}
+
+/* Tints the content of the group that a dragged tab will drop into. */
+.dockview-theme-elsewise :is(.dv-content-container, .dv-dockview)[data-drop-target] {
+  position: relative;
+}
+
+.dockview-theme-elsewise :is(.dv-content-container, .dv-dockview)[data-drop-target]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: var(--layer-selected);
+  pointer-events: none;
+}
+
+/* A split fills the half that the new group will occupy. */
+.dockview-theme-elsewise .dv-content-container[data-drop-target="left"]::after {
+  right: 50%;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target="right"]::after {
+  left: 50%;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target="above"]::after {
+  bottom: 50%;
+}
+
+.dockview-theme-elsewise .dv-content-container[data-drop-target="below"]::after {
+  top: 50%;
+}
+
+/* An edge drop fills the quarter of the dock that the new group will occupy. */
+.dockview-theme-elsewise .dv-dockview[data-drop-target="left"]::after {
+  right: 75%;
+}
+
+.dockview-theme-elsewise .dv-dockview[data-drop-target="right"]::after {
+  left: 75%;
+}
+
+.dockview-theme-elsewise .dv-dockview[data-drop-target="bottom"]::after {
+  top: 75%;
 }
 
 /* The tab components own their horizontal padding. */
@@ -55,30 +131,31 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Breathing room at the strip's outer edges; the pills' own 3px handles in-between spacing. */
-.dockview-theme-elsewise .dv-groupview:not(:has([data-tool])) .dv-tabs-container {
-  padding: 0 4px;
+/* Breathing room at the strip's outer edge; the pills' own 3px handles in-between spacing. */
+.dockview-theme-elsewise .dv-groupview:not(:has([data-tabless])) .dv-tabs-container {
+  padding: 0 1px 0 4px;
 }
 
 /*
- * Tool groups (marked by their tab's data-tool) fuse the tab bar with the panel: same fill, no seam, and no
- * hover/selected painting on the tab. The tab itself stays — it is the group's only drag handle.
+ * Tool groups (marked by their tab's data-tabless) fuse the tab bar with the panel: same fill, no seam, and no
+ * hover/selected painting on the tab. The strip is the group's drag handle.
  */
-.dockview-theme-elsewise .dv-groupview:has([data-tool]) .dv-tabs-and-actions-container {
+.dockview-theme-elsewise .dv-groupview:has([data-tabless]) .dv-tabs-and-actions-container {
   background-color: var(--background);
   border-bottom: none;
 }
 
 /* Tab fills route through --dv-* variables; re-pointing them at group scope beats fighting core's six-class fill
    selectors on specificity. */
-.dockview-theme-elsewise .dv-groupview:has([data-tool]) {
+.dockview-theme-elsewise .dv-groupview:has([data-tabless]) {
   --dv-activegroup-visiblepanel-tab-background-color: var(--background);
   --dv-activegroup-hiddenpanel-tab-background-color: var(--background);
   --dv-inactivegroup-visiblepanel-tab-background-color: var(--background);
   --dv-inactivegroup-hiddenpanel-tab-background-color: var(--background);
 }
 
-.dockview-theme-elsewise .dv-tab:has([data-tool])::before {
+/* A tool tab is never painted. */
+.dockview-theme-elsewise .dv-tab:has([data-tabless])::before {
   content: none;
 }
 
@@ -88,7 +165,7 @@
 .dockview-theme-elsewise .dv-tab::before {
   content: "";
   position: absolute;
-  inset: 4px 1px;
+  inset: 3px 1px 4px;
   border-radius: var(--radius-md);
   pointer-events: none;
 }
@@ -115,6 +192,16 @@
   background-image:
     linear-gradient(var(--layer-hover), var(--layer-hover)),
     linear-gradient(var(--layer-selected-inactive), var(--layer-selected-inactive));
+}
+
+/* The dragged tab's placeholder slides in from the group it left, which overflows the strip it joins. */
+.dockview-theme-elsewise .dv-tab[data-dnd-placeholder] {
+  translate: none !important;
+}
+
+/* A dragged tab keeps its fill in an inactive group. */
+.dockview-theme-elsewise .dv-groupview .dv-tab.dv-active-tab[data-dnd-dragging]::before {
+  background-image: linear-gradient(var(--layer-selected), var(--layer-selected));
 }
 
 /*

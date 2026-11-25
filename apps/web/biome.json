@@ -48,6 +48,12 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/vite.config.ts", "**/vitest.config.ts", "**/vite/**/*"],
+      "linter": { "rules": { "style": { "noRestrictedImports": "off" } } }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "single",

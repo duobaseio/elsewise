@@ -55,18 +55,18 @@ export async function showWorkspace(router: AnyRouter) {
   await router.load();
 }
 
-// Adds the file beside the file tree, which is alone in a new dock.
+// Adds the file in place of the placeholder, beside the file tree of a new dock.
 export function addFile(dockview: DockviewApi) {
   dockview.addPanel({
     id: FILE.id,
     component: 'file',
     title: '$workspace.tsx',
     params: { path: FILE.relativePath },
-    position: { referencePanel: FILE_TREE.id, direction: 'left' },
+    position: { referencePanel: 'placeholder' },
     minimumWidth: 10,
     minimumHeight: 10,
   });
-  dockview.getPanel(FILE_TREE.id)?.group.api.setSize({ width: 350 });
+  dockview.getPanel('placeholder')?.api.close();
 }
 
 // Mounts a dock of stub panels, which has the file beside the file tree.

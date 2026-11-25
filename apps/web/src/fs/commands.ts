@@ -169,12 +169,10 @@ export const FILE_TREE_OPEN_FILE: FileTreeCommand = {
       return false;
     }
 
-    // TODO: Review placement logic of file relative to file tree. Sizing and placement might be incorrect.
     // TODO: How are hidden file tree panels handled?
     for (const path of files) {
       const active = dock.activeTabPanel;
       const fileTree = dock.panels.find((panel) => panel.type === 'fileTree');
-      // TODO: Open in the dock's default group once it has one, instead of splitting the file tree.
       dock.addFile(
         path,
         active !== null

@@ -75,6 +75,8 @@ export class DockStore {
 
   private mapPanel(panel: IDockviewPanel): Panel | null {
     switch (panel.view.contentComponent) {
+      case 'placeholder':
+        return { id: panel.id, type: 'placeholder', tab: true, closable: false };
       case 'file':
         return { id: panel.id, type: 'file', tab: true, closable: true, relativePath: panel.params?.path };
       case 'terminal':

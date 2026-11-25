@@ -42,8 +42,8 @@ export function SplitPage({ title, preview, children }: SplitPageProps) {
     event.api.addPanel({
       id: 'form',
       component: 'form' satisfies keyof typeof PANELS,
-      minimumSize: 600,
-      maximumSize: 672,
+      minimumSize: 480,
+      maximumSize: 768,
     });
     event.api.addPanel({ id: 'preview', component: 'preview' satisfies keyof typeof PANELS, minimumSize: 384 });
 

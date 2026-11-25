@@ -10,7 +10,7 @@ import { StatusIndicator } from '@elsewise/components/components/status-indicato
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { DEFAULT_COMMANDS, type Workspace as PluginWorkspace } from '@elsewise/frontend-plugin';
-import { Link, useParams } from '@tanstack/react-router';
+import { Link, linkOptions, useNavigate, useParams } from '@tanstack/react-router';
 import { useId, useMemo, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
@@ -43,6 +43,7 @@ export function WorkspaceItem({
   workspace: Workspace;
   index: number;
 }) {
+  const navigate = useNavigate();
   const params = useParams({ strict: false });
   const statusId = useId();
   const row = useRef<HTMLDivElement>(null);
@@ -54,6 +55,11 @@ export function WorkspaceItem({
   const pluginWorkspace = useMemo(() => mapWorkspace(daemonId, workspace), [daemonId, workspace]);
   const renaming = useRenaming(pluginWorkspace.id);
   const { state } = pluginWorkspace;
+
+  const link = linkOptions({
+    to: '/$daemon/$project/$workspace',
+    params: { daemon: daemonId, project: projectId, workspace: workspace.id },
+  });
 
   const { ref, handleRef } = useSortable({
     id: workspace.id,
@@ -103,9 +109,12 @@ export function WorkspaceItem({
                 aria-describedby={workspace.main ? `${statusId} ${statusId}main` : statusId}
                 aria-keyshortcuts={workspace.main ? undefined : 'Delete'}
                 draggable={false}
-                params={{ daemon: daemonId, project: projectId, workspace: workspace.id }}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void navigate(link);
+                }}
                 ref={handleRef}
-                to="/$daemon/$project/$workspace"
+                {...link}
               />
             }
           >

@@ -36,7 +36,12 @@ function Shell() {
 
   return (
     <div className="dockview-theme-elsewise h-dvh bg-background text-foreground">
-      <SplitviewReact components={PANELS} onReady={onReady} orientation={Orientation.HORIZONTAL} />
+      <SplitviewReact
+        components={PANELS}
+        onReady={onReady}
+        orientation={Orientation.HORIZONTAL}
+        proportionalLayout={false}
+      />
     </div>
   );
 }
