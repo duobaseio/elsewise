@@ -171,6 +171,15 @@ describe('Projects', () => {
     expect(router.state.location.pathname).toBe('/local/dotfiles/tokyo');
   });
 
+  test.each(['Alt', 'Meta', 'Shift'] as const)('opens workspace on %s-click', async (modifier) => {
+    const { router } = await mount('/local/elsewise/singapore');
+
+    await page.getByRole('treeitem', { name: 'Tokyo' }).click({ modifiers: [modifier] });
+
+    await expect.element(page.getByRole('treeitem', { name: 'Tokyo' })).toHaveAttribute('data-active');
+    expect(router.state.location.pathname).toBe('/local/dotfiles/tokyo');
+  });
+
   test('describes main workspace', async () => {
     await mount('/local/elsewise/singapore');
 
