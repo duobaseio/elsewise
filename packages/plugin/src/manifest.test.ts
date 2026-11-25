@@ -57,6 +57,8 @@ const INVALID: [string, unknown][] = [
   ],
   ['has a universal daemon target', { ...MINIMAL, frontend: {}, daemon: { targets: ['universal'] } }],
   ['has a daemon target in uppercase', { ...MINIMAL, frontend: {}, daemon: { targets: ['Darwin-arm64'] } }],
+  ['has a musl daemon target off Linux', { ...MINIMAL, frontend: {}, daemon: { targets: ['darwin-arm64-musl'] } }],
+  ['has a daemon target with a glibc suffix', { ...MINIMAL, frontend: {}, daemon: { targets: ['linux-x64-gnu'] } }],
 ];
 
 const RANGES = [
@@ -103,7 +105,16 @@ describe('Manifest', () => {
   });
 
   test('keeps daemon targets', () => {
-    const targets = ['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-arm64', 'win32-x64'];
+    const targets = [
+      'darwin-arm64',
+      'darwin-x64',
+      'linux-arm64',
+      'linux-arm64-musl',
+      'linux-x64',
+      'linux-x64-musl',
+      'win32-arm64',
+      'win32-x64',
+    ];
 
     expect(Manifest.parse({ ...MINIMAL, frontend: {}, daemon: { targets } })).toEqual({
       ...MINIMAL,

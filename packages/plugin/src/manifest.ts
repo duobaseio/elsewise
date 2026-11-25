@@ -25,13 +25,16 @@ export const PluginId = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/);
 /**
  * A platform a daemon part's bundle runs on.
  *
- * From node's `process.platform` and `process.arch`, joined by a hyphen (e.g. `darwin-arm64`).
+ * From node's `process.platform` and `process.arch`, joined by a hyphen (e.g. `darwin-arm64`). A Linux target is for
+ * glibc, or for musl with the `-musl` suffix (e.g. `linux-x64-musl`).
  */
 export const DaemonTarget = z.enum([
   'darwin-arm64',
   'darwin-x64',
   'linux-arm64',
+  'linux-arm64-musl',
   'linux-x64',
+  'linux-x64-musl',
   'win32-arm64',
   'win32-x64',
 ]);
