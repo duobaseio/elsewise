@@ -60,3 +60,54 @@ describe('onChange', () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('openCloseDialog', () => {
+  // A store whose dialog is not rendered.
+  function store() {
+    const files = new FileHandleStore();
+    const opened = vi.spyOn(files.closeDialog, 'openWithPayload').mockImplementation(() => {});
+    const closed = vi.spyOn(files.closeDialog, 'close').mockImplementation(() => {});
+    return { files, opened, closed };
+  }
+
+  test('opens dialog for file and failure', () => {
+    const { files, opened } = store();
+    const file = handle();
+
+    void files.openCloseDialog(file, 'unreachable');
+
+    expect(opened).toHaveBeenCalledExactlyOnceWith({ file, failure: 'unreachable' });
+  });
+
+  test('returns action dialog is closed with', async () => {
+    const { files, closed } = store();
+    const action = files.openCloseDialog(handle(), null);
+
+    files.closeCloseDialog('overwrite');
+
+    await expect(action).resolves.toBe('overwrite');
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
+  test('cancels dialog that another replaces', async () => {
+    const { files } = store();
+    const earlier = files.openCloseDialog(handle(), null);
+
+    const later = files.openCloseDialog(handle('other.ts'), null);
+    files.closeCloseDialog('discard');
+
+    await expect(earlier).resolves.toBe('cancel');
+    await expect(later).resolves.toBe('discard');
+  });
+});
+
+describe('closeCloseDialog', () => {
+  test('does nothing while no dialog is open', () => {
+    const files = new FileHandleStore();
+    const closed = vi.spyOn(files.closeDialog, 'close').mockImplementation(() => {});
+
+    files.closeCloseDialog('cancel');
+
+    expect(closed).not.toHaveBeenCalled();
+  });
+});

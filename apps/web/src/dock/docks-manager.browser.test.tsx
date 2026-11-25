@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
-import { WorkspaceManager } from '@/projects/workspace-manager';
-import { TerminalManager } from '@/terminals/terminal-manager';
+import { ProjectManager } from '@/projects/project-manager';
+import { builtInApplication } from '../../test/commands';
 import {
   addTerminal,
   FILE,
@@ -12,26 +12,27 @@ import {
   workspaceRouter,
 } from '../../test/dock';
 import type { DockManager } from './dock-manager';
-import { DocksManager } from './docks-manager';
+import type { PanelComponent } from './panel-component';
 
 // Dockview reports some changes late, so listeners are given time to be called.
 function settle() {
   return new Promise((resolve) => setTimeout(resolve, 50));
 }
 
-// The docks of a workspace manager that shows the workspace if `shown`.
-async function docksOf(shown: boolean) {
+// An application that shows the workspace if `shown`, whose docks have `panelComponents`.
+async function applicationOf(shown: boolean, panelComponents: readonly PanelComponent[] = []) {
   const { client, router } = workspaceRouter();
-  const workspaces = new WorkspaceManager(client, router);
+  const application = builtInApplication({ router, projects: new ProjectManager(client, router), panelComponents });
   if (shown) {
     await showWorkspace(router);
-    await vi.waitFor(() => expect(workspaces.active).not.toBeNull());
+    await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
   }
-  return new DocksManager(workspaces, new TerminalManager(client));
+  return application;
 }
 
-async function mount(shown = true) {
-  const docks = await docksOf(shown);
+async function mount(shown = true, panelComponents: readonly PanelComponent[] = []) {
+  const application = await applicationOf(shown, panelComponents);
+  const { docks } = application;
   let attached: DockManager | undefined;
   const api = await mountDock((ready) => {
     attached = docks.attach(WORKSPACE, ready);
@@ -44,7 +45,7 @@ async function mount(shown = true) {
   docks.onPanelOpen(opened);
   docks.onPanelClose(closed);
   docks.onChange(changed);
-  return { docks, api, attached: attached as DockManager, opened, closed, changed };
+  return { application, docks, api, attached: attached as DockManager, opened, closed, changed };
 }
 
 describe('addPanelComponents', () => {
@@ -52,7 +53,7 @@ describe('addPanelComponents', () => {
   const TERMINAL_COMPONENT = { type: 'terminal', tab: () => null, panel: () => null } as const;
 
   test('lists components in order of addition', async () => {
-    const docks = await docksOf(false);
+    const { docks } = await applicationOf(false);
 
     docks.addPanelComponents([FILE_COMPONENT]);
     docks.addPanelComponents([TERMINAL_COMPONENT]);
@@ -61,7 +62,7 @@ describe('addPanelComponents', () => {
   });
 
   test('removes components when disposed', async () => {
-    const docks = await docksOf(false);
+    const { docks } = await applicationOf(false);
     docks.addPanelComponents([FILE_COMPONENT]);
 
     const dispose = docks.addPanelComponents([TERMINAL_COMPONENT]);
@@ -86,6 +87,16 @@ describe('active', () => {
 });
 
 describe('attach', () => {
+  test('asks component of panel type before panel closes', async () => {
+    const close = vi.fn(() => false);
+    const { application, attached } = await mount(true, [{ type: 'file', tab: () => null, panel: () => null, close }]);
+
+    await expect(attached.close(FILE)).resolves.toBe(false);
+
+    expect(close).toHaveBeenCalledExactlyOnceWith(application, attached, FILE);
+    expect(attached.get(FILE.id)).toEqual(FILE);
+  });
+
   test('returns dock before workspace is shown', async () => {
     const { docks, attached } = await mount(false);
 
@@ -94,7 +105,7 @@ describe('attach', () => {
   });
 
   test('reports change without opened panels', async () => {
-    const docks = await docksOf(true);
+    const { docks } = await applicationOf(true);
     const opened = vi.fn();
     const changed = vi.fn();
     docks.onPanelOpen(opened);

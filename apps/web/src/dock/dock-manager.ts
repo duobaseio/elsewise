@@ -15,6 +15,7 @@ import type {
   WorkspaceId,
 } from '@elsewise/frontend-plugin';
 import { type DockviewApi, type DockviewIDisposable, Orientation, type SerializedDockview } from 'dockview-react';
+import type { ApplicationManager } from '@/application-manager';
 import { sameWorkspace, type WorkspaceManager } from '@/projects/workspace-manager';
 import type { TerminalManager } from '@/terminals/terminal-manager';
 import { DockStore } from './dock-store';
@@ -26,6 +27,7 @@ import { addPanel, movePanel } from './placement';
 export class DockManager implements Dock {
   private readonly disposables: DockviewIDisposable[];
   private readonly store: DockStore;
+  private readonly closing = new Map<string, Promise<boolean>>();
   private grid: SerializedDockview['grid'];
   private changed = false;
   private disposed = false;
@@ -36,6 +38,7 @@ export class DockManager implements Dock {
     private readonly dockview: DockviewApi,
     private readonly workspaces: WorkspaceManager,
     private readonly terminals: TerminalManager,
+    private readonly application: ApplicationManager,
     onOpen: (panel: Panel) => void,
     onClose: (panel: Panel) => void,
     onChange: () => void,
@@ -287,17 +290,28 @@ export class DockManager implements Dock {
     this.update();
   }
 
-  // TODO: Return false once what a panel shows can refuse, e.g. an editor with unsaved changes.
-  async close(panel: ClosablePanel): Promise<boolean> {
-    const open = this.get(panel.id);
-    if (open?.type === 'terminal') {
-      await this.terminals.delete(open.session);
-    }
+  close(panel: ClosablePanel): Promise<boolean> {
+    let closing = this.closing.get(panel.id);
+    if (closing === undefined) {
+      closing = (async () => {
+        const open = this.get(panel.id);
+        const component = this.application.docks.panelComponents.find((other) => other.type === open?.type);
+        if (open?.closable && !((await component?.close?.(this.application, this, open)) ?? true)) {
+          return false;
+        }
 
-    // A terminal's panel closes itself once its terminal is deleted.
-    this.dockview.getPanel(panel.id)?.api.close();
-    this.update();
-    return true;
+        if (open?.type === 'terminal') {
+          await this.terminals.delete(open.session);
+        }
+
+        // A terminal's panel closes itself once its terminal is deleted.
+        this.dockview.getPanel(panel.id)?.api.close();
+        this.update();
+        return true;
+      })().finally(() => this.closing.delete(panel.id));
+      this.closing.set(panel.id, closing);
+    }
+    return closing;
   }
 
   get workspace(): Workspace {

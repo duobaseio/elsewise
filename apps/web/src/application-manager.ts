@@ -3,7 +3,7 @@ import type { Application, Keymap } from '@elsewise/frontend-plugin';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { AppearanceManager } from '@/appearance/appearance-manager';
 import { CommandManager } from '@/command/command-manager';
-import type { DocksManager } from '@/dock/docks-manager';
+import { DocksManager } from '@/dock/docks-manager';
 import type { EditorManager } from '@/editor/editor-manager';
 import { FileHandleStore } from '@/fs/file-handle-store';
 import type { FileTreeManager } from '@/fs/file-tree-manager';
@@ -21,6 +21,7 @@ export class ApplicationManager implements Application {
   readonly commands: CommandManager;
   readonly sidebar = new SidebarStore();
   readonly files = new FileHandleStore();
+  readonly docks: DocksManager;
 
   constructor(
     readonly appearance: AppearanceManager,
@@ -30,10 +31,10 @@ export class ApplicationManager implements Application {
     readonly editor: EditorManager,
     readonly terminals: TerminalManager,
     readonly fileTree: FileTreeManager,
-    readonly docks: DocksManager,
     selected: Keymap,
     platform?: Platform,
   ) {
+    this.docks = new DocksManager(projects.workspaces, terminals, this);
     this.commands = new CommandManager(this, selected, platform);
   }
 }

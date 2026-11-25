@@ -9,7 +9,6 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { ApplicationManager } from '@/application-manager';
 import type { CommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap/keymap';
-import { DocksManager } from '@/dock/docks-manager';
 import type { PanelComponent } from '@/dock/panel-component';
 import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { FileTreeManager } from '@/fs/file-tree-manager';
@@ -32,9 +31,7 @@ export function builtInApplication(
   const router = parts.router ?? memoryRouter();
   const projects = parts.projects ?? new ProjectManager(new QueryClient(), router);
   const terminals = parts.terminals ?? new TerminalManager(new QueryClient());
-  const docks = new DocksManager(projects.workspaces, terminals);
-  docks.addPanelComponents(parts.panelComponents ?? STUB_COMPONENTS);
-  return new ApplicationManager(
+  const application = new ApplicationManager(
     parts.appearance ?? new AppearanceManager('light', resolveActiveTheme(undefined, 'light')),
     router,
     parts.settings ?? new SettingsPanelManager(),
@@ -42,10 +39,11 @@ export function builtInApplication(
     parts.editor ?? new EditorManager(),
     terminals,
     parts.fileTree ?? new FileTreeManager(),
-    docks,
     EMPTY_KEYMAP,
     platform,
   );
+  application.docks.addPanelComponents(parts.panelComponents ?? STUB_COMPONENTS);
+  return application;
 }
 
 export function builtInCommands(parts: Parameters<typeof builtInApplication>[0] = {}): CommandManager {

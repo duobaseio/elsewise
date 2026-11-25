@@ -17,6 +17,7 @@ import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-
 import { DraggableDock } from './-dock/draggable-dock';
 import { DraggableTab } from './-dock/draggable-tab';
 import { TabActions } from './-dock/tab-actions';
+import { CloseFileDialog } from './-file/close-file-dialog';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
@@ -62,6 +63,7 @@ function WorkspaceRoute() {
       <DeleteEntriesDialog />
       <PasteEntriesDialog />
       <OverwriteEntriesDialog />
+      <CloseFileDialog />
     </>
   );
 }

@@ -243,6 +243,26 @@ test('highlights previous overflowing tab when last one closes by key', async ()
   await vi.waitFor(() => expect(highlighted()).toBe(before));
 });
 
+test('keeps highlight when tab that refused to close by key closes later', async () => {
+  const dock = await mount();
+  const rows = await openOverflowing(dock);
+  const [first, second, third, ...others] = rows();
+  const panel = dock.panels.find((open) => open.type === 'file' && open.relativePath === `src/${second}`);
+  const closed = vi.spyOn(dock, 'close').mockResolvedValueOnce(false);
+  await userEvent.hover(document.querySelectorAll('[role="menuitem"]')[1] as HTMLElement);
+  await userEvent.keyboard(CLOSE);
+  await vi.waitFor(() => expect(closed).toHaveBeenCalledOnce());
+  await userEvent.hover(document.querySelector('[role="menuitem"]') as HTMLElement);
+
+  if (panel?.closable) {
+    await dock.close(panel);
+  }
+
+  await vi.waitFor(() => expect(rows()).toEqual([first, third, ...others]));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(highlighted()).toBe(first);
+});
+
 test('keeps overflowing tabs closed when tabs overflow again', async () => {
   const dock = await mount();
   const rows = await openOverflowing(dock);

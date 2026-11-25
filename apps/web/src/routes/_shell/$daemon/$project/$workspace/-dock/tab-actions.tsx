@@ -183,13 +183,20 @@ function OverflowTabsAction(props: IDockviewHeaderActionsProps) {
           const close = () => {
             if (panel.closable) {
               // TODO: Log this properly
-              dock.close(panel).catch((error: Error) =>
-                toast.add({
-                  type: 'error',
-                  title: panel.type === 'terminal' ? 'Deleting the terminal failed' : 'Closing the tab failed',
-                  description: error.message,
-                }),
-              );
+              dock
+                .close(panel)
+                .then((closed) => {
+                  if (!closed && focusing.current?.closed === id) {
+                    focusing.current = undefined;
+                  }
+                })
+                .catch((error: Error) =>
+                  toast.add({
+                    type: 'error',
+                    title: panel.type === 'terminal' ? 'Deleting the terminal failed' : 'Closing the tab failed',
+                    description: error.message,
+                  }),
+                );
             }
           };
 

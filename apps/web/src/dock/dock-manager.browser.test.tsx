@@ -1,16 +1,17 @@
 import type { Panel, TerminalPanel } from '@elsewise/frontend-plugin';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
-import { ProjectManager } from '@/projects/project-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
-import { memoryRouter } from '../../test/commands';
+import { builtInApplication } from '../../test/commands';
 import { addTerminal, FILE, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
 import { DockManager } from './dock-manager';
+import type { PanelComponent } from './panel-component';
 
 const OTHER = { ...FILE, id: 'file:other.ts', relativePath: 'other.ts' };
 
-// A dock that has the file and another in a group, above the terminal and beside the file tree.
-async function mount() {
+// A dock that has the file and another in a group, above the terminal and beside the file tree. Its file and terminal
+// components have `close`.
+async function mount(close?: PanelComponent['close']) {
   const dockview = await mountDock();
   dockview.addPanel({
     id: OTHER.id,
@@ -26,16 +27,24 @@ async function mount() {
   const created = vi
     .spyOn(terminals.store, 'add')
     .mockResolvedValue({ id: { ...WORKSPACE, session: '2' }, name: 'Terminal', state: 'idle' } as never);
+  const application = builtInApplication({
+    terminals,
+    panelComponents: [
+      { type: 'file', tab: () => null, panel: () => null, close },
+      { type: 'terminal', tab: () => null, panel: () => null, close },
+    ],
+  });
   const dock = new DockManager(
     WORKSPACE,
     dockview,
-    new ProjectManager(new QueryClient(), memoryRouter()).workspaces,
+    application.projects.workspaces,
     terminals,
+    application,
     () => {},
     () => {},
     () => {},
   );
-  return { dock, dockview, created, deleted };
+  return { application, dock, dockview, created, deleted };
 }
 
 const ADDED = { ...TERMINAL, id: 'terminal:2', session: { ...WORKSPACE, session: '2' } };
@@ -232,6 +241,62 @@ describe('close', () => {
     const { dock } = await mount();
 
     await expect(dock.close({ ...OTHER, id: 'closed' })).resolves.toBe(true);
+  });
+
+  test('closes panel that component allows', async () => {
+    const close = vi.fn(() => true);
+    const { application, dock } = await mount(close);
+
+    await expect(dock.close(OTHER)).resolves.toBe(true);
+
+    expect(close).toHaveBeenCalledExactlyOnceWith(application, dock, OTHER);
+    expect(dock.get(OTHER.id)).toBeNull();
+  });
+
+  test('keeps panel that component refuses', async () => {
+    const { dock } = await mount(async () => false);
+
+    await expect(dock.close(OTHER)).resolves.toBe(false);
+
+    expect(dock.get(OTHER.id)).toEqual(OTHER);
+  });
+
+  test('keeps terminal of panel that component refuses', async () => {
+    const { dock, deleted } = await mount(() => false);
+
+    await expect(dock.close(TERMINAL)).resolves.toBe(false);
+
+    expect(deleted).not.toHaveBeenCalled();
+  });
+
+  test('rejects and keeps panel whose component rejects', async () => {
+    const { dock } = await mount(() => Promise.reject(new Error('unreadable')));
+
+    await expect(dock.close(OTHER)).rejects.toThrow('unreadable');
+
+    expect(dock.get(OTHER.id)).toEqual(OTHER);
+  });
+
+  test('asks component once while panel is closing', async () => {
+    let allow = (_: boolean) => {};
+    const close = vi.fn(() => new Promise<boolean>((resolve) => (allow = resolve)));
+    const { dock } = await mount(close);
+
+    const closes = [dock.close(OTHER), dock.close(OTHER)];
+    allow(true);
+
+    await expect(Promise.all(closes)).resolves.toEqual([true, true]);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  test('asks component again after it refused', async () => {
+    const close = vi.fn(() => false);
+    const { dock } = await mount(close);
+
+    await dock.close(OTHER);
+    await dock.close(OTHER);
+
+    expect(close).toHaveBeenCalledTimes(2);
   });
 });
 

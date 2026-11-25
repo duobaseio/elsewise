@@ -7,7 +7,6 @@ import { useActiveTheme } from '@/appearance/themes';
 import { ApplicationManagerContext } from '@/application-context';
 import { ApplicationManager } from '@/application-manager';
 import { installApplicationKeys, useSelectedKeymap } from '@/command/keymap/keymap';
-import { DocksManager } from '@/dock/docks-manager';
 import { DEFAULT_PANEL_COMPONENTS } from '@/dock/panel-component';
 import { FAKE_GIT } from '@/editor/diff/fake-diff';
 import { EditorManager } from '@/editor/editor-manager';
@@ -65,7 +64,6 @@ function RootComponent() {
       new EditorManager(),
       terminals,
       new FileTreeManager(),
-      new DocksManager(projects.workspaces, terminals),
       keymap,
     );
 

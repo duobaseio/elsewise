@@ -1,5 +1,6 @@
 import type { Disposable, Dock, Docks, Panel, WorkspaceId } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
+import type { ApplicationManager } from '@/application-manager';
 import { sameWorkspace, type WorkspaceManager } from '@/projects/workspace-manager';
 import type { TerminalManager } from '@/terminals/terminal-manager';
 import { DockManager } from './dock-manager';
@@ -20,6 +21,7 @@ export class DocksManager implements Docks {
   constructor(
     private readonly workspaces: WorkspaceManager,
     private readonly terminals: TerminalManager,
+    private readonly application: ApplicationManager,
   ) {
     workspaces.onActiveChange(() => this.update());
   }
@@ -53,6 +55,7 @@ export class DocksManager implements Docks {
       view,
       this.workspaces,
       this.terminals,
+      this.application,
       (panel) => {
         if (this.active === dock) {
           this.call(this.openListeners, dock, panel);
