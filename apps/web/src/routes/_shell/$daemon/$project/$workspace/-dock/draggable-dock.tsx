@@ -43,7 +43,10 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
       ? []
       : dockview.groups.filter((group) => group.panels.every((panel) => dock.get(panel.id)?.tab === true));
 
-  // Where a dropped tab goes: into a group as its last tab, beside a group, or along an edge of the dock.
+  // Where a dropped tab goes:
+  // * into a group as its last tab
+  // * beside a group
+  // * along an edge of the dock
   const destination = (
     { source, target, position, shape }: DragOperation<Draggable, Droppable>,
     pointer = position.current,
@@ -217,10 +220,9 @@ export function DraggableDock({ dockview, children }: { dockview: DockviewApi | 
           if (!element.hasAttribute('data-dnd-dragging')) {
             observer.disconnect();
 
-            // Dockview treats moving tabs as removal + addition internally. Consequently, dockview activates another
-            // tab in the intermission and scrolls to it.
-            //
-            // We work around this by saving the scroll positions before a move and restoring them afterward.
+            // TODO: Drop once dockview moves a tab without removing and adding it. Until then, dockview activates
+            // another tab in the intermission and scrolls to it, so the scroll positions are saved before a move and
+            // restored afterward.
             const strips = [...(root?.querySelectorAll('.dv-tabs-container') ?? [])].map(
               (strip) => [strip, strip.scrollLeft] as const,
             );

@@ -97,7 +97,8 @@ export class DockManager implements Dock {
   }
 
   // TODO: Drop once dockview can give the space of a group that leaves a row or column to a neighbour.
-  // Disclaimer: This method is AI generated. It is throaway code until we have proper sizing on removal working in upstream.
+  // Disclaimer: This method is AI generated. It is throwaway code until we have proper sizing on removal working in
+  // upstream.
   private restoreSizes(left: string) {
     type Node = SerializedDockview['grid']['root'];
     const leaves = (node: Node): string[] => (Array.isArray(node.data) ? node.data.flatMap(leaves) : [node.data.id]);
