@@ -1,6 +1,5 @@
 import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
-import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import { createFileRoute } from '@tanstack/react-router';
@@ -8,15 +7,15 @@ import {
   type DockviewApi,
   DockviewReact,
   type DockviewReadyEvent,
-  type IDockviewHeaderActionsProps,
   type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from 'dockview-react';
 import { type ReactNode, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
-import { DraggableDock } from './-drag/draggable-dock';
-import { DraggableTab } from './-drag/draggable-tab';
+import { DraggableDock } from './-dock/draggable-dock';
+import { DraggableTab } from './-dock/draggable-tab';
+import { TabActions } from './-dock/tab-actions';
 import { FilePanel } from './-file/file-panel';
 import { FileTab } from './-file/file-tab';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
@@ -37,7 +36,6 @@ type PanelKind = keyof typeof PANELS;
 
 const TOOL_TABS = { fileTree: FileTreeTab };
 const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab, placeholder: PlaceholderTab };
-const TOOL_PANELS = new Set(['fileTree' satisfies PanelKind]);
 const PANELS = {
   file: FilePanel,
   terminal: TerminalPanel,
@@ -154,7 +152,8 @@ export function WorkspaceDock({
             components={panels}
             defaultTabComponent={DefaultTab}
             disableDnd
-            leftHeaderActionsComponent={AddTabAction}
+            disableTabsOverflowList
+            leftHeaderActionsComponent={TabActions}
             onReady={onReady}
             tabComponents={tabs}
             theme={THEME}
@@ -162,46 +161,6 @@ export function WorkspaceDock({
         </DraggableDock>
       </div>
       <ToolStripe />
-    </div>
-  );
-}
-
-/**
- * The + after the last tab of every content group.
- */
-export function AddTabAction(props: IDockviewHeaderActionsProps) {
-  const application = useContext(ApplicationManagerContext);
-  const isToolGroup = props.panels.some((panel) => TOOL_PANELS.has(panel.view.contentComponent));
-  if (isToolGroup) {
-    return null;
-  }
-
-  // TODO: Offer each kind of tab instead of always adding a terminal.
-  const add = () => {
-    const dock = application?.docks.active;
-    const last = dock?.get(props.panels.at(-1)?.id ?? '');
-    if (dock == null || last == null || !last.tab) {
-      return;
-    }
-
-    dock
-      .addTerminal({}, { tab: 'last', with: last })
-      .catch((error: Error) =>
-        toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
-      );
-  };
-
-  return (
-    <div className="-ml-1 flex h-full py-[3px] pr-0.5 pl-px">
-      <Button
-        aria-label="New tab"
-        className="aspect-square size-auto text-text-3"
-        onClick={add}
-        size="icon-xs"
-        variant="ghost"
-      >
-        <Icon className="size-3" name="add" />
-      </Button>
     </div>
   );
 }

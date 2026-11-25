@@ -63,3 +63,11 @@ test('restores placeholder beside file tree', async () => {
     ['placeholder', 714],
   ]);
 });
+
+test('shows no tab actions outside active dock', async () => {
+  const { api } = await mount();
+  addFile(api);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  expect(document.querySelector('button[aria-label="New tab"]')).toBeNull();
+});

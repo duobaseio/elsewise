@@ -235,7 +235,9 @@ describe('DraggableDock', () => {
 
     await hold('e', strip('d'));
     const held = groups();
-    const { right } = strip('d').getBoundingClientRect();
+    const { right } = (
+      group('d').querySelector('.dv-tabs-and-actions-container') as HTMLElement
+    ).getBoundingClientRect();
     for (let x = right - 30; x < right; x++) {
       Object.assign(pointer, { x, y: pointer.y });
       dispatch('pointermove', document);
@@ -268,7 +270,8 @@ describe('DraggableDock', () => {
       dispatch('pointermove', document);
       await frames();
     }
-    expect(pointer.x).toBeLessThan(strip('d').getBoundingClientRect().right);
+    const header = group('d').querySelector('.dv-tabs-and-actions-container') as HTMLElement;
+    expect(pointer.x).toBeLessThan(header.getBoundingClientRect().right);
     await drop(dockview);
 
     expect(model(dockview)).toContain('d');

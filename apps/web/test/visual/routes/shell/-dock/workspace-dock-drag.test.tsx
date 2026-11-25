@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
-import { cancel, content, hold, mount, move, tab } from '../../../dock-drag';
-import { THEMES } from '../../../sheet';
+import { cancel, content, hold, mount, move, tab } from '../../../../dock-drag';
+import { THEMES } from '../../../../sheet';
 
 test.each(THEMES)('workspace dock dragged tab (%s)', async (theme) => {
   const dockview = await mount(theme);

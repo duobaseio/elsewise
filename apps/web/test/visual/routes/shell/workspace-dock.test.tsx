@@ -1,6 +1,6 @@
 import type { DockviewApi } from 'dockview-react';
-import { expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { expect, onTestFinished, test, vi } from 'vitest';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
 import 'dockview-react/dist/styles/dockview.css';
@@ -133,6 +133,32 @@ test.each(THEMES)('workspace dock tab focus states (%s)', async (theme) => {
   ]);
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-focus-${theme}`);
+});
+
+test.each(THEMES)('workspace dock tab overflow (%s)', async (theme) => {
+  const api = await mount(theme);
+  await addEditorGroupTerminals(api);
+  api.getPanel('fileTree')?.group.api.setSize({ width: 800 });
+  await expect.element(page.getByRole('button', { name: 'New tab' }).first()).toBeVisible();
+  await expect.element(page.getByRole('button', { name: 'Show hidden tabs' })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-overflow-${theme}`);
+});
+
+test.each(THEMES)('workspace dock overflowing tabs menu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  const api = await mount(theme);
+  await addEditorGroupTerminals(api);
+  api.getPanel('fileTree')?.group.api.setSize({ width: 800 });
+
+  await userEvent.click(page.getByRole('button', { name: 'Show hidden tabs' }));
+  await expect.element(page.getByRole('menuitem').first()).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-overflowing-tabs-menu-${theme}`);
 });
 
 test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {

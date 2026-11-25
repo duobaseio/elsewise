@@ -9,6 +9,7 @@
   --dv-floating-border: 1px solid var(--border);
   --dv-context-menu-background-color: var(--popover);
   --dv-context-menu-color: var(--foreground);
+  --dv-overlay-z-index: 999;
   /* Tabs — every tab sits on the pane; state is carried by overlays (see the rules below), not fills. */
   --dv-activegroup-visiblepanel-tab-background-color: var(--surface);
   --dv-activegroup-visiblepanel-tab-color: var(--foreground);
@@ -27,7 +28,7 @@
   --dv-active-sash-color: var(--border);
   /* State layers */
   --dv-icon-hover-background-color: var(--layer-hover);
-  --dv-scrollbar-background-color: var(--layer-selection);
+  --dv-scrollbar-background-color: var(--border);
   --dv-tabs-container-scrollbar-color: var(--disabled);
 }
 
@@ -130,9 +131,9 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* Breathing room at the strip's outer edges; the pills' own 3px handles in-between spacing. */
+/* Breathing room at the strip's outer edge; the pills' own 3px handles in-between spacing. */
 .dockview-theme-elsewise .dv-groupview:not(:has([data-tabless])) .dv-tabs-container {
-  padding: 0 4px;
+  padding: 0 1px 0 4px;
 }
 
 /*
@@ -164,7 +165,7 @@
 .dockview-theme-elsewise .dv-tab::before {
   content: "";
   position: absolute;
-  inset: 3px 1px;
+  inset: 3px 1px 4px;
   border-radius: var(--radius-md);
   pointer-events: none;
 }
