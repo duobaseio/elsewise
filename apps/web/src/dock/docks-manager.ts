@@ -12,6 +12,8 @@ import {
   type WorkspaceId,
 } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useApplicationManager } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { MenuManager } from '@/collections/menu-manager';
 import { sameWorkspace } from '@/projects/workspace-manager';
@@ -108,16 +110,6 @@ export class DocksManager implements Docks {
   }
 
   /**
-   * Calls `listener` when the panel menu's groups change.
-   */
-  onPanelMenuChange(listener: () => void): Disposable {
-    this.menuListeners.add(listener);
-    return () => {
-      this.menuListeners.delete(listener);
-    };
-  }
-
-  /**
    * Attaches the dockview that shows `workspace`.
    *
    * Returns its dock, which is not active until the workspace is.
@@ -200,6 +192,16 @@ export class DocksManager implements Docks {
   }
 
   /**
+   * Calls `listener` when the panel menu's groups change.
+   */
+  onPanelMenuChange(listener: () => void): Disposable {
+    this.menuListeners.add(listener);
+    return () => {
+      this.menuListeners.delete(listener);
+    };
+  }
+
+  /**
    * Calls `listener` with each panel that opens, and its dock.
    */
   onPanelOpen(listener: (dock: Dock, panel: Panel) => void): Disposable {
@@ -229,3 +231,17 @@ export class DocksManager implements Docks {
     };
   }
 }
+
+export function usePanelSources(): readonly CustomPanelSource[] {
+  const { docks } = useApplicationManager();
+  const subscribe = useCallback((listener: () => void) => docks.onPanelSourcesChange(listener), [docks]);
+  return useSyncExternalStore(subscribe, () => docks.panelSources);
+}
+
+export function usePanelMenu(): readonly PanelMenuGroup[] {
+  const { docks } = useApplicationManager();
+  const subscribe = useCallback((listener: () => void) => docks.onPanelMenuChange(listener), [docks]);
+  return useSyncExternalStore(subscribe, () => docks.panelMenu);
+}
+
+

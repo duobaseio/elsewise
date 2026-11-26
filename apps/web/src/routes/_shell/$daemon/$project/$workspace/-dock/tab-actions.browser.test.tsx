@@ -118,6 +118,29 @@ describe('AddTabAction', () => {
     expect(addedTerminal).toHaveBeenCalledOnce();
   });
 
+  test('separates groups', async () => {
+    const { docks } = await mount();
+    docks.addPanelSources([REPORT]);
+    docks.addPanelMenu([{ id: 'example.panels', order: 20, items: [{ source: REPORT.id }] }]);
+
+    await page.getByRole('button', { name: 'New tab' }).click();
+
+    await expect.element(page.getByRole('menuitem', { name: 'Report' })).toBeVisible();
+    expect(page.getByRole('separator').elements()).toHaveLength(1);
+  });
+
+  test('hides submenu without shown item', async () => {
+    const { docks, addedTerminal } = await mount();
+    docks.addPanelMenu([
+      { id: 'example.more', items: [{ label: 'More', submenu: 'example.more' }] },
+      { id: 'example.reports', in: 'example.more', items: [{ source: REPORT.id }] },
+    ]);
+
+    await page.getByRole('button', { name: 'New tab' }).click();
+
+    expect(addedTerminal).toHaveBeenCalledOnce();
+  });
+
   test('opens submenu of groups in it', async () => {
     const { docks } = await mount();
     docks.addPanelSources([REPORT]);

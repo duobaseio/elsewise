@@ -7,6 +7,7 @@ import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
 import { ApplicationManagerContext } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import { ProjectManager } from '@/projects/project-manager';
 import { FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../../commands';
@@ -15,7 +16,10 @@ import { StubTab, stubComponents } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
 
-async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
+async function mount(
+  theme: 'light' | 'dark',
+  configure?: (application: ApplicationManager) => void,
+): Promise<DockviewApi> {
   const { client, router } = workspaceRouter();
   const application = builtInApplication({
     router,
@@ -26,6 +30,7 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
       terminal: { tab: StubTab },
     }),
   });
+  configure?.(application);
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
 
@@ -168,6 +173,31 @@ test.each(THEMES)('workspace dock overflowing tabs menu (%s)', async (theme) => 
   await expect.element(page.getByRole('menuitem').first()).toBeVisible();
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-overflowing-tabs-menu-${theme}`);
+});
+
+test.each(THEMES)('workspace dock panel menu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  await mount(theme, ({ docks }) => {
+    const source = { tab: true, closable: true, header: () => null, panel: () => null };
+    docks.addPanelSources([
+      { ...source, id: 'example/report', label: 'Report' },
+      { ...source, id: 'example/chart', label: 'Chart' },
+    ]);
+    docks.addPanelMenu([
+      { id: 'example.panels', order: 20, items: [{ order: 10, source: 'example/report' }] },
+      { id: 'example.more', order: 30, items: [{ label: 'More', submenu: 'example.more' }] },
+      { id: 'example.charts', in: 'example.more', items: [{ source: 'example/chart' }] },
+    ]);
+  });
+
+  await userEvent.click(page.getByRole('button', { name: 'New tab' }).first());
+  await expect.element(page.getByRole('menuitem', { name: 'Terminal' })).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-panel-menu-${theme}`);
 });
 
 test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {
