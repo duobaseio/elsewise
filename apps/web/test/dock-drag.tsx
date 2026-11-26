@@ -5,18 +5,18 @@ import { cdp } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
-import { DefaultTab, FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
+import { FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from './commands';
 import { showWorkspace, WORKSPACE, workspaceRouter } from './dock';
-import { stubComponents } from './dock-stubs';
+import { StubTab, stubComponents } from './dock-stubs';
 
 import 'dockview-react/dist/styles/dockview.css';
 import '@/routes/_shell/dockview.css';
 
 const COMPONENTS = stubComponents({
   fileTree: { tab: FileTreeTab },
-  file: { tab: DefaultTab },
-  terminal: { tab: DefaultTab },
+  file: { tab: StubTab },
+  terminal: { tab: StubTab },
 });
 
 /**

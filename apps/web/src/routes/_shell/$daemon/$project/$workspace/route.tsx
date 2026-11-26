@@ -1,4 +1,5 @@
 import { Button } from '@elsewise/components/components/button';
+import { DockToolHeader } from '@elsewise/components/components/dock';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
@@ -11,7 +12,7 @@ import {
   type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-dock/draggable-dock';
@@ -143,7 +144,6 @@ export function WorkspaceDock({
         <DraggableDock dockview={dockview}>
           <DockviewReact
             components={panels}
-            defaultTabComponent={DefaultTab}
             disableDnd
             disableFloatingGroups
             disableTabsOverflowList
@@ -159,71 +159,17 @@ export function WorkspaceDock({
   );
 }
 
-export function DefaultTab({
-  icon,
-  dirty = false,
-  onClose,
-  ...props
-}: IDockviewPanelHeaderProps & {
-  /**
-   * The icon before the tab's title.
-   */
-  icon?: ReactNode;
-  /**
-   * Whether the panel has unsaved changes, which marks the tab with a dot that turns into the close button on hover.
-   */
-  dirty?: boolean;
-  onClose?: () => void;
-}) {
-  const docks = useContext(ApplicationManagerContext)?.docks;
-
-  return (
-    <div className="flex h-full items-center gap-1.5 px-2 text-base/6" data-dirty={dirty || undefined}>
-      <DraggableTab api={props.api} />
-      {icon}
-      <span>{props.api.title}</span>
-      <Button
-        aria-label={`Close ${props.api.title}`}
-        className={cn(
-          '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
-          dirty && 'opacity-100',
-        )}
-        onClick={(event) => {
-          event.stopPropagation();
-          if (onClose !== undefined) {
-            onClose();
-            return;
-          }
-
-          const dock = docks?.active;
-          const panel = dock?.get(props.api.id);
-          if (dock == null || panel == null || !panel.closable) {
-            props.api.close();
-          } else {
-            void dock.close(panel);
-          }
-        }}
-        onPointerDown={(event) => event.stopPropagation()}
-        size="icon-xs"
-        variant="ghost"
-      >
-        {dirty && <span aria-hidden className="size-2 rounded-full bg-current in-[.dv-tab:hover]:hidden" />}
-        <Icon className={cn('size-3', dirty && 'hidden in-[.dv-tab:hover]:block')} name="close" />
-      </Button>
-    </div>
-  );
-}
-
 /**
  * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tabless` is the adapter CSS hook for
  * tool-specific state painting.
  */
 export function FileTreeTab(props: IDockviewPanelHeaderProps) {
   return (
-    <div className="flex h-full items-center gap-1.5 px-4 text-base text-text-2" data-tabless>
+    <>
+      <span data-tabless hidden />
       <DraggableTab api={props.api} />
-      <span>{props.api.title}</span>
-    </div>
+      <DockToolHeader title={props.api.title} />
+    </>
   );
 }
 
