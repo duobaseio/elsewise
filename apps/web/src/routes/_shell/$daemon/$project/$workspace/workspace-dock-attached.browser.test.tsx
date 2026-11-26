@@ -1,20 +1,27 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { builtInApplication } from '../../../../../../test/commands';
 import { addFile, FILE, FILE_TREE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../test/dock';
-import { STUB_PANELS, STUB_TABS } from '../../../../../../test/dock-stubs';
+import { stubComponents } from '../../../../../../test/dock-stubs';
 import { DefaultTab, WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 
-// A dock attached to an application that shows its workspace.
-async function mount() {
+// A dock attached to an application that shows its workspace, with `settings` if given.
+async function mount(settings?: SettingsPanelManager) {
   const { client, router } = workspaceRouter();
-  const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
+  const application = builtInApplication({
+    router,
+    settings,
+    projects: new ProjectManager(client, router),
+    panelComponents: stubComponents({ file: { tab: DefaultTab } }),
+  });
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
 
@@ -22,8 +29,6 @@ async function mount() {
     <ApplicationManagerContext value={application}>
       <div style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
-          panels={STUB_PANELS}
-          tabs={{ ...STUB_TABS, file: DefaultTab }}
           onDockviewReady={(ready) => {
             addFile(ready);
             application.docks.attach(WORKSPACE, ready);
@@ -69,6 +74,20 @@ test('closes editor through dock', async () => {
 
   expect(closed).toHaveBeenCalledExactlyOnceWith(added);
   await vi.waitFor(() => expect(dock.panels).toEqual([FILE, FILE_TREE]));
+});
+
+test('adds terminal with close confirmation as set', async () => {
+  const dock = await mount(
+    new SettingsPanelManager([], {
+      ...DEFAULT_FRONTEND_SETTINGS,
+      terminal: { ...DEFAULT_FRONTEND_SETTINGS.terminal, closeConfirmation: true },
+    }),
+  );
+  const added = vi.spyOn(dock, 'addTerminal').mockResolvedValue(null);
+
+  await page.getByRole('button', { name: 'New tab' }).click();
+
+  expect(added).toHaveBeenCalledExactlyOnceWith({ closeConfirmation: true }, { tab: 'last', with: FILE });
 });
 
 const hiddenTabs = () => document.querySelector('button[aria-label="Show hidden tabs"]') as HTMLElement;
@@ -239,6 +258,26 @@ test('highlights previous overflowing tab when last one closes by key', async ()
 
   await vi.waitFor(() => expect(rows().at(-1)).toBe(before));
   await vi.waitFor(() => expect(highlighted()).toBe(before));
+});
+
+test('keeps highlight when tab that refused to close by key closes later', async () => {
+  const dock = await mount();
+  const rows = await openOverflowing(dock);
+  const [first, second, third, ...others] = rows();
+  const panel = dock.panels.find((open) => open.type === 'file' && open.relativePath === `src/${second}`);
+  const closed = vi.spyOn(dock, 'close').mockResolvedValueOnce(false);
+  await userEvent.hover(document.querySelectorAll('[role="menuitem"]')[1] as HTMLElement);
+  await userEvent.keyboard(CLOSE);
+  await vi.waitFor(() => expect(closed).toHaveBeenCalledOnce());
+  await userEvent.hover(document.querySelector('[role="menuitem"]') as HTMLElement);
+
+  if (panel?.closable) {
+    await dock.close(panel);
+  }
+
+  await vi.waitFor(() => expect(rows()).toEqual([first, third, ...others]));
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  expect(highlighted()).toBe(first);
 });
 
 test('keeps overflowing tabs closed when tabs overflow again', async () => {

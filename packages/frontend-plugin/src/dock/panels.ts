@@ -73,6 +73,7 @@ export interface TerminalPanel extends BasePanel {
   readonly tab: true;
   readonly closable: true;
   readonly session: TerminalSessionId;
+  readonly closeConfirmation: boolean;
 }
 
 /**

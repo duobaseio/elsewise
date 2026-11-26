@@ -147,7 +147,7 @@ describe('FilePanel', () => {
 
     editor(screen.container).dispatch({ changes: { from: 4, to: 5, insert: 'b' } });
 
-    expect(application.files.get(workspace, 'main.ts')?.dirty).toBe(true);
+    expect(application.files.get(workspace, 'main.ts')?.document).not.toBeNull();
     await screen.unmount();
     expect(application.files.get(workspace, 'main.ts')).toBeNull();
   });

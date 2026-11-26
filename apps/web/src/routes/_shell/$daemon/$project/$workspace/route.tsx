@@ -2,6 +2,7 @@ import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
+import type { Panel } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
@@ -10,38 +11,23 @@ import {
   type IDockviewPanelHeaderProps,
   type SerializedDockview,
 } from 'dockview-react';
-import { type ReactNode, useCallback, useContext, useEffect, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-dock/draggable-dock';
 import { DraggableTab } from './-dock/draggable-tab';
 import { TabActions } from './-dock/tab-actions';
-import { FilePanel } from './-file/file-panel';
-import { FileTab } from './-file/file-tab';
+import { CloseFileDialog } from './-file/close-file-dialog';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
-import { FileTreePanel } from './-file-tree/file-tree-panel';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
-import { Placeholder, PlaceholderTab } from './-placeholder/placeholder';
-import { TerminalPanel } from './-terminal/terminal-panel';
-import { TerminalTab } from './-terminal/terminal-tab';
+import { CloseTerminalDialog } from './-terminal/close-terminal-dialog';
 
 export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
   component: WorkspaceRoute,
   wrapInSuspense: true,
 });
-
-type PanelKind = keyof typeof PANELS;
-
-const TOOL_TABS = { fileTree: FileTreeTab };
-const TABS = { ...TOOL_TABS, file: FileTab, terminal: TerminalTab, placeholder: PlaceholderTab };
-const PANELS = {
-  file: FilePanel,
-  terminal: TerminalPanel,
-  fileTree: FileTreePanel,
-  placeholder: Placeholder,
-};
 
 const THEME = { name: 'elsewise', className: 'dockview-theme-elsewise' };
 
@@ -78,19 +64,17 @@ function WorkspaceRoute() {
       <DeleteEntriesDialog />
       <PasteEntriesDialog />
       <OverwriteEntriesDialog />
+      <CloseFileDialog />
+      <CloseTerminalDialog />
     </>
   );
 }
 
 export function WorkspaceDock({
-  panels = PANELS,
-  tabs = TABS,
   layout,
   onDockviewReady,
   onLayoutChange,
 }: {
-  panels?: typeof PANELS;
-  tabs?: typeof TABS;
   /**
    * The layout to restore, as the dock serialized it.
    */
@@ -99,6 +83,15 @@ export function WorkspaceDock({
   onLayoutChange?: (layout: SerializedDockview) => void;
 }) {
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
+  const { panelComponents } = useApplicationManager().docks;
+  const tabs = useMemo(
+    () => Object.fromEntries(panelComponents.map((component) => [component.type, component.tab])),
+    [panelComponents],
+  );
+  const panels = useMemo(
+    () => Object.fromEntries(panelComponents.map((component) => [component.type, component.panel])),
+    [panelComponents],
+  );
 
   useEffect(() => {
     if (dockview && onLayoutChange) {
@@ -124,8 +117,8 @@ export function WorkspaceDock({
 
     event.api.addPanel({
       id: 'fileTree',
-      tabComponent: 'fileTree' satisfies PanelKind,
-      component: 'fileTree' satisfies PanelKind,
+      tabComponent: 'fileTree' satisfies Panel['type'],
+      component: 'fileTree' satisfies Panel['type'],
       title: 'Files',
       params: { path: '/' },
       minimumWidth: 10,
@@ -133,8 +126,8 @@ export function WorkspaceDock({
     });
     event.api.addPanel({
       id: 'placeholder',
-      tabComponent: 'placeholder' satisfies PanelKind,
-      component: 'placeholder' satisfies PanelKind,
+      tabComponent: 'placeholder' satisfies Panel['type'],
+      component: 'placeholder' satisfies Panel['type'],
       position: { referencePanel: 'fileTree', direction: 'left' },
       minimumWidth: 10,
       minimumHeight: 10,

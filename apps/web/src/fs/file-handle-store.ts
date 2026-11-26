@@ -1,15 +1,59 @@
+import { createDialogHandle } from '@elsewise/components/components/dialog';
 import type { WorkspaceId } from '@elsewise/frontend-plugin';
 import { KeyedMap } from '@/collections/keyed-map';
 import type { FileHandle } from './file-handle';
 
 /**
+ * A file that could not be saved before its panel closes.
+ */
+export interface CloseFileRequest {
+  readonly file: FileHandle;
+  /**
+   * Why saving failed, or null if the file changed on disk.
+   */
+  readonly failure: string | null;
+}
+
+/**
  * The handles of the open files, by workspace and path.
  */
 export class FileHandleStore {
+  /**
+   * Asks what to do with a file that could not be saved before its panel closes.
+   */
+  readonly closeDialog = createDialogHandle<CloseFileRequest>();
+  private resolveCloseDialog: ((action: 'overwrite' | 'discard' | 'cancel') => void) | null = null;
   private readonly handles = new KeyedMap<readonly [WorkspaceId, string], FileHandle>(
     ([{ daemon, project, workspace }, relativePath]) => [daemon, project, workspace, relativePath],
   );
   private readonly changeListeners = new Set<() => void>();
+
+  /**
+   * Opens the close dialog for `file`.
+   *
+   * If the dialog is already open for another file, that one is closed with `cancel` first.
+   */
+  openCloseDialog(file: FileHandle, failure: string | null): Promise<'overwrite' | 'discard' | 'cancel'> {
+    this.resolveCloseDialog?.('cancel');
+    return new Promise((resolve) => {
+      this.resolveCloseDialog = resolve;
+      this.closeDialog.openWithPayload({ file, failure });
+    });
+  }
+
+  /**
+   * Closes the close dialog with `action`. Does nothing if it is not open.
+   */
+  closeCloseDialog(action: 'overwrite' | 'discard' | 'cancel') {
+    const resolve = this.resolveCloseDialog;
+    if (resolve === null) {
+      return;
+    }
+
+    this.resolveCloseDialog = null;
+    resolve(action);
+    this.closeDialog.close();
+  }
 
   /**
    * Returns the handle of the file at `relativePath` in `workspace`, or null if the file is not open.

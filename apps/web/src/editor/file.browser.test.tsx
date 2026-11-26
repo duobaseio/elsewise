@@ -43,13 +43,13 @@ describe('editorFile', () => {
   test('opens file of mixed line endings clean', async () => {
     const { file } = await open('let a;\nlet b;\r\nlet c;\r\n', '\r\n');
 
-    expect(file.dirty).toBe(false);
+    expect(file.document).toBeNull();
   });
 
   test('opens file clean under other line separator', async () => {
     const { file } = await open('let a;\r\nlet b;\r\n', '\n');
 
-    expect(file.dirty).toBe(false);
+    expect(file.document).toBeNull();
   });
 
   test('applies change on disk to file of mixed line endings', async () => {
@@ -66,7 +66,7 @@ describe('editorFile', () => {
 
     view.dispatch({ changes: { from: 4, to: 5, insert: 'b' } });
 
-    expect(file.dirty).toBe(true);
+    expect(file.document).not.toBeNull();
   });
 
   test('clears dirty on undoing edit', async () => {
@@ -75,7 +75,7 @@ describe('editorFile', () => {
     view.dispatch({ changes: { from: 4, to: 5, insert: 'b' } });
     view.dispatch({ changes: { from: 4, to: 5, insert: 'a' } });
 
-    expect(file.dirty).toBe(false);
+    expect(file.document).toBeNull();
   });
 
   test('applies change on disk, keeping caret', async () => {
@@ -109,7 +109,44 @@ describe('editorFile', () => {
 
     await expect.poll(() => file.state).toEqual({ type: 'text', content: 'let z;\n' });
     expect(view.state.doc.toString()).toBe('let b;\n');
-    expect(file.dirty).toBe(true);
+    expect(file.document).not.toBeNull();
+  });
+});
+
+describe('editorFile text', () => {
+  test('gives file text of editor', async () => {
+    const { file, view } = await open('let a;\r\nlet b;\r\n', '\r\n');
+
+    view.dispatch({ changes: { from: 4, to: 5, insert: 'z' } });
+
+    expect(file.document?.()).toBe('let z;\r\nlet b;\r\n');
+  });
+
+  test('gives file text of editor outside document', async () => {
+    const { file, view } = await open('let a;\n');
+    view.dispatch({ changes: { from: 4, to: 5, insert: 'z' } });
+
+    view.dom.remove();
+
+    expect(file.document?.()).toBe('let z;\n');
+  });
+
+  test('gives file no text while editor has text on disk', async () => {
+    const { file, view } = await open('let a;\n');
+    view.dispatch({ changes: { from: 4, to: 5, insert: 'z' } });
+
+    view.dispatch({ changes: { from: 4, to: 5, insert: 'a' } });
+
+    expect(file.document).toBeNull();
+  });
+
+  test('gives file no text once editor is destroyed', async () => {
+    const { file, view } = await open('let a;\n');
+    view.dispatch({ changes: { from: 4, to: 5, insert: 'z' } });
+
+    view.destroy();
+
+    expect(file.document).toBeNull();
   });
 });
 
@@ -167,7 +204,7 @@ describe('EDITOR_SAVE', () => {
     commands.run(SAVE, view);
 
     await expect.poll(() => fake.writes).toEqual([{ relativePath: 'main.ts', content: 'let b;\n' }]);
-    expect(file.dirty).toBe(false);
+    expect(file.document).toBeNull();
   });
 
   test('writes with file line separator', async () => {

@@ -9,27 +9,29 @@ import { resolveActiveTheme } from '@/appearance/themes';
 import { ApplicationManager } from '@/application-manager';
 import type { CommandManager } from '@/command/command-manager';
 import { editorKeymap } from '@/command/keymap/keymap';
-import { DocksManager } from '@/dock/docks-manager';
+import type { PanelComponent } from '@/dock/panel-component';
 import { COMMANDS, EditorManager } from '@/editor/editor-manager';
 import { FileTreeManager } from '@/fs/file-tree-manager';
 import { ProjectManager } from '@/projects/project-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
+import { STUB_COMPONENTS } from './dock-stubs';
 
 // A keymap without entries, so every command keeps its default keys.
 export const EMPTY_KEYMAP: Keymap = { name: 'Empty', keys: {} };
 
-// An application with the built-in commands and an empty keymap, from `parts` and fresh managers for the rest.
+// An application with the built-in commands and an empty keymap, from `parts` and fresh managers for the rest. Its docks
+// have `panelComponents`, or the stubs.
 export function builtInApplication(
   parts: Partial<
     Pick<ApplicationManager, 'appearance' | 'editor' | 'fileTree' | 'projects' | 'router' | 'settings' | 'terminals'>
-  > = {},
+  > & { panelComponents?: readonly PanelComponent[] } = {},
   platform?: Platform,
 ): ApplicationManager {
   const router = parts.router ?? memoryRouter();
   const projects = parts.projects ?? new ProjectManager(new QueryClient(), router);
   const terminals = parts.terminals ?? new TerminalManager(new QueryClient());
-  return new ApplicationManager(
+  const application = new ApplicationManager(
     parts.appearance ?? new AppearanceManager('light', resolveActiveTheme(undefined, 'light')),
     router,
     parts.settings ?? new SettingsPanelManager(),
@@ -37,10 +39,11 @@ export function builtInApplication(
     parts.editor ?? new EditorManager(),
     terminals,
     parts.fileTree ?? new FileTreeManager(),
-    new DocksManager(projects.workspaces, terminals),
     EMPTY_KEYMAP,
     platform,
   );
+  application.docks.addPanelComponents(parts.panelComponents ?? STUB_COMPONENTS);
+  return application;
 }
 
 export function builtInCommands(parts: Parameters<typeof builtInApplication>[0] = {}): CommandManager {

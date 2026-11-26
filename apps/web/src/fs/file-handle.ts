@@ -34,7 +34,7 @@ export class FileHandle {
   private monotonic = 0;
   private bom = false;
   private currentState: FileHandleState = { type: 'loading' };
-  private currentDirty = false;
+  private currentDocument: (() => string) | null = null;
   private disposed = false;
 
   constructor(
@@ -138,7 +138,7 @@ export class FileHandle {
   }
 
   /**
-   * Calls `listener` whenever the state or whether it is dirty changes.
+   * Calls `listener` whenever the state or whether it has a document changes.
    *
    * To stop, call the returned function.
    */
@@ -165,15 +165,16 @@ export class FileHandle {
   }
 
   /**
-   * Whether the editor has changes that are not saved.
+   * Returns the currently edited document, or null if it is the same as on disk.
    */
-  get dirty(): boolean {
-    return this.currentDirty;
+  get document(): (() => string) | null {
+    return this.currentDocument;
   }
 
-  set dirty(dirty: boolean) {
-    if (this.currentDirty !== dirty) {
-      this.currentDirty = dirty;
+  set document(document: (() => string) | null) {
+    const edited = this.currentDocument !== null;
+    this.currentDocument = document;
+    if (edited !== (document !== null)) {
       this.notify();
     }
   }

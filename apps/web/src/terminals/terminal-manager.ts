@@ -1,3 +1,4 @@
+import { createDialogHandle } from '@elsewise/components/components/dialog';
 import type {
   ContextMenuGroup,
   Disposable,
@@ -36,6 +37,11 @@ interface TerminalEntry {
  */
 export class TerminalManager implements Terminals {
   readonly store: SessionStore;
+  /**
+   * Asks whether to close a terminal whose program runs.
+   */
+  readonly closeDialog = createDialogHandle<TerminalSession>();
+  private resolveCloseDialog: ((confirmed: boolean) => void) | null = null;
   private readonly listeners = new Set<() => void>();
   private readonly openListeners = new Set<(view: TerminalView) => void>();
   private readonly closeListeners = new Set<(view: TerminalView) => void>();
@@ -48,6 +54,33 @@ export class TerminalManager implements Terminals {
 
   constructor(private readonly client: QueryClient) {
     this.store = new SessionStore(client);
+  }
+
+  /**
+   * Opens the close dialog for `session`.
+   *
+   * If the dialog is already open for another terminal, that one is closed unconfirmed first.
+   */
+  openCloseDialog(session: TerminalSession): Promise<boolean> {
+    this.resolveCloseDialog?.(false);
+    return new Promise((resolve) => {
+      this.resolveCloseDialog = resolve;
+      this.closeDialog.openWithPayload(session);
+    });
+  }
+
+  /**
+   * Closes the close dialog, `confirmed` or not. Does nothing if it is not open.
+   */
+  closeCloseDialog(confirmed: boolean) {
+    const resolve = this.resolveCloseDialog;
+    if (resolve === null) {
+      return;
+    }
+
+    this.resolveCloseDialog = null;
+    resolve(confirmed);
+    this.closeDialog.close();
   }
 
   get active(): TerminalView | null {

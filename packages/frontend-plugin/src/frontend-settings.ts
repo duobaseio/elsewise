@@ -169,6 +169,10 @@ export const FrontendSettings = z.lazy(() =>
         font: font(12, 1.0625),
         cursorStyle: CursorStyle.catch('block'),
         cursorBlink: z.boolean().catch(true),
+        /**
+         * Whether to display a confirmation dialog before closing the terminal. Defaults to false.
+         */
+        closeConfirmation: z.boolean().catch(false),
         copyOnSelect: z.boolean().catch(false),
         /**
          * Whether Option-click selects text on macOS while a program tracks the mouse, e.g. tmux, instead of sending

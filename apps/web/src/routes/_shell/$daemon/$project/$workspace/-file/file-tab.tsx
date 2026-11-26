@@ -17,7 +17,7 @@ export function FileTab(props: IDockviewPanelHeaderProps<{ path: string }>) {
   const subscribeFiles = useCallback((listener: () => void) => files.onChange(listener), [files]);
   const file = useSyncExternalStore(subscribeFiles, () => files.get({ daemon, project, workspace }, path));
   const subscribe = useCallback((listener: () => void) => file?.onChange(listener) ?? (() => {}), [file]);
-  const dirty = useSyncExternalStore(subscribe, () => file?.dirty ?? false);
+  const dirty = useSyncExternalStore(subscribe, () => file?.document != null);
 
   return <DefaultTab {...props} icon={<FileIcon name={path.slice(path.lastIndexOf('/') + 1)} />} dirty={dirty} />;
 }

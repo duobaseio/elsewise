@@ -8,7 +8,6 @@ import { ProjectManager } from '@/projects/project-manager';
 import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../test/commands';
 import { addFile, FILE, FILE_TREE, showWorkspace, TERMINAL, WORKSPACE, workspaceRouter } from '../../test/dock';
-import { STUB_PANELS, STUB_TABS } from '../../test/dock-stubs';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -25,8 +24,6 @@ async function mount(build: (dockview: DockviewApi) => void = addFile) {
     <ApplicationManagerContext value={application}>
       <div style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
-          panels={STUB_PANELS}
-          tabs={STUB_TABS}
           onDockviewReady={(ready) => {
             build(ready);
             application.docks.attach(WORKSPACE, ready);

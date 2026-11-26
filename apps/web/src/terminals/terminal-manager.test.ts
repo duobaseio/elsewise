@@ -279,3 +279,64 @@ describe('onChange', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 });
+
+describe('openCloseDialog', () => {
+  const SESSION = {
+    id: TOKYO,
+    name: 'Terminal',
+    cwd: '',
+    program: '',
+    args: [],
+    restore: true,
+    state: 'running',
+    exit: null,
+  } as const;
+
+  // A manager whose dialog is not rendered.
+  function manager() {
+    const terminals = setUp();
+    const opened = vi.spyOn(terminals.closeDialog, 'openWithPayload').mockImplementation(() => {});
+    const closed = vi.spyOn(terminals.closeDialog, 'close').mockImplementation(() => {});
+    return { terminals, opened, closed };
+  }
+
+  test('opens dialog for session', () => {
+    const { terminals, opened } = manager();
+
+    void terminals.openCloseDialog(SESSION);
+
+    expect(opened).toHaveBeenCalledExactlyOnceWith(SESSION);
+  });
+
+  test('returns whether dialog is closed confirmed', async () => {
+    const { terminals, closed } = manager();
+    const confirmed = terminals.openCloseDialog(SESSION);
+
+    terminals.closeCloseDialog(true);
+
+    await expect(confirmed).resolves.toBe(true);
+    expect(closed).toHaveBeenCalledOnce();
+  });
+
+  test('closes dialog that another replaces unconfirmed', async () => {
+    const { terminals } = manager();
+    const earlier = terminals.openCloseDialog(SESSION);
+
+    const later = terminals.openCloseDialog({ ...SESSION, id: OSAKA });
+    terminals.closeCloseDialog(true);
+
+    await expect(earlier).resolves.toBe(false);
+    await expect(later).resolves.toBe(true);
+  });
+});
+
+describe('closeCloseDialog', () => {
+  test('does nothing while no dialog is open', () => {
+    const terminals = setUp();
+    const closed = vi.spyOn(terminals.closeDialog, 'close').mockImplementation(() => {});
+
+    terminals.closeCloseDialog(false);
+
+    expect(closed).not.toHaveBeenCalled();
+  });
+});

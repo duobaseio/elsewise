@@ -1,28 +1,39 @@
 import type { DockviewApi, SerializedDockview } from 'dockview-react';
 import { expect, test, vi } from 'vitest';
 import { render } from 'vitest-browser-react';
+import { ApplicationManagerContext } from '@/application-context';
+import { builtInApplication } from '../../../../../../test/commands';
 import { addFile } from '../../../../../../test/dock';
-import { STUB_PANELS } from '../../../../../../test/dock-stubs';
-import { WorkspaceDock } from './route';
+import { stubComponents } from '../../../../../../test/dock-stubs';
+import { FileTab } from './-file/file-tab';
+import { TerminalTab } from './-terminal/terminal-tab';
+import { FileTreeTab, WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
+
+const COMPONENTS = stubComponents({
+  fileTree: { tab: FileTreeTab },
+  file: { tab: FileTab },
+  terminal: { tab: TerminalTab },
+});
 
 async function mount(layout?: unknown, width = 1100) {
   let api: DockviewApi | undefined;
   let saved: SerializedDockview | undefined;
   const screen = await render(
-    <div style={{ width, height: 700 }}>
-      <WorkspaceDock
-        panels={STUB_PANELS}
-        layout={layout}
-        onDockviewReady={(ready) => {
-          api = ready;
-        }}
-        onLayoutChange={(changed) => {
-          saved = changed;
-        }}
-      />
-    </div>,
+    <ApplicationManagerContext value={builtInApplication({ panelComponents: COMPONENTS })}>
+      <div style={{ width, height: 700 }}>
+        <WorkspaceDock
+          layout={layout}
+          onDockviewReady={(ready) => {
+            api = ready;
+          }}
+          onLayoutChange={(changed) => {
+            saved = changed;
+          }}
+        />
+      </div>
+    </ApplicationManagerContext>,
   );
   await vi.waitFor(() => {
     if (api === undefined) {

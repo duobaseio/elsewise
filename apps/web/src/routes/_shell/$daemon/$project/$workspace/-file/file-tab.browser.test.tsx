@@ -62,7 +62,7 @@ describe('FileTab', () => {
     const { application, file } = await mount();
     application.files.add(WORKSPACE, file);
 
-    file.dirty = true;
+    file.document = () => '';
 
     await expect.poll(marked).toBe(true);
   });
@@ -70,17 +70,17 @@ describe('FileTab', () => {
   test('unmarks tab once file has no unsaved changes', async () => {
     const { application, file } = await mount();
     application.files.add(WORKSPACE, file);
-    file.dirty = true;
+    file.document = () => '';
     await expect.poll(marked).toBe(true);
 
-    file.dirty = false;
+    file.document = null;
 
     await expect.poll(marked).toBe(false);
   });
 
   test('marks tab of file that opens with unsaved changes', async () => {
     const { application, file } = await mount();
-    file.dirty = true;
+    file.document = () => '';
 
     application.files.add(WORKSPACE, file);
 
@@ -89,7 +89,7 @@ describe('FileTab', () => {
 
   test('ignores file of other workspace', async () => {
     const { application, file } = await mount();
-    file.dirty = true;
+    file.document = () => '';
 
     application.files.add({ ...WORKSPACE, workspace: 'other' }, file);
     await new Promise((resolve) => setTimeout(resolve, 10));

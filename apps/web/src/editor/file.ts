@@ -143,6 +143,7 @@ class FileHandlePlugin {
   }
 
   destroy(): void {
+    this.file.document = null;
     for (const dispose of this.disposables) {
       dispose();
     }
@@ -152,6 +153,7 @@ class FileHandlePlugin {
   }
 
   private markDirty(): void {
-    this.file.dirty = !this.view.state.doc.eq(this.disk.doc);
+    // Lines are joined with the view's line separator, which they were split by, so the file's line endings are kept.
+    this.file.document = this.view.state.doc.eq(this.disk.doc) ? null : () => this.view.state.sliceDoc();
   }
 }
