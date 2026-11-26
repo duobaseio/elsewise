@@ -18,6 +18,7 @@
     "./components/combobox": "./src/components/combobox.tsx",
     "./components/context-menu": "./src/components/context-menu.tsx",
     "./components/dialog": "./src/components/dialog.tsx",
+    "./components/dock": "./src/components/dock.tsx",
     "./components/dropdown-menu": "./src/components/dropdown-menu.tsx",
     "./components/file-icon": "./src/components/file-icon.tsx",
     "./components/file-tree": "./src/components/file-tree.tsx",
