@@ -125,7 +125,7 @@ describe('addTerminal', () => {
   test('deletes terminal that cannot be placed', async () => {
     const { dock, deleted } = await mount();
 
-    await expect(dock.addTerminal({}, { tab: 'last', with: FILE_TREE as never })).resolves.toBeNull();
+    await expect(dock.addTerminal({}, { tab: 'last', with: FILE_TREE })).resolves.toBeNull();
 
     expect(deleted).toHaveBeenCalledExactlyOnceWith(ADDED.session);
     expect(dock.panels).toHaveLength(4);
@@ -239,6 +239,14 @@ describe('close', () => {
     const { dock } = await mount();
 
     await expect(dock.close({ ...OTHER, id: 'closed' })).resolves.toBe(true);
+  });
+
+  test('keeps panel that cannot be closed', async () => {
+    const { dock } = await mount();
+
+    await expect(dock.close(FILE_TREE)).resolves.toBe(false);
+
+    expect(dock.get(FILE_TREE.id)).toEqual(FILE_TREE);
   });
 
   test('closes panel that component allows', async () => {

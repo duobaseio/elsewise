@@ -3,22 +3,7 @@ import type { TerminalSessionId } from '../terminal';
 /**
  * A panel.
  */
-export type Panel = PlaceholderPanel | FilePanel | TerminalPanel | FileTreePanel;
-
-/**
- * A panel that can share its group with others.
- */
-export type TabPanel = Extract<Panel, { readonly tab: true }>;
-
-/**
- * A panel that is always alone in its group.
- */
-export type TablessPanel = Extract<Panel, { readonly tab: false }>;
-
-/**
- * A panel that can be closed.
- */
-export type ClosablePanel = Extract<Panel, { readonly closable: true }>;
+export type Panel = PlaceholderPanel | FilePanel | TerminalPanel | FileTreePanel | CustomPanel;
 
 /**
  * The properties that every panel has.
@@ -29,10 +14,10 @@ export interface BasePanel {
    */
   readonly id: string;
 
-  readonly type: 'placeholder' | 'file' | 'terminal' | 'fileTree';
+  readonly type: 'placeholder' | 'file' | 'terminal' | 'fileTree' | CustomPanel['type'];
 
   /**
-   * Whether the panel sits among a group's tabs.
+   * Whether the panel sits among a group's tabs. A panel that does not is always alone in its group.
    */
   readonly tab: boolean;
 
@@ -83,4 +68,11 @@ export interface FileTreePanel extends BasePanel {
   readonly type: 'fileTree';
   readonly tab: false;
   readonly closable: false;
+}
+
+/**
+ * A panel that shows a custom component.
+ */
+export interface CustomPanel extends BasePanel {
+  readonly type: `${string}/${string}`;
 }

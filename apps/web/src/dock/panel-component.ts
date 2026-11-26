@@ -1,4 +1,4 @@
-import type { ClosablePanel, Panel } from '@elsewise/frontend-plugin';
+import type { Panel } from '@elsewise/frontend-plugin';
 import type { IDockviewPanelHeaderProps, IDockviewPanelProps } from 'dockview-react';
 import type { FunctionComponent } from 'react';
 import type { ApplicationManager } from '@/application-manager';
@@ -25,5 +25,5 @@ export interface PanelComponent {
   readonly tab: FunctionComponent<IDockviewPanelHeaderProps>;
   readonly panel: FunctionComponent<IDockviewPanelProps>;
 
-  close?(application: ApplicationManager, dock: DockManager, panel: ClosablePanel): boolean | Promise<boolean>;
+  close?(application: ApplicationManager, dock: DockManager, panel: Panel): boolean | Promise<boolean>;
 }

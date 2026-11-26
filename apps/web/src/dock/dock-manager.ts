@@ -1,14 +1,10 @@
 import type {
-  ClosablePanel,
   Dock,
   FilePanel,
   Group,
-  GroupPlacement,
   Layout,
   Panel,
   Placement,
-  TablessPanel,
-  TabPanel,
   TerminalOptions,
   TerminalPanel,
   Workspace,
@@ -245,8 +241,6 @@ export class DockManager implements Dock {
     return panel;
   }
 
-  move(panel: TabPanel, placement: Placement, activate?: boolean): void;
-  move(panel: TablessPanel, placement: GroupPlacement, activate?: boolean): void;
   move(panel: Panel, placement: Placement, activate = true): void {
     const active = activate ? panel : this.activePanel;
     if (!movePanel(this.dockview, this.panels, panel, placement)) {
@@ -287,13 +281,13 @@ export class DockManager implements Dock {
     this.update();
   }
 
-  close(panel: ClosablePanel): Promise<boolean> {
+  close(panel: Panel): Promise<boolean> {
     let closing = this.closing.get(panel.id);
     if (closing === undefined) {
       closing = (async () => {
         const open = this.get(panel.id);
         const component = this.application.docks.panelComponents.find((other) => other.type === open?.type);
-        if (open?.closable && !((await component?.close?.(this.application, this, open)) ?? true)) {
+        if (open !== null && !(open.closable && ((await component?.close?.(this.application, this, open)) ?? true))) {
           return false;
         }
 
@@ -322,7 +316,7 @@ export class DockManager implements Dock {
     return this.store.snapshot.activePanel;
   }
 
-  get activeTabPanel(): TabPanel | null {
+  get activeTabPanel(): Panel | null {
     return this.store.snapshot.activeTabPanel;
   }
 

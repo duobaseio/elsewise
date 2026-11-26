@@ -67,8 +67,9 @@ export function movePanel(
   moved: Panel,
   placement: Placement,
 ): boolean {
+  const open = panels.find((panel) => panel.id === moved.id);
   const panel = dockview.getPanel(moved.id);
-  if (panel === undefined) {
+  if (open === undefined || panel === undefined) {
     return false;
   }
 
@@ -91,7 +92,7 @@ export function movePanel(
     return true;
   }
 
-  if (!reference.tab || !moved.tab || (moved.id === id && 'of' in placement)) {
+  if (!reference.tab || !open.tab || (moved.id === id && 'of' in placement)) {
     return false;
   }
 

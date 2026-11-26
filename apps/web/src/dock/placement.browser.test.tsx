@@ -1,4 +1,4 @@
-import type { Layout, Panel, Placement, TablessPanel, TabPanel } from '@elsewise/frontend-plugin';
+import type { Layout, Panel, Placement } from '@elsewise/frontend-plugin';
 import { describe, expect, test } from 'vitest';
 import { mount as mountDock, WORKSPACE } from '../../test/dock';
 import { DockStore } from './dock-store';
@@ -23,8 +23,8 @@ async function mount() {
   };
 
   return {
-    tab: (id: string) => panels.find((panel) => panel.id === id) as TabPanel,
-    fileTree: panels.find((panel) => panel.id === 'fileTree') as TablessPanel,
+    tab: (id: string) => panels.find((panel) => panel.id === id) as Panel,
+    fileTree: panels.find((panel) => panel.id === 'fileTree') as Panel,
     add: (placement: Placement) =>
       addPanel(dockview, panels, { id: 'n', component: 'terminal', params: { session: 'n' } }, placement)?.id ?? null,
     move: (moved: Panel, placement: Placement) => movePanel(dockview, panels, moved, placement),
@@ -129,7 +129,7 @@ describe('addPanel', () => {
   test('returns null for tab in group of tabless panel', async () => {
     const { fileTree, add, layout } = await mount();
 
-    expect(add({ tab: 'last', with: fileTree as unknown as TabPanel })).toBeNull();
+    expect(add({ tab: 'last', with: fileTree })).toBeNull();
     expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 });
@@ -236,7 +236,7 @@ describe('movePanel', () => {
   test('returns false for tab in group of tabless panel', async () => {
     const { tab, fileTree, move, layout } = await mount();
 
-    expect(move(tab('a'), { tab: 'last', with: fileTree as unknown as TabPanel })).toBe(false);
+    expect(move(tab('a'), { tab: 'last', with: fileTree })).toBe(false);
     expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 
@@ -244,6 +244,13 @@ describe('movePanel', () => {
     const { tab, fileTree, move, layout } = await mount();
 
     expect(move(fileTree, { tab: 'last', with: tab('b') })).toBe(false);
+    expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
+  });
+
+  test('returns false for tabless panel that claims tab', async () => {
+    const { tab, fileTree, move, layout } = await mount();
+
+    expect(move({ ...fileTree, tab: true } as Panel, { tab: 'last', with: tab('b') })).toBe(false);
     expect(layout()).toEqual({ row: [[FILE, 'a', 'b', 'c'], ['fileTree']] });
   });
 

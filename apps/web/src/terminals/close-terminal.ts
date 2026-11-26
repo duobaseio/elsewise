@@ -1,4 +1,4 @@
-import type { ClosablePanel } from '@elsewise/frontend-plugin';
+import type { Panel } from '@elsewise/frontend-plugin';
 import type { ApplicationManager } from '@/application-manager';
 import type { DockManager } from '@/dock/dock-manager';
 
@@ -10,7 +10,7 @@ import type { DockManager } from '@/dock/dock-manager';
 export async function closeTerminal(
   { terminals }: ApplicationManager,
   _dock: DockManager,
-  panel: ClosablePanel,
+  panel: Panel,
 ): Promise<boolean> {
   if (panel.type !== 'terminal') {
     return true;

@@ -1,8 +1,11 @@
+import type { Disposable } from '@elsewise/plugin';
+import type { ComponentType } from 'react';
+import type { Application } from '../plugin';
 import type { Workspace } from '../projects/workspaces';
 import type { TerminalOptions } from '../terminal';
 import type { Group, Layout } from './layout';
-import type { ClosablePanel, FilePanel, Panel, TablessPanel, TabPanel, TerminalPanel } from './panels';
-import type { GroupPlacement, Placement } from './placement';
+import type { CustomPanel, FilePanel, Panel, TerminalPanel } from './panels';
+import type { Placement } from './placement';
 
 /**
  * The docks, one for each workspace.
@@ -12,6 +15,15 @@ export interface Docks {
    * The dock of the workspace shown, or null on a page without one, e.g. the settings.
    */
   readonly active: Dock | null;
+
+  /**
+   * Adds sources of custom panels, each of which shows the panels whose type is its id.
+   *
+   * A source whose id already exists is omitted.
+   *
+   * Disposing it removes the sources and closes their panels, without calling `close`.
+   */
+  addPanelSources(sources: readonly CustomPanelSource[]): Disposable;
 }
 
 /**
@@ -37,7 +49,7 @@ export interface Dock {
    *
    * `null` when no tab panel is open.
    */
-  readonly activeTabPanel: TabPanel | null;
+  readonly activeTabPanel: Panel | null;
 
   /**
    * The open panels.
@@ -66,7 +78,9 @@ export interface Dock {
    *
    * If the file is already open, `placement` is ignored.
    *
-   * Returns the panel, or null if the panel that `placement` refers to is not open.
+   * Returns the panel, or null if:
+   * * the panel that `placement` refers to is not open
+   * * `placement` is among tabs, and the panel that it refers to is tabless
    */
   addFile(relativePath: string, placement: Placement, activate?: boolean): FilePanel | null;
 
@@ -75,19 +89,35 @@ export interface Dock {
    *
    * The panel is shown, and becomes the active panel unless `activate` is false. Defaults to true.
    *
-   * Returns the panel, or null if the panel that `placement` refers to is not open.
+   * Returns the panel, or null if:
+   * * the panel that `placement` refers to is not open
+   * * `placement` is among tabs, and the panel that it refers to is tabless
    */
   addTerminal(options: TerminalOptions, placement: Placement, activate?: boolean): Promise<TerminalPanel | null>;
+
+  /**
+   * Adds a panel that `source` shows.
+   *
+   * The panel is shown, and becomes the active panel unless `activate` is false. Defaults to true.
+   *
+   * Returns the panel, or null if:
+   * * `source` was not added
+   * * the panel that `placement` refers to is not open
+   * * `placement` is among tabs, and either panel is tabless
+   */
+  addPanel(source: CustomPanelSource, placement: Placement, activate?: boolean): CustomPanel | null;
 
   /**
    * Moves `panel` to `placement`.
    *
    * The panel is shown, and becomes the active panel if `activate` is true. Defaults to true.
    *
-   * Does nothing if `panel`, or the panel that `placement` refers to, is not open.
+   * Does nothing if:
+   * * `panel` is not open
+   * * the panel that `placement` refers to is not open
+   * * `placement` is among tabs, and either panel is tabless
    */
-  move(panel: TabPanel, placement: Placement, activate?: boolean): void;
-  move(panel: TablessPanel, placement: GroupPlacement, activate?: boolean): void;
+  move(panel: Panel, placement: Placement, activate?: boolean): void;
 
   /**
    * Shows `panel` and makes it the active panel.
@@ -115,5 +145,58 @@ export interface Dock {
    *
    * Returns false if the panel stays open.
    */
-  close(panel: ClosablePanel): Promise<boolean>;
+  close(panel: Panel): Promise<boolean>;
+}
+
+/**
+ * A source of custom panels.
+ */
+export interface CustomPanelSource {
+  /**
+   * The source's id, namespaced by the plugin's, e.g. `example/report`. Omitted if the id already exists.
+   */
+  readonly id: string;
+
+  /**
+   * Whether its panels sit among a group's tabs. A panel that does not is always alone in its group.
+   */
+  readonly tab: boolean;
+
+  /**
+   * Whether its panels can be closed.
+   */
+  readonly closable: boolean;
+
+  /**
+   * The panel's icon and title.
+   */
+  readonly header: ComponentType<CustomPanelProps>;
+
+  /**
+   * The panel.
+   */
+  readonly panel: ComponentType<CustomPanelProps>;
+
+  /**
+   * Called before `panel` closes. Returns false if the panel stays open.
+   *
+   * It is not called when the panel has to close, e.g. when its source is removed.
+   *
+   * Throwing an error keeps the panel open.
+   */
+  close?(application: Application, dock: Dock, panel: CustomPanel): boolean | Promise<boolean>;
+}
+
+/**
+ * The props of the components that show a custom panel.
+ */
+export interface CustomPanelProps {
+  readonly application: Application;
+
+  /**
+   * The dock that the panel is in.
+   */
+  readonly dock: Dock;
+
+  readonly panel: CustomPanel;
 }

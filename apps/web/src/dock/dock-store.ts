@@ -1,4 +1,4 @@
-import type { Group, Layout, Panel, TabPanel, WorkspaceId } from '@elsewise/frontend-plugin';
+import type { Group, Layout, Panel, WorkspaceId } from '@elsewise/frontend-plugin';
 import { type DockviewApi, type IDockviewPanel, Orientation, type SerializedDockview } from 'dockview-react';
 
 export interface DockSnapshot {
@@ -6,7 +6,7 @@ export interface DockSnapshot {
   readonly groups: readonly Group[];
   readonly layout: Layout | null;
   readonly activePanel: Panel | null;
-  readonly activeTabPanel: TabPanel | null;
+  readonly activeTabPanel: Panel | null;
 }
 
 /**
@@ -62,7 +62,7 @@ export class DockStore {
     const panels = groups.flatMap((group) => group.panels);
     const shown = groups.flatMap((group) => (group.shown === null ? [] : [group.shown]));
     const recent = this.recent.flatMap((id) => open.get(id) ?? []);
-    const tabs = (candidates: readonly Panel[]) => candidates.filter((panel): panel is TabPanel => panel.tab);
+    const tabs = (candidates: readonly Panel[]) => candidates.filter((panel) => panel.tab);
 
     return {
       panels,
