@@ -10,12 +10,13 @@ import { Placeholder, PlaceholderTab } from '@/routes/_shell/$daemon/$project/$w
 import { TerminalPanel } from '@/routes/_shell/$daemon/$project/$workspace/-terminal/terminal-panel';
 import { TerminalTab } from '@/routes/_shell/$daemon/$project/$workspace/-terminal/terminal-tab';
 import { FileTreeTab } from '@/routes/_shell/$daemon/$project/$workspace/route';
+import { closeTerminal } from '@/terminals/close-terminal';
 import type { DockManager } from './dock-manager';
 
 export const DEFAULT_PANEL_COMPONENTS: readonly PanelComponent[] = [
   { type: 'placeholder', tab: PlaceholderTab, panel: Placeholder },
   { type: 'file', tab: FileTab, panel: FilePanel, close: closeFile },
-  { type: 'terminal', tab: TerminalTab, panel: TerminalPanel },
+  { type: 'terminal', tab: TerminalTab, panel: TerminalPanel, close: closeTerminal },
   { type: 'fileTree', tab: FileTreeTab, panel: FileTreePanel },
 ];
 

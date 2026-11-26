@@ -86,6 +86,7 @@ export class DockStore {
           tab: true,
           closable: true,
           session: { ...this.workspace, session: panel.params?.session },
+          closeConfirmation: panel.params?.closeConfirmation === true,
         };
       case 'fileTree':
         return { id: panel.id, type: 'fileTree', tab: false, closable: false };

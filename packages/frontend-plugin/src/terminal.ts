@@ -95,6 +95,11 @@ export interface TerminalOptions {
    * Whether to reopen the terminal, running `program` again, when Elsewise restarts. Defaults to true.
    */
   readonly restore?: boolean;
+
+  /**
+   * Whether to display a confirmation dialog before closing the terminal. Defaults to false.
+   */
+  readonly closeConfirmation?: boolean;
 }
 
 /**

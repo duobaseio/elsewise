@@ -271,6 +271,7 @@ describe('Terminal', () => {
         font: { family: null, size: 16, lineHeight: 1.2, ligatures: false },
         cursorStyle: 'bar',
         cursorBlink: false,
+        closeConfirmation: false,
         copyOnSelect: false,
         macOptionClickForcesSelection: true,
         macOptionIsMeta: true,

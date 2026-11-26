@@ -23,6 +23,7 @@ export const TERMINAL_TERMS = {
   ligatures: { label: 'Ligatures', keywords: ['font', 'glyphs', 'monospace', 'terminal font'] },
   cursorStyle: { label: 'Cursor style', keywords: ['caret', 'block', 'underline', 'bar', 'beam'] },
   cursorBlink: { label: 'Cursor blinking', keywords: ['caret', 'blink', 'flash'] },
+  closeConfirmation: { label: 'Close confirmation', keywords: ['ask', 'prompt', 'warn', 'exit', 'kill', 'tab'] },
   copyOnSelect: { label: 'Copy on select', keywords: ['clipboard', 'selection', 'auto copy'] },
   ...(PLATFORM === 'mac' && {
     macOptionClickForcesSelection: {
@@ -139,6 +140,19 @@ export function Terminal() {
       </Row>
 
       <Separator />
+
+      <Row
+        id="closeConfirmation"
+        label={TERMINAL_TERMS.closeConfirmation.label}
+        description="Display a confirmation dialog before closing a terminal."
+        help="Applies only to new terminals."
+      >
+        <Switch
+          aria-label={TERMINAL_TERMS.closeConfirmation.label}
+          checked={terminal.closeConfirmation}
+          onCheckedChange={(closeConfirmation) => set({ closeConfirmation })}
+        />
+      </Row>
 
       <Row
         id="copyOnSelect"

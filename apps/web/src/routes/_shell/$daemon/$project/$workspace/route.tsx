@@ -22,6 +22,7 @@ import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
 import { NewEntryDialog } from './-file-tree/new-entry-dialog';
 import { OverwriteEntriesDialog } from './-file-tree/overwrite-entries-dialog';
 import { PasteEntriesDialog } from './-file-tree/paste-entries-dialog';
+import { CloseTerminalDialog } from './-terminal/close-terminal-dialog';
 
 export const Route = createFileRoute('/_shell/$daemon/$project/$workspace')({
   component: WorkspaceRoute,
@@ -64,6 +65,7 @@ function WorkspaceRoute() {
       <PasteEntriesDialog />
       <OverwriteEntriesDialog />
       <CloseFileDialog />
+      <CloseTerminalDialog />
     </>
   );
 }

@@ -54,7 +54,7 @@ export function TabActions(props: IDockviewHeaderActionsProps) {
 }
 
 function AddTabAction(props: IDockviewHeaderActionsProps) {
-  const docks = useContext(ApplicationManagerContext)?.docks;
+  const application = useContext(ApplicationManagerContext);
 
   return (
     <Tooltip>
@@ -65,14 +65,17 @@ function AddTabAction(props: IDockviewHeaderActionsProps) {
             className="aspect-square size-auto bg-clip-border text-text-3"
             // TODO: Offer each kind of tab instead of always adding a terminal.
             onClick={() => {
-              const dock = docks?.active;
+              const dock = application?.docks.active;
               const last = dock?.get(props.panels.at(-1)?.id ?? '');
-              if (dock == null || last == null || !last.tab) {
+              if (application == null || dock == null || last == null || !last.tab) {
                 return;
               }
 
               dock
-                .addTerminal({}, { tab: 'last', with: last })
+                .addTerminal(
+                  { closeConfirmation: application.settings.frontend.terminal.closeConfirmation },
+                  { tab: 'last', with: last },
+                )
                 .catch((error: Error) =>
                   toast.add({ type: 'error', title: 'Creating the terminal failed', description: error.message }),
                 );

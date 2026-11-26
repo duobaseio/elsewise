@@ -35,6 +35,7 @@ export const TERMINAL = {
   tab: true,
   closable: true,
   session: { ...WORKSPACE, session: '1' },
+  closeConfirmation: false,
 } as const;
 
 // A query client that has the workspace, and a router that can show it.

@@ -227,7 +227,7 @@ export class DockManager implements Dock {
         tabComponent: 'terminal',
         component: 'terminal',
         title: session.name,
-        params: { session: session.id.session },
+        params: { session: session.id.session, closeConfirmation: options.closeConfirmation ?? false },
         inactive: true,
         minimumWidth: 10,
         minimumHeight: 10,
@@ -300,11 +300,6 @@ export class DockManager implements Dock {
           return false;
         }
 
-        if (open?.type === 'terminal') {
-          await this.terminals.delete(open.session);
-        }
-
-        // A terminal's panel closes itself once its terminal is deleted.
         this.dockview.getPanel(panel.id)?.api.close();
         this.update();
         return true;

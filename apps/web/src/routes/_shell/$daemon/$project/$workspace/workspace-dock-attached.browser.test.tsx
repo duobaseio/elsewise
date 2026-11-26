@@ -1,9 +1,11 @@
 import { PLATFORM } from '@elsewise/components/lib/platform';
+import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
 import { expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { builtInApplication } from '../../../../../../test/commands';
 import { addFile, FILE, FILE_TREE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../test/dock';
 import { stubComponents } from '../../../../../../test/dock-stubs';
@@ -11,11 +13,12 @@ import { DefaultTab, WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 
-// A dock attached to an application that shows its workspace.
-async function mount() {
+// A dock attached to an application that shows its workspace, with `settings` if given.
+async function mount(settings?: SettingsPanelManager) {
   const { client, router } = workspaceRouter();
   const application = builtInApplication({
     router,
+    settings,
     projects: new ProjectManager(client, router),
     panelComponents: stubComponents({ file: { tab: DefaultTab } }),
   });
@@ -71,6 +74,20 @@ test('closes editor through dock', async () => {
 
   expect(closed).toHaveBeenCalledExactlyOnceWith(added);
   await vi.waitFor(() => expect(dock.panels).toEqual([FILE, FILE_TREE]));
+});
+
+test('adds terminal with close confirmation as set', async () => {
+  const dock = await mount(
+    new SettingsPanelManager([], {
+      ...DEFAULT_FRONTEND_SETTINGS,
+      terminal: { ...DEFAULT_FRONTEND_SETTINGS.terminal, closeConfirmation: true },
+    }),
+  );
+  const added = vi.spyOn(dock, 'addTerminal').mockResolvedValue(null);
+
+  await page.getByRole('button', { name: 'New tab' }).click();
+
+  expect(added).toHaveBeenCalledExactlyOnceWith({ closeConfirmation: true }, { tab: 'last', with: FILE });
 });
 
 const hiddenTabs = () => document.querySelector('button[aria-label="Show hidden tabs"]') as HTMLElement;

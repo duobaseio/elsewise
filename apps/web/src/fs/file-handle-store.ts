@@ -29,7 +29,9 @@ export class FileHandleStore {
   private readonly changeListeners = new Set<() => void>();
 
   /**
-   * Opens the close dialog for `file`, in place of one that is open, which is closed with `cancel`.
+   * Opens the close dialog for `file`.
+   *
+   * If the dialog is already open for another file, that one is closed with `cancel` first.
    */
   openCloseDialog(file: FileHandle, failure: string | null): Promise<'overwrite' | 'discard' | 'cancel'> {
     this.resolveCloseDialog?.('cancel');

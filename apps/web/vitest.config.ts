@@ -101,6 +101,8 @@ function browserProject(
       name,
       include: [...include],
       sequence: { groupOrder },
+      // A worker per core has the files slow each other past the tests' waits and the frames they count.
+      maxWorkers: '50%',
       setupFiles: ['./test/browser-setup.ts', ...(frozenMotion ? ['./test/visual-setup.ts'] : [])],
       // Mirrors the components' browser projects; see their `vitest.config.ts` for why each option is what it is.
       browser: {

@@ -88,6 +88,15 @@ describe('addFile', () => {
 });
 
 describe('addTerminal', () => {
+  test('keeps close confirmation of panel', async () => {
+    const { dock } = await mount();
+
+    const panel = await dock.addTerminal({ closeConfirmation: true }, { tab: 'after', of: TERMINAL });
+
+    expect(panel).toEqual({ ...ADDED, closeConfirmation: true });
+    expect(dock.get(ADDED.id)).toEqual({ ...ADDED, closeConfirmation: true });
+  });
+
   test('adds terminal and activates panel', async () => {
     const { dock, created } = await mount();
 
@@ -219,22 +228,13 @@ describe('close', () => {
     expect(deleted).not.toHaveBeenCalled();
   });
 
-  test('deletes terminal of panel', async () => {
+  test('closes terminal without deleting it', async () => {
     const { dock, deleted } = await mount();
 
     await expect(dock.close(TERMINAL)).resolves.toBe(true);
 
-    expect(deleted).toHaveBeenCalledExactlyOnceWith(TERMINAL.session);
     expect(dock.get(TERMINAL.id)).toBeNull();
-  });
-
-  test('rejects and keeps panel whose terminal is not deleted', async () => {
-    const { dock, deleted } = await mount();
-    deleted.mockRejectedValue(new Error('unreachable'));
-
-    await expect(dock.close(TERMINAL)).rejects.toThrow('unreachable');
-
-    expect(dock.get(TERMINAL.id)).toEqual(TERMINAL);
+    expect(deleted).not.toHaveBeenCalled();
   });
 
   test('returns true for panel that is not open', async () => {
@@ -259,14 +259,6 @@ describe('close', () => {
     await expect(dock.close(OTHER)).resolves.toBe(false);
 
     expect(dock.get(OTHER.id)).toEqual(OTHER);
-  });
-
-  test('keeps terminal of panel that component refuses', async () => {
-    const { dock, deleted } = await mount(() => false);
-
-    await expect(dock.close(TERMINAL)).resolves.toBe(false);
-
-    expect(deleted).not.toHaveBeenCalled();
   });
 
   test('rejects and keeps panel whose component rejects', async () => {

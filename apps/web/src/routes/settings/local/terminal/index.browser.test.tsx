@@ -142,6 +142,15 @@ describe('Terminal', () => {
     await expect.element(input).toHaveValue('1.0');
   });
 
+  test('saves close confirmation', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Close confirmation' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith(withTerminal({ closeConfirmation: true }));
+  });
+
   test('saves copy on select', async () => {
     const save = await mount();
 
