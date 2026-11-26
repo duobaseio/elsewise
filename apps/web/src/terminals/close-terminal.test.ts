@@ -19,7 +19,7 @@ function open(state: TerminalSession['state'], confirmed = true) {
   const asked = vi.spyOn(terminals, 'openCloseDialog').mockResolvedValue(confirmed);
   const close = (closeConfirmation: boolean) =>
     closeTerminal({ terminals } as ApplicationManager, {} as DockManager, { ...PANEL, closeConfirmation });
-  return { session, deleted, asked, close };
+  return { terminals, session, deleted, asked, close };
 }
 
 describe('closeTerminal', () => {
@@ -39,6 +39,29 @@ describe('closeTerminal', () => {
 
     expect(asked).toHaveBeenCalledExactlyOnceWith(session);
     expect(deleted).toHaveBeenCalledExactlyOnceWith(ID);
+  });
+
+  test('asks before deleting terminal whose session is not loaded', async () => {
+    const { session, deleted, asked, close, terminals } = open('running');
+    terminals.store.sessions.delete(ID);
+    const fetched = vi.spyOn(terminals.store, 'get').mockResolvedValue(session);
+
+    await expect(close(true)).resolves.toBe(true);
+
+    expect(fetched).toHaveBeenCalledExactlyOnceWith(ID);
+    expect(asked).toHaveBeenCalledExactlyOnceWith(session);
+    expect(deleted).toHaveBeenCalledExactlyOnceWith(ID);
+  });
+
+  test('deletes terminal whose session is gone without asking', async () => {
+    const { deleted, asked, close, terminals } = open('running');
+    terminals.store.sessions.delete(ID);
+    vi.spyOn(terminals.store, 'get').mockResolvedValue(null);
+
+    await expect(close(true)).resolves.toBe(true);
+
+    expect(deleted).toHaveBeenCalledExactlyOnceWith(ID);
+    expect(asked).not.toHaveBeenCalled();
   });
 
   test('keeps terminal that is not confirmed', async () => {

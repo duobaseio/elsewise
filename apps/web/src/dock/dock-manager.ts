@@ -16,8 +16,7 @@ import type {
 } from '@elsewise/frontend-plugin';
 import { type DockviewApi, type DockviewIDisposable, Orientation, type SerializedDockview } from 'dockview-react';
 import type { ApplicationManager } from '@/application-manager';
-import { sameWorkspace, type WorkspaceManager } from '@/projects/workspace-manager';
-import type { TerminalManager } from '@/terminals/terminal-manager';
+import { sameWorkspace } from '@/projects/workspace-manager';
 import { DockStore } from './dock-store';
 import { addPanel, movePanel } from './placement';
 
@@ -36,8 +35,6 @@ export class DockManager implements Dock {
   constructor(
     readonly workspaceId: WorkspaceId,
     private readonly dockview: DockviewApi,
-    private readonly workspaces: WorkspaceManager,
-    private readonly terminals: TerminalManager,
     private readonly application: ApplicationManager,
     onOpen: (panel: Panel) => void,
     onClose: (panel: Panel) => void,
@@ -213,9 +210,9 @@ export class DockManager implements Dock {
       return null;
     }
 
-    const session = await this.terminals.store.add(this.workspaceId, options);
+    const session = await this.application.terminals.store.add(this.workspaceId, options);
     if (this.disposed) {
-      await this.terminals.delete(session.id);
+      await this.application.terminals.delete(session.id);
       return null;
     }
 
@@ -236,7 +233,7 @@ export class DockManager implements Dock {
     );
     const panel = added && this.get(added.id);
     if (panel?.type !== 'terminal') {
-      await this.terminals.delete(session.id);
+      await this.application.terminals.delete(session.id);
       return null;
     }
 
@@ -310,7 +307,7 @@ export class DockManager implements Dock {
   }
 
   get workspace(): Workspace {
-    const active = this.workspaces.active;
+    const active = this.application.projects.workspaces.active;
     if (sameWorkspace(active?.id, this.workspaceId)) {
       this.resolved = active;
     }

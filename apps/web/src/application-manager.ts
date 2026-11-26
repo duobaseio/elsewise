@@ -34,7 +34,7 @@ export class ApplicationManager implements Application {
     selected: Keymap,
     platform?: Platform,
   ) {
-    this.docks = new DocksManager(projects.workspaces, terminals, this);
+    this.docks = new DocksManager(this);
     this.commands = new CommandManager(this, selected, platform);
   }
 }

@@ -12,7 +12,7 @@ import { useApplicationManager } from '@/application-context';
 
 /**
  * The dialog that asks whether to close a terminal whose program runs, opened through the terminals. It is closed
- * unconfirmed if it goes away without an answer.
+ * unconfirmed if it goes away before it is confirmed.
  */
 export function CloseTerminalDialog() {
   const { terminals } = useApplicationManager();
