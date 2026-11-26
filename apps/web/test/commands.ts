@@ -20,8 +20,8 @@ import { STUB_COMPONENTS } from './dock-stubs';
 // A keymap without entries, so every command keeps its default keys.
 export const EMPTY_KEYMAP: Keymap = { name: 'Empty', keys: {} };
 
-// An application with the built-in commands and an empty keymap, from `parts` and fresh managers for the rest. Its docks
-// have `panelComponents`, or the stubs.
+// An application with the built-in commands and an empty keymap, from `parts` and fresh managers for the rest. Its
+// docks have `panelComponents`, or the stubs.
 export function builtInApplication(
   parts: Partial<
     Pick<ApplicationManager, 'appearance' | 'editor' | 'fileTree' | 'projects' | 'router' | 'settings' | 'terminals'>

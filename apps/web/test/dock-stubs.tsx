@@ -1,9 +1,9 @@
 import type { PanelComponent } from '@/dock/panel-component';
 import { Placeholder, PlaceholderTab } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 
-// Minimal stand-ins for the dock's panels and tabs. Tests exercise the dock's chrome and policies, not panel content —
-// stubs keep them (and the screenshot baselines) stable while the real panels evolve. The real tabs also need the
-// workspace's route around the dock.
+// Minimal stand-ins for the dock's panels and tabs. Tests exercise the dock's chrome and policies, not panel
+// content — stubs keep them (and the screenshot baselines) stable while the real panels evolve. The real tabs also
+// need the workspace's route around the dock.
 export const STUB_COMPONENTS: readonly PanelComponent[] = [
   { type: 'placeholder', tab: PlaceholderTab, panel: Placeholder },
   {
