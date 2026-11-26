@@ -1,4 +1,4 @@
-import type { Panel, TabPanel } from './panels';
+import type { Panel } from './panels';
 
 /**
  * Where a panel is placed.
@@ -17,8 +17,8 @@ export type Placement = TabPlacement | GroupPlacement;
  * A place among a group's tabs.
  */
 export type TabPlacement =
-  | { readonly tab: 'before' | 'after'; readonly of: TabPanel }
-  | { readonly tab: 'first' | 'last'; readonly with: TabPanel };
+  | { readonly tab: 'before' | 'after'; readonly of: Panel }
+  | { readonly tab: 'first' | 'last'; readonly with: Panel };
 
 /**
  * A place for a new group.

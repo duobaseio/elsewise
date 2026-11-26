@@ -5,17 +5,11 @@ import { ApplicationManagerContext } from '@/application-context';
 import { builtInApplication } from '../../../../../../test/commands';
 import { addFile } from '../../../../../../test/dock';
 import { stubComponents } from '../../../../../../test/dock-stubs';
-import { FileTab } from './-file/file-tab';
-import { TerminalTab } from './-terminal/terminal-tab';
 import { FileTreeTab, WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 
-const COMPONENTS = stubComponents({
-  fileTree: { tab: FileTreeTab },
-  file: { tab: FileTab },
-  terminal: { tab: TerminalTab },
-});
+const COMPONENTS = stubComponents({ fileTree: { tab: FileTreeTab } });
 
 async function mount(layout?: unknown, width = 1100) {
   let api: DockviewApi | undefined;

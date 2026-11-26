@@ -2,7 +2,7 @@ import type { DragOperation } from '@dnd-kit/abstract';
 import type { DragDropManager, Draggable, Droppable } from '@dnd-kit/dom';
 import { isSortable } from '@dnd-kit/dom/sortable';
 import { DragDropProvider } from '@dnd-kit/react';
-import type { Dock, GroupPlacement, Panel, TabPanel, TabPlacement } from '@elsewise/frontend-plugin';
+import type { Dock, GroupPlacement, Panel, TabPlacement } from '@elsewise/frontend-plugin';
 import type { DockviewApi, DockviewGroupPanel } from 'dockview-react';
 import {
   createContext,
@@ -293,10 +293,10 @@ function newGroupPlacement(
 }
 
 // The placement of `panel` among the `group`'s tabs, before the tab at `index`.
-function tabPlacement(dock: Dock, panel: TabPanel, group: DockviewGroupPanel, index: number): TabPlacement {
+function tabPlacement(dock: Dock, panel: Panel, group: DockviewGroupPanel, index: number): TabPlacement {
   const tabs = group.panels
     .map(({ id }) => dock.get(id))
-    .filter((tab): tab is TabPanel => tab?.tab === true && tab.id !== panel.id);
+    .filter((tab): tab is Panel => tab?.tab === true && tab.id !== panel.id);
   const next = tabs[index];
 
   return next === undefined ? { tab: 'last', with: tabs.at(-1) ?? panel } : { tab: 'before', of: next };

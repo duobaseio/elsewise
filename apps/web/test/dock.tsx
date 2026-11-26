@@ -61,6 +61,7 @@ export async function showWorkspace(router: AnyRouter) {
 export function addFile(dockview: DockviewApi) {
   dockview.addPanel({
     id: FILE.id,
+    tabComponent: 'file',
     component: 'file',
     title: '$workspace.tsx',
     params: { path: FILE.relativePath },
@@ -99,6 +100,7 @@ export async function mount(onReady?: (dockview: DockviewApi) => void): Promise<
 export function addTerminal(dockview: DockviewApi) {
   return dockview.addPanel({
     id: TERMINAL.id,
+    tabComponent: 'terminal',
     component: 'terminal',
     params: { session: TERMINAL.session.session },
     position: { referencePanel: FILE.id, direction: 'below' },

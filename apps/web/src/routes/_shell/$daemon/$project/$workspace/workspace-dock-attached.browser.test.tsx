@@ -8,8 +8,7 @@ import { ProjectManager } from '@/projects/project-manager';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { builtInApplication } from '../../../../../../test/commands';
 import { addFile, FILE, FILE_TREE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../test/dock';
-import { stubComponents } from '../../../../../../test/dock-stubs';
-import { DefaultTab, WorkspaceDock } from './route';
+import { WorkspaceDock } from './route';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -20,7 +19,6 @@ async function mount(settings?: SettingsPanelManager) {
     router,
     settings,
     projects: new ProjectManager(client, router),
-    panelComponents: stubComponents({ file: { tab: DefaultTab } }),
   });
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
@@ -63,17 +61,6 @@ test('shows file tree hidden through dock in tool stripe', async () => {
   dock.hide(FILE_TREE);
 
   await expect.element(page.getByRole('button', { name: 'Toggle file tree' })).toHaveAttribute('aria-pressed', 'false');
-});
-
-test('closes editor through dock', async () => {
-  const dock = await mount();
-  const closed = vi.spyOn(dock, 'close');
-  const added = dock.addFile('src/other.ts', { tab: 'after', of: FILE });
-
-  await page.getByRole('button', { name: 'Close other.ts' }).click();
-
-  expect(closed).toHaveBeenCalledExactlyOnceWith(added);
-  await vi.waitFor(() => expect(dock.panels).toEqual([FILE, FILE_TREE]));
 });
 
 test('adds terminal with close confirmation as set', async () => {

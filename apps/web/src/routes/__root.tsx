@@ -93,7 +93,7 @@ function RootComponent() {
   useEffect(() => installApplicationKeys(window, commands), [commands]);
 
   useEffect(() => {
-    void plugins.enableAll(application);
+    void plugins.enableAll(application).then(() => application.docks.closeSourcelessPanels());
     return () => {
       void plugins.disableAll();
     };

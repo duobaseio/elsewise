@@ -125,7 +125,7 @@ describe('addTerminal', () => {
   test('deletes terminal that cannot be placed', async () => {
     const { dock, deleted } = await mount();
 
-    await expect(dock.addTerminal({}, { tab: 'last', with: FILE_TREE as never })).resolves.toBeNull();
+    await expect(dock.addTerminal({}, { tab: 'last', with: FILE_TREE })).resolves.toBeNull();
 
     expect(deleted).toHaveBeenCalledExactlyOnceWith(ADDED.session);
     expect(dock.panels).toHaveLength(4);
@@ -151,6 +151,64 @@ describe('addTerminal', () => {
 
     await expect(dock.addTerminal({}, { edge: 'bottom' })).rejects.toThrow('unreachable');
 
+    expect(dock.panels).toHaveLength(4);
+  });
+});
+
+const REPORT = { id: 'example/report', tab: true, closable: true, header: () => null, panel: () => null } as const;
+const TOOL = { id: 'example/tool', tab: false, closable: false, header: () => null, panel: () => null } as const;
+
+describe('addPanel', () => {
+  test('adds and activates panel of source', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([REPORT]);
+
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    expect(panel).toEqual({ id: expect.stringMatching(/^custom:/), type: 'example/report', tab: true, closable: true });
+    expect(dock.groups[0]?.panels).toEqual([FILE, panel, OTHER]);
+    expect(dock.activePanel).toEqual(panel);
+  });
+
+  test('shows panel without activating it', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([REPORT]);
+
+    const panel = dock.addPanel(REPORT.id, { tab: 'first', with: TERMINAL }, false);
+
+    expect(dock.groups[1]).toEqual({ panels: [panel, TERMINAL], shown: panel });
+    expect(dock.activePanel).toEqual(FILE);
+  });
+
+  test('adds tabless panel in group of its own', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([TOOL]);
+
+    const panel = dock.addPanel(TOOL.id, { edge: 'bottom' });
+
+    expect(panel).toEqual({ id: expect.stringMatching(/^custom:/), type: 'example/tool', tab: false, closable: false });
+    expect(dock.groups.at(-1)).toEqual({ panels: [panel], shown: panel });
+  });
+
+  test('returns null for source that was not added', async () => {
+    const { dock } = await mount();
+
+    expect(dock.addPanel(REPORT.id, { tab: 'after', of: FILE })).toBeNull();
+    expect(dock.panels).toHaveLength(4);
+  });
+
+  test('returns null for panel that is not open', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([REPORT]);
+
+    expect(dock.addPanel(REPORT.id, { tab: 'after', of: { ...OTHER, id: 'closed' } })).toBeNull();
+  });
+
+  test('returns null for tabless panel among tabs', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([TOOL]);
+
+    expect(dock.addPanel(TOOL.id, { tab: 'after', of: FILE })).toBeNull();
     expect(dock.panels).toHaveLength(4);
   });
 });
@@ -239,6 +297,48 @@ describe('close', () => {
     const { dock } = await mount();
 
     await expect(dock.close({ ...OTHER, id: 'closed' })).resolves.toBe(true);
+  });
+
+  test('closes panel that source allows', async () => {
+    const close = vi.fn(() => true);
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, close }]);
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await expect(dock.close(panel as Panel)).resolves.toBe(true);
+
+    expect(close).toHaveBeenCalledExactlyOnceWith(application, dock, panel);
+    expect(dock.panels).toHaveLength(4);
+  });
+
+  test('keeps panel that source refuses', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, close: async () => false }]);
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await expect(dock.close(panel as Panel)).resolves.toBe(false);
+
+    expect(dock.get(panel?.id ?? '')).toEqual(panel);
+  });
+
+  test('keeps panel that cannot be closed without asking its source', async () => {
+    const close = vi.fn(() => true);
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...TOOL, close }]);
+    const panel = dock.addPanel(TOOL.id, { edge: 'bottom' });
+
+    await expect(dock.close(panel as Panel)).resolves.toBe(false);
+
+    expect(close).not.toHaveBeenCalled();
+    expect(dock.get(panel?.id ?? '')).toEqual(panel);
+  });
+
+  test('keeps panel that cannot be closed', async () => {
+    const { dock } = await mount();
+
+    await expect(dock.close(FILE_TREE)).resolves.toBe(false);
+
+    expect(dock.get(FILE_TREE.id)).toEqual(FILE_TREE);
   });
 
   test('closes panel that component allows', async () => {

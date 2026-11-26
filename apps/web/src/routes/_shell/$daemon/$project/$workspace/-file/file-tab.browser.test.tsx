@@ -6,7 +6,7 @@ import {
   RouterProvider,
 } from '@tanstack/react-router';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
@@ -54,7 +54,7 @@ async function mount() {
 }
 
 function marked(): boolean {
-  return document.querySelector('[data-dirty]') !== null;
+  return page.getByRole('img', { name: 'Unsaved changes' }).elements().length > 0;
 }
 
 describe('FileTab', () => {
@@ -85,6 +85,17 @@ describe('FileTab', () => {
     application.files.add(WORKSPACE, file);
 
     await expect.poll(marked).toBe(true);
+  });
+
+  test('closes panel through dock', async () => {
+    const { application } = await mount();
+    const panel = { id: 'file:1', type: 'file', tab: true, closable: true, relativePath: 'main.ts' };
+    const close = vi.fn(async () => true);
+    application.docks.active = { get: () => panel, close } as never;
+
+    await page.getByRole('button', { name: 'Close main.ts' }).click();
+
+    expect(close).toHaveBeenCalledExactlyOnceWith(panel);
   });
 
   test('ignores file of other workspace', async () => {

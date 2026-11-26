@@ -1,14 +1,11 @@
 import type {
-  ClosablePanel,
+  CustomPanel,
   Dock,
   FilePanel,
   Group,
-  GroupPlacement,
   Layout,
   Panel,
   Placement,
-  TablessPanel,
-  TabPanel,
   TerminalOptions,
   TerminalPanel,
   Workspace,
@@ -17,7 +14,7 @@ import type {
 import { type DockviewApi, type DockviewIDisposable, Orientation, type SerializedDockview } from 'dockview-react';
 import type { ApplicationManager } from '@/application-manager';
 import { sameWorkspace } from '@/projects/workspace-manager';
-import { DockStore } from './dock-store';
+import { DockStore, isCustomPanel } from './dock-store';
 import { addPanel, movePanel } from './placement';
 
 /**
@@ -245,8 +242,40 @@ export class DockManager implements Dock {
     return panel;
   }
 
-  move(panel: TabPanel, placement: Placement, activate?: boolean): void;
-  move(panel: TablessPanel, placement: GroupPlacement, activate?: boolean): void;
+  addPanel(type: CustomPanel['type'], placement: Placement, activate = true): CustomPanel | null {
+    const source = this.application.docks.panelSources.find((other) => other.id === type);
+    if (source === undefined) {
+      return null;
+    }
+
+    const open = addPanel(
+      this.dockview,
+      this.panels,
+      {
+        id: `custom:${crypto.randomUUID()}`,
+        tabComponent: 'custom',
+        component: 'custom',
+        params: { type: source.id, tab: source.tab, closable: source.closable },
+        inactive: true,
+        minimumWidth: 10,
+        minimumHeight: 10,
+      },
+      placement,
+      source.tab,
+    );
+    const panel = open && this.get(open.id);
+    if (panel == null || !isCustomPanel(panel)) {
+      return null;
+    }
+
+    if (activate) {
+      this.activate(panel);
+    } else {
+      this.show(panel);
+    }
+    return panel;
+  }
+
   move(panel: Panel, placement: Placement, activate = true): void {
     const active = activate ? panel : this.activePanel;
     if (!movePanel(this.dockview, this.panels, panel, placement)) {
@@ -287,14 +316,28 @@ export class DockManager implements Dock {
     this.update();
   }
 
-  close(panel: ClosablePanel): Promise<boolean> {
+  close(panel: Panel): Promise<boolean> {
     let closing = this.closing.get(panel.id);
     if (closing === undefined) {
       closing = (async () => {
         const open = this.get(panel.id);
-        const component = this.application.docks.panelComponents.find((other) => other.type === open?.type);
-        if (open?.closable && !((await component?.close?.(this.application, this, open)) ?? true)) {
-          return false;
+        if (open !== null) {
+          if (!open.closable) {
+            return false;
+          }
+
+          let allowed: boolean;
+          if (isCustomPanel(open)) {
+            const source = this.application.docks.panelSources.find((other) => other.id === open.type);
+            allowed = (await source?.close?.(this.application, this, open)) ?? true;
+          } else {
+            const component = this.application.docks.panelComponents.find((other) => other.type === open.type);
+            allowed = (await component?.close?.(this.application, this, open)) ?? true;
+          }
+
+          if (!allowed) {
+            return false;
+          }
         }
 
         this.dockview.getPanel(panel.id)?.api.close();
@@ -304,6 +347,28 @@ export class DockManager implements Dock {
       this.closing.set(panel.id, closing);
     }
     return closing;
+  }
+
+  /**
+   * Closes the custom panels whose source was not added.
+   */
+  closeSourcelessPanels() {
+    const sources = this.application.docks.panelSources.map((source) => source.id);
+    this.closeCustomPanels(
+      this.panels.filter((panel) => isCustomPanel(panel) && !sources.includes(panel.type)).map((panel) => panel.type),
+    );
+  }
+
+  /**
+   * Closes the custom panels of the `sources`.
+   */
+  closeCustomPanels(sources: readonly string[]) {
+    for (const panel of this.panels) {
+      if (sources.includes(panel.type)) {
+        this.dockview.getPanel(panel.id)?.api.close();
+      }
+    }
+    this.update();
   }
 
   get workspace(): Workspace {
@@ -322,7 +387,7 @@ export class DockManager implements Dock {
     return this.store.snapshot.activePanel;
   }
 
-  get activeTabPanel(): TabPanel | null {
+  get activeTabPanel(): Panel | null {
     return this.store.snapshot.activeTabPanel;
   }
 

@@ -1,4 +1,8 @@
+import { DockTabHeader } from '@elsewise/components/components/dock';
+import type { IDockviewPanelHeaderProps } from 'dockview-react';
 import type { PanelComponent } from '@/dock/panel-component';
+import { CustomPanelContent, CustomTab } from '@/routes/_shell/$daemon/$project/$workspace/-custom/custom-panel';
+import { DraggableTab } from '@/routes/_shell/$daemon/$project/$workspace/-dock/draggable-tab';
 import { Placeholder, PlaceholderTab } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 
 // Minimal stand-ins for the dock's panels and tabs. Tests exercise the dock's chrome and policies, not panel content —
@@ -21,9 +25,18 @@ export const STUB_COMPONENTS: readonly PanelComponent[] = [
     tab: () => <span className="px-2 text-base">Files</span>,
     panel: () => <p className="p-2 text-base text-text-3">tree stub</p>,
   },
+  { type: 'custom', tab: CustomTab, panel: CustomPanelContent },
 ];
 
-// The stubs, with the tab or panel of each type in `real` in place of its stub.
+export function StubTab(props: IDockviewPanelHeaderProps) {
+  return (
+    <>
+      <DraggableTab api={props.api} />
+      <DockTabHeader title={props.api.title} onClose={() => props.api.close()} />
+    </>
+  );
+}
+
 export function stubComponents(
   real: Partial<Record<PanelComponent['type'], Partial<Omit<PanelComponent, 'type'>>>>,
 ): readonly PanelComponent[] {

@@ -22,6 +22,21 @@ describe('snapshot', () => {
 });
 
 describe('update', () => {
+  test('maps custom panel to its saved type', async () => {
+    const { api, store } = await mount();
+    api.addPanel({
+      id: 'custom:1',
+      tabComponent: 'custom',
+      component: 'custom',
+      params: { type: 'example/tool', tab: false, closable: true },
+      position: { direction: 'below' },
+    });
+
+    store.update();
+
+    expect(store.snapshot.panels).toContainEqual({ id: 'custom:1', type: 'example/tool', tab: false, closable: true });
+  });
+
   test('nests column in row', async () => {
     const { api, store } = await mount();
 

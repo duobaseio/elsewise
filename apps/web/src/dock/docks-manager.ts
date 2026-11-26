@@ -1,4 +1,4 @@
-import type { Disposable, Dock, Docks, Panel, WorkspaceId } from '@elsewise/frontend-plugin';
+import type { CustomPanelSource, Disposable, Dock, Docks, Panel, WorkspaceId } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
 import type { ApplicationManager } from '@/application-manager';
 import { sameWorkspace } from '@/projects/workspace-manager';
@@ -13,9 +13,12 @@ export class DocksManager implements Docks {
   private readonly openListeners = new Set<(dock: Dock, panel: Panel) => void>();
   private readonly closeListeners = new Set<(dock: Dock, panel: Panel) => void>();
   private readonly changeListeners = new Set<(dock: Dock | null) => void>();
+  private readonly sourceListeners = new Set<() => void>();
   private attached: DockManager | null = null;
   private addedComponents: readonly (readonly PanelComponent[])[] = [];
   private currentComponents: readonly PanelComponent[] = [];
+  private currentSources: readonly CustomPanelSource[] = [];
+  private pendingPanelSources = true;
 
   constructor(private readonly application: ApplicationManager) {
     application.projects.workspaces.onActiveChange(() => this.update());
@@ -35,6 +38,34 @@ export class DocksManager implements Docks {
     return () => {
       this.addedComponents = this.addedComponents.filter((other) => other !== added);
       this.currentComponents = this.addedComponents.flat();
+    };
+  }
+
+  /**
+   * The sources of custom panels, in order of addition.
+   */
+  get panelSources(): readonly CustomPanelSource[] {
+    return this.currentSources;
+  }
+
+  addPanelSources(sources: readonly CustomPanelSource[]): Disposable {
+    const added: CustomPanelSource[] = [];
+    for (const source of sources) {
+      if (!source.id.includes('/')) {
+        console.warn(`Panel source ${source.id} is not namespaced`);
+      } else if ([...this.currentSources, ...added].some((other) => other.id === source.id)) {
+        console.warn(`Panel source ${source.id} already exists`);
+      } else {
+        added.push(source);
+      }
+    }
+
+    this.currentSources = [...this.currentSources, ...added];
+    this.call(this.sourceListeners);
+    return () => {
+      this.currentSources = this.currentSources.filter((source) => !added.includes(source));
+      this.attached?.closeCustomPanels(added.map((source) => source.id));
+      this.call(this.sourceListeners);
     };
   }
 
@@ -66,6 +97,9 @@ export class DocksManager implements Docks {
       },
     );
     this.attached = dock;
+    if (!this.pendingPanelSources) {
+      dock.closeSourcelessPanels();
+    }
     this.update();
     return dock;
   }
@@ -97,6 +131,24 @@ export class DocksManager implements Docks {
         console.error('Dock listener failed', error);
       }
     }
+  }
+
+  /**
+   * Closes the custom panels with unknown sources. Should be called after all sources are initially loaded.
+   */
+  closeSourcelessPanels() {
+    this.pendingPanelSources = false;
+    this.attached?.closeSourcelessPanels();
+  }
+
+  /**
+   * Calls `listener` when a source of custom panels is added or removed.
+   */
+  onPanelSourcesChange(listener: () => void): Disposable {
+    this.sourceListeners.add(listener);
+    return () => {
+      this.sourceListeners.delete(listener);
+    };
   }
 
   /**

@@ -30,16 +30,14 @@ export {
   DEFAULT_TERMINAL_CONTEXT_MENU,
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
-export type { Dock, Docks } from './dock/docks';
+export type { CustomPanelProps, CustomPanelSource, Dock, Docks } from './dock/docks';
 export type { Group, Layout, Split } from './dock/layout';
 export type {
   BasePanel,
-  ClosablePanel,
+  CustomPanel,
   FilePanel,
   FileTreePanel,
   Panel,
-  TablessPanel,
-  TabPanel,
   TerminalPanel,
 } from './dock/panels';
 export type { GroupPlacement, Placement, TabPlacement } from './dock/placement';

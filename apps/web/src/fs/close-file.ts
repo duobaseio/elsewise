@@ -1,13 +1,9 @@
-import type { ClosablePanel } from '@elsewise/frontend-plugin';
+import type { Panel } from '@elsewise/frontend-plugin';
 import { Code, TransportError } from '@elsewise/transport';
 import type { ApplicationManager } from '@/application-manager';
 import type { DockManager } from '@/dock/dock-manager';
 
-export async function closeFile(
-  { files }: ApplicationManager,
-  dock: DockManager,
-  panel: ClosablePanel,
-): Promise<boolean> {
+export async function closeFile({ files }: ApplicationManager, dock: DockManager, panel: Panel): Promise<boolean> {
   // document needs to be a separate variable because TS has fucking shit unsound control flow analysis. It assumes that
   // the file.document property can never be null after an initial check :)
   const file = panel.type === 'file' ? files.get(dock.workspaceId, panel.relativePath) : null;

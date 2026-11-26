@@ -9,13 +9,14 @@ const SIDES = { left: 'left', right: 'right', above: 'top', below: 'bottom' } as
  *
  * Returns null if `placement`:
  * * refers to a panel that is not among the open `panels`
- * * puts a tab in the group of a tabless panel
+ * * puts a tab in the group of a tabless panel, or a panel that is not a `tab` among tabs
  */
 export function addPanel(
   dockview: DockviewApi,
   panels: readonly Panel[],
   options: Omit<AddPanelOptions, 'position' | 'floating'>,
   placement: Placement,
+  tab = true,
 ): IDockviewPanel | null {
   if ('edge' in placement) {
     const { width, height } = extent(placement.edge, placement);
@@ -44,7 +45,7 @@ export function addPanel(
     });
   }
 
-  if (!reference.tab) {
+  if (!reference.tab || !tab) {
     return null;
   }
 
@@ -67,8 +68,9 @@ export function movePanel(
   moved: Panel,
   placement: Placement,
 ): boolean {
+  const open = panels.find((panel) => panel.id === moved.id);
   const panel = dockview.getPanel(moved.id);
-  if (panel === undefined) {
+  if (open === undefined || panel === undefined) {
     return false;
   }
 
@@ -91,7 +93,7 @@ export function movePanel(
     return true;
   }
 
-  if (!reference.tab || !moved.tab || (moved.id === id && 'of' in placement)) {
+  if (!reference.tab || !open.tab || (moved.id === id && 'of' in placement)) {
     return false;
   }
 

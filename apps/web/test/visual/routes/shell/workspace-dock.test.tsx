@@ -8,12 +8,10 @@ import '@/routes/_shell/dockview.css';
 
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
-import { FileTab } from '@/routes/_shell/$daemon/$project/$workspace/-file/file-tab';
-import { TerminalTab } from '@/routes/_shell/$daemon/$project/$workspace/-terminal/terminal-tab';
 import { FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../../commands';
 import { addFile, showWorkspace, WORKSPACE, workspaceRouter } from '../../../dock';
-import { stubComponents } from '../../../dock-stubs';
+import { StubTab, stubComponents } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
 
@@ -24,8 +22,8 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
     projects: new ProjectManager(client, router),
     panelComponents: stubComponents({
       fileTree: { tab: FileTreeTab },
-      file: { tab: FileTab },
-      terminal: { tab: TerminalTab },
+      file: { tab: StubTab },
+      terminal: { tab: StubTab },
     }),
   });
   await showWorkspace(router);
@@ -45,6 +43,7 @@ async function mount(theme: 'light' | 'dark'): Promise<DockviewApi> {
             addFile(readyApi);
             readyApi.addPanel({
               id: 'terminal:1',
+              tabComponent: 'terminal',
               component: 'terminal',
               title: 'Terminal',
               params: { session: '1' },
@@ -93,6 +92,7 @@ async function addEditorGroupTerminals(api: DockviewApi) {
   for (const index of [2, 3]) {
     api.addPanel({
       id: `term-${index}`,
+      tabComponent: 'terminal',
       component: 'terminal',
       title: `zsh ${index}`,
       params: { index },
