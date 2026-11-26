@@ -1,8 +1,7 @@
 import type { Disposable, Dock, Docks, Panel, WorkspaceId } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
 import type { ApplicationManager } from '@/application-manager';
-import { sameWorkspace, type WorkspaceManager } from '@/projects/workspace-manager';
-import type { TerminalManager } from '@/terminals/terminal-manager';
+import { sameWorkspace } from '@/projects/workspace-manager';
 import { DockManager } from './dock-manager';
 import type { PanelComponent } from './panel-component';
 
@@ -18,12 +17,8 @@ export class DocksManager implements Docks {
   private addedComponents: readonly (readonly PanelComponent[])[] = [];
   private currentComponents: readonly PanelComponent[] = [];
 
-  constructor(
-    private readonly workspaces: WorkspaceManager,
-    private readonly terminals: TerminalManager,
-    private readonly application: ApplicationManager,
-  ) {
-    workspaces.onActiveChange(() => this.update());
+  constructor(private readonly application: ApplicationManager) {
+    application.projects.workspaces.onActiveChange(() => this.update());
   }
 
   /**
@@ -53,8 +48,6 @@ export class DocksManager implements Docks {
     const dock = new DockManager(
       workspace,
       view,
-      this.workspaces,
-      this.terminals,
       this.application,
       (panel) => {
         if (this.active === dock) {
@@ -87,7 +80,9 @@ export class DocksManager implements Docks {
 
   // There is a slight gap between when the dock manager is attached and workspaces.active is updated.
   private update() {
-    const dock = sameWorkspace(this.workspaces.active?.id, this.attached?.workspaceId) ? this.attached : null;
+    const dock = sameWorkspace(this.application.projects.workspaces.active?.id, this.attached?.workspaceId)
+      ? this.attached
+      : null;
     if (this.active !== dock) {
       this.active = dock;
       this.call(this.changeListeners, dock);

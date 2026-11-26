@@ -37,8 +37,6 @@ async function mount(close?: PanelComponent['close']) {
   const dock = new DockManager(
     WORKSPACE,
     dockview,
-    application.projects.workspaces,
-    terminals,
     application,
     () => {},
     () => {},

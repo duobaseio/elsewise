@@ -68,14 +68,14 @@ class FileHandlePlugin {
     const code = file.state.type === 'text' ? file.state.content : '';
     this.disk = { code, doc: this.view.state.toText(code) };
     this.disposables = [file.onChange(() => this.refresh()), file.onDiskChange(() => this.reload())];
-    this.markDirty();
+    this.updateDocument();
   }
 
   private refresh(): void {
     if (this.file.state.type === 'text' && this.file.state.content !== this.disk.code) {
       const code = this.file.state.content;
       this.disk = { code, doc: this.view.state.toText(code) };
-      this.markDirty();
+      this.updateDocument();
     }
   }
 
@@ -92,7 +92,7 @@ class FileHandlePlugin {
       return;
     }
 
-    this.markDirty();
+    this.updateDocument();
     // TODO: This UX can be improved.
     if (this.toastId !== undefined) {
       toast.close(this.toastId);
@@ -138,7 +138,7 @@ class FileHandlePlugin {
 
   update(update: ViewUpdate): void {
     if (update.docChanged) {
-      this.markDirty();
+      this.updateDocument();
     }
   }
 
@@ -152,7 +152,7 @@ class FileHandlePlugin {
     }
   }
 
-  private markDirty(): void {
+  private updateDocument(): void {
     // Lines are joined with the view's line separator, which they were split by, so the file's line endings are kept.
     this.file.document = this.view.state.doc.eq(this.disk.doc) ? null : () => this.view.state.sliceDoc();
   }
