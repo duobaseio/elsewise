@@ -13,7 +13,7 @@ import { type ITerminalAddon, Terminal as XTerm } from '@xterm/xterm';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { KeyedMap } from '@/collections/keyed-map';
-import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
+import { MenuManager } from '@/collections/menu-manager';
 import { type Daemon, daemonQuery } from '@/daemon';
 import { DEFAULT_CONTEXT_MENU } from '@/terminals/context-menu/default-context-menu';
 import { SessionStore } from '@/terminals/session-store';
@@ -50,7 +50,7 @@ export class TerminalManager implements Terminals {
   private readonly opening = new KeyedMap<TerminalSessionId, Promise<TerminalEntry | null>>(keyOf);
   private readonly factories = new Set<AddonFactory>();
   private current: TerminalSessionId | null = null;
-  private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
+  private readonly contextMenus = new MenuManager(DEFAULT_CONTEXT_MENU, () => this.notify(), 'Context menu');
 
   constructor(private readonly client: QueryClient) {
     this.store = new SessionStore(client);

@@ -13,6 +13,7 @@ import 'dockview-react/dist/styles/dockview.css';
 
 const REPORT: CustomPanelSource = {
   id: 'example/report',
+  label: 'Report',
   tab: true,
   closable: true,
   header: () => <span>Report header</span>,

@@ -1,9 +1,30 @@
-import type { CustomPanelSource, Disposable, Dock, Docks, Panel, WorkspaceId } from '@elsewise/frontend-plugin';
+import {
+  type CustomPanelSource,
+  DEFAULT_PANEL_MENU,
+  DEFAULT_PANEL_SOURCES,
+  type Disposable,
+  type Dock,
+  type Docks,
+  type Panel,
+  type PanelMenuGroup,
+  type PanelMenuItem,
+  type PanelMenuSubmenuItem,
+  type WorkspaceId,
+} from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
 import type { ApplicationManager } from '@/application-manager';
+import { MenuManager } from '@/collections/menu-manager';
 import { sameWorkspace } from '@/projects/workspace-manager';
 import { DockManager } from './dock-manager';
 import type { PanelComponent } from './panel-component';
+
+const DEFAULT_PANEL_MENU_GROUPS: readonly PanelMenuGroup[] = [
+  {
+    id: DEFAULT_PANEL_MENU.terminals.id,
+    order: DEFAULT_PANEL_MENU.terminals.order,
+    items: [{ order: DEFAULT_PANEL_MENU.terminals.items.terminal, source: DEFAULT_PANEL_SOURCES.terminal }],
+  },
+];
 
 /**
  * The docks, of which only the shown workspace's exists.
@@ -14,6 +35,12 @@ export class DocksManager implements Docks {
   private readonly closeListeners = new Set<(dock: Dock, panel: Panel) => void>();
   private readonly changeListeners = new Set<(dock: Dock | null) => void>();
   private readonly sourceListeners = new Set<() => void>();
+  private readonly menuListeners = new Set<() => void>();
+  private readonly menu = new MenuManager<PanelMenuItem | PanelMenuSubmenuItem>(
+    DEFAULT_PANEL_MENU_GROUPS,
+    () => this.call(this.menuListeners),
+    'Panel menu',
+  );
   private attached: DockManager | null = null;
   private addedComponents: readonly (readonly PanelComponent[])[] = [];
   private currentComponents: readonly PanelComponent[] = [];
@@ -66,6 +93,27 @@ export class DocksManager implements Docks {
       this.currentSources = this.currentSources.filter((source) => !added.includes(source));
       this.attached?.closeCustomPanels(added.map((source) => source.id));
       this.call(this.sourceListeners);
+    };
+  }
+
+  /**
+   * The panel menu's groups, one per id, in order of first addition.
+   */
+  get panelMenu(): readonly PanelMenuGroup[] {
+    return this.menu.groups;
+  }
+
+  addPanelMenu(groups: readonly PanelMenuGroup[]): Disposable {
+    return this.menu.add(groups);
+  }
+
+  /**
+   * Calls `listener` when the panel menu's groups change.
+   */
+  onPanelMenuChange(listener: () => void): Disposable {
+    this.menuListeners.add(listener);
+    return () => {
+      this.menuListeners.delete(listener);
     };
   }
 

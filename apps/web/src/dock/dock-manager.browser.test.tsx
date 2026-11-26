@@ -155,8 +155,22 @@ describe('addTerminal', () => {
   });
 });
 
-const REPORT = { id: 'example/report', tab: true, closable: true, header: () => null, panel: () => null } as const;
-const TOOL = { id: 'example/tool', tab: false, closable: false, header: () => null, panel: () => null } as const;
+const REPORT = {
+  id: 'example/report',
+  label: 'Report',
+  tab: true,
+  closable: true,
+  header: () => null,
+  panel: () => null,
+} as const;
+const TOOL = {
+  id: 'example/tool',
+  label: 'Tool',
+  tab: false,
+  closable: false,
+  header: () => null,
+  panel: () => null,
+} as const;
 
 describe('addPanel', () => {
   test('adds and activates panel of source', async () => {

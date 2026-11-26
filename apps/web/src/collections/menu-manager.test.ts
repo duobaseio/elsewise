@@ -1,6 +1,6 @@
-import type { ContextMenuGroup, ContextMenuItem } from '@elsewise/frontend-plugin';
+import type { ContextMenuGroup, ContextMenuItem, ContextMenuSubmenuItem } from '@elsewise/frontend-plugin';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
+import { MenuManager } from '@/collections/menu-manager';
 
 // Returns an item that runs the command with `id`.
 function item(id: string): ContextMenuItem {
@@ -20,7 +20,7 @@ describe('add', () => {
   test('adds groups after defaults until disposed, notifying', () => {
     const notify = vi.fn();
     const defaults = [group('defaults', [item('default')])];
-    const menus = new ContextMenuManager(defaults, notify);
+    const menus = new MenuManager(defaults, notify, 'Context menu');
     const added = [group('a', [item('first')])];
     const dispose = menus.add(added);
 
@@ -33,7 +33,7 @@ describe('add', () => {
   });
 
   test('appends same-group items in order added', () => {
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     menus.add([group('a', [item('first')])]);
     menus.add([group('a', [item('second')])]);
 
@@ -41,7 +41,7 @@ describe('add', () => {
   });
 
   test('removes only disposed items from group', () => {
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     const dispose = menus.add([group('a', [item('first')])]);
     menus.add([group('a', [item('second')])]);
     dispose();
@@ -50,7 +50,7 @@ describe('add', () => {
   });
 
   test('removes only disposed addition when added twice', () => {
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     const added = [group('a', [item('first')])];
     const dispose = menus.add(added);
     menus.add(added);
@@ -60,7 +60,7 @@ describe('add', () => {
   });
 
   test('takes first defined order and submenu', () => {
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     menus.add([group('a', [item('first')])]);
     menus.add([group('a', [item('second')], { order: 1, in: 'menu' })]);
 
@@ -69,7 +69,7 @@ describe('add', () => {
 
   test('keeps first order and submenu and warns on differing', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     menus.add([group('a', [], { order: 1, in: 'menu' })]);
     menus.add([group('a', [], { order: 2, in: 'other' })]);
 
@@ -81,7 +81,7 @@ describe('add', () => {
 
   test('ignores repeated order and submenu', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     menus.add([group('a', [], { order: 1, in: 'menu' })]);
     menus.add([group('a', [], { order: 1, in: 'menu' })]);
 
@@ -89,7 +89,7 @@ describe('add', () => {
   });
 
   test('takes later order once first disposed', () => {
-    const menus = new ContextMenuManager([], () => {});
+    const menus = new MenuManager<ContextMenuItem | ContextMenuSubmenuItem>([], () => {}, 'Context menu');
     const dispose = menus.add([group('a', [], { order: 1 })]);
     menus.add([group('a', [], { order: 2 })]);
     dispose();

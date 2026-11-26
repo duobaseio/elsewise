@@ -21,8 +21,8 @@ import { type QueryClient, queryOptions } from '@tanstack/react-query';
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { MenuManager } from '@/collections/menu-manager';
 import { SortedSet } from '@/collections/sorted-set';
-import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import { type Progress, Progress_Phase } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import type { Project as ProjectMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
@@ -53,7 +53,7 @@ export class ProjectManager implements Projects {
   private readonly listeners = new Set<() => void>();
   private readonly addedIcons = new SortedSet<ProjectIcon>('Project icon', () => this.notify());
   private readonly addedSidebarItems = new SortedSet<ProjectSidebarItem>('Project sidebar item', () => this.notify());
-  private readonly contextMenus = new ContextMenuManager(DEFAULT_PROJECT_MENU, () => this.notify());
+  private readonly contextMenus = new MenuManager(DEFAULT_PROJECT_MENU, () => this.notify(), 'Context menu');
   private addedSourceGroups: readonly (readonly ProjectSourceGroup[])[] = [DEFAULT_PROJECT_SOURCES];
   private currentSourceGroups: readonly ProjectSourceGroup[] = this.mergeSources(DEFAULT_PROJECT_SOURCES);
   private repositorySources: readonly (readonly RepositorySource[])[] = [];

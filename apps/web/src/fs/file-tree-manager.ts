@@ -9,7 +9,7 @@ import type {
 } from '@elsewise/frontend-plugin';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
-import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
+import { MenuManager } from '@/collections/menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/fs/default-context-menu';
 import type { PasteEntry } from '@/fs/paste';
 import { sameWorkspace } from '@/projects/workspace-manager';
@@ -44,7 +44,7 @@ export class FileTreeManager implements FileTree {
   }>();
 
   private readonly listeners = new Set<() => void>();
-  private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
+  private readonly contextMenus = new MenuManager(DEFAULT_CONTEXT_MENU, () => this.notify(), 'Context menu');
   private currentClipboard: FileTreeClipboard | null = null;
   private currentRenaming: { readonly workspace: WorkspaceId; readonly path: string } | null = null;
 

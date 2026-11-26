@@ -30,8 +30,20 @@ export {
   DEFAULT_TERMINAL_CONTEXT_MENU,
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
-export type { CustomPanelProps, CustomPanelSource, Dock, Docks } from './dock/docks';
+export {
+  type CustomPanelProps,
+  type CustomPanelSource,
+  DEFAULT_PANEL_SOURCES,
+  type Dock,
+  type Docks,
+} from './dock/docks';
 export type { Group, Layout, Split } from './dock/layout';
+export {
+  DEFAULT_PANEL_MENU,
+  type PanelMenuGroup,
+  type PanelMenuItem,
+  type PanelMenuSubmenuItem,
+} from './dock/panel-menu';
 export type {
   BasePanel,
   CustomPanel,

@@ -4,8 +4,16 @@ import type { Application } from '../plugin';
 import type { Workspace } from '../projects/workspaces';
 import type { TerminalOptions } from '../terminal';
 import type { Group, Layout } from './layout';
+import type { PanelMenuGroup } from './panel-menu';
 import type { CustomPanel, FilePanel, Panel, TerminalPanel } from './panels';
 import type { Placement } from './placement';
+
+/**
+ * The ids of the built-in sources.
+ */
+export const DEFAULT_PANEL_SOURCES = {
+  terminal: '@elsewise/terminal',
+} as const;
 
 /**
  * The docks, one for each workspace.
@@ -24,6 +32,21 @@ export interface Docks {
    * Disposing it removes the sources and closes their panels, without calling `close`.
    */
   addPanelSources(sources: readonly CustomPanelSource[]): Disposable;
+
+  /**
+   * Adds `groups` to the panel menu, the menu of a tab group's button that adds a panel.
+   *
+   * ```ts
+   * docks.addPanelMenu([
+   *   { id: 'example.panels', order: 20, items: [{ order: 10, source: 'example/report' }] },
+   * ]);
+   * ```
+   *
+   * The button adds a panel at once, without a menu, while the menu has a single item.
+   *
+   * Returns a disposable that removes the `groups`.
+   */
+  addPanelMenu(groups: readonly PanelMenuGroup[]): Disposable;
 }
 
 /**
@@ -156,6 +179,11 @@ export interface CustomPanelSource {
    * The source's id, namespaced by the plugin's, e.g. `example/report`. Omitted if the id already exists.
    */
   readonly id: CustomPanel['type'];
+
+  /**
+   * The source's name, shown in menus, e.g. `Report`.
+   */
+  readonly label: string;
 
   /**
    * Whether its panels sit among a group's tabs. A panel that does not is always alone in its group.
