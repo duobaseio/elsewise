@@ -274,6 +274,7 @@ describe('settings:load', () => {
       font: { family: 'Iosevka', size: 16, lineHeight: 1.2, ligatures: false },
       cursorStyle: 'bar',
       cursorBlink: false,
+      closeConfirmation: true,
       copyOnSelect: true,
       macOptionClickForcesSelection: true,
       macOptionIsMeta: true,
@@ -285,6 +286,7 @@ describe('settings:load', () => {
     for (const bad of [
       { cursorStyle: 'beam' },
       { cursorBlink: 'yes' },
+      { closeConfirmation: 'yes' },
       { copyOnSelect: 'yes' },
       { macOptionClickForcesSelection: 'yes' },
       { macOptionIsMeta: 'yes' },
