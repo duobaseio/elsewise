@@ -17,8 +17,8 @@ import { type QueryClient, queryOptions, useQuery } from '@tanstack/react-query'
 import type { AnyRouter } from '@tanstack/react-router';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import { MenuManager } from '@/collections/menu-manager';
 import { SortedSet } from '@/collections/sorted-set';
-import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
 import { daemonQuery } from '@/daemon';
 import type { Workspace as WorkspaceMessage } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { DEFAULT_WORKSPACE_MENU } from '@/projects/default-context-menu';
@@ -56,7 +56,7 @@ export class WorkspaceManager implements Workspaces {
   private readonly addedSidebarItems = new SortedSet<WorkspaceSidebarItem>('Workspace sidebar item', () =>
     this.notify(),
   );
-  private readonly contextMenus = new ContextMenuManager(DEFAULT_WORKSPACE_MENU, () => this.notify());
+  private readonly contextMenus = new MenuManager(DEFAULT_WORKSPACE_MENU, () => this.notify(), 'Context menu');
   private shown: WorkspaceId | null = null;
   private lastActive: Workspace | null = null;
   private routing = 0;

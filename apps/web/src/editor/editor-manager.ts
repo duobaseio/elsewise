@@ -10,7 +10,7 @@ import type {
 } from '@elsewise/frontend-plugin';
 import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
-import { ContextMenuManager } from '@/command/context-menu/context-menu-manager';
+import { MenuManager } from '@/collections/menu-manager';
 import { DEFAULT_CONTEXT_MENU } from '@/editor/context-menu/default-context-menu';
 import { DiffManager } from '@/editor/diff/diff-manager';
 import { LanguageManager } from '@/editor/language-manager';
@@ -30,7 +30,7 @@ export class EditorManager implements Editor {
   private current: EditorView | null = null;
   private addedExtensions: readonly (readonly (Extension | ((document: EditorDocument) => Extension))[])[] = [];
   private currentExtensions: readonly (Extension | ((document: EditorDocument) => Extension))[] = [];
-  private readonly contextMenus = new ContextMenuManager(DEFAULT_CONTEXT_MENU, () => this.notify());
+  private readonly contextMenus = new MenuManager(DEFAULT_CONTEXT_MENU, () => this.notify(), 'Context menu');
   private addedToolbarItems: readonly (readonly EditorToolbarItem[])[] = [];
   private currentToolbarItems: readonly EditorToolbarItem[] = [];
 

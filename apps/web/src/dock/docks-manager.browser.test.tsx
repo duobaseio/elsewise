@@ -72,8 +72,22 @@ describe('addPanelComponents', () => {
   });
 });
 
-const REPORT = { id: 'example/report', tab: true, closable: true, header: () => null, panel: () => null } as const;
-const TOOL = { id: 'example/tool', tab: false, closable: false, header: () => null, panel: () => null } as const;
+const REPORT = {
+  id: 'example/report',
+  label: 'Report',
+  tab: true,
+  closable: true,
+  header: () => null,
+  panel: () => null,
+} as const;
+const TOOL = {
+  id: 'example/tool',
+  label: 'Tool',
+  tab: false,
+  closable: false,
+  header: () => null,
+  panel: () => null,
+} as const;
 
 describe('addPanelSources', () => {
   test('lists sources in order of addition', async () => {
@@ -150,6 +164,61 @@ describe('onPanelSourcesChange', () => {
     docks.onPanelSourcesChange(changed);
 
     const dispose = docks.addPanelSources([REPORT]);
+    void dispose();
+
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('addPanelMenu', () => {
+  const TERMINAL_ITEM = { order: 10, source: '@elsewise/terminal' };
+
+  test('lists built-in group', async () => {
+    const { docks } = await applicationOf(false);
+
+    expect(docks.panelMenu).toEqual([
+      { id: 'io.duobase.elsewise.dock.panelMenu.terminals', order: 10, items: [TERMINAL_ITEM] },
+    ]);
+  });
+
+  test('merges items into group of same id', async () => {
+    const { docks } = await applicationOf(false);
+
+    docks.addPanelMenu([{ id: 'io.duobase.elsewise.dock.panelMenu.terminals', items: [{ source: REPORT.id }] }]);
+
+    expect(docks.panelMenu).toEqual([
+      { id: 'io.duobase.elsewise.dock.panelMenu.terminals', order: 10, items: [TERMINAL_ITEM, { source: REPORT.id }] },
+    ]);
+  });
+
+  test('removes groups when disposed', async () => {
+    const { docks } = await applicationOf(false);
+
+    const dispose = docks.addPanelMenu([{ id: 'example.panels', items: [{ source: REPORT.id }] }]);
+    void dispose();
+
+    expect(docks.panelMenu).toHaveLength(1);
+  });
+
+  test('warns of differing order as panel menu group', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { docks } = await applicationOf(false);
+
+    docks.addPanelMenu([{ id: 'io.duobase.elsewise.dock.panelMenu.terminals', order: 20, items: [] }]);
+
+    expect(warned).toHaveBeenCalledExactlyOnceWith(
+      'Panel menu group io.duobase.elsewise.dock.panelMenu.terminals already has order 10, ignoring 20',
+    );
+  });
+});
+
+describe('onPanelMenuChange', () => {
+  test('reports added and removed groups', async () => {
+    const { docks } = await applicationOf(false);
+    const changed = vi.fn();
+    docks.onPanelMenuChange(changed);
+
+    const dispose = docks.addPanelMenu([{ id: 'example.panels', items: [{ source: REPORT.id }] }]);
     void dispose();
 
     expect(changed).toHaveBeenCalledTimes(2);
