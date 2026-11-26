@@ -55,6 +55,55 @@ describe('closeFile', () => {
     expect(asked).not.toHaveBeenCalled();
   });
 
+  test('allows file that save made clean', async () => {
+    const { fake, file, asked, close } = await open();
+    file.onChange(() => {
+      if (file.state.type === 'text' && file.state.content === 'let b;') {
+        file.document = null;
+      }
+    });
+
+    await expect(close()).resolves.toBe(true);
+
+    expect(fake.writes).toEqual([{ relativePath: 'main.ts', content: 'let b;' }]);
+    expect(asked).not.toHaveBeenCalled();
+  });
+
+  test('saves text edited during save', async () => {
+    const { fake, file, close } = await open();
+    const save = file.save.bind(file);
+    vi.spyOn(file, 'save').mockImplementationOnce(async (content) => {
+      await save(content);
+      file.document = () => 'let c;';
+    });
+
+    await expect(close()).resolves.toBe(true);
+
+    expect(fake.writes).toEqual([
+      { relativePath: 'main.ts', content: 'let b;' },
+      { relativePath: 'main.ts', content: 'let c;' },
+    ]);
+  });
+
+  test('saves text edited during overwrite', async () => {
+    const { fake, file, close } = await open('overwrite');
+    fake.put('main.ts', 'let z;');
+    const save = file.save.bind(file);
+    vi.spyOn(file, 'save')
+      .mockImplementationOnce(save)
+      .mockImplementationOnce(async (content, options) => {
+        await save(content, options);
+        file.document = () => 'let c;';
+      });
+
+    await expect(close()).resolves.toBe(true);
+
+    expect(fake.writes).toEqual([
+      { relativePath: 'main.ts', content: 'let b;' },
+      { relativePath: 'main.ts', content: 'let c;' },
+    ]);
+  });
+
   test('overwrites file that changed on disk', async () => {
     const { fake, file, asked, close } = await open('overwrite');
     fake.put('main.ts', 'let z;');
@@ -63,6 +112,20 @@ describe('closeFile', () => {
 
     expect(asked).toHaveBeenCalledExactlyOnceWith(file, null);
     expect(fake.writes).toEqual([{ relativePath: 'main.ts', content: 'let b;' }]);
+  });
+
+  test('allows file that became clean before overwrite', async () => {
+    const { fake, file, asked, close } = await open();
+    asked.mockImplementation(async () => {
+      file.document = null;
+      return 'overwrite';
+    });
+    fake.put('main.ts', 'let z;');
+
+    await expect(close()).resolves.toBe(true);
+
+    expect(asked).toHaveBeenCalledOnce();
+    expect(fake.writes).toEqual([]);
   });
 
   test('allows file that changed on disk without saving it', async () => {

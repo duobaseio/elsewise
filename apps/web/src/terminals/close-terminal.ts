@@ -16,8 +16,8 @@ export async function closeTerminal(
     return true;
   }
 
-  const session = terminals.store.sessions.get(panel.session);
-  if (panel.closeConfirmation && session?.state === 'running' && !(await terminals.openCloseDialog(session))) {
+  const session = panel.closeConfirmation ? await terminals.store.get(panel.session) : null;
+  if (session?.state === 'running' && !(await terminals.openCloseDialog(session))) {
     return false;
   }
 

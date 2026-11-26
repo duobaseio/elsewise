@@ -8,14 +8,22 @@ export async function closeFile(
   dock: DockManager,
   panel: ClosablePanel,
 ): Promise<boolean> {
+  // document needs to be a separate variable because TS has fucking shit unsound control flow analysis. It assumes that
+  // the file.document property can never be null after an initial check :)
   const file = panel.type === 'file' ? files.get(dock.workspaceId, panel.relativePath) : null;
-  if (file === null || file.document === null) {
+  let document = file?.document ?? null;
+  if (file === null || document === null) {
     return true;
   }
 
   let failure: unknown;
   try {
-    await file.save(file.document());
+    let saved: string;
+    do {
+      saved = document();
+      await file.save(saved);
+      document = file.document;
+    } while (document !== null && document() !== saved);
     return true;
   } catch (error) {
     failure = error;
@@ -32,8 +40,18 @@ export async function closeFile(
       return false;
     }
 
+    document = file.document;
+    if (document === null) {
+      return true;
+    }
+
     try {
-      await file.save(file.document(), { overwrite: true });
+      let saved: string;
+      do {
+        saved = document();
+        await file.save(saved, { overwrite: true });
+        document = file.document;
+      } while (document !== null && document() !== saved);
       return true;
     } catch (error) {
       failure = error;
