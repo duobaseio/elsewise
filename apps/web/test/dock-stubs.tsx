@@ -1,6 +1,7 @@
 import { DockTabHeader } from '@elsewise/components/components/dock';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
 import type { PanelComponent } from '@/dock/panel-component';
+import { CustomPanelContent, CustomTab } from '@/routes/_shell/$daemon/$project/$workspace/-custom/custom-panel';
 import { DraggableTab } from '@/routes/_shell/$daemon/$project/$workspace/-dock/draggable-tab';
 import { Placeholder, PlaceholderTab } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 
@@ -24,6 +25,7 @@ export const STUB_COMPONENTS: readonly PanelComponent[] = [
     tab: () => <span className="px-2 text-base">Files</span>,
     panel: () => <p className="p-2 text-base text-text-3">tree stub</p>,
   },
+  { type: 'custom', tab: CustomTab, panel: CustomPanelContent },
 ];
 
 export function StubTab(props: IDockviewPanelHeaderProps) {

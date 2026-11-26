@@ -72,6 +72,126 @@ describe('addPanelComponents', () => {
   });
 });
 
+const REPORT = { id: 'example/report', tab: true, closable: true, header: () => null, panel: () => null } as const;
+const TOOL = { id: 'example/tool', tab: false, closable: false, header: () => null, panel: () => null } as const;
+
+describe('addPanelSources', () => {
+  test('lists sources in order of addition', async () => {
+    const { docks } = await applicationOf(false);
+
+    docks.addPanelSources([REPORT]);
+    docks.addPanelSources([TOOL]);
+
+    expect(docks.panelSources).toEqual([REPORT, TOOL]);
+  });
+
+  test('omits source whose id already exists', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { docks } = await applicationOf(false);
+    docks.addPanelSources([REPORT]);
+
+    docks.addPanelSources([{ ...REPORT, tab: false }, TOOL]);
+
+    expect(docks.panelSources).toEqual([REPORT, TOOL]);
+    expect(warned).toHaveBeenCalledExactlyOnceWith('Panel source example/report already exists');
+  });
+
+  test('omits source whose id is not namespaced', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { docks } = await applicationOf(false);
+
+    docks.addPanelSources([{ ...REPORT, id: 'file' as never }]);
+
+    expect(docks.panelSources).toEqual([]);
+    expect(warned).toHaveBeenCalledExactlyOnceWith('Panel source file is not namespaced');
+  });
+
+  test('removes sources when disposed', async () => {
+    const { docks } = await applicationOf(false);
+    docks.addPanelSources([REPORT]);
+
+    const dispose = docks.addPanelSources([TOOL]);
+    void dispose();
+
+    expect(docks.panelSources).toEqual([REPORT]);
+  });
+
+  test('keeps source of same id that was added after omitted one is disposed', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { docks } = await applicationOf(false);
+    docks.addPanelSources([REPORT]);
+
+    const dispose = docks.addPanelSources([{ ...REPORT, tab: false }]);
+    void dispose();
+
+    expect(docks.panelSources).toEqual([REPORT]);
+  });
+
+  test('closes panels of disposed sources without asking', async () => {
+    const close = vi.fn(() => false);
+    const { docks, attached } = await mount();
+    const dispose = docks.addPanelSources([{ ...REPORT, close }]);
+    docks.addPanelSources([TOOL]);
+    const report = attached.addPanel(REPORT.id, { tab: 'after', of: FILE });
+    const tool = attached.addPanel(TOOL.id, { edge: 'bottom' });
+
+    void dispose();
+
+    expect(attached.panels).toEqual([FILE, FILE_TREE, tool]);
+    expect(report).not.toBeNull();
+    expect(close).not.toHaveBeenCalled();
+  });
+});
+
+describe('onPanelSourcesChange', () => {
+  test('reports added and removed sources', async () => {
+    const { docks } = await applicationOf(false);
+    const changed = vi.fn();
+    docks.onPanelSourcesChange(changed);
+
+    const dispose = docks.addPanelSources([REPORT]);
+    void dispose();
+
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('closeSourcelessPanels', () => {
+  test('closes panels whose source was not added', async () => {
+    const { docks, attached, api } = await mount();
+    docks.addPanelSources([REPORT]);
+    const report = attached.addPanel(REPORT.id, { tab: 'after', of: FILE });
+    api.addPanel({
+      id: 'custom:gone',
+      tabComponent: 'custom',
+      component: 'custom',
+      params: { type: 'example/gone' },
+    });
+
+    docks.closeSourcelessPanels();
+
+    expect(attached.panels).toEqual([FILE, report, FILE_TREE]);
+  });
+
+  test('closes panels whose source was not added in dock attached afterwards', async () => {
+    const { docks } = await applicationOf(true);
+    docks.closeSourcelessPanels();
+
+    let attached: DockManager | undefined;
+    await mountDock((ready) => {
+      ready.addPanel({
+        id: 'custom:gone',
+        tabComponent: 'custom',
+        component: 'custom',
+        params: { type: 'example/gone' },
+      });
+      attached = docks.attach(WORKSPACE, ready);
+    });
+
+    expect(attached?.panels).toEqual([FILE, FILE_TREE]);
+  });
+});
+
 describe('active', () => {
   test('returns dock of shown workspace', async () => {
     const { docks } = await mount();

@@ -96,16 +96,16 @@ export interface Dock {
   addTerminal(options: TerminalOptions, placement: Placement, activate?: boolean): Promise<TerminalPanel | null>;
 
   /**
-   * Adds a panel that `source` shows.
+   * Adds a custom panel of `type`, the id of the source that shows it.
    *
    * The panel is shown, and becomes the active panel unless `activate` is false. Defaults to true.
    *
    * Returns the panel, or null if:
-   * * `source` was not added
+   * * no source with that id was added
    * * the panel that `placement` refers to is not open
    * * `placement` is among tabs, and either panel is tabless
    */
-  addPanel(source: CustomPanelSource, placement: Placement, activate?: boolean): CustomPanel | null;
+  addPanel(type: CustomPanel['type'], placement: Placement, activate?: boolean): CustomPanel | null;
 
   /**
    * Moves `panel` to `placement`.
@@ -155,7 +155,7 @@ export interface CustomPanelSource {
   /**
    * The source's id, namespaced by the plugin's, e.g. `example/report`. Omitted if the id already exists.
    */
-  readonly id: string;
+  readonly id: CustomPanel['type'];
 
   /**
    * Whether its panels sit among a group's tabs. A panel that does not is always alone in its group.

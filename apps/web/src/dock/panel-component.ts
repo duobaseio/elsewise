@@ -3,6 +3,7 @@ import type { IDockviewPanelHeaderProps, IDockviewPanelProps } from 'dockview-re
 import type { FunctionComponent } from 'react';
 import type { ApplicationManager } from '@/application-manager';
 import { closeFile } from '@/fs/close-file';
+import { CustomPanelContent, CustomTab } from '@/routes/_shell/$daemon/$project/$workspace/-custom/custom-panel';
 import { FilePanel } from '@/routes/_shell/$daemon/$project/$workspace/-file/file-panel';
 import { FileTab } from '@/routes/_shell/$daemon/$project/$workspace/-file/file-tab';
 import { FileTreePanel } from '@/routes/_shell/$daemon/$project/$workspace/-file-tree/file-tree-panel';
@@ -18,10 +19,11 @@ export const DEFAULT_PANEL_COMPONENTS: readonly PanelComponent[] = [
   { type: 'file', tab: FileTab, panel: FilePanel, close: closeFile },
   { type: 'terminal', tab: TerminalTab, panel: TerminalPanel, close: closeTerminal },
   { type: 'fileTree', tab: FileTreeTab, panel: FileTreePanel },
+  { type: 'custom', tab: CustomTab, panel: CustomPanelContent },
 ];
 
 export interface PanelComponent {
-  readonly type: Panel['type'];
+  readonly type: Panel['type'] | 'custom';
   readonly tab: FunctionComponent<IDockviewPanelHeaderProps>;
   readonly panel: FunctionComponent<IDockviewPanelProps>;
 
