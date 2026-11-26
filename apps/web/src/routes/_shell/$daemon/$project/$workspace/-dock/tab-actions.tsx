@@ -141,8 +141,9 @@ function AddTabAction(props: IDockviewHeaderActionsProps) {
   );
 }
 
-// Returns the shown groups of the submenu at the end of `path`, or of the menu when it is empty, sorted. `path` holds the
-// submenu ids from the menu down, so a submenu inside itself is skipped. A source or submenu is placed once per group.
+// Returns the shown groups of the submenu at the end of `path`, or of the menu when it is empty, sorted. `path`
+// holds the submenu ids from the menu down, so a submenu inside itself is skipped. A source or submenu is placed
+// once per group.
 function resolvePanelMenu(
   menu: readonly PanelMenuGroup[],
   sources: readonly CustomPanelSource[],
@@ -184,7 +185,8 @@ function resolvePanelMenu(
         continue;
       }
 
-      // The terminal is a built-in panel that the menu lists as a source. Only a source of tabs can be added among them.
+      // The terminal is a built-in panel that the menu lists as a source. Only a source of tabs can be added among
+      // them.
       const source = sources.find((other) => other.id === item.source);
       const label =
         item.source === DEFAULT_PANEL_SOURCES.terminal ? 'Terminal' : source?.tab ? source.label : undefined;

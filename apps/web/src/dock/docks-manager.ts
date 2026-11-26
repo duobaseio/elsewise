@@ -243,5 +243,3 @@ export function usePanelMenu(): readonly PanelMenuGroup[] {
   const subscribe = useCallback((listener: () => void) => docks.onPanelMenuChange(listener), [docks]);
   return useSyncExternalStore(subscribe, () => docks.panelMenu);
 }
-
-
