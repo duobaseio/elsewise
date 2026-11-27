@@ -27,3 +27,27 @@ export function TabTooltipsHelp({ enabled }: { enabled: boolean }) {
     </HelpIllustration>
   );
 }
+
+export function FolderPrefixHelp({ enabled }: { enabled: boolean }) {
+  return (
+    <HelpIllustration className="h-24 bg-background">
+      <div className="flex h-9 border-border border-b bg-surface px-1">
+        {['routes', 'settings'].map((folder, index) => (
+          <div
+            className={cn(
+              'relative isolate before:absolute before:inset-[3px_1px_4px] before:-z-10 before:rounded-md',
+              index === 0 && 'dv-active-tab before:bg-layer-selected',
+            )}
+            key={folder}
+          >
+            <DockTabHeader
+              icon={<FileIcon name="index.tsx" />}
+              title={enabled ? `${folder}/index.tsx` : 'index.tsx'}
+              onClose={() => {}}
+            />
+          </div>
+        ))}
+      </div>
+    </HelpIllustration>
+  );
+}

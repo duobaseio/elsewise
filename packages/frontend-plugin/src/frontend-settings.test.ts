@@ -10,6 +10,10 @@ describe('FrontendSettings', () => {
     expect(FrontendSettings.parse({}).workspace.tabTooltips).toBe(true);
   });
 
+  test('prefixes folders by default', () => {
+    expect(FrontendSettings.parse({}).workspace.folderPrefix).toBe(true);
+  });
+
   test('leaves modified tabs unmarked by default', () => {
     expect(FrontendSettings.parse({}).workspace.markModifiedTabs).toBe(false);
   });

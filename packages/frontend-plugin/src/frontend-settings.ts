@@ -91,6 +91,10 @@ export const FrontendSettings = z.lazy(() =>
          */
         tabTooltips: z.boolean().catch(true),
         /**
+         * Whether to prefix file tabs that share a name with their folders.
+         */
+        folderPrefix: z.boolean().catch(true),
+        /**
          * Whether a file tab with unsaved changes is marked.
          */
         markModifiedTabs: z.boolean().catch(false),
