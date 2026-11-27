@@ -90,6 +90,10 @@ export const FrontendSettings = z.lazy(() =>
          * Whether a tab shows a tooltip when hovered.
          */
         tabTooltips: z.boolean().catch(true),
+        /**
+         * Whether a file tab with unsaved changes is marked.
+         */
+        markModifiedTabs: z.boolean().catch(false),
       }),
     ),
     editor: z.preprocess(

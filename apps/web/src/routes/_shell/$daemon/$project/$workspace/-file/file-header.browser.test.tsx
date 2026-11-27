@@ -20,9 +20,9 @@ import { FileHeader, fileTooltip } from './file-header';
 
 const WORKSPACE = { daemon: 'local', project: 'elsewise', workspace: 'singapore' };
 
-// Renders the header of main.ts in the workspace Singapore, and returns the application it runs in and a handle of the
-// file, which is not open yet.
-async function mount() {
+// Renders the header of main.ts in the workspace Singapore with modified tabs marked if `marker`, and returns the
+// application it runs in and a handle of the file, which is not open yet.
+async function mount(marker = true) {
   const root = createRootRoute();
   const shell = createRoute({ getParentRoute: () => root, id: '_shell' });
   const workspace = createRoute({
@@ -37,6 +37,8 @@ async function mount() {
     history: createMemoryHistory({ initialEntries: ['/local/elsewise/singapore'] }),
   });
   const application = builtInApplication({ router });
+  const frontend = application.settings.frontend;
+  application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, markModifiedTabs: marker } };
   await render(
     <ApplicationManagerContext value={application}>
       <RouterProvider router={router} />
@@ -112,6 +114,24 @@ describe('FileHeader', () => {
     open(WORKSPACE, 'other.ts').document = () => '';
 
     application.files.move(WORKSPACE, 'other.ts', 'main.ts');
+
+    await expect.poll(marked).toBe(true);
+  });
+
+  test('omits mark while modified tabs are not marked', async () => {
+    const { open } = await mount(false);
+    open().document = () => '';
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(marked()).toBe(false);
+  });
+
+  test('marks file once modified tabs are marked', async () => {
+    const { application, open } = await mount(false);
+    open().document = () => '';
+    const frontend = application.settings.frontend;
+
+    application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, markModifiedTabs: true } };
 
     await expect.poll(marked).toBe(true);
   });

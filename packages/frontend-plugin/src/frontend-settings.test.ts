@@ -10,6 +10,10 @@ describe('FrontendSettings', () => {
     expect(FrontendSettings.parse({}).workspace.tabTooltips).toBe(true);
   });
 
+  test('leaves modified tabs unmarked by default', () => {
+    expect(FrontendSettings.parse({}).workspace.markModifiedTabs).toBe(false);
+  });
+
   test('keeps valid close activation', () => {
     expect(FrontendSettings.parse({ workspace: { closeActivation: 'recent' } }).workspace.closeActivation).toBe(
       'recent',
