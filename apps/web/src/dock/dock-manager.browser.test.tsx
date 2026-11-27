@@ -298,6 +298,49 @@ describe('move', () => {
   });
 });
 
+describe('moveFiles', () => {
+  test('points panel at moved file', async () => {
+    const { dock, dockview } = await mount();
+
+    dock.moveFiles('other.ts', 'src/index.ts');
+
+    expect(dock.get(OTHER.id)).toEqual({ ...OTHER, relativePath: 'src/index.ts' });
+    expect(dockview.getPanel(OTHER.id)?.title).toBe('index.ts');
+    expect(dock.get(FILE.id)).toEqual(FILE);
+  });
+
+  test('points panels under moved folder', async () => {
+    const { dock, dockview } = await mount();
+
+    dock.moveFiles('apps/web/', 'web/');
+
+    expect(dock.get(FILE.id)).toEqual({
+      ...FILE,
+      relativePath: 'web/src/routes/_shell/$daemon/$project/$workspace.tsx',
+    });
+    expect(dockview.getPanel(FILE.id)?.title).toBe('$workspace.tsx');
+    expect(dock.get(OTHER.id)).toEqual(OTHER);
+  });
+
+  test('closes panel already at destination', async () => {
+    const { dock } = await mount();
+
+    dock.moveFiles('other.ts', FILE.relativePath);
+
+    expect(dock.get(FILE.id)).toBeNull();
+    expect(dock.get(OTHER.id)).toEqual({ ...OTHER, relativePath: FILE.relativePath });
+  });
+
+  test('moves handles of files', async () => {
+    const { application, dock } = await mount();
+    const moved = vi.spyOn(application.files, 'move');
+
+    dock.moveFiles('other.ts', 'index.ts');
+
+    expect(moved).toHaveBeenCalledExactlyOnceWith(WORKSPACE, 'other.ts', 'index.ts');
+  });
+});
+
 describe('close', () => {
   test('closes file', async () => {
     const { dock, deleted } = await mount();

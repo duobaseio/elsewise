@@ -224,6 +224,30 @@ describe('OverwriteEntriesDialog', () => {
     expect(application.fileTree.clipboard?.paths).toEqual(['src/a.ts', 'b.ts', 'src/docs/', 'other.ts']);
   });
 
+  test('moves open files of overwritten entries', async () => {
+    const application = await mount({
+      move: async () =>
+        create(MoveResponseSchema, {
+          failures: [{ relativePath: 'b.ts', reason: MoveReason.OTHER, message: 'denied' }],
+        }),
+    });
+    const moved = vi.spyOn(application.docks, 'moveFiles');
+    application.fileTree.overwriteDialog.openWithPayload({
+      workspace: WORKSPACE,
+      folder: 'src',
+      cut: true,
+      entries: ENTRIES,
+    });
+
+    await userEvent.click(page.getByRole('button', { name: 'Overwrite' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(moved.mock.calls).toEqual([
+      [WORKSPACE.id, 'a.ts', 'src/a.ts'],
+      [WORKSPACE.id, 'docs/', 'src/docs/'],
+    ]);
+  });
+
   test('reports failed entry', async () => {
     const add = vi.spyOn(toast, 'add');
     const application = await mount({

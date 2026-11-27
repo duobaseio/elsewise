@@ -283,6 +283,30 @@ export class DockManager implements Dock {
     }
   }
 
+  moveFiles(source: string, destination: string) {
+    for (const panel of this.panels) {
+      if (
+        panel.type === 'file' &&
+        (panel.relativePath === source || (source.endsWith('/') && panel.relativePath.startsWith(source)))
+      ) {
+        const path = destination + panel.relativePath.slice(source.length);
+        const replaced = this.panels.find(
+          (other) => other.type === 'file' && other.id !== panel.id && other.relativePath === path,
+        );
+        if (replaced !== undefined) {
+          this.closeWithSuccessor(replaced);
+        }
+
+        const open = this.dockview.getPanel(panel.id);
+        open?.api.updateParameters({ path });
+        open?.api.setTitle(path.slice(path.lastIndexOf('/') + 1));
+      }
+    }
+
+    this.application.files.move(this.workspaceId, source, destination);
+    this.update();
+  }
+
   activate(panel: Panel): void {
     const open = this.dockview.getPanel(panel.id);
     if (open === undefined) {

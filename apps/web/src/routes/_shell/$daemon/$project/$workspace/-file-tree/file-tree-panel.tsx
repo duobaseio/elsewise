@@ -172,7 +172,7 @@ function useWorkspaceTree(
   client: Daemon | undefined,
   workspace: Workspace | undefined,
 ): FileTreeModel {
-  const { fileTree, git } = useApplicationManager();
+  const { docks, fileTree, git } = useApplicationManager();
   const store = useWorkspaceStateStore();
   const hidden = useSettings((settings) => settings.fileTree.hidden);
   const root = workspace?.absolutePath;
@@ -218,6 +218,7 @@ function useWorkspaceTree(
           if (!conflicting.includes(entry) && !failures.some((failure) => failure.entry === entry)) {
             const suffix = entry.folder ? '/' : '';
             fileTree.moveClipboardPaths(workspace.id, entry.source + suffix, entry.destination + suffix);
+            docks.moveFiles(workspace.id, entry.source + suffix, entry.destination + suffix);
           }
         }
 
@@ -270,6 +271,7 @@ function useWorkspaceTree(
             restore(failure.error.message);
           } else {
             fileTree.moveClipboardPaths(workspace.id, sourcePath, destinationPath);
+            docks.moveFiles(workspace.id, sourcePath, destinationPath);
           }
         },
         (error: Error) => restore(error.message),

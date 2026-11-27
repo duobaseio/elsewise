@@ -231,4 +231,47 @@ describe('FileHandle', () => {
 
     expect(fake.cancelled()).toBe(true);
   });
+
+  test('watches path it moved to', async () => {
+    const { fake, file } = open('let a;');
+    await expect.poll(() => file.state.type).toBe('text');
+
+    file.move('src/index.ts');
+
+    expect(file.relativePath).toBe('src/index.ts');
+    expect(fake.watches).toEqual([['main.ts'], ['src/index.ts']]);
+  });
+
+  test('keeps content when moved', async () => {
+    const { fake, file } = open('let a;');
+    await expect.poll(() => file.state.type).toBe('text');
+    fake.put('index.ts', 'let a;');
+
+    file.move('index.ts');
+    fake.report('main.ts');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(file.state).toEqual({ type: 'text', content: 'let a;' });
+  });
+
+  test('ignores report of path it left', async () => {
+    const { fake, file } = open();
+
+    file.move('index.ts');
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(file.state).toEqual({ type: 'loading' });
+    fake.report('index.ts');
+    await expect.poll(() => file.state.type).toBe('unavailable');
+  });
+
+  test('saves to path it moved to', async () => {
+    const { fake, file } = open('let a;');
+    await expect.poll(() => file.state.type).toBe('text');
+    file.move('index.ts');
+
+    await file.save('let b;', { overwrite: true });
+
+    expect(fake.writes).toEqual([{ relativePath: 'index.ts', content: 'let b;' }]);
+  });
 });

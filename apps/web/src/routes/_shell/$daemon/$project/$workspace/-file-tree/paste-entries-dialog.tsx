@@ -38,7 +38,7 @@ interface Paste {
 }
 
 export function PasteEntriesDialog() {
-  const { fileTree } = useApplicationManager();
+  const { docks, fileTree } = useApplicationManager();
   const client = useQueryClient();
   const [opening, setOpening] = useState(0);
   const [failure, setFailure] = useState<Error | null>(null);
@@ -48,7 +48,7 @@ export function PasteEntriesDialog() {
       const daemon = await client.query(daemonQuery(workspace.id.daemon));
       return pasteEntries(daemon, workspace, cut, entries, false);
     },
-    onSuccess: ({ conflicting, failures }, { workspace, folder, cut, single }) => {
+    onSuccess: ({ conflicting, failures }, { workspace, folder, cut, single, entries }) => {
       const [failed] = failures;
       if (single && failed !== undefined) {
         setFailure(failed.error);
@@ -65,6 +65,12 @@ export function PasteEntriesDialog() {
 
       if (cut) {
         fileTree.clipboard = null;
+        for (const entry of entries) {
+          if (!conflicting.includes(entry) && !failures.some((failure) => failure.entry === entry)) {
+            const suffix = entry.folder ? '/' : '';
+            docks.moveFiles(workspace.id, entry.source + suffix, entry.destination + suffix);
+          }
+        }
       }
 
       if (conflicting.length > 0) {

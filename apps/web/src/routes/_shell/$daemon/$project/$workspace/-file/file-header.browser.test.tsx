@@ -12,7 +12,6 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
-import { FileHandle } from '@/fs/file-handle';
 import { Change } from '@/gen/elsewise/daemon/git/v1/git_pb';
 import { WatchStatusResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
@@ -44,7 +43,11 @@ async function mount() {
     </ApplicationManagerContext>,
   );
   await expect.element(page.getByText('main.ts')).toBeVisible();
-  return { application, file: new FileHandle(fakeFileSystem().fileSystem, '/elsewise', 'main.ts') };
+  return {
+    application,
+    open: (workspace = WORKSPACE, relativePath = 'main.ts') =>
+      application.files.open(workspace, fakeFileSystem().fileSystem, '/elsewise', relativePath),
+  };
 }
 
 // Gives main.ts the git status `kind` in `workspace`, and returns once the application has it.
@@ -85,8 +88,8 @@ function marked(): boolean {
 
 describe('FileHeader', () => {
   test('marks file with unsaved changes', async () => {
-    const { application, file } = await mount();
-    application.files.add(WORKSPACE, file);
+    const { open } = await mount();
+    const file = open();
 
     file.document = () => '';
 
@@ -94,8 +97,8 @@ describe('FileHeader', () => {
   });
 
   test('unmarks file once it has no unsaved changes', async () => {
-    const { application, file } = await mount();
-    application.files.add(WORKSPACE, file);
+    const { open } = await mount();
+    const file = open();
     file.document = () => '';
     await expect.poll(marked).toBe(true);
 
@@ -104,11 +107,11 @@ describe('FileHeader', () => {
     await expect.poll(marked).toBe(false);
   });
 
-  test('marks file that opens with unsaved changes', async () => {
-    const { application, file } = await mount();
-    file.document = () => '';
+  test('marks file moved to its path with unsaved changes', async () => {
+    const { application, open } = await mount();
+    open(WORKSPACE, 'other.ts').document = () => '';
 
-    application.files.add(WORKSPACE, file);
+    application.files.move(WORKSPACE, 'other.ts', 'main.ts');
 
     await expect.poll(marked).toBe(true);
   });
@@ -125,10 +128,9 @@ describe('FileHeader', () => {
   });
 
   test('ignores file of other workspace', async () => {
-    const { application, file } = await mount();
-    file.document = () => '';
+    const { open } = await mount();
 
-    application.files.add({ ...WORKSPACE, workspace: 'other' }, file);
+    open({ ...WORKSPACE, workspace: 'other' }).document = () => '';
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(marked()).toBe(false);
