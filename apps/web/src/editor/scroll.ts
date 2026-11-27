@@ -55,3 +55,72 @@ export function scrollbarsKeepFocus(): Extension {
     },
   );
 }
+
+/**
+ * Returns the extension that keeps the editor's scroll position when it is taken out of the document and put back,
+ * e.g. as its tab is switched from and back to. The browser otherwise drops the position.
+ */
+// Disclaimer: This effect is AI generated and has not been thoroughly reviewed.
+export function scrollKeepsPosition(): Extension {
+  return ViewPlugin.fromClass(
+    class {
+      private readonly sentinel: HTMLElement;
+      private readonly resized: ResizeObserver;
+      private position: { readonly top: number; readonly left: number } | null = null;
+      private pending = false;
+
+      constructor(private readonly view: EditorView) {
+        // Only a custom element is told when it enters the document.
+        if (customElements.get('elsewise-attach-sentinel') === undefined) {
+          customElements.define(
+            'elsewise-attach-sentinel',
+            class extends HTMLElement {
+              connectedCallback() {
+                this.dispatchEvent(new Event('connect'));
+              }
+            },
+          );
+        }
+
+        this.sentinel = document.createElement('elsewise-attach-sentinel');
+        this.sentinel.hidden = true;
+        this.sentinel.addEventListener('connect', this.restore);
+        view.dom.append(this.sentinel);
+        view.scrollDOM.addEventListener('scroll', this.record);
+        // The position cannot be restored until the editor is laid out.
+        this.resized = new ResizeObserver(() => {
+          if (this.pending) {
+            this.restore();
+          }
+        });
+        this.resized.observe(view.scrollDOM);
+      }
+
+      destroy() {
+        this.resized.disconnect();
+        this.view.scrollDOM.removeEventListener('scroll', this.record);
+        this.sentinel.remove();
+      }
+
+      private readonly record = () => {
+        const { scrollDOM } = this.view;
+        if (scrollDOM.isConnected && !this.pending) {
+          this.position = { top: scrollDOM.scrollTop, left: scrollDOM.scrollLeft };
+        }
+      };
+
+      private readonly restore = () => {
+        const { scrollDOM } = this.view;
+        if (this.position === null) {
+          return;
+        }
+
+        this.pending = scrollDOM.clientHeight === 0;
+        if (!this.pending) {
+          scrollDOM.scrollTop = this.position.top;
+          scrollDOM.scrollLeft = this.position.left;
+        }
+      };
+    },
+  );
+}

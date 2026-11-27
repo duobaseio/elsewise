@@ -118,6 +118,20 @@ describe('FilePanel', () => {
     await vi.waitFor(() => expect(editor(screen.container).hasFocus).toBe(true));
   });
 
+  test('keeps scroll position when editor takes focus', async () => {
+    const { application, screen } = await mount('let a;\n'.repeat(200));
+    await expect.element(page.getByText('let a;').first()).toBeVisible();
+    const view = editor(screen.container);
+    view.scrollDOM.scrollTo(0, 900);
+    await expect.poll(() => view.scrollDOM.scrollTop).toBe(900);
+
+    application.docks.requestPanelFocus('file:1');
+
+    await vi.waitFor(() => expect(view.hasFocus).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(view.scrollDOM.scrollTop).toBe(900);
+  });
+
   test('focuses editor once file loads after its panel was asked', async () => {
     const { application, screen } = await mount('let a;\n');
     application.docks.requestPanelFocus('file:1');

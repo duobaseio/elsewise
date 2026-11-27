@@ -60,7 +60,7 @@ export function FilePanel(props: IDockviewPanelProps<FilePanelParams>) {
   // A split comparison has two editors.
   usePanelFocus(
     state.type === 'text'
-      ? (content) => [...content.querySelectorAll<HTMLElement>('.cm-content')].at(-1)?.focus()
+      ? (content) => [...content.querySelectorAll<HTMLElement>('.cm-content')].at(-1)?.focus({ preventScroll: true })
       : null,
   );
 
