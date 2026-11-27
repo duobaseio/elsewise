@@ -10,7 +10,9 @@ export const VERSION: string = typeof DAEMON_VERSION === 'undefined' ? manifest.
  */
 export const TARGET: string = `${process.platform}-${process.arch}${musl() ? '-musl' : ''}`;
 
-/** Whether the daemon runs on Linux with musl. */
+/**
+ * Whether the daemon runs on Linux with musl.
+ */
 function musl(): boolean {
   if (process.platform !== 'linux') {
     return false;

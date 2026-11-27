@@ -5,10 +5,14 @@ import path from 'node:path';
  * A Vite plugin that links the part's `node_modules` into the output folder.
  */
 export function linkNodeModules() {
-  /** Represents the `starter/daemon` path. */
+  /**
+   * Represents the `starter/daemon` path.
+   */
   let root = '';
 
-  /** Represents the compiled output's path. */
+  /**
+   * Represents the compiled output's path.
+   */
   let outDir = '';
 
   return {
