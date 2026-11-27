@@ -315,7 +315,16 @@ export class DockManager implements Dock {
     this.update();
   }
 
-  close(panel: Panel): Promise<boolean> {
+  /**
+   * Closes `panel` as the contract has it. With `force`, the panel closes at once: whether it can be closed and what
+   * it shows are not asked, e.g. for a terminal whose shell exited.
+   */
+  close(panel: Panel, force = false): Promise<boolean> {
+    if (force) {
+      this.closeWithSuccessor(panel);
+      return Promise.resolve(true);
+    }
+
     let closing = this.closing.get(panel.id);
     if (closing === undefined) {
       closing = (async () => {
@@ -339,8 +348,7 @@ export class DockManager implements Dock {
           }
         }
 
-        this.dockview.getPanel(panel.id)?.api.close();
-        this.update();
+        this.closeWithSuccessor(panel);
         return true;
       })().finally(() => this.closing.delete(panel.id));
       this.closing.set(panel.id, closing);
@@ -364,9 +372,27 @@ export class DockManager implements Dock {
   closeCustomPanels(sources: readonly string[]) {
     for (const panel of this.panels) {
       if (sources.includes(panel.type)) {
-        this.dockview.getPanel(panel.id)?.api.close();
+        this.closeWithSuccessor(panel);
       }
     }
+  }
+
+  private closeWithSuccessor(panel: Panel) {
+    const activation = this.application.settings.frontend.workspace.closeActivation;
+    const tabs = this.groups.find((group) => group.shown?.id === panel.id)?.panels;
+    if (tabs !== undefined && activation !== 'recent') {
+      const index = tabs.findIndex((tab) => tab.id === panel.id);
+      const left = tabs[index - 1];
+      const right = tabs[index + 1];
+      const successor = activation === 'left' ? (left ?? right) : (right ?? left);
+      if (successor !== undefined && this.activePanel?.id === panel.id) {
+        this.activate(successor);
+      } else if (successor !== undefined) {
+        this.show(successor);
+      }
+    }
+
+    this.dockview.getPanel(panel.id)?.api.close();
     this.update();
   }
 

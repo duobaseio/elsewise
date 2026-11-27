@@ -21,6 +21,7 @@ import { Route as SettingsLocalEditorLanguageRouteImport } from './routes/settin
 import { Route as SettingsLocalFileTreeIndexRouteImport } from './routes/settings/local/file-tree/index'
 import { Route as SettingsLocalKeymapIndexRouteImport } from './routes/settings/local/keymap/index'
 import { Route as SettingsLocalTerminalIndexRouteImport } from './routes/settings/local/terminal/index'
+import { Route as SettingsLocalWorkspaceIndexRouteImport } from './routes/settings/local/workspace/index'
 import { Route as SettingsRemoteRemoteIdRouteImport } from './routes/settings/remote/$remote/$id'
 
 const ShellRouteRoute = ShellRouteRouteImport.update({
@@ -89,6 +90,12 @@ const SettingsLocalTerminalIndexRoute =
     path: '/local/terminal/',
     getParentRoute: () => SettingsRouteRoute,
   } as any)
+const SettingsLocalWorkspaceIndexRoute =
+  SettingsLocalWorkspaceIndexRouteImport.update({
+    id: '/local/workspace/',
+    path: '/local/workspace/',
+    getParentRoute: () => SettingsRouteRoute,
+  } as any)
 const SettingsRemoteRemoteIdRoute = SettingsRemoteRemoteIdRouteImport.update({
   id: '/remote/$remote/$id',
   path: '/remote/$remote/$id',
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/settings/local/file-tree/': typeof SettingsLocalFileTreeIndexRoute
   '/settings/local/keymap/': typeof SettingsLocalKeymapIndexRoute
   '/settings/local/terminal/': typeof SettingsLocalTerminalIndexRoute
+  '/settings/local/workspace/': typeof SettingsLocalWorkspaceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof ShellIndexRoute
@@ -121,6 +129,7 @@ export interface FileRoutesByTo {
   '/settings/local/file-tree': typeof SettingsLocalFileTreeIndexRoute
   '/settings/local/keymap': typeof SettingsLocalKeymapIndexRoute
   '/settings/local/terminal': typeof SettingsLocalTerminalIndexRoute
+  '/settings/local/workspace': typeof SettingsLocalWorkspaceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -137,6 +146,7 @@ export interface FileRoutesById {
   '/settings/local/file-tree/': typeof SettingsLocalFileTreeIndexRoute
   '/settings/local/keymap/': typeof SettingsLocalKeymapIndexRoute
   '/settings/local/terminal/': typeof SettingsLocalTerminalIndexRoute
+  '/settings/local/workspace/': typeof SettingsLocalWorkspaceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/settings/local/file-tree/'
     | '/settings/local/keymap/'
     | '/settings/local/terminal/'
+    | '/settings/local/workspace/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/settings/local/file-tree'
     | '/settings/local/keymap'
     | '/settings/local/terminal'
+    | '/settings/local/workspace'
   id:
     | '__root__'
     | '/_shell'
@@ -181,6 +193,7 @@ export interface FileRouteTypes {
     | '/settings/local/file-tree/'
     | '/settings/local/keymap/'
     | '/settings/local/terminal/'
+    | '/settings/local/workspace/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -274,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsLocalTerminalIndexRouteImport
       parentRoute: typeof SettingsRouteRoute
     }
+    '/settings/local/workspace/': {
+      id: '/settings/local/workspace/'
+      path: '/local/workspace'
+      fullPath: '/settings/local/workspace/'
+      preLoaderRoute: typeof SettingsLocalWorkspaceIndexRouteImport
+      parentRoute: typeof SettingsRouteRoute
+    }
     '/settings/remote/$remote/$id': {
       id: '/settings/remote/$remote/$id'
       path: '/remote/$remote/$id'
@@ -308,6 +328,7 @@ interface SettingsRouteRouteChildren {
   SettingsLocalFileTreeIndexRoute: typeof SettingsLocalFileTreeIndexRoute
   SettingsLocalKeymapIndexRoute: typeof SettingsLocalKeymapIndexRoute
   SettingsLocalTerminalIndexRoute: typeof SettingsLocalTerminalIndexRoute
+  SettingsLocalWorkspaceIndexRoute: typeof SettingsLocalWorkspaceIndexRoute
 }
 
 const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
@@ -320,6 +341,7 @@ const SettingsRouteRouteChildren: SettingsRouteRouteChildren = {
   SettingsLocalFileTreeIndexRoute: SettingsLocalFileTreeIndexRoute,
   SettingsLocalKeymapIndexRoute: SettingsLocalKeymapIndexRoute,
   SettingsLocalTerminalIndexRoute: SettingsLocalTerminalIndexRoute,
+  SettingsLocalWorkspaceIndexRoute: SettingsLocalWorkspaceIndexRoute,
 }
 
 const SettingsRouteRouteWithChildren = SettingsRouteRoute._addFileChildren(

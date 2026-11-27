@@ -309,8 +309,10 @@ describe('Tab', () => {
   test('closes tabs in a row by key', async () => {
     const { api, dock } = await mount();
     addFiles(dock);
-    for (const panel of api.panels) {
-      panel.view.content.element.querySelector('div')?.append(document.createElement('button'));
+    const contents = () => api.panels.map((panel) => panel.view.content.element.querySelector('div'));
+    await vi.waitFor(() => expect(contents()).not.toContain(null));
+    for (const content of contents()) {
+      content?.append(document.createElement('button'));
     }
     const files = () => dock.panels.filter((panel) => panel.type === 'file');
     await userEvent.click(page.getByText('third.ts'));

@@ -101,6 +101,7 @@ export {
   Brightness,
   BundledKeymap,
   BundledTheme,
+  CloseActivation,
   CursorStyle,
   DEFAULT_FRONTEND_SETTINGS,
   DEFAULT_LANGUAGES,

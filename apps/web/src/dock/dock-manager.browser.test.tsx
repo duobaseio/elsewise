@@ -1,6 +1,12 @@
-import type { Panel, TerminalPanel } from '@elsewise/frontend-plugin';
+import {
+  type CloseActivation,
+  DEFAULT_FRONTEND_SETTINGS,
+  type Panel,
+  type TerminalPanel,
+} from '@elsewise/frontend-plugin';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
+import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../test/commands';
 import { addTerminal, FILE, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
@@ -11,7 +17,7 @@ const OTHER = { ...FILE, id: 'file:other.ts', relativePath: 'other.ts' };
 
 // A dock that has the file and another in a group, above the terminal and beside the file tree. Its file and terminal
 // components have `close`.
-async function mount(close?: PanelComponent['close']) {
+async function mount(close?: PanelComponent['close'], closeActivation: CloseActivation = 'left') {
   const dockview = await mountDock();
   dockview.addPanel({
     id: OTHER.id,
@@ -28,6 +34,7 @@ async function mount(close?: PanelComponent['close']) {
     .spyOn(terminals.store, 'add')
     .mockResolvedValue({ id: { ...WORKSPACE, session: '2' }, name: 'Terminal', state: 'idle' } as never);
   const application = builtInApplication({
+    settings: new SettingsPanelManager([], { ...DEFAULT_FRONTEND_SETTINGS, workspace: { closeActivation } }),
     terminals,
     panelComponents: [
       { type: 'file', header: () => null, panel: () => null, close },
@@ -311,6 +318,120 @@ describe('close', () => {
     const { dock } = await mount();
 
     await expect(dock.close({ ...OTHER, id: 'closed' })).resolves.toBe(true);
+  });
+
+  // Adds a third file after the file and the other, and returns its panel.
+  function addThird(dock: DockManager) {
+    const third = dock.addFile('third.ts', { tab: 'last', with: FILE });
+    if (third === null) {
+      throw new Error('third not added');
+    }
+    return third;
+  }
+
+  test('shows and activates tab on left of closed tab', async () => {
+    const { dock } = await mount();
+    const third = addThird(dock);
+    dock.activate(FILE);
+    dock.activate(third);
+
+    await dock.close(third);
+
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: OTHER });
+    expect(dock.activePanel).toEqual(OTHER);
+  });
+
+  test('shows tab on right of closed first tab', async () => {
+    const { dock } = await mount();
+    const third = addThird(dock);
+    dock.activate(third);
+    dock.activate(FILE);
+
+    await dock.close(FILE);
+
+    expect(dock.groups[0]).toEqual({ panels: [OTHER, third], shown: OTHER });
+  });
+
+  test('shows tab on right of closed tab when set', async () => {
+    const { dock } = await mount(undefined, 'right');
+    const third = addThird(dock);
+    dock.activate(third);
+    dock.activate(FILE);
+
+    await dock.close(FILE);
+
+    expect(dock.groups[0]).toEqual({ panels: [OTHER, third], shown: OTHER });
+  });
+
+  test('shows tab on left of closed last tab when set to right', async () => {
+    const { dock } = await mount(undefined, 'right');
+    const third = addThird(dock);
+    dock.activate(FILE);
+    dock.activate(third);
+
+    await dock.close(third);
+
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: OTHER });
+  });
+
+  test('shows most recent tab when set', async () => {
+    const { dock } = await mount(undefined, 'recent');
+    const third = addThird(dock);
+    dock.activate(FILE);
+    dock.activate(third);
+
+    await dock.close(third);
+
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: FILE });
+  });
+
+  test('keeps shown tab when another closes', async () => {
+    const { dock } = await mount();
+    const third = addThird(dock);
+    dock.activate(third);
+
+    await dock.close(OTHER);
+
+    expect(dock.groups[0]).toEqual({ panels: [FILE, third], shown: third });
+  });
+
+  test('keeps active panel when shown tab of other group closes', async () => {
+    const { dock } = await mount();
+    const third = addThird(dock);
+    dock.activate(third);
+    dock.activate(TERMINAL);
+
+    await dock.close(third);
+
+    expect(dock.groups[0]).toEqual({ panels: [FILE, OTHER], shown: OTHER });
+    expect(dock.activePanel).toEqual(TERMINAL);
+  });
+
+  test('closes panel that cannot be closed when forced', async () => {
+    const { dock } = await mount();
+
+    await expect(dock.close(FILE_TREE, true)).resolves.toBe(true);
+
+    expect(dock.get(FILE_TREE.id)).toBeNull();
+  });
+
+  test('closes without asking when forced', async () => {
+    const close = vi.fn(() => false);
+    const { dock } = await mount(close);
+
+    await expect(dock.close(OTHER, true)).resolves.toBe(true);
+
+    expect(dock.get(OTHER.id)).toBeNull();
+    expect(close).not.toHaveBeenCalled();
+  });
+
+  test('closes at once when forced while panel is asked', async () => {
+    const { dock } = await mount(() => new Promise<boolean>(() => {}));
+    void dock.close(OTHER);
+
+    await expect(dock.close(OTHER, true)).resolves.toBe(true);
+
+    expect(dock.get(OTHER.id)).toBeNull();
   });
 
   test('closes panel that source allows', async () => {

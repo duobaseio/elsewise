@@ -10,6 +10,7 @@ export type FontSize = z.infer<typeof FontSize>;
 export type LineHeight = z.infer<typeof LineHeight>;
 export type EditorLanguageSettings = DeepReadonly<z.infer<typeof EditorLanguageSettings>>;
 export type LineSeparator = z.infer<typeof LineSeparator>;
+export type CloseActivation = z.infer<typeof CloseActivation>;
 export type DiffLayout = z.infer<typeof DiffLayout>;
 export type CursorStyle = z.infer<typeof CursorStyle>;
 export type KeymapId = DeepReadonly<z.infer<typeof KeymapId>>;
@@ -78,6 +79,15 @@ export const FrontendSettings = z.lazy(() =>
      * The current keymap.
      */
     keymap: KeymapId.catch({ source: 'elsewise', id: 'elsewise' }),
+    workspace: z.preprocess(
+      (section) => section ?? {},
+      z.object({
+        /**
+         * The tab shown after closing the current tab.
+         */
+        closeActivation: CloseActivation.catch('left'),
+      }),
+    ),
     editor: z.preprocess(
       (section) => section ?? {},
       z.object({
@@ -265,6 +275,15 @@ export const EditorLanguageSettings = z.object({
    */
   visualGuides: z.array(z.int().min(1).max(500)),
 });
+
+/**
+ * The tab shown after closing the current tab:
+ *
+ * - `left`: the tab on its left, or on its right if it is the first.
+ * - `right`: the tab on its right, or on its left if it is the last.
+ * - `recent`: the tab that was shown before it.
+ */
+export const CloseActivation = z.enum(['left', 'right', 'recent']);
 
 export const DiffLayout = z.enum(['unified', 'split']);
 

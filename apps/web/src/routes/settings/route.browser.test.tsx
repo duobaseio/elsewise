@@ -164,7 +164,17 @@ describe('Settings', () => {
       .getByRole('treeitem')
       .elements()
       .map((link) => link.textContent);
-    expect(links).toEqual(['Appearance', 'Keymap', 'Editor', 'File tree', 'Terminal', 'Words', 'Hooks', 'Broken']);
+    expect(links).toEqual([
+      'Appearance',
+      'Keymap',
+      'Workspace',
+      'Editor',
+      'File tree',
+      'Terminal',
+      'Words',
+      'Hooks',
+      'Broken',
+    ]);
   });
 
   test('lists languages under editor, sorted by label, expanded when open', async () => {
@@ -180,6 +190,7 @@ describe('Settings', () => {
     expect(links).toEqual([
       'Appearance',
       'Keymap',
+      'Workspace',
       'Editor',
       'Elm',
       'JavaScript/JSX',
@@ -261,8 +272,8 @@ describe('Item', () => {
   });
 
   test('keeps focus on row opening split page', async () => {
-    const router = await mount(['/settings/local/keymap']);
-    sidebar().getByRole('treeitem', { name: 'Keymap' }).element().focus();
+    const router = await mount(['/settings/local/workspace']);
+    sidebar().getByRole('treeitem', { name: 'Workspace' }).element().focus();
 
     await userEvent.keyboard('{ArrowDown}');
     await expect.poll(() => router.state.location.pathname).toBe('/settings/local/editor');
