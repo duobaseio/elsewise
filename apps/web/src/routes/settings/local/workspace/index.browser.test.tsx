@@ -63,6 +63,21 @@ describe('Workspace', () => {
     await userEvent.click(page.getByRole('option', { name: 'Most recent tab' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
-    expect(save).toHaveBeenCalledWith({ ...DEFAULT_FRONTEND_SETTINGS, workspace: { closeActivation: 'recent' } });
+    expect(save).toHaveBeenCalledWith({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, closeActivation: 'recent' },
+    });
+  });
+
+  test('saves tab tooltips', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Tab tooltips' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, tabTooltips: false },
+    });
   });
 });

@@ -86,6 +86,10 @@ export const FrontendSettings = z.lazy(() =>
          * The tab shown after closing the current tab.
          */
         closeActivation: CloseActivation.catch('left'),
+        /**
+         * Whether a tab shows a tooltip when hovered.
+         */
+        tabTooltips: z.boolean().catch(true),
       }),
     ),
     editor: z.preprocess(

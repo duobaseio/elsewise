@@ -350,7 +350,7 @@ describe('Tab', () => {
     dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
 
     await userEvent.hover(page.getByText('Report header'));
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
   });
@@ -374,13 +374,24 @@ describe('Tab', () => {
     await vi.waitFor(() => expect(page.getByText('Report tooltip').elements()).toHaveLength(0));
   });
 
+  test('shows no tooltip while tab tooltips are off', async () => {
+    const mounted = await mount();
+    const { frontend } = mounted.application.settings;
+    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, tabTooltips: false } };
+
+    await hoverReport(mounted);
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
+  });
+
   test('shows no tooltip while source returns none', async () => {
     const { application, dock } = await mount();
     application.docks.addPanelSources([{ ...REPORT, tooltip: () => null }]);
     dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
 
     await userEvent.hover(page.getByText('Report header'));
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
   });

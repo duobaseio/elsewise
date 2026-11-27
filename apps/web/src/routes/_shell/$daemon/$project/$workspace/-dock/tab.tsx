@@ -42,7 +42,10 @@ export function Tab(props: IDockviewPanelHeaderProps) {
 
               const dock = docks.active;
               const content =
-                details.reason === 'trigger-focus' || dock === null || panel === null
+                !application.settings.frontend.workspace.tabTooltips ||
+                details.reason === 'trigger-focus' ||
+                dock === null ||
+                panel === null
                   ? null
                   : (component.tooltip?.(application, dock, panel) ?? null);
 

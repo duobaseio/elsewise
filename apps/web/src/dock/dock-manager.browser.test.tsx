@@ -34,7 +34,10 @@ async function mount(close?: PanelComponent['close'], closeActivation: CloseActi
     .spyOn(terminals.store, 'add')
     .mockResolvedValue({ id: { ...WORKSPACE, session: '2' }, name: 'Terminal', state: 'idle' } as never);
   const application = builtInApplication({
-    settings: new SettingsPanelManager([], { ...DEFAULT_FRONTEND_SETTINGS, workspace: { closeActivation } }),
+    settings: new SettingsPanelManager([], {
+      ...DEFAULT_FRONTEND_SETTINGS,
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, closeActivation },
+    }),
     terminals,
     panelComponents: [
       { type: 'file', header: () => null, panel: () => null, close },

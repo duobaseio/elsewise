@@ -6,6 +6,10 @@ describe('FrontendSettings', () => {
     expect(FrontendSettings.parse({}).workspace.closeActivation).toBe('left');
   });
 
+  test('shows tab tooltips by default', () => {
+    expect(FrontendSettings.parse({}).workspace.tabTooltips).toBe(true);
+  });
+
   test('keeps valid close activation', () => {
     expect(FrontendSettings.parse({ workspace: { closeActivation: 'recent' } }).workspace.closeActivation).toBe(
       'recent',
