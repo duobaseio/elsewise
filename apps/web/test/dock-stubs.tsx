@@ -8,9 +8,9 @@ import {
 } from '@/routes/_shell/$daemon/$project/$workspace/-custom/custom-panel';
 import { Placeholder, PlaceholderHeader } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 
-// Minimal stand-ins for the dock's panels and headers. Tests exercise the dock's chrome and policies, not panel content —
-// stubs keep them (and the screenshot baselines) stable while the real panels evolve. The real headers also need the
-// workspace's route around the dock.
+// Minimal stand-ins for the dock's panels and headers. Tests exercise the dock's chrome and policies, not panel
+// content — stubs keep them (and the screenshot baselines) stable while the real panels evolve. The real headers also
+// need the workspace's route around the dock.
 export const STUB_COMPONENTS: readonly PanelComponent[] = [
   { type: 'placeholder', header: PlaceholderHeader, panel: Placeholder },
   {

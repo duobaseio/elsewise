@@ -227,8 +227,8 @@ export interface CustomPanelSource {
   /**
    * The panel.
    *
-   * When the panel is focused, the dock calls the handle's `focus`. Without a handle, the panel's first focusable element
-   * takes the focus.
+   * When the panel is focused, the dock calls the handle's `focus`. Without a handle, the panel's first focusable
+   * element takes the focus.
    *
    * ```tsx
    * panel: ({ ref }) => {
