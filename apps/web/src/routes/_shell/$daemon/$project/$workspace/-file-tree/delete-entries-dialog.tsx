@@ -13,9 +13,10 @@ import type { FileTreeSelection } from '@elsewise/frontend-plugin';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
+import { sameWorkspace } from '@/projects/workspace-manager';
 
 export function DeleteEntriesDialog() {
-  const { fileTree } = useApplicationManager();
+  const { docks, fileTree } = useApplicationManager();
   const client = useQueryClient();
 
   const remove = useMutation({
@@ -29,10 +30,22 @@ export function DeleteEntriesDialog() {
         root: workspace.absolutePath,
         relativePaths: outermost.map((path) => path.replace(/\/$/, '')),
       });
+
+      const dock = docks.active;
+      const open = dock !== null && sameWorkspace(dock.workspaceId, workspace.id) ? dock.panels : [];
+
       for (const path of outermost) {
         const failure = failures.find((other) => other.relativePath === path.replace(/\/$/, ''));
         if (failure === undefined) {
           fileTree.deleteClipboardPaths(workspace.id, path);
+          for (const panel of open) {
+            if (
+              panel.type === 'file' &&
+              (panel.relativePath === path || (path.endsWith('/') && panel.relativePath.startsWith(path)))
+            ) {
+              void dock?.close(panel, true);
+            }
+          }
         } else {
           toast.add({ type: 'error', title: `Deleting “${name(path)}” failed`, description: failure.message });
         }

@@ -10,6 +10,7 @@ import type { ApplicationManager } from '@/application-manager';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import { DeleteEntriesResponseSchema } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
+import { FILE, mount as mountDock } from '../../../../../../../test/dock';
 import { DeleteEntriesDialog } from './delete-entries-dialog';
 
 const SELECTION: FileTreeSelection = {
@@ -36,6 +37,27 @@ async function mount(deleteEntries: Daemon['fileSystem']['deleteEntries']): Prom
     </QueryClientProvider>,
   );
   return application;
+}
+
+// Makes a dock of `workspace` that has the `paths` open the active one, and returns a function that reads its open
+// files.
+async function openFiles(
+  application: ApplicationManager,
+  paths: readonly string[],
+  workspace = SELECTION.workspace.id,
+): Promise<() => string[]> {
+  const dockview = await mountDock();
+  for (const path of paths) {
+    dockview.addPanel({
+      id: `file:${path}`,
+      component: 'file',
+      params: { path },
+      position: { referencePanel: FILE.id },
+    });
+  }
+  const dock = application.docks.attach(workspace, dockview);
+  application.docks.active = dock;
+  return () => dock.panels.flatMap((panel) => (panel.type === 'file' ? [panel.relativePath] : []));
 }
 
 describe('DeleteEntriesDialog', () => {
@@ -100,5 +122,40 @@ describe('DeleteEntriesDialog', () => {
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
     expect(application.fileTree.clipboard?.paths).toEqual(['README.md', 'docs/a.md']);
+  });
+
+  test('closes panels at and under deleted paths', async () => {
+    const application = await mount(async () => create(DeleteEntriesResponseSchema));
+    const files = await openFiles(application, ['src/main.ts', 'src/nested/a.ts', 'src-old/a.ts', 'README.md']);
+    application.fileTree.deleteDialog.openWithPayload(SELECTION);
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(files()).toEqual([FILE.relativePath, 'src-old/a.ts']);
+  });
+
+  test('keeps panels under failed path', async () => {
+    const application = await mount(async () =>
+      create(DeleteEntriesResponseSchema, { failures: [{ relativePath: 'src', message: 'denied' }] }),
+    );
+    const files = await openFiles(application, ['src/main.ts', 'README.md']);
+    application.fileTree.deleteDialog.openWithPayload(SELECTION);
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(files()).toEqual([FILE.relativePath, 'src/main.ts']);
+  });
+
+  test('keeps panels of other workspace', async () => {
+    const application = await mount(async () => create(DeleteEntriesResponseSchema));
+    const files = await openFiles(application, ['README.md'], { ...SELECTION.workspace.id, workspace: 'other' });
+    application.fileTree.deleteDialog.openWithPayload(SELECTION);
+
+    await userEvent.click(page.getByRole('button', { name: 'Delete' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(files()).toEqual([FILE.relativePath, 'README.md']);
   });
 });
