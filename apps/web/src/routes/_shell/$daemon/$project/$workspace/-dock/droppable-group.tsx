@@ -15,7 +15,7 @@ export interface GroupTarget {
 
 export function DroppableGroup({ group, dragging }: { group: DockviewGroupPanel; dragging: RefObject<boolean> }) {
   // The strip resizes as its tabs slide when a dragged tab joins or leaves them.
-  // Disclaimer: This effect is AI generated.
+  // Disclaimer: This effect is AI generated and has not been thoroughly reviewed.
   useEffect(() => {
     const tabs = group.element.querySelector('.dv-tabs-container');
     const strip = tabs?.parentElement;
