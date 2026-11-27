@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf';
+import { undo } from '@codemirror/commands';
 import { EditorView } from '@codemirror/view';
-import { DEFAULT_FRONTEND_SETTINGS } from '@elsewise/frontend-plugin';
+import { DEFAULT_FRONTEND_SETTINGS, EDITOR_DOCUMENT } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   createMemoryHistory,
@@ -22,6 +23,7 @@ import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { fakeFileSystem } from '../../../../../../../test/fake-file-system';
+import { StubTransport } from '../../../../../../../test/stub-transport';
 import { Panel } from '../-dock/panel';
 import { FilePanel } from './file-panel';
 
@@ -73,6 +75,10 @@ async function mount(content: string | Uint8Array) {
     history: createMemoryHistory({ initialEntries: [`/${LOCAL_DAEMON_ID}/elsewise/singapore`] }),
   });
   const application = builtInApplication({ router });
+  const transport = new StubTransport();
+  application.editor.languages.addServers([
+    { id: 'typescript', name: 'TypeScript', languages: { TypeScript: 'typescript' }, start: () => transport },
+  ]);
   const screen = await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
@@ -85,7 +91,7 @@ async function mount(content: string | Uint8Array) {
     </QueryClientProvider>,
   );
   fake.report('main.ts');
-  return { application, fake, screen, updateParameters };
+  return { application, fake, screen, sent: transport.sent, updateParameters };
 }
 
 function editor(container: Element): EditorView {
@@ -110,6 +116,20 @@ describe('FilePanel', () => {
     application.docks.requestPanelFocus('file:1');
 
     await vi.waitFor(() => expect(editor(screen.container).hasFocus).toBe(true));
+  });
+
+  test('keeps scroll position when editor takes focus', async () => {
+    const { application, screen } = await mount('let a;\n'.repeat(200));
+    await expect.element(page.getByText('let a;').first()).toBeVisible();
+    const view = editor(screen.container);
+    view.scrollDOM.scrollTo(0, 900);
+    await expect.poll(() => view.scrollDOM.scrollTop).toBe(900);
+
+    application.docks.requestPanelFocus('file:1');
+
+    await vi.waitFor(() => expect(view.hasFocus).toBe(true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(view.scrollDOM.scrollTop).toBe(900);
   });
 
   test('focuses editor once file loads after its panel was asked', async () => {
@@ -171,5 +191,41 @@ describe('FilePanel', () => {
     expect(application.files.get(workspace, 'main.ts')?.document).not.toBeNull();
     await screen.unmount();
     expect(application.files.get(workspace, 'main.ts')).toBeNull();
+  });
+
+  test('keeps editor and unsaved changes when file moves', async () => {
+    const { application, screen } = await mount('let a;\n');
+    await expect.element(page.getByText('let a;')).toBeVisible();
+    const view = editor(screen.container);
+    view.dispatch({ changes: { from: 4, to: 5, insert: 'b' } });
+
+    application.files.move({ daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' }, 'main.ts', 'a.md');
+
+    await expect.poll(() => view.state.facet(EDITOR_DOCUMENT)?.relativePath).toBe('a.md');
+    expect(editor(screen.container)).toBe(view);
+    expect(view.state.doc.toString()).toBe('let b;\n');
+    undo(view);
+    expect(view.state.doc.toString()).toBe('let a;\n');
+  });
+
+  test('reconnects language server at path file moves to', async () => {
+    const { application, sent } = await mount('let a;\n');
+    await expect.poll(() => sent.some((message) => message.method === 'textDocument/didOpen')).toBe(true);
+
+    application.files.move({ daemon: LOCAL_DAEMON_ID, project: 'elsewise', workspace: 'singapore' }, 'main.ts', 'a.ts');
+
+    await expect
+      .poll(() =>
+        sent.flatMap(({ method, params }) =>
+          method?.startsWith('textDocument/did')
+            ? [[method, (params as { textDocument: { uri: string } }).textDocument.uri]]
+            : [],
+        ),
+      )
+      .toEqual([
+        ['textDocument/didOpen', 'file:///elsewise/main.ts'],
+        ['textDocument/didClose', 'file:///elsewise/main.ts'],
+        ['textDocument/didOpen', 'file:///elsewise/a.ts'],
+      ]);
   });
 });

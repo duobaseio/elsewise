@@ -1,10 +1,11 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
+import { Separator } from '@elsewise/components/components/separator';
 import { Page, Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import type { CloseActivation, FrontendSettings, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
-import { TabTooltipsHelp } from './-help';
+import { FolderPrefixHelp, TabTooltipsHelp } from './-help';
 
 export const Route = createFileRoute('/settings/local/workspace/')({ component: Workspace });
 
@@ -16,6 +17,14 @@ export const WORKSPACE_TERMS = {
   tabTooltips: {
     label: 'Tab tooltips',
     keywords: ['tooltip', 'hover', 'tab', 'path', 'name', 'hint'],
+  },
+  folderPrefix: {
+    label: 'Folder prefix',
+    keywords: ['folder', 'directory', 'path', 'tab', 'name', 'same', 'duplicate', 'unique'],
+  },
+  markModifiedTabs: {
+    label: 'Mark modified tabs',
+    keywords: ['unsaved', 'dirty', 'dot', 'tab', 'changes', 'indicator'],
   },
 } as const satisfies Record<keyof FrontendSettings['workspace'], SettingsSearchTerm>;
 
@@ -68,6 +77,33 @@ export function Workspace() {
           aria-label={WORKSPACE_TERMS.tabTooltips.label}
           checked={workspace.tabTooltips}
           onCheckedChange={(tabTooltips) => set({ tabTooltips })}
+        />
+      </Row>
+
+      <Separator />
+
+      <Row
+        id="folderPrefix"
+        label={WORKSPACE_TERMS.folderPrefix.label}
+        description="Prefix file tabs that share a name."
+        help={<FolderPrefixHelp enabled={workspace.folderPrefix} />}
+      >
+        <Switch
+          aria-label={WORKSPACE_TERMS.folderPrefix.label}
+          checked={workspace.folderPrefix}
+          onCheckedChange={(folderPrefix) => set({ folderPrefix })}
+        />
+      </Row>
+
+      <Row
+        id="markModifiedTabs"
+        label={WORKSPACE_TERMS.markModifiedTabs.label}
+        description="Mark file tabs with unsaved changes."
+      >
+        <Switch
+          aria-label={WORKSPACE_TERMS.markModifiedTabs.label}
+          checked={workspace.markModifiedTabs}
+          onCheckedChange={(markModifiedTabs) => set({ markModifiedTabs })}
         />
       </Row>
     </Page>

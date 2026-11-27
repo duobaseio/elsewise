@@ -309,6 +309,20 @@ describe('FileTreePanel', () => {
     await expect.poll(() => application.fileTree.clipboard?.paths).toEqual(['z.ts', 'b.ts']);
   });
 
+  test('moves open file on rename', async () => {
+    const application = await mount({ move: async () => create(MoveResponseSchema) });
+    const moved = vi.spyOn(application.docks, 'moveFiles');
+    const row = page.getByRole('treeitem', { name: 'a.ts' });
+    await expect.element(row).toBeVisible();
+
+    await userEvent.click(row, { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem', { name: /Rename/ }));
+    await userEvent.fill(page.getByRole('textbox'), 'z.ts');
+    await userEvent.keyboard('{Enter}');
+
+    await expect.poll(() => moved.mock.calls).toEqual([[WORKSPACE, 'a.ts', 'z.ts']]);
+  });
+
   test('restores row when rename fails', async () => {
     const add = vi.spyOn(toast, 'add');
     const application = await mount({
@@ -509,6 +523,19 @@ describe('FileTreePanel', () => {
     );
 
     await expect.poll(() => application.fileTree.clipboard?.paths).toEqual(['src/a.ts', 'b.ts']);
+  });
+
+  test('moves open file on drop', async () => {
+    const application = await mount({ move: async () => create(MoveResponseSchema) });
+    const moved = vi.spyOn(application.docks, 'moveFiles');
+    await expect.element(page.getByRole('treeitem', { name: 'd.ts' })).toBeVisible();
+
+    await userEvent.dragAndDrop(
+      page.getByRole('treeitem', { name: 'a.ts' }),
+      page.getByRole('treeitem', { name: 'src' }),
+    );
+
+    await expect.poll(() => moved.mock.calls).toEqual([[WORKSPACE, 'a.ts', 'src/a.ts']]);
   });
 
   test('reports failed drop', async () => {

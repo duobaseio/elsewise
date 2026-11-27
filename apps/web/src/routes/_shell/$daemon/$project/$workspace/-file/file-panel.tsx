@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelProps } from 'dockview-react';
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useEffectEvent, useState, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
-import { FileHandle, type FileHandleState } from '@/fs/file-handle';
+import type { FileHandle, FileHandleState } from '@/fs/file-handle';
 import { useWorkspace } from '@/projects/workspace-manager';
 import { usePanelFocus } from '../-dock/panel';
 import { EditorFileView, type EditorFileViewParams } from './editor-file-view';
@@ -35,35 +35,36 @@ export function FilePanel(props: IDockviewPanelProps<FilePanelParams>) {
   const root = useWorkspace({ daemon, project, workspace })?.absolutePath;
   const { files } = useApplicationManager();
   const [file, setFile] = useState<FileHandle | null>(null);
+  // Read without being a dependency of the effect, so that a rename keeps the handle instead of opening a new one.
+  const path = useEffectEvent(() => props.params.path);
 
   useEffect(() => {
     if (client === undefined || root === undefined) {
       return undefined;
     }
 
-    const next = new FileHandle(client.fileSystem, root, props.params.path);
-    const remove = files.add({ daemon, project, workspace }, next);
+    const next = files.open({ daemon, project, workspace }, client.fileSystem, root, path());
     setFile(next);
 
     return () => {
-      remove();
-      next.dispose();
+      files.close({ daemon, project, workspace }, next);
       setFile(null);
     };
-  }, [client, root, files, daemon, project, workspace, props.params.path]);
+  }, [client, root, files, daemon, project, workspace]);
 
   const subscribe = useCallback((listener: () => void) => file?.onChange(listener) ?? (() => {}), [file]);
   const state = useSyncExternalStore(subscribe, () => file?.state ?? LOADING);
+  const relativePath = useSyncExternalStore(subscribe, () => file?.relativePath);
   const onViewParamsChange = useCallback((view: FileViewParams) => props.api.updateParameters({ view }), [props.api]);
 
   // A split comparison has two editors.
   usePanelFocus(
     state.type === 'text'
-      ? (content) => [...content.querySelectorAll<HTMLElement>('.cm-content')].at(-1)?.focus()
+      ? (content) => [...content.querySelectorAll<HTMLElement>('.cm-content')].at(-1)?.focus({ preventScroll: true })
       : null,
   );
 
-  if (file === null || state.type === 'loading') {
+  if (file === null || relativePath === undefined || state.type === 'loading') {
     return null;
   }
 
@@ -72,7 +73,7 @@ export function FilePanel(props: IDockviewPanelProps<FilePanelParams>) {
       <EditorFileView
         file={file}
         root={file.root}
-        relativePath={file.relativePath}
+        relativePath={relativePath}
         params={props.params.view?.type === 'editor' ? props.params.view : undefined}
         onParamsChange={onViewParamsChange}
       />

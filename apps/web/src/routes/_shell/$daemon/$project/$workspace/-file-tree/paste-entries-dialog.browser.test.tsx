@@ -243,6 +243,35 @@ describe('PasteEntriesDialog', () => {
     expect(application.fileTree.clipboard).toBeNull();
   });
 
+  test('moves open files of moved entries', async () => {
+    const application = await mount({
+      move: async () =>
+        create(MoveResponseSchema, { failures: [{ relativePath: 'a.ts', reason: MoveReason.ALREADY_EXISTS }] }),
+    });
+    const moved = vi.spyOn(application.docks, 'moveFiles');
+    open(application, 'src/', { cut: true, paths: ['a.ts', 'docs/', 'c.ts'] });
+
+    await userEvent.click(page.getByRole('button', { name: 'Move' }));
+
+    await expect
+      .poll(() => moved.mock.calls)
+      .toEqual([
+        [WORKSPACE.id, 'docs/', 'src/docs/'],
+        [WORKSPACE.id, 'c.ts', 'src/c.ts'],
+      ]);
+  });
+
+  test('keeps open files of copied entries', async () => {
+    const application = await mount();
+    const moved = vi.spyOn(application.docks, 'moveFiles');
+    open(application, 'src/', { cut: false, paths: ['docs/', 'c.ts'] });
+
+    await userEvent.click(page.getByRole('button', { name: 'Copy' }));
+
+    await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
+    expect(moved).not.toHaveBeenCalled();
+  });
+
   test('keeps clipboard when handing copy conflicts', async () => {
     const application = await mount({
       copyEntries: async () =>

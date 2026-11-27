@@ -6,6 +6,7 @@ import {
 } from '@elsewise/frontend-plugin';
 import { QueryClient } from '@tanstack/react-query';
 import { describe, expect, test, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { SettingsPanelManager } from '@/settings/settings-panel-manager';
 import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../test/commands';
@@ -295,6 +296,123 @@ describe('move', () => {
     dock.move({ ...OTHER, id: 'closed' }, { edge: 'top' });
 
     expect(dock.groups).toEqual(groups);
+  });
+});
+
+describe('moveFiles', () => {
+  test('points panel at moved file', async () => {
+    const { dock, dockview } = await mount();
+
+    dock.moveFiles('other.ts', 'src/index.ts');
+
+    expect(dock.get(OTHER.id)).toEqual({ ...OTHER, relativePath: 'src/index.ts' });
+    expect(dockview.getPanel(OTHER.id)?.title).toBe('index.ts');
+    expect(dock.get(FILE.id)).toEqual(FILE);
+  });
+
+  test('points panels under moved folder', async () => {
+    const { dock, dockview } = await mount();
+
+    dock.moveFiles('apps/web/', 'web/');
+
+    expect(dock.get(FILE.id)).toEqual({
+      ...FILE,
+      relativePath: 'web/src/routes/_shell/$daemon/$project/$workspace.tsx',
+    });
+    expect(dockview.getPanel(FILE.id)?.title).toBe('$workspace.tsx');
+    expect(dock.get(OTHER.id)).toEqual(OTHER);
+  });
+
+  test('closes panel already at destination', async () => {
+    const { dock } = await mount();
+
+    dock.moveFiles('other.ts', FILE.relativePath);
+
+    expect(dock.get(FILE.id)).toBeNull();
+    expect(dock.get(OTHER.id)).toEqual({ ...OTHER, relativePath: FILE.relativePath });
+  });
+
+  test('moves handles of files', async () => {
+    const { application, dock } = await mount();
+    const moved = vi.spyOn(application.files, 'move');
+
+    dock.moveFiles('other.ts', 'index.ts');
+
+    expect(moved).toHaveBeenCalledExactlyOnceWith(WORKSPACE, 'other.ts', 'index.ts');
+  });
+});
+
+describe('titles', () => {
+  // Returns the titles of the panels of `paths`, which are added to `dock`.
+  function add({ dock, dockview }: Awaited<ReturnType<typeof mount>>, ...paths: string[]) {
+    const panels = paths.map((path) => dock.addFile(path, { tab: 'last', with: FILE }));
+    return () => panels.map((panel) => dockview.getPanel(panel?.id ?? '')?.title);
+  }
+
+  test('prefixes folders of files sharing name', async () => {
+    const mounted = await mount();
+
+    const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx', 'src/main.ts');
+
+    expect(titles()).toEqual(['routes/index.tsx', 'settings/index.tsx', 'main.ts']);
+    await expect.element(page.getByText('routes/index.tsx', { exact: true })).toBeVisible();
+  });
+
+  test('drops prefix once other file closes', async () => {
+    const mounted = await mount();
+    const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
+
+    mounted.dockview.panels.find((panel) => panel.title === 'settings/index.tsx')?.api.close();
+
+    expect(titles()).toEqual(['index.tsx', undefined]);
+  });
+
+  test('prefixes folder of file moved to shared name', async () => {
+    const mounted = await mount();
+    const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/page.tsx');
+
+    mounted.dock.moveFiles('src/settings/page.tsx', 'src/settings/index.tsx');
+
+    expect(titles()).toEqual(['routes/index.tsx', 'settings/index.tsx']);
+  });
+
+  test('keeps names without folder prefix', async () => {
+    const mounted = await mount();
+    const { frontend } = mounted.application.settings;
+    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, folderPrefix: false } };
+
+    const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
+
+    expect(titles()).toEqual(['index.tsx', 'index.tsx']);
+  });
+
+  test('prefixes folders of files already open', async () => {
+    const dockview = await mountDock();
+    for (const path of ['src/routes/index.tsx', 'src/settings/index.tsx']) {
+      dockview.addPanel({ id: `file:${path}`, component: 'file', title: 'index.tsx', params: { path } });
+    }
+
+    new DockManager(
+      WORKSPACE,
+      dockview,
+      builtInApplication(),
+      () => {},
+      () => {},
+      () => {},
+    );
+
+    expect(dockview.getPanel('file:src/routes/index.tsx')?.title).toBe('routes/index.tsx');
+    expect(dockview.getPanel('file:src/settings/index.tsx')?.title).toBe('settings/index.tsx');
+  });
+
+  test('follows folder prefix setting', async () => {
+    const mounted = await mount();
+    const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
+    const { frontend } = mounted.application.settings;
+
+    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, folderPrefix: false } };
+
+    expect(titles()).toEqual(['index.tsx', 'index.tsx']);
   });
 });
 

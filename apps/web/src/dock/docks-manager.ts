@@ -191,6 +191,15 @@ export class DocksManager implements Docks {
     }
   }
 
+  /**
+   * Points the file panels at or under `source` in `workspace` to `destination`.
+   */
+  moveFiles(workspace: WorkspaceId, source: string, destination: string) {
+    if (sameWorkspace(this.attached?.workspaceId, workspace)) {
+      this.attached?.moveFiles(source, destination);
+    }
+  }
+
   // There is a slight gap between when the dock manager is attached and workspaces.active is updated.
   private update() {
     const dock = sameWorkspace(this.application.projects.workspaces.active?.id, this.attached?.workspaceId)

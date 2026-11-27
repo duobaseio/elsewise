@@ -1,3 +1,4 @@
+import { create } from '@bufbuild/protobuf';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,16 +11,18 @@ import { describe, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
-import { FileHandle } from '@/fs/file-handle';
+import type { ApplicationManager } from '@/application-manager';
+import { Change } from '@/gen/elsewise/daemon/git/v1/git_pb';
+import { WatchStatusResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { fakeFileSystem } from '../../../../../../../test/fake-file-system';
 import { FileHeader, fileTooltip } from './file-header';
 
 const WORKSPACE = { daemon: 'local', project: 'elsewise', workspace: 'singapore' };
 
-// Renders the header of main.ts in the workspace Singapore, and returns the application it runs in and a handle of the
-// file, which is not open yet.
-async function mount() {
+// Renders the header of main.ts in the workspace Singapore with modified tabs marked if `marker`, and returns the
+// application it runs in and a handle of the file, which is not open yet.
+async function mount(marker = true) {
   const root = createRootRoute();
   const shell = createRoute({ getParentRoute: () => root, id: '_shell' });
   const workspace = createRoute({
@@ -34,13 +37,51 @@ async function mount() {
     history: createMemoryHistory({ initialEntries: ['/local/elsewise/singapore'] }),
   });
   const application = builtInApplication({ router });
+  const frontend = application.settings.frontend;
+  application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, markModifiedTabs: marker } };
   await render(
     <ApplicationManagerContext value={application}>
       <RouterProvider router={router} />
     </ApplicationManagerContext>,
   );
   await expect.element(page.getByText('main.ts')).toBeVisible();
-  return { application, file: new FileHandle(fakeFileSystem().fileSystem, '/elsewise', 'main.ts') };
+  return {
+    application,
+    open: (workspace = WORKSPACE, relativePath = 'main.ts') =>
+      application.files.open(workspace, fakeFileSystem().fileSystem, '/elsewise', relativePath),
+  };
+}
+
+// Gives main.ts the git status `kind` in `workspace`, and returns once the application has it.
+async function watch(application: ApplicationManager, kind: 'modified' | 'ignored', workspace = WORKSPACE) {
+  application.git.watch(
+    {
+      watchStatus: async function* () {
+        yield create(WatchStatusResponseSchema, {
+          status: {
+            entries: [
+              {
+                relativePath: 'main.ts',
+                kind:
+                  kind === 'modified'
+                    ? { case: 'changed', value: { unstaged: Change.MODIFIED } }
+                    : { case: 'ignored', value: {} },
+              },
+            ],
+          },
+        });
+        await new Promise(() => {});
+      },
+    },
+    workspace,
+    '/elsewise',
+  );
+  await vi.waitFor(() => expect(application.git.get(workspace, 'main.ts')).toBe(kind));
+  await new Promise(requestAnimationFrame);
+}
+
+function color(): string {
+  return getComputedStyle(page.getByText('main.ts').element()).color;
 }
 
 function marked(): boolean {
@@ -49,8 +90,8 @@ function marked(): boolean {
 
 describe('FileHeader', () => {
   test('marks file with unsaved changes', async () => {
-    const { application, file } = await mount();
-    application.files.add(WORKSPACE, file);
+    const { open } = await mount();
+    const file = open();
 
     file.document = () => '';
 
@@ -58,8 +99,8 @@ describe('FileHeader', () => {
   });
 
   test('unmarks file once it has no unsaved changes', async () => {
-    const { application, file } = await mount();
-    application.files.add(WORKSPACE, file);
+    const { open } = await mount();
+    const file = open();
     file.document = () => '';
     await expect.poll(marked).toBe(true);
 
@@ -68,11 +109,29 @@ describe('FileHeader', () => {
     await expect.poll(marked).toBe(false);
   });
 
-  test('marks file that opens with unsaved changes', async () => {
-    const { application, file } = await mount();
-    file.document = () => '';
+  test('marks file moved to its path with unsaved changes', async () => {
+    const { application, open } = await mount();
+    open(WORKSPACE, 'other.ts').document = () => '';
 
-    application.files.add(WORKSPACE, file);
+    application.files.move(WORKSPACE, 'other.ts', 'main.ts');
+
+    await expect.poll(marked).toBe(true);
+  });
+
+  test('omits mark while modified tabs are not marked', async () => {
+    const { open } = await mount(false);
+    open().document = () => '';
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(marked()).toBe(false);
+  });
+
+  test('marks file once modified tabs are marked', async () => {
+    const { application, open } = await mount(false);
+    open().document = () => '';
+    const frontend = application.settings.frontend;
+
+    application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, markModifiedTabs: true } };
 
     await expect.poll(marked).toBe(true);
   });
@@ -89,13 +148,41 @@ describe('FileHeader', () => {
   });
 
   test('ignores file of other workspace', async () => {
-    const { application, file } = await mount();
-    file.document = () => '';
+    const { open } = await mount();
 
-    application.files.add({ ...WORKSPACE, workspace: 'other' }, file);
+    open({ ...WORKSPACE, workspace: 'other' }).document = () => '';
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(marked()).toBe(false);
+  });
+
+  test('colours title of modified file', async () => {
+    const { application } = await mount();
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--info)';
+    document.body.append(probe);
+
+    await watch(application, 'modified');
+
+    expect(color()).toBe(getComputedStyle(probe).color);
+  });
+
+  test('keeps title colour of ignored file', async () => {
+    const { application } = await mount();
+    const before = color();
+
+    await watch(application, 'ignored');
+
+    expect(color()).toBe(before);
+  });
+
+  test('ignores status of other workspace', async () => {
+    const { application } = await mount();
+    const before = color();
+
+    await watch(application, 'modified', { ...WORKSPACE, workspace: 'other' });
+
+    expect(color()).toBe(before);
   });
 });
 

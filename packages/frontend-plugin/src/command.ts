@@ -390,8 +390,8 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       moveDown: [],
     },
     file: {
-      copyPath: [],
-      copyRelativePath: [],
+      copyPath: ['Mod-Shift-c'],
+      copyRelativePath: ['Mod-Shift-Alt-c'],
       openFileManager: [],
     },
     terminal: {

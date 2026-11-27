@@ -39,7 +39,7 @@ import { format } from '@/editor/format';
 import { hover } from '@/editor/hover';
 import { useLanguageServerExtension } from '@/editor/lsp/language-servers';
 import { navigation } from '@/editor/navigation';
-import { scrollbarsKeepFocus } from '@/editor/scroll';
+import { scrollbarsKeepFocus, scrollKeepsPosition } from '@/editor/scroll';
 import { selectionMatches } from '@/editor/scrollbar-markers/selection-matches';
 import { useSearchExtension } from '@/editor/search/search-bar';
 import { useSettingsExtension } from '@/editor/settings';
@@ -236,6 +236,7 @@ export function useEditorExtensions(
               RIGHT_CLICK_CONTEXT_MENU,
               navigation(),
               scrollbarsKeepFocus(),
+              scrollKeepsPosition(),
 
               // Escape is not a command to keep it from taking precedence over the popups' own Escape.
               keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),
@@ -283,6 +284,7 @@ export function useEditorExtensions(
               RIGHT_CLICK_CONTEXT_MENU,
               navigation(),
               scrollbarsKeepFocus(),
+              scrollKeepsPosition(),
 
               // Escape is not a command to keep it from taking precedence over the popups' own Escape.
               keymap.of([...standardKeymap, { key: 'Escape', run: simplifySelection }]),

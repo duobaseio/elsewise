@@ -16,6 +16,7 @@ type FileSystem = ConstructorParameters<typeof FileHandle>[0];
  */
 export function fakeFileSystem() {
   const disk = new Map<string, { content: Uint8Array; hash: Uint8Array; binary: boolean }>();
+  const watches: string[][] = [];
   const reads: string[] = [];
   const writes: { relativePath: string; content: string }[] = [];
   const pending: WatchFilesResponse[] = [];
@@ -53,7 +54,9 @@ export function fakeFileSystem() {
       return create(WriteFileResponseSchema, { hash });
     },
     watchFiles: () => ({
-      send: async () => {},
+      send: async ({ relativePaths = [] }) => {
+        watches.push([...relativePaths]);
+      },
       close() {},
       cancel() {
         cancelled = true;
@@ -79,6 +82,7 @@ export function fakeFileSystem() {
 
   return {
     fileSystem,
+    watches,
     reads,
     writes,
     cancelled: () => cancelled,

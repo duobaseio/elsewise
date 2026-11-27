@@ -9,10 +9,10 @@ import {
 } from '@elsewise/components/components/dialog';
 import { Input } from '@elsewise/components/components/input';
 import { Label } from '@elsewise/components/components/label';
-import type { Workspace } from '@elsewise/frontend-plugin';
+import { DEFAULT_COMMANDS, type FileTreeSelection, type Workspace } from '@elsewise/frontend-plugin';
 import { Code, TransportError } from '@elsewise/transport';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
 
@@ -23,10 +23,11 @@ interface NewEntry {
 }
 
 export function NewEntryDialog() {
-  const { fileTree } = useApplicationManager();
+  const { commands, fileTree } = useApplicationManager();
   const client = useQueryClient();
   const [opening, setOpening] = useState(0);
   const [failure, setFailure] = useState<Error | null>(null);
+  const created = useRef<FileTreeSelection | null>(null);
 
   const add = useMutation({
     mutationFn: async ({ workspace, kind, path }: NewEntry) => {
@@ -34,8 +35,10 @@ export function NewEntryDialog() {
       const request = { root: workspace.absolutePath, relativePath: path };
       await (kind === 'file' ? daemon.fileSystem.writeFile(request) : daemon.fileSystem.createDirectory(request));
     },
-    // TODO: Open the new file in its editor.
-    onSuccess: () => fileTree.newDialog.close(),
+    onSuccess: (_, { workspace, kind, path }) => {
+      created.current = kind === 'file' ? { workspace, relativePaths: [path] } : null;
+      fileTree.newDialog.close();
+    },
     onError: (error) => setFailure(error),
   });
 
@@ -46,8 +49,14 @@ export function NewEntryDialog() {
         if (add.isPending && details.reason !== 'imperative-action') {
           details.cancel();
         } else if (next) {
+          created.current = null;
           setFailure(null);
           setOpening((count) => count + 1);
+        }
+      }}
+      onOpenChangeComplete={(open) => {
+        if (!open && created.current !== null) {
+          commands.run(DEFAULT_COMMANDS.fileTree.open.file, created.current);
         }
       }}
     >
@@ -61,6 +70,7 @@ export function NewEntryDialog() {
             name={payload.name}
             pending={add.isPending}
             error={failure}
+            finalFocus={() => created.current === null}
             onCreate={(entry) => {
               setFailure(null);
               add.mutate(entry);
@@ -79,6 +89,7 @@ function NewEntryForm({
   name: initialName,
   pending,
   error,
+  finalFocus,
   onCreate,
 }: {
   workspace: Workspace;
@@ -87,6 +98,7 @@ function NewEntryForm({
   name: string | undefined;
   pending: boolean;
   error: Error | null;
+  finalFocus: () => boolean;
   onCreate: (entry: NewEntry) => void;
 }) {
   const { fileTree } = useApplicationManager();
@@ -101,7 +113,7 @@ function NewEntryForm({
     kind === 'folder' && /^[^.].*\.(?=[A-Za-z0-9]{1,10}$)\d*[A-Za-z]/.test(trimmed.split('/').at(-1) ?? '');
 
   return (
-    <DialogContent className="max-w-md" showCloseButton={false}>
+    <DialogContent className="max-w-md" finalFocus={finalFocus} showCloseButton={false}>
       <form
         className="contents"
         onSubmit={(event) => {

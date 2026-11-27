@@ -84,7 +84,9 @@ export class DockManager implements Dock {
           onChange();
         }
       }),
+      { dispose: application.settings.onFrontendChange(() => this.update()) },
     ];
+    this.update();
   }
 
   // TODO: Drop once dockview can give the space of a group that leaves a row or column to a neighbour.
@@ -283,6 +285,28 @@ export class DockManager implements Dock {
     }
   }
 
+  moveFiles(source: string, destination: string) {
+    for (const panel of this.panels) {
+      if (
+        panel.type === 'file' &&
+        (panel.relativePath === source || (source.endsWith('/') && panel.relativePath.startsWith(source)))
+      ) {
+        const path = destination + panel.relativePath.slice(source.length);
+        const replaced = this.panels.find(
+          (other) => other.type === 'file' && other.id !== panel.id && other.relativePath === path,
+        );
+        if (replaced !== undefined) {
+          this.closeWithSuccessor(replaced);
+        }
+
+        this.dockview.getPanel(panel.id)?.api.updateParameters({ path });
+      }
+    }
+
+    this.application.files.move(this.workspaceId, source, destination);
+    this.update();
+  }
+
   activate(panel: Panel): void {
     const open = this.dockview.getPanel(panel.id);
     if (open === undefined) {
@@ -402,6 +426,20 @@ export class DockManager implements Dock {
       this.changed = true;
     }
 
+    const files = this.panels.filter(
+      (panel): panel is FilePanel => panel.type === 'file' && panel.relativePath !== undefined,
+    );
+    const names = this.application.settings.frontend.workspace.folderPrefix
+      ? uniqueFileNames(files.map((file) => file.relativePath))
+      : null;
+    for (const { id, relativePath } of files) {
+      const open = this.dockview.getPanel(id);
+      const title = names?.get(relativePath) ?? relativePath.slice(relativePath.lastIndexOf('/') + 1);
+      if (open !== undefined && open.title !== title) {
+        open.api.setTitle(title);
+      }
+    }
+
     const active = this.activePanel;
     if (active !== null && active.id !== before) {
       this.application.docks.requestPanelFocus(active.id);
@@ -446,4 +484,36 @@ export class DockManager implements Dock {
       disposable.dispose();
     }
   }
+}
+
+/**
+ * Returns the names of the files at `paths`, by path.
+ */
+export function uniqueFileNames(paths: readonly string[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const [name, same] of Map.groupBy(new Set(paths), (path) => path.slice(path.lastIndexOf('/') + 1))) {
+    for (const [parent, conflicting] of Map.groupBy(same, (path) => path.split('/').at(-2))) {
+      if (same.length === 1 || parent === undefined) {
+        for (const path of conflicting) {
+          names.set(path, name);
+        }
+        continue;
+      }
+
+      const segments = conflicting.map((path) => path.split('/'));
+      let common = 0;
+      while (segments.every((other) => common < other.length - 2 && other[common] === segments[0]?.[common])) {
+        common++;
+      }
+
+      const prefixed = segments.map((other) =>
+        common === other.length - 2 ? `${parent}/${name}` : `${other[common]}/…/${name}`,
+      );
+      for (const [index, path] of conflicting.entries()) {
+        const unique = prefixed.filter((other) => other === prefixed[index]).length === 1;
+        names.set(path, unique ? (prefixed[index] ?? path) : path);
+      }
+    }
+  }
+  return names;
 }

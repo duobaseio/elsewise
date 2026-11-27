@@ -80,4 +80,28 @@ describe('Workspace', () => {
       workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, tabTooltips: false },
     });
   });
+
+  test('saves folder prefix', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Folder prefix' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, folderPrefix: false },
+    });
+  });
+
+  test('saves mark modified tabs', async () => {
+    const save = await mount();
+
+    await userEvent.click(page.getByRole('switch', { name: 'Mark modified tabs' }));
+
+    await expect.poll(() => save.mock.calls.length).toBe(1);
+    expect(save).toHaveBeenCalledWith({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, markModifiedTabs: true },
+    });
+  });
 });

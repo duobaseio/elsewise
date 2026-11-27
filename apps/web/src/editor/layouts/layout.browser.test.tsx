@@ -716,6 +716,22 @@ describe('useEditorExtensions', () => {
       expect(view().dom.querySelector('.cm-toolbar [data-slot="toolbar"]')).not.toBeNull();
     });
   });
+
+  test.each(['workingTree', 'blob'] as const)('keeps scroll position of %s put back in document', async (type) => {
+    const { view } = await mount(type, { code: 'alpha\n'.repeat(500) });
+    const editor = view();
+    const host = editor.dom.parentElement;
+    editor.dom.style.height = '200px';
+    editor.scrollDOM.scrollTo(0, 900);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const top = editor.scrollDOM.scrollTop;
+    expect(top).toBeGreaterThan(0);
+
+    editor.dom.remove();
+    host?.append(editor.dom);
+
+    expect(editor.scrollDOM.scrollTop).toBe(top);
+  });
 });
 
 // Returns a language for files with `extension` whose latest load settles once `load` or `fail` is called.

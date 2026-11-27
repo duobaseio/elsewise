@@ -2,6 +2,7 @@ import { Button } from '@elsewise/components/components/button';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
+import { useQuery } from '@tanstack/react-query';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
@@ -13,7 +14,9 @@ import {
 import { useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { runPanelKeys } from '@/command/keymap/keymap';
+import { daemonQuery } from '@/daemon';
 import type { PanelComponent } from '@/dock/panel-component';
+import { useWorkspace } from '@/projects/workspace-manager';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-dock/draggable-dock';
 import { Panel } from './-dock/panel';
@@ -42,7 +45,17 @@ function WorkspaceRoute() {
     [store, daemon, project, workspace],
   );
 
-  const { docks } = useApplicationManager();
+  const { docks, git } = useApplicationManager();
+  const client = useQuery(daemonQuery(daemon)).data;
+  const root = useWorkspace({ daemon, project, workspace })?.absolutePath;
+  useEffect(() => {
+    if (client === undefined || root === undefined) {
+      return undefined;
+    }
+
+    return git.watch(client.git, { daemon, project, workspace }, root);
+  }, [git, client, daemon, project, workspace, root]);
+
   const key = JSON.stringify([daemon, project, workspace]);
   const [view, setView] = useState<{ key: string; api: DockviewApi } | null>(null);
   useEffect(() => {

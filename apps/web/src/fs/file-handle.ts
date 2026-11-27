@@ -34,14 +34,16 @@ export class FileHandle {
   private monotonic = 0;
   private bom = false;
   private currentState: FileHandleState = { type: 'loading' };
+  private currentRelativePath: string;
   private currentDocument: (() => string) | null = null;
   private disposed = false;
 
   constructor(
     private readonly fs: Client<typeof FileSystemService>,
     readonly root: string,
-    readonly relativePath: string,
+    relativePath: string,
   ) {
+    this.currentRelativePath = relativePath;
     this.watcher = fs.watchFiles();
     void this.watcher.send({ root, relativePaths: [relativePath] }).catch(() => {
       // `listen` reports the stream's failure.
@@ -54,6 +56,10 @@ export class FileHandle {
     try {
       for await (const response of this.watcher.responses) {
         await this.saving;
+        if (response.relativePath !== this.relativePath) {
+          continue;
+        }
+
         if (response.state.case === 'content') {
           if (!sameBytes(response.state.value.hash, this.hash)) {
             await this.load().catch((error: Error) => {
@@ -138,6 +144,17 @@ export class FileHandle {
   }
 
   /**
+   * Changes the file's path to `relativePath`. Does not move the file on disk.
+   */
+  move(relativePath: string): void {
+    this.currentRelativePath = relativePath;
+    void this.watcher.send({ root: this.root, relativePaths: [relativePath] }).catch(() => {
+      // `listen` reports the stream's failure.
+    });
+    this.notify();
+  }
+
+  /**
    * Calls `listener` whenever the state or whether it has a document changes.
    *
    * To stop, call the returned function.
@@ -162,6 +179,10 @@ export class FileHandle {
    */
   get state(): FileHandleState {
     return this.currentState;
+  }
+
+  get relativePath(): string {
+    return this.currentRelativePath;
   }
 
   /**

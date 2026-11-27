@@ -4,7 +4,6 @@ import type { ApplicationManager } from '@/application-manager';
 import type { DockManager } from '@/dock/dock-manager';
 import { fakeFileSystem } from '../../test/fake-file-system';
 import { closeFile } from './close-file';
-import { FileHandle } from './file-handle';
 import { FileHandleStore } from './file-handle-store';
 
 const WORKSPACE = { daemon: 'd', project: 'p', workspace: 'w' };
@@ -14,13 +13,12 @@ const PANEL = { id: 'file:1', type: 'file', tab: true, closable: true, relativeP
 async function open(...actions: Awaited<ReturnType<FileHandleStore['openCloseDialog']>>[]) {
   const fake = fakeFileSystem();
   fake.put('main.ts', 'let a;');
-  const file = new FileHandle(fake.fileSystem, '/repo', 'main.ts');
+  const files = new FileHandleStore();
+  const file = files.open(WORKSPACE, fake.fileSystem, '/repo', 'main.ts');
   fake.report('main.ts');
   await expect.poll(() => file.state.type).toBe('text');
   file.document = () => 'let b;';
 
-  const files = new FileHandleStore();
-  files.add(WORKSPACE, file);
   const asked = vi.spyOn(files, 'openCloseDialog').mockImplementation(async () => actions.shift() ?? 'cancel');
   const application = { files } as ApplicationManager;
   const dock = { workspaceId: WORKSPACE } as DockManager;

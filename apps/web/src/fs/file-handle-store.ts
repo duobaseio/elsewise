@@ -1,7 +1,10 @@
 import { createDialogHandle } from '@elsewise/components/components/dialog';
 import type { WorkspaceId } from '@elsewise/frontend-plugin';
+import type { Client } from '@elsewise/transport';
 import { KeyedMap } from '@/collections/keyed-map';
-import type { FileHandle } from './file-handle';
+import type { FileSystemService } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
+import { sameWorkspace } from '@/projects/workspace-manager';
+import { FileHandle } from './file-handle';
 
 /**
  * A file that could not be saved before its panel closes.
@@ -26,6 +29,7 @@ export class FileHandleStore {
   private readonly handles = new KeyedMap<readonly [WorkspaceId, string], FileHandle>(
     ([{ daemon, project, workspace }, relativePath]) => [daemon, project, workspace, relativePath],
   );
+  private readonly references = new Map<FileHandle, number>();
   private readonly changeListeners = new Set<() => void>();
 
   /**
@@ -63,23 +67,65 @@ export class FileHandleStore {
   }
 
   /**
-   * Adds the handle of a file in `workspace`, in place of another of the same file.
-   *
-   * To remove it, call the returned function.
+   * Returns the handle of the file at `relativePath` in `workspace` at `root`, creating it if it does not already exist.
    */
-  add(workspace: WorkspaceId, handle: FileHandle): () => void {
-    this.handles.set([workspace, handle.relativePath], handle);
+  open(workspace: WorkspaceId, fs: Client<typeof FileSystemService>, root: string, relativePath: string): FileHandle {
+    let handle = this.get(workspace, relativePath);
+    if (handle === null) {
+      handle = new FileHandle(fs, root, relativePath);
+      this.handles.set([workspace, relativePath], handle);
+    }
+
+    this.references.set(handle, (this.references.get(handle) ?? 0) + 1);
     this.notify();
-    return () => {
-      if (this.get(workspace, handle.relativePath) === handle) {
-        this.handles.delete([workspace, handle.relativePath]);
-        this.notify();
-      }
-    };
+    return handle;
   }
 
   /**
-   * Calls `listener` whenever a handle is added or removed.
+   * Closes `handle` in `workspace`, which is disposed after all references are released.
+   */
+  close(workspace: WorkspaceId, handle: FileHandle) {
+    const references = (this.references.get(handle) ?? 0) - 1;
+    if (references > 0) {
+      this.references.set(handle, references);
+      return;
+    }
+
+    this.references.delete(handle);
+    handle.dispose();
+    if (this.get(workspace, handle.relativePath) === handle) {
+      this.handles.delete([workspace, handle.relativePath]);
+    }
+    this.notify();
+  }
+
+  /**
+   * Points the handles at or under `source` in `workspace` to `destination`, replacing the conflicting handles at
+   * the destination.
+   */
+  move(workspace: WorkspaceId, source: string, destination: string) {
+    const moved = [...this.handles].filter(
+      ([[other, path]]) =>
+        sameWorkspace(other, workspace) && (path === source || (source.endsWith('/') && path.startsWith(source))),
+    );
+
+    for (const [key] of moved) {
+      this.handles.delete(key);
+    }
+
+    for (const [[, path], handle] of moved) {
+      const relativePath = destination + path.slice(source.length);
+      this.handles.set([workspace, relativePath], handle);
+      handle.move(relativePath);
+    }
+
+    if (moved.length > 0) {
+      this.notify();
+    }
+  }
+
+  /**
+   * Calls `listener` whenever a handle is opened, closed or moved.
    *
    * To stop, call the returned function.
    */

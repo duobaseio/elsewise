@@ -30,7 +30,7 @@ interface Overwrite {
  * overwrite dialog handle. Each entry starts checked; unchecked ones are left as they are.
  */
 export function OverwriteEntriesDialog() {
-  const { fileTree } = useApplicationManager();
+  const { docks, fileTree } = useApplicationManager();
   const client = useQueryClient();
   const [opening, setOpening] = useState(0);
 
@@ -43,6 +43,7 @@ export function OverwriteEntriesDialog() {
         if (!failures.some((failure) => failure.entry === entry)) {
           const suffix = entry.folder ? '/' : '';
           fileTree.moveClipboardPaths(workspace.id, entry.source + suffix, entry.destination + suffix);
+          docks.moveFiles(workspace.id, entry.source + suffix, entry.destination + suffix);
         }
       }
 
