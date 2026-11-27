@@ -10,19 +10,42 @@ export type Part = 'frontend' | 'daemon';
 
 export interface Entry<Installed extends InstalledPlugin, Running> {
   plugin: Installed | InvalidPlugin;
+
   state:
     | { readonly status: 'disabled' }
     | { readonly status: 'failed' }
     | { readonly status: 'incompatible'; readonly unsatisfied: Unsatisfied }
     | { readonly status: 'enabled'; readonly running?: Running };
+
   /**
    * The plugin's queued enable or disable.
    */
   pending: Promise<void>;
 }
 
+/**
+ * The host the plugins run in.
+ */
+export interface Host {
+  /**
+   * The plugin part the host runs.
+   */
+  readonly part: Part;
+
+  /**
+   * The host's version. If undefined, every plugin is compatible.
+   */
+  readonly version: string | undefined;
+
+  /**
+   * The platform the daemon runs on (e.g. `linux-x64-musl`). If undefined, the resolver does not validate the target.
+   */
+  readonly target: string | undefined;
+}
+
 export type Unsatisfied =
   | { readonly elsewise: string }
+  | { readonly target: string }
   | { readonly dependency: string; readonly cause: 'missing' | 'incompatible' }
   | { readonly cycle: readonly string[] };
 
@@ -31,7 +54,7 @@ export type Unsatisfied =
  */
 export function resolve<Installed extends InstalledPlugin, Running>(
   entries: ReadonlyMap<string, Entry<Installed, Running>>,
-  host: { part: Part; version: string | undefined },
+  host: Host,
 ): {
   graph: DepGraph<undefined>;
   unsatisfied: ReadonlyMap<string, Unsatisfied>;
@@ -66,7 +89,7 @@ export function resolve<Installed extends InstalledPlugin, Running>(
  */
 function compatibleGraph<Installed extends InstalledPlugin, Running>(
   entries: ReadonlyMap<string, Entry<Installed, Running>>,
-  { part, version }: { part: Part; version: string | undefined },
+  { part, version, target }: Host,
 ): {
   graph: DepGraph<undefined>;
   unsatisfied: ReadonlyMap<string, Unsatisfied>;
@@ -82,6 +105,12 @@ function compatibleGraph<Installed extends InstalledPlugin, Running>(
   for (const [id, manifest] of manifests) {
     if (version !== undefined && !satisfies(version, manifest.elsewise)) {
       unsatisfied.set(id, { elsewise: manifest.elsewise });
+      continue;
+    }
+
+    const targets: readonly string[] | undefined = manifest.daemon?.targets;
+    if (target !== undefined && targets !== undefined && !targets.includes(target)) {
+      unsatisfied.set(id, { target });
       continue;
     }
 

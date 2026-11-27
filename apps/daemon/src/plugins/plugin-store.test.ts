@@ -4,6 +4,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { type DataDirectory, dataDirectory } from '../directories';
+import { TARGET } from '../global';
 import { PluginStore } from './plugin-store';
 
 // A main module that records what happens to it, with `enabled` for an enable, through a module it and the test share.
@@ -47,12 +48,14 @@ async function install(
     code = tracked(),
     dependencies,
     elsewise = '^0.1.0',
+    targets,
     version = '1.0.0',
     enabled = true,
   }: {
     code?: string | null;
     dependencies?: Record<string, string>;
     elsewise?: string;
+    targets?: string[];
     version?: string;
     enabled?: boolean;
   } = {},
@@ -65,7 +68,7 @@ async function install(
     version,
     elsewise,
     frontend: {},
-    ...(code !== null && { daemon: { ...(dependencies && { dependencies }) } }),
+    ...(code !== null && { daemon: { ...(dependencies && { dependencies }), ...(targets && { targets }) } }),
   };
   await fs.writeFile(path.join(folder, 'manifest.json'), JSON.stringify(manifest));
   if (code !== null) {
@@ -218,6 +221,26 @@ describe('enableAll', () => {
 
     expect(store.plugins).toMatchObject([{ id: 'a', status: 'incompatible', unsatisfied: { elsewise: '^2.0.0' } }]);
     expect(events).toEqual([]);
+  });
+
+  test('marks plugin whose targets exclude platform incompatible', async () => {
+    await install('a', { targets: [TARGET === 'win32-arm64' ? 'win32-x64' : 'win32-arm64'] });
+    await store.loadAll();
+
+    await store.enableAll({});
+
+    expect(store.plugins).toMatchObject([{ id: 'a', status: 'incompatible', unsatisfied: { target: TARGET } }]);
+    expect(events).toEqual([]);
+  });
+
+  test('enables plugin whose targets include platform', async () => {
+    await install('a', { targets: [TARGET] });
+    await store.loadAll();
+
+    await store.enableAll({});
+
+    expect(status('a')).toBe('enabled');
+    expect(events).toEqual(['enable a']);
   });
 
   test('marks plugin whose dependency is missing incompatible', async () => {

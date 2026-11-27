@@ -83,6 +83,12 @@ that a plugin's frontend can reuse. If you require those modules in your fronten
 `peerDependencies`. Do **NOT** declare them as `dependencies` as that installs a copy of its own, which may cause
 runtime issues.
 
+The daemon part's `main.js` holds only its own code. A package it imports at runtime goes in the `dependencies` of
+`daemon/package.json`, or its `optionalDependencies` when it only installs on some platforms: `build` leaves it as an
+import and links `daemon/node_modules` to `dist/daemon/node_modules`, so the build runs on this machine.
+`devDependencies` are for building only. If a dependency has native code, e.g. `@parcel/watcher`, list the platforms
+the part runs on in `daemon.targets`.
+
 ### Existing pnpm workspace
 
 To put the plugin in an existing pnpm workspace, delete its `pnpm-workspace.yaml` and `pnpm-lock.yaml`, and add the

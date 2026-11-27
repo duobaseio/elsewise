@@ -11,7 +11,8 @@
   "description": "The API for a plugin's daemon part.",
   "sideEffects": false,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./build": "./src/build.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
