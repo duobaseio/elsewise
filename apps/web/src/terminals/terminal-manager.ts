@@ -50,6 +50,7 @@ export class TerminalManager implements Terminals {
   private readonly opening = new KeyedMap<TerminalSessionId, Promise<TerminalEntry | null>>(keyOf);
   private readonly factories = new Set<AddonFactory>();
   private current: TerminalSessionId | null = null;
+  private currentRenaming: TerminalSessionId | null = null;
   private readonly contextMenus = new MenuManager(DEFAULT_CONTEXT_MENU, () => this.notify(), 'Context menu');
 
   constructor(private readonly client: QueryClient) {
@@ -266,6 +267,18 @@ export class TerminalManager implements Terminals {
       this.current = null;
       this.notify();
     }
+  }
+
+  /**
+   * The session whose name is edited in its panel's header.
+   */
+  get renaming(): TerminalSessionId | null {
+    return this.currentRenaming;
+  }
+
+  set renaming(renaming: TerminalSessionId | null) {
+    this.currentRenaming = renaming;
+    this.notify();
   }
 
   /**

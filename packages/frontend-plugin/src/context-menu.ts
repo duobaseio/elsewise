@@ -161,7 +161,7 @@ export const DEFAULT_FILE_TREE_CONTEXT_MENU = {
 } as const;
 
 /**
- * The dock context menu's built-in groups and items.
+ * The dock context menu's built-in groups, submenus and items.
  */
 export const DEFAULT_DOCK_CONTEXT_MENU = {
   close: {
@@ -172,7 +172,54 @@ export const DEFAULT_DOCK_CONTEXT_MENU = {
   split: {
     id: 'io.duobase.elsewise.dock.contextMenu.split',
     order: 20,
-    items: { moveRight: 10, moveDown: 20 },
+    items: {
+      splitAndMove: {
+        id: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove',
+        order: 10,
+        groups: {
+          directions: {
+            id: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove.directions',
+            order: 10,
+            items: { right: 10, down: 20 },
+          },
+        },
+      },
+    },
+  },
+  edit: { id: 'io.duobase.elsewise.dock.contextMenu.edit', order: 30, items: { rename: 10 } },
+  clipboard: {
+    id: 'io.duobase.elsewise.dock.contextMenu.clipboard',
+    order: 40,
+    items: {
+      copyPath: {
+        id: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath',
+        order: 10,
+        groups: {
+          paths: {
+            id: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath.paths',
+            order: 10,
+            items: { absolute: 10, relative: 20 },
+          },
+        },
+      },
+    },
+  },
+  open: {
+    id: 'io.duobase.elsewise.dock.contextMenu.open',
+    order: 50,
+    items: {
+      openIn: {
+        id: 'io.duobase.elsewise.dock.contextMenu.open.openIn',
+        order: 10,
+        groups: {
+          apps: {
+            id: 'io.duobase.elsewise.dock.contextMenu.open.openIn.apps',
+            order: 10,
+            items: { fileManager: 10 },
+          },
+        },
+      },
+    },
   },
 } as const;
 

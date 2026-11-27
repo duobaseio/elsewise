@@ -3,10 +3,10 @@ import { useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 
 /**
- * The field that renames a sidebar row's item from `name`, in place of the row's label.
+ * The field that renames something from `name`, in place of its label.
  *
- * Enter or leaving the field renames it, unless the name is blank or unchanged, and Escape cancels. Enter and Escape
- * move focus back to the row's label.
+ * Enter or leaving the field renames it, unless the name is blank or unchanged, and Escape cancels. In a sidebar row,
+ * Enter and Escape move focus back to the row's label.
  */
 export function NameInput({
   name,

@@ -1,5 +1,5 @@
 import type { Panel } from '@elsewise/frontend-plugin';
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { builtInApplication } from '../../test/commands';
 import { addTerminal, FILE, FILE_TREE, mount as mountDock, TERMINAL, WORKSPACE } from '../../test/dock';
 import {
@@ -8,8 +8,12 @@ import {
   PANEL_CLOSE_LEFT,
   PANEL_CLOSE_OTHERS,
   PANEL_CLOSE_RIGHT,
+  PANEL_FILE_COPY_PATH,
+  PANEL_FILE_COPY_RELATIVE_PATH,
+  PANEL_FILE_OPEN_FILE_MANAGER,
   PANEL_SPLIT_MOVE_DOWN,
   PANEL_SPLIT_MOVE_RIGHT,
+  PANEL_TERMINAL_RENAME,
 } from './commands';
 import { DockManager } from './dock-manager';
 import type { PanelComponent } from './panel-component';
@@ -268,5 +272,103 @@ describe('PANEL_SPLIT_MOVE_DOWN', () => {
         { panels: [tool] },
       ],
     });
+  });
+});
+
+// An application whose shown dock is of a workspace at /p/w on `daemon`, without panels.
+function shown(daemon = 'local') {
+  const application = builtInApplication();
+  application.docks.active = {
+    workspace: { id: { ...WORKSPACE, daemon }, name: 'w', state: 'ok', main: false, absolutePath: '/p/w' },
+    groups: [],
+  } as never;
+  return application;
+}
+
+afterEach(() => {
+  delete window.bridge;
+  vi.restoreAllMocks();
+});
+
+describe('PANEL_FILE_COPY_PATH', () => {
+  test('shows and enables for file only', () => {
+    const application = shown();
+
+    for (const check of [PANEL_FILE_COPY_PATH.shown, PANEL_FILE_COPY_PATH.enabled]) {
+      expect(check?.(application, FILE)).toBe(true);
+      expect(check?.(application, TERMINAL)).toBe(false);
+    }
+  });
+
+  test('copies absolute path of file', () => {
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+
+    expect(PANEL_FILE_COPY_PATH.run(shown(), { ...FILE, relativePath: 'src/a.ts' })).toBe(true);
+
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('/p/w/src/a.ts');
+  });
+});
+
+describe('PANEL_FILE_COPY_RELATIVE_PATH', () => {
+  test('shows and enables for file only', () => {
+    const application = shown();
+
+    for (const check of [PANEL_FILE_COPY_RELATIVE_PATH.shown, PANEL_FILE_COPY_RELATIVE_PATH.enabled]) {
+      expect(check?.(application, FILE)).toBe(true);
+      expect(check?.(application, TERMINAL)).toBe(false);
+    }
+  });
+
+  test('copies path of file from workspace', () => {
+    const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue();
+
+    expect(PANEL_FILE_COPY_RELATIVE_PATH.run(shown(), { ...FILE, relativePath: 'src/a.ts' })).toBe(true);
+
+    expect(writeText).toHaveBeenCalledExactlyOnceWith('src/a.ts');
+  });
+});
+
+describe('PANEL_FILE_OPEN_FILE_MANAGER', () => {
+  test('shows and enables for local file with bridge only', () => {
+    const { shown: isShown, enabled } = PANEL_FILE_OPEN_FILE_MANAGER;
+
+    for (const check of [isShown, enabled]) {
+      expect(check?.(shown(), FILE)).toBe(false);
+    }
+
+    window.bridge = { window: { showPath: async () => {} } } as never;
+    for (const check of [isShown, enabled]) {
+      expect(check?.(shown(), FILE)).toBe(true);
+      expect(check?.(shown(), TERMINAL)).toBe(false);
+      expect(check?.(shown('remote'), FILE)).toBe(false);
+    }
+  });
+
+  test('shows file in file manager', () => {
+    const showPath = vi.fn(async () => {});
+    window.bridge = { window: { showPath } } as never;
+
+    expect(PANEL_FILE_OPEN_FILE_MANAGER.run(shown(), { ...FILE, relativePath: 'src/a.ts' })).toBe(true);
+
+    expect(showPath).toHaveBeenCalledExactlyOnceWith('/p/w/src/a.ts');
+  });
+});
+
+describe('PANEL_TERMINAL_RENAME', () => {
+  test('shows and enables for terminal only', () => {
+    const application = shown();
+
+    for (const check of [PANEL_TERMINAL_RENAME.shown, PANEL_TERMINAL_RENAME.enabled]) {
+      expect(check?.(application, TERMINAL)).toBe(true);
+      expect(check?.(application, FILE)).toBe(false);
+    }
+  });
+
+  test('starts renaming session of terminal', () => {
+    const application = shown();
+
+    expect(PANEL_TERMINAL_RENAME.run(application, TERMINAL)).toBe(true);
+
+    expect(application.terminals.renaming).toEqual(TERMINAL.session);
   });
 });

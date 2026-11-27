@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
+import { FILE_MANAGER } from '@/projects/commands';
 import { ProjectManager } from '@/projects/project-manager';
 import { builtInApplication } from '../../test/commands';
 import {
@@ -245,9 +246,47 @@ describe('addContextMenu', () => {
         id: 'io.duobase.elsewise.dock.contextMenu.split',
         order: 20,
         items: [
-          { order: 10, command: 'elsewise.panel.split.moveRight' },
-          { order: 20, command: 'elsewise.panel.split.moveDown' },
+          { order: 10, label: 'Split and move', submenu: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove' },
         ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove.directions',
+        order: 10,
+        in: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove',
+        items: [
+          { order: 10, label: 'Right', command: 'elsewise.panel.split.moveRight' },
+          { order: 20, label: 'Down', command: 'elsewise.panel.split.moveDown' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.edit',
+        order: 30,
+        items: [{ order: 10, command: 'elsewise.panel.terminal.rename' }],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.clipboard',
+        order: 40,
+        items: [{ order: 10, label: 'Copy path', submenu: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath' }],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath.paths',
+        order: 10,
+        in: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath',
+        items: [
+          { order: 10, label: 'Absolute', command: 'elsewise.panel.file.copyPath' },
+          { order: 20, label: 'From workspace', command: 'elsewise.panel.file.copyRelativePath' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.open',
+        order: 50,
+        items: [{ order: 10, label: 'Open in', submenu: 'io.duobase.elsewise.dock.contextMenu.open.openIn' }],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.open.openIn.apps',
+        order: 10,
+        in: 'io.duobase.elsewise.dock.contextMenu.open.openIn',
+        items: [{ order: 10, label: FILE_MANAGER, command: 'elsewise.panel.file.openFileManager' }],
       },
     ]);
   });
@@ -256,10 +295,10 @@ describe('addContextMenu', () => {
     const { docks } = await applicationOf(false);
 
     const dispose = docks.addContextMenu([{ id: 'example.panels', items: [{ command: 'example.pin' }] }]);
-    expect(docks.contextMenu).toHaveLength(3);
+    expect(docks.contextMenu).toHaveLength(9);
     void dispose();
 
-    expect(docks.contextMenu).toHaveLength(2);
+    expect(docks.contextMenu).toHaveLength(8);
   });
 });
 

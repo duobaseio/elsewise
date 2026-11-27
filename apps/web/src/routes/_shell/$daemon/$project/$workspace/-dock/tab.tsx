@@ -26,7 +26,12 @@ export function Tab(props: IDockviewPanelHeaderProps) {
           <component.header api={props.api} params={props.params} />
         ) : (
           // The tab pads its content, which the menu's trigger covers too.
-          <CommandContextMenu menu={menu} target={{ current: panel }} className="-my-1 box-content h-full py-1">
+          <CommandContextMenu
+            menu={menu}
+            target={{ current: panel }}
+            onClosed={() => {}}
+            className="-my-1 box-content h-full py-1"
+          >
             <component.header api={props.api} params={props.params} />
           </CommandContextMenu>
         ))}

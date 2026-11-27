@@ -1,10 +1,16 @@
+import { DockTabHeader } from '@elsewise/components/components/dock';
+import { Popover, PopoverContent } from '@elsewise/components/components/popover';
 import type { CustomPanelSource } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
+import { useRef } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { ApplicationManagerContext } from '@/application-context';
+import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
+import { NameInput } from '@/components/name-input';
 import { ProjectManager } from '@/projects/project-manager';
+import { useTerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { labels } from '../../../../../../../test/context-menu';
 import { addFile, FILE, showWorkspace, WORKSPACE, workspaceRouter } from '../../../../../../../test/dock';
@@ -21,6 +27,26 @@ const REPORT: CustomPanelSource = {
   header: () => <span>Report header</span>,
   panel: () => <p>Report body</p>,
 };
+
+// A header with a close button, and a field in a popover while a terminal session is renamed, as a terminal's has.
+function RenamedHeader() {
+  const { terminals } = useApplicationManager();
+  const renaming = useTerminalManager((manager) => manager.renaming !== null);
+  const anchor = useRef<HTMLSpanElement>(null);
+  const stop = () => {
+    terminals.renaming = null;
+  };
+  return (
+    <>
+      <DockTabHeader title={<span ref={anchor}>Report header</span>} onClose={() => {}} />
+      <Popover open={renaming}>
+        <PopoverContent anchor={anchor} finalFocus={false} onContextMenu={(event) => event.stopPropagation()}>
+          <NameInput label="Name" name="Report" onCancel={stop} onRename={stop} />
+        </PopoverContent>
+      </Popover>
+    </>
+  );
+}
 
 // An application whose dock shows the workspace, with the file beside the file tree.
 async function mount() {
@@ -111,9 +137,30 @@ describe('Tab', () => {
       'Close to the left',
       'Close to the right',
       '-',
-      'Split and move right',
-      'Split and move down',
+      'Split and move',
+      '-',
+      'Copy path',
     ]);
+  });
+
+  test('lists directions in split and move submenu', async () => {
+    const { dock } = await mount();
+    const { second } = addFiles(dock);
+
+    await userEvent.click(page.getByText('second.ts'), { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem', { name: 'Split and move' }));
+    await userEvent.click(page.getByRole('menuitem', { name: 'Right' }));
+
+    await vi.waitFor(() => expect(dock.groups.find((group) => group.panels.length === 1)?.panels).toEqual([second]));
+  });
+
+  test('omits split and move for lone tab', async () => {
+    await mount();
+
+    await userEvent.click(page.getByText('$workspace.tsx'), { button: 'right' });
+
+    await expect.element(page.getByRole('menu')).toBeVisible();
+    expect(labels()).not.toContain('Split and move');
   });
 
   test('omits close to the left for first tab', async () => {
@@ -172,5 +219,66 @@ describe('Tab', () => {
     const tab = header.closest('.dv-tab')?.getBoundingClientRect();
 
     expect(trigger).toEqual(tab);
+  });
+
+  test('lists file commands for file', async () => {
+    const { dock } = await mount();
+    addFiles(dock);
+
+    await userEvent.click(page.getByText('second.ts'), { button: 'right' });
+
+    await expect.element(page.getByRole('menu')).toBeVisible();
+    await userEvent.click(page.getByRole('menuitem', { name: 'Copy path' }));
+    await expect.element(page.getByRole('menuitem', { name: 'Absolute' })).toBeVisible();
+    await expect.element(page.getByRole('menuitem', { name: 'From workspace' })).toBeVisible();
+    expect(labels()).not.toContain('Rename session…');
+  });
+
+  test('lists terminal commands for terminal', async () => {
+    const { api } = await mount();
+    api.addPanel({
+      id: 'terminal:1',
+      tabComponent: 'terminal',
+      component: 'terminal',
+      title: 'zsh',
+      params: { session: '1' },
+      position: { referencePanel: FILE.id },
+    });
+
+    await userEvent.click(page.getByText('zsh'), { button: 'right' });
+
+    await expect.element(page.getByRole('menu')).toBeVisible();
+    expect(labels()).toContain('Rename session…');
+    expect(labels()).not.toContain('Copy path');
+  });
+
+  test('leaves focus to field that item shows in header, and off close button after it', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, header: RenamedHeader }]);
+    application.commands.add([
+      {
+        id: 'example.rename',
+        label: 'Rename report',
+        scope: 'panel',
+        group: 'elsewise.panel',
+        run: ({ terminals }: ApplicationManager) => {
+          terminals.renaming = { ...WORKSPACE, session: 'any' };
+          return true;
+        },
+      },
+    ]);
+    application.docks.addContextMenu([{ id: 'example.panels', items: [{ command: 'example.rename' }] }]);
+    dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
+
+    await userEvent.click(page.getByText('Report header'), { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem', { name: 'Rename report' }));
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    await expect.element(page.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+
+    await userEvent.keyboard('{Enter}');
+
+    await vi.waitFor(() => expect(page.getByRole('textbox', { name: 'Name' }).elements()).toHaveLength(0));
+    expect(document.activeElement).toBe(document.body);
   });
 });

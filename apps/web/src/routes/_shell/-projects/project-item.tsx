@@ -24,13 +24,13 @@ import { type ReactNode, useId, useMemo, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { runSidebarKeys } from '@/command/keymap/keymap';
+import { NameInput } from '@/components/name-input';
 import type { Project } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useProjectLayout, useUpdateProjectLayout } from '@/projects/layout';
 import { mapProject, useProjectContextMenu, useProjectIcons, useProjectSidebarItems } from '@/projects/project-manager';
 import { useRenaming } from '@/projects/sidebar-store';
 import { workspacesQuery } from '@/projects/workspace-manager';
-import { NameInput } from './name-input';
 import { WorkspaceItem } from './workspace-item';
 
 const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a git repository' } as const;

@@ -7,6 +7,10 @@ import {
   type Panel,
   type PanelCommand,
 } from '@elsewise/frontend-plugin';
+import type { ApplicationManager } from '@/application-manager';
+import { LOCAL_DAEMON_ID } from '@/daemon';
+import { absolutePath } from '@/fs/commands';
+import { FILE_MANAGER } from '@/projects/commands';
 
 export const PANEL_CLOSE: PanelCommand = {
   scope: 'panel',
@@ -92,6 +96,90 @@ export const PANEL_SPLIT_MOVE_DOWN: PanelCommand = {
   run: ({ docks }, panel) => {
     docks.active?.move(panel, { group: 'below', of: panel });
     return docks.active !== null;
+  },
+};
+
+export const PANEL_FILE_COPY_PATH: PanelCommand = {
+  scope: 'panel',
+  id: DEFAULT_COMMANDS.panel.file.copyPath,
+  group: DEFAULT_COMMAND_GROUPS.panel.id,
+  label: 'Copy absolute path',
+  defaultKeys: DEFAULT_KEYS.panel.file.copyPath,
+  shown: (_, panel) => panel.type === 'file',
+  enabled: (_, panel) => panel.type === 'file',
+  run: ({ docks }, panel) => {
+    if (panel.type !== 'file' || docks.active === null) {
+      return false;
+    }
+
+    void navigator.clipboard.writeText(absolutePath(docks.active.workspace, panel.relativePath));
+    return true;
+  },
+};
+
+export const PANEL_FILE_COPY_RELATIVE_PATH: PanelCommand = {
+  scope: 'panel',
+  id: DEFAULT_COMMANDS.panel.file.copyRelativePath,
+  group: DEFAULT_COMMAND_GROUPS.panel.id,
+  label: 'Copy path from workspace',
+  defaultKeys: DEFAULT_KEYS.panel.file.copyRelativePath,
+  shown: (_, panel) => panel.type === 'file',
+  enabled: (_, panel) => panel.type === 'file',
+  run: (_, panel) => {
+    if (panel.type !== 'file') {
+      return false;
+    }
+
+    void navigator.clipboard.writeText(panel.relativePath);
+    return true;
+  },
+};
+
+export const PANEL_FILE_OPEN_FILE_MANAGER: PanelCommand = {
+  scope: 'panel',
+  id: DEFAULT_COMMANDS.panel.file.openFileManager,
+  group: DEFAULT_COMMAND_GROUPS.panel.id,
+  label: `Open in ${FILE_MANAGER}`,
+  defaultKeys: DEFAULT_KEYS.panel.file.openFileManager,
+  shown: ({ docks }, panel) =>
+    panel.type === 'file' &&
+    docks.active?.workspace.id.daemon === LOCAL_DAEMON_ID &&
+    docks.active.workspace.state !== 'missing' &&
+    window.bridge?.window?.showPath !== undefined,
+  enabled: ({ docks }, panel) =>
+    panel.type === 'file' &&
+    docks.active?.workspace.id.daemon === LOCAL_DAEMON_ID &&
+    docks.active.workspace.state !== 'missing' &&
+    window.bridge?.window?.showPath !== undefined,
+  run: ({ docks, platform }: ApplicationManager, panel) => {
+    if (panel.type !== 'file' || docks.active === null) {
+      return false;
+    }
+
+    void platform
+      .showPath(absolutePath(docks.active.workspace, panel.relativePath))
+      .catch((error: Error) =>
+        toast.add({ type: 'error', title: `Opening ${FILE_MANAGER} failed`, description: error.message }),
+      );
+    return true;
+  },
+};
+
+export const PANEL_TERMINAL_RENAME: PanelCommand = {
+  scope: 'panel',
+  id: DEFAULT_COMMANDS.panel.terminal.rename,
+  group: DEFAULT_COMMAND_GROUPS.panel.id,
+  label: 'Rename session…',
+  defaultKeys: DEFAULT_KEYS.panel.terminal.rename,
+  shown: (_, panel) => panel.type === 'terminal',
+  enabled: (_, panel) => panel.type === 'terminal',
+  run: ({ terminals }: ApplicationManager, panel) => {
+    if (panel.type !== 'terminal') {
+      return false;
+    }
+
+    terminals.renaming = panel.session;
+    return true;
   },
 };
 

@@ -200,6 +200,14 @@ export const DEFAULT_COMMANDS = {
       moveRight: 'elsewise.panel.split.moveRight',
       moveDown: 'elsewise.panel.split.moveDown',
     },
+    file: {
+      copyPath: 'elsewise.panel.file.copyPath',
+      copyRelativePath: 'elsewise.panel.file.copyRelativePath',
+      openFileManager: 'elsewise.panel.file.openFileManager',
+    },
+    terminal: {
+      rename: 'elsewise.panel.terminal.rename',
+    },
   },
 } as const;
 
@@ -378,6 +386,14 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     split: {
       moveRight: [],
       moveDown: [],
+    },
+    file: {
+      copyPath: [],
+      copyRelativePath: [],
+      openFileManager: [],
+    },
+    terminal: {
+      rename: [],
     },
   },
 };
