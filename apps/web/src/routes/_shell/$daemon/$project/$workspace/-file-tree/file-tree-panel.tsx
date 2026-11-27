@@ -20,6 +20,8 @@ import { sameWorkspace, useWorkspace } from '@/projects/workspace-manager';
 import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
 
+import { usePanelFocus } from '../-dock/panel';
+
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
 // How close to the tree's top or bottom edge an outside drag scrolls it, and how far per frame at most, as the tree
@@ -49,6 +51,8 @@ export function FileTreePanel(_props: IDockviewPanelProps<{ path: string }>) {
   const dropFromPlatform = usePlatformDrop(model, client, workspace);
   const edgeScroll = useEdgeScroll(model);
   const [dropTarget, setDropTarget] = useState<string>();
+
+  usePanelFocus(() => model.getFileTreeContainer()?.shadowRoot?.querySelector<HTMLElement>('[role="tree"]')?.focus());
 
   const renaming = useFileTreeManager((manager) => manager.renaming);
   useEffect(() => {

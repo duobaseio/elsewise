@@ -33,6 +33,7 @@ export {
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
 export {
+  type CustomPanelHandle,
   type CustomPanelProps,
   type CustomPanelSource,
   DEFAULT_PANEL_SOURCES,

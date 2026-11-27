@@ -1,5 +1,6 @@
 import type { CustomPanelProps, CustomPanelSource } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
+import { useImperativeHandle } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -105,7 +106,38 @@ describe('CustomPanelContent', () => {
     const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
 
     await expect.element(page.getByText('Report body')).toBeVisible();
-    expect(props.at(-1)).toEqual({ application, dock, panel });
+    expect(props.at(-1)).toEqual({ application, dock, panel, ref: expect.any(Object) });
+  });
+
+  test('focuses through handle of panel that becomes active', async () => {
+    const focused = vi.fn();
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([
+      {
+        ...REPORT,
+        panel: ({ ref }) => {
+          useImperativeHandle(ref, () => ({ focus: focused }));
+          return <p>Report body</p>;
+        },
+      },
+    ]);
+
+    dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await vi.waitFor(() => expect(focused).toHaveBeenCalled());
+  });
+
+  test('focuses first focusable element of panel without handle', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, panel: () => <input aria-label="Query" /> }]);
+
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE }, false);
+    await expect.element(page.getByRole('textbox', { name: 'Query' })).toBeVisible();
+    if (panel !== null) {
+      dock.activate(panel);
+    }
+
+    await expect.element(page.getByRole('textbox', { name: 'Query' })).toHaveFocus();
   });
 
   test('renders panel once its source is added', async () => {

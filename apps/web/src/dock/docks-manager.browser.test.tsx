@@ -315,6 +315,67 @@ describe('onContextMenuChange', () => {
   });
 });
 
+describe('requestPanelFocus', () => {
+  test('asks active panel of attached dock', async () => {
+    const application = await applicationOf(true);
+
+    await mountDock((ready) => {
+      ready.getPanel(FILE.id)?.api.setActive();
+      application.docks.attach(WORKSPACE, ready);
+    });
+
+    expect(application.docks.focusRequest?.panel).toBe(FILE.id);
+  });
+
+  test('asks panel that becomes active', async () => {
+    const { docks, attached } = await mount();
+
+    attached.activate(FILE_TREE);
+
+    expect(docks.focusRequest?.panel).toBe(FILE_TREE.id);
+  });
+
+  test('asks panel that becomes active once another closes', async () => {
+    const { docks, attached } = await mount();
+    attached.activate(FILE);
+
+    await attached.close(FILE);
+
+    expect(docks.focusRequest?.panel).toBe(attached.activePanel?.id);
+    expect(attached.activePanel).not.toEqual(FILE);
+  });
+
+  test('asks panel that becomes active once another hides', async () => {
+    const { docks, attached } = await mount();
+    attached.activate(FILE_TREE);
+
+    attached.hide(FILE_TREE);
+
+    expect(attached.activePanel).toEqual(FILE);
+    expect(docks.focusRequest?.panel).toBe(FILE.id);
+  });
+
+  test('asks active panel again when it is activated', async () => {
+    const { docks, attached } = await mount();
+    attached.activate(FILE);
+    const before = docks.focusRequest;
+
+    attached.activate(FILE);
+
+    expect(docks.focusRequest).toEqual({ panel: FILE.id, monotonic: (before?.monotonic ?? 0) + 1 });
+  });
+
+  test('reports request', async () => {
+    const { docks } = await mount();
+    const changed = vi.fn();
+    docks.onFocusRequestChange(changed);
+
+    docks.requestPanelFocus(FILE.id);
+
+    expect(changed).toHaveBeenCalledOnce();
+  });
+});
+
 describe('closeSourcelessPanels', () => {
   test('closes panels whose source was not added', async () => {
     const { docks, attached, api } = await mount();

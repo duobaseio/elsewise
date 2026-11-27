@@ -77,27 +77,26 @@ async function mount({ client, manager }: ReturnType<typeof setUp>, layout?: unk
     routeTree: root.addChildren([shell.addChildren([workspace])]),
     history: createMemoryHistory({ initialEntries: [`/${LOCAL_DAEMON_ID}/elsewise/singapore`] }),
   });
+  const application = builtInApplication({
+    router,
+    terminals: manager,
+    panelComponents: stubComponents({
+      fileTree: { header: FileTreeHeader },
+      file: { header: FileHeader },
+      terminal: { header: TerminalHeader, panel: TerminalPanel },
+    }),
+  });
   const screen = await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <ApplicationManagerContext
-          value={builtInApplication({
-            router,
-            terminals: manager,
-            panelComponents: stubComponents({
-              fileTree: { header: FileTreeHeader },
-              file: { header: FileHeader },
-              terminal: { header: TerminalHeader, panel: TerminalPanel },
-            }),
-          })}
-        >
+        <ApplicationManagerContext value={application}>
           <RouterProvider router={router} />
         </ApplicationManagerContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => api).toBeDefined();
-  return { api: api as DockviewApi, unmount: () => screen.unmount() };
+  return { api: api as DockviewApi, application, unmount: () => screen.unmount() };
 }
 
 // Adds tokyo-1 to Singapore and shows it.
@@ -202,6 +201,16 @@ test('opens rename popover below tab from its left edge', async () => {
     expect(popover.left).toBeCloseTo(tab.getBoundingClientRect().left, 0);
     expect(popover.top).toBeGreaterThanOrEqual(tab.getBoundingClientRect().bottom);
   });
+});
+
+test('focuses terminal when its panel is asked', async () => {
+  const setup = setUp();
+  const { api, application } = await mount(setup);
+  await show(setup, api);
+
+  application.docks.requestPanelFocus('terminal:tokyo-1');
+
+  await vi.waitFor(() => expect(document.activeElement?.classList.contains('xterm-helper-textarea')).toBe(true));
 });
 
 test('keeps terminal across remount', async () => {

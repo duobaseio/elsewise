@@ -32,7 +32,11 @@ export function Tab(props: IDockviewPanelHeaderProps) {
             onClosed={() => {}}
             className="-my-1 box-content h-full py-1"
           >
-            <component.header api={props.api} params={props.params} />
+            {/* biome-ignore lint/a11y/noStaticElementInteractions: a click on the tab selects it, which dockview does. */}
+            {/* biome-ignore lint/a11y/useKeyWithClickEvents: as above. */}
+            <div className="contents" onClick={() => docks.requestPanelFocus(props.api.id)}>
+              <component.header api={props.api} params={props.params} />
+            </div>
           </CommandContextMenu>
         ))}
     </>

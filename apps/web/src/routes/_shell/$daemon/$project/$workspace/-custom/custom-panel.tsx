@@ -1,8 +1,10 @@
+import type { CustomPanelHandle } from '@elsewise/frontend-plugin';
 import type { IDockviewPanelHeaderProps, IDockviewPanelProps } from 'dockview-react';
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { isCustomPanel } from '@/dock/dock-store';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
+import { usePanelFocus } from '../-dock/panel';
 
 /**
  * A custom panel's header, which renders the header of the panel's source once that source is added.
@@ -24,11 +26,13 @@ export function CustomHeader(props: Pick<IDockviewPanelHeaderProps, 'api'>) {
  */
 export function CustomPanelContent(props: IDockviewPanelProps) {
   const custom = useCustomPanel(props.api.id);
+  const handle = useRef<CustomPanelHandle>(null);
+  usePanelFocus(custom === null ? null : () => handle.current?.focus());
 
   return (
     custom && (
       <PluginBoundary name={`Panel of panel source ${custom.source.id}`}>
-        <custom.source.panel application={custom.application} dock={custom.dock} panel={custom.panel} />
+        <custom.source.panel application={custom.application} dock={custom.dock} panel={custom.panel} ref={handle} />
       </PluginBoundary>
     )
   );

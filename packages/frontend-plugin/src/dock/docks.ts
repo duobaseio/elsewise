@@ -1,5 +1,5 @@
 import type { Disposable } from '@elsewise/plugin';
-import type { ComponentType } from 'react';
+import type { ComponentType, Ref } from 'react';
 import type { ContextMenuGroup } from '../context-menu';
 import type { Application } from '../plugin';
 import type { Workspace } from '../projects/workspaces';
@@ -219,8 +219,19 @@ export interface CustomPanelSource {
 
   /**
    * The panel.
+   *
+   * When the panel is focused, the dock calls the handle's `focus`. Without a handle, the panel's first focusable element
+   * takes the focus.
+   *
+   * ```tsx
+   * panel: ({ ref }) => {
+   *   const field = useRef<HTMLTextAreaElement>(null);
+   *   useImperativeHandle(ref, () => ({ focus: () => field.current?.focus() }));
+   *   return <textarea ref={field} />;
+   * }
+   * ```
    */
-  readonly panel: ComponentType<CustomPanelProps>;
+  readonly panel: ComponentType<CustomPanelProps & { readonly ref?: Ref<CustomPanelHandle> }>;
 
   /**
    * Called before `panel` closes. Returns false if the panel stays open.
@@ -244,4 +255,14 @@ export interface CustomPanelProps {
   readonly dock: Dock;
 
   readonly panel: CustomPanel;
+}
+
+/**
+ * The functions that the dock calls on a custom panel.
+ */
+export interface CustomPanelHandle {
+  /**
+   * Focuses what the panel shows, e.g. its editor.
+   */
+  focus(): void;
 }

@@ -1,5 +1,6 @@
 import { DockTabHeader } from '@elsewise/components/components/dock';
 import { Popover, PopoverContent } from '@elsewise/components/components/popover';
+import { PLATFORM } from '@elsewise/components/lib/platform';
 import type { CustomPanelSource } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
 import { useRef } from 'react';
@@ -27,6 +28,8 @@ const REPORT: CustomPanelSource = {
   header: () => <span>Report header</span>,
   panel: () => <p>Report body</p>,
 };
+
+const CLOSE_PANEL = PLATFORM === 'mac' ? '{Meta>}w{/Meta}' : '{Control>}{F4}{/Control}';
 
 // A header with a close button, and a field in a popover while a terminal session is renamed, as a terminal's has.
 function RenamedHeader() {
@@ -280,5 +283,42 @@ describe('Tab', () => {
 
     await vi.waitFor(() => expect(page.getByRole('textbox', { name: 'Name' }).elements()).toHaveLength(0));
     expect(document.activeElement).toBe(document.body);
+  });
+
+  test('asks panel of clicked tab to take focus', async () => {
+    const { application, dock } = await mount();
+    const { second } = addFiles(dock);
+
+    await userEvent.click(page.getByText('second.ts'));
+
+    expect(dock.activePanel).toEqual(second);
+    expect(application.docks.focusRequest?.panel).toBe(second.id);
+  });
+
+  test('asks panel of clicked tab that is active to take focus', async () => {
+    const { application, dock } = await mount();
+    addFiles(dock);
+    const before = application.docks.focusRequest?.monotonic ?? 0;
+
+    await userEvent.click(page.getByText('$workspace.tsx'));
+
+    expect(application.docks.focusRequest?.panel).toBe(FILE.id);
+    expect(application.docks.focusRequest?.monotonic).toBeGreaterThan(before);
+  });
+
+  test('closes tabs in a row by key', async () => {
+    const { api, dock } = await mount();
+    addFiles(dock);
+    for (const panel of api.panels) {
+      panel.view.content.element.querySelector('div')?.append(document.createElement('button'));
+    }
+    const files = () => dock.panels.filter((panel) => panel.type === 'file');
+    await userEvent.click(page.getByText('third.ts'));
+
+    await userEvent.keyboard(CLOSE_PANEL);
+    await vi.waitFor(() => expect(files()).toHaveLength(2));
+    await userEvent.keyboard(CLOSE_PANEL);
+
+    await vi.waitFor(() => expect(files()).toHaveLength(1));
   });
 });

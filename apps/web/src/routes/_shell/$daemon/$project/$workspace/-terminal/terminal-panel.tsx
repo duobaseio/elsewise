@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { Terminal } from '@/terminals/terminal';
 
+import { usePanelFocus } from '../-dock/panel';
+
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
 export function TerminalPanel(props: IDockviewPanelProps<{ session?: string }>) {
@@ -52,6 +54,8 @@ export function TerminalPanel(props: IDockviewPanelProps<{ session?: string }>) 
       void subscription();
     };
   }, [terminals, daemon, project, workspace, session, failure, props.api]);
+
+  usePanelFocus(view === null ? null : () => view.terminal.focus());
 
   if (failure !== null) {
     return (

@@ -87,12 +87,6 @@ export class DockManager implements Dock {
     ];
   }
 
-  private update() {
-    if (this.store.update()) {
-      this.changed = true;
-    }
-  }
-
   // TODO: Drop once dockview can give the space of a group that leaves a row or column to a neighbour.
   // Disclaimer: This method is AI generated. It is throwaway code until we have proper sizing on removal working in
   // upstream.
@@ -295,9 +289,14 @@ export class DockManager implements Dock {
       return;
     }
 
+    // A panel that becomes the active one is asked to take the focus as the dock updates.
+    const active = this.activePanel?.id === panel.id;
     open.group.api.setVisible(true);
     open.api.setActive();
     this.update();
+    if (active) {
+      this.application.docks.requestPanelFocus(panel.id);
+    }
   }
 
   show(panel: Panel): void {
@@ -369,6 +368,18 @@ export class DockManager implements Dock {
       }
     }
     this.update();
+  }
+
+  private update() {
+    const before = this.activePanel?.id;
+    if (this.store.update()) {
+      this.changed = true;
+    }
+
+    const active = this.activePanel;
+    if (active !== null && active.id !== before) {
+      this.application.docks.requestPanelFocus(active.id);
+    }
   }
 
   get workspace(): Workspace {
