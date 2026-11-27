@@ -233,8 +233,8 @@ describe('Tab', () => {
 
     await expect.element(page.getByRole('menu')).toBeVisible();
     await userEvent.click(page.getByRole('menuitem', { name: 'Copy path' }));
-    await expect.element(page.getByRole('menuitem', { name: 'Absolute' })).toBeVisible();
-    await expect.element(page.getByRole('menuitem', { name: 'From workspace' })).toBeVisible();
+    await expect.element(page.getByRole('menuitem', { name: 'Absolute ⇧⌘C' })).toBeVisible();
+    await expect.element(page.getByRole('menuitem', { name: 'From workspace ⌥⇧⌘C' })).toBeVisible();
     expect(labels()).not.toContain('Rename session…');
   });
 
