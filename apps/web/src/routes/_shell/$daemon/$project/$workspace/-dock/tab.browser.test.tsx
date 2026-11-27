@@ -51,7 +51,7 @@ function RenamedHeader() {
   );
 }
 
-// An application whose dock shows the workspace, with the file beside the file tree.
+// An application whose dock shows the workspace, with the file beside the file tree, and a field outside the dock.
 async function mount() {
   const { client, router } = workspaceRouter();
   const application = builtInApplication({ router, projects: new ProjectManager(client, router) });
@@ -61,6 +61,7 @@ async function mount() {
   let api: DockviewApi | undefined;
   await render(
     <ApplicationManagerContext value={application}>
+      <input aria-label="Outside" />
       <div className="dockview-theme-elsewise" style={{ width: 1100, height: 700 }}>
         <WorkspaceDock
           onDockviewReady={(ready) => {
@@ -422,5 +423,55 @@ describe('Tab', () => {
     await userEvent.hover(page.getByText('Report header'));
 
     await expect.element(page.getByText('Report tooltip')).toBeVisible();
+  });
+
+  // Adds a field to the content of each file's panel, labelled with the file's name, once the contents are rendered.
+  async function addFields(api: DockviewApi) {
+    const files = () => api.panels.filter((panel) => panel.id.startsWith('file:'));
+    const contents = () => files().map((panel) => panel.view.content.element.querySelector('div'));
+    await vi.waitFor(() => expect(contents()).not.toContain(null));
+    for (const [index, content] of contents().entries()) {
+      const field = document.createElement('input');
+      field.setAttribute('aria-label', files()[index]?.title ?? '');
+      content?.append(field);
+    }
+  }
+
+  test('restores focus outside dock once context menu is dismissed', async () => {
+    const { dock } = await mount();
+    addFiles(dock);
+    await userEvent.click(page.getByRole('textbox', { name: 'Outside' }));
+
+    await userEvent.click(page.getByText('second.ts'), { button: 'right' });
+    await expect.element(page.getByRole('menu')).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+
+    await expect.element(page.getByRole('textbox', { name: 'Outside' })).toHaveFocus();
+  });
+
+  test('restores focus in panel once context menu is dismissed', async () => {
+    const { api, dock } = await mount();
+    addFiles(dock);
+    await addFields(api);
+    await userEvent.click(page.getByRole('textbox', { name: '$workspace.tsx' }));
+
+    await userEvent.click(page.getByText('second.ts'), { button: 'right' });
+    await expect.element(page.getByRole('menu')).toBeVisible();
+    await userEvent.keyboard('{Escape}');
+
+    await expect.element(page.getByRole('textbox', { name: '$workspace.tsx' })).toHaveFocus();
+  });
+
+  test('leaves focus to new active panel when item closes focused panel', async () => {
+    const { api, dock } = await mount();
+    addFiles(dock);
+    await addFields(api);
+    await userEvent.click(page.getByRole('textbox', { name: '$workspace.tsx' }));
+
+    await userEvent.click(page.getByText('$workspace.tsx'), { button: 'right' });
+    await userEvent.click(page.getByRole('menuitem').first());
+
+    await vi.waitFor(() => expect(dock.get(FILE.id)).toBeNull());
+    await expect.element(page.getByRole('textbox', { name: 'second.ts' })).toHaveFocus();
   });
 });

@@ -16,10 +16,13 @@ export function Tab(props: IDockviewPanelHeaderProps) {
   const subscribe = useCallback((listener: () => void) => docks.onChange(listener), [docks]);
   const panel = useSyncExternalStore(subscribe, () => docks.active?.get(props.api.id) ?? null);
   const menu = useDockContextMenu();
+
   const [tooltip, setTooltip] = useState<{ open: boolean; content: ReactNode }>({ open: false, content: null });
   const trigger = useRef<HTMLDivElement>(null);
+
   const type = props.api.tabComponent;
   const component = docks.panelComponents.find((other) => other.type === type);
+  const previous = useRef<Element | null>(null);
 
   return (
     <>
@@ -54,8 +57,24 @@ export function Tab(props: IDockviewPanelHeaderProps) {
             <CommandContextMenu
               menu={menu}
               target={{ current: panel }}
-              onClosed={() => {}}
-              render={<TooltipTrigger delay={600} render={<div ref={trigger} />} />}
+              onClosed={() => {
+                if (previous.current instanceof HTMLElement && previous.current.isConnected) {
+                  previous.current.focus();
+                }
+              }}
+              render={
+                <TooltipTrigger
+                  delay={600}
+                  render={
+                    <div
+                      onPointerDownCapture={() => {
+                        previous.current = document.activeElement;
+                      }}
+                      ref={trigger}
+                    />
+                  }
+                />
+              }
               className="-my-1 box-content h-full py-1"
             >
               {/* biome-ignore lint/a11y/noStaticElementInteractions: a click on the tab selects it, which dockview does. */}
