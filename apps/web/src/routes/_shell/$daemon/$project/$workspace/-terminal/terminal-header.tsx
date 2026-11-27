@@ -3,12 +3,15 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Kbd } from '@elsewise/components/components/kbd';
 import { Popover, PopoverContent, PopoverTitle } from '@elsewise/components/components/popover';
 import { toast } from '@elsewise/components/components/toast';
+import type { Panel } from '@elsewise/frontend-plugin';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
-import { useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import { NameInput } from '@/components/name-input';
-import { useTerminalManager } from '@/terminals/terminal-manager';
+import type { DockManager } from '@/dock/dock-manager';
+import { sameSession, useTerminalManager } from '@/terminals/terminal-manager';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
@@ -25,11 +28,7 @@ export function TerminalHeader(props: Pick<IDockviewPanelHeaderProps<{ session?:
   );
   const renaming = useTerminalManager(
     ({ renaming }) =>
-      renaming !== null &&
-      renaming.daemon === daemon &&
-      renaming.project === project &&
-      renaming.workspace === workspace &&
-      renaming.session === session,
+      session !== undefined && sameSession(renaming ?? undefined, { daemon, project, workspace, session }),
   );
   const title = useRef<HTMLSpanElement>(null);
 
@@ -105,5 +104,17 @@ export function TerminalHeader(props: Pick<IDockviewPanelHeaderProps<{ session?:
         </Popover>
       )}
     </>
+  );
+}
+
+export function terminalTooltip({ terminals }: ApplicationManager, _dock: DockManager, panel: Panel): ReactNode | null {
+  if (panel.type !== 'terminal') {
+    return null;
+  }
+
+  const { renaming } = terminals;
+  const name = terminals.get(panel.session)?.session.name;
+  return name === undefined || sameSession(renaming ?? undefined, panel.session) ? null : (
+    <span className="whitespace-nowrap">{name}</span>
   );
 }

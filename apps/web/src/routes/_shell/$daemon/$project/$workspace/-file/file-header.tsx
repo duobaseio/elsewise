@@ -1,9 +1,13 @@
 import { DockTabHeader } from '@elsewise/components/components/dock';
 import { FileIcon } from '@elsewise/components/components/file-icon';
+import type { Panel } from '@elsewise/frontend-plugin';
 import { getRouteApi } from '@tanstack/react-router';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
-import { useCallback, useSyncExternalStore } from 'react';
+import { type ReactNode, useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
+import type { DockManager } from '@/dock/dock-manager';
+import { absolutePath } from '@/fs/commands';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
@@ -34,5 +38,18 @@ export function FileHeader(props: Pick<IDockviewPanelHeaderProps<{ path: string 
         }
       }}
     />
+  );
+}
+
+export function fileTooltip({ projects }: ApplicationManager, _dock: DockManager, panel: Panel): ReactNode | null {
+  if (panel.type !== 'file') {
+    return null;
+  }
+
+  const workspace = projects.workspaces.active;
+  return (
+    <span className="whitespace-nowrap">
+      {workspace === null ? panel.relativePath : absolutePath(workspace, panel.relativePath)}
+    </span>
   );
 }

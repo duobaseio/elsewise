@@ -16,7 +16,7 @@ import type { ApplicationManager } from '@/application-manager';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
-import { TerminalHeader } from './terminal-header';
+import { TerminalHeader, terminalTooltip } from './terminal-header';
 
 const SESSION = { daemon: 'local', project: 'elsewise', workspace: 'singapore', session: 'a' };
 
@@ -168,5 +168,38 @@ describe('TerminalHeader', () => {
     await userEvent.keyboard('dev server{Enter}');
 
     expect(renamed).toHaveBeenCalledExactlyOnceWith(SESSION, 'dev server');
+  });
+});
+
+describe('terminalTooltip', () => {
+  const PANEL = {
+    id: 'terminal:a',
+    type: 'terminal',
+    tab: true,
+    closable: true,
+    session: SESSION,
+    closeConfirmation: false,
+  } as const;
+
+  test('returns name of session', async () => {
+    const application = builtInApplication();
+    vi.spyOn(application.terminals, 'get').mockReturnValue({ session: { name: 'Build' } } as never);
+
+    await render(terminalTooltip(application, {} as never, PANEL));
+
+    await expect.element(page.getByText('Build', { exact: true })).toBeVisible();
+  });
+
+  test('returns none while session is renamed', () => {
+    const application = builtInApplication();
+    vi.spyOn(application.terminals, 'get').mockReturnValue({ session: { name: 'Build' } } as never);
+
+    application.terminals.renaming = SESSION;
+
+    expect(terminalTooltip(application, {} as never, PANEL)).toBeNull();
+  });
+
+  test('returns none for session that is not loaded', () => {
+    expect(terminalTooltip(builtInApplication(), {} as never, PANEL)).toBeNull();
   });
 });

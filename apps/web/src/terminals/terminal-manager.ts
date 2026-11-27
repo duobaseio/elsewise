@@ -366,6 +366,17 @@ export class TerminalManager implements Terminals {
   }
 }
 
+export function sameSession(a: TerminalSessionId | undefined, b: TerminalSessionId | undefined): boolean {
+  return (
+    a !== undefined &&
+    b !== undefined &&
+    a.daemon === b.daemon &&
+    a.project === b.project &&
+    a.workspace === b.workspace &&
+    a.session === b.session
+  );
+}
+
 export function useTerminalManager(): TerminalManager;
 export function useTerminalManager<T>(select: (terminal: TerminalManager) => T): T;
 export function useTerminalManager<T>(select?: (terminal: TerminalManager) => T): TerminalManager | T {

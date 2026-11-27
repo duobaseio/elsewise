@@ -1,5 +1,5 @@
 import type { Disposable } from '@elsewise/plugin';
-import type { ComponentType, Ref } from 'react';
+import type { ComponentType, ReactNode, Ref } from 'react';
 import type { ContextMenuGroup } from '../context-menu';
 import type { Application } from '../plugin';
 import type { Workspace } from '../projects/workspaces';
@@ -216,6 +216,13 @@ export interface CustomPanelSource {
    * The panel's header, e.g. its icon and title, in the tab bar and overflow menu.
    */
   readonly header: ComponentType<CustomPanelProps>;
+
+  /**
+   * Returns the tooltip shown below the panel's header in the tab bar, e.g. a file's path, or null for none.
+   *
+   * Called each time the tooltip is about to open. Defaults to none.
+   */
+  tooltip?(application: Application, dock: Dock, panel: CustomPanel): ReactNode | null;
 
   /**
    * The panel.

@@ -1,7 +1,11 @@
 import { DockTabHeader } from '@elsewise/components/components/dock';
 import type { IDockviewPanelHeaderProps } from 'dockview-react';
 import type { PanelComponent } from '@/dock/panel-component';
-import { CustomHeader, CustomPanelContent } from '@/routes/_shell/$daemon/$project/$workspace/-custom/custom-panel';
+import {
+  CustomHeader,
+  CustomPanelContent,
+  customTooltip,
+} from '@/routes/_shell/$daemon/$project/$workspace/-custom/custom-panel';
 import { Placeholder, PlaceholderHeader } from '@/routes/_shell/$daemon/$project/$workspace/-placeholder/placeholder';
 
 // Minimal stand-ins for the dock's panels and headers. Tests exercise the dock's chrome and policies, not panel content —
@@ -24,7 +28,7 @@ export const STUB_COMPONENTS: readonly PanelComponent[] = [
     header: () => <span className="px-2 text-base">Files</span>,
     panel: () => <p className="p-2 text-base text-text-3">tree stub</p>,
   },
-  { type: 'custom', header: CustomHeader, panel: CustomPanelContent },
+  { type: 'custom', header: CustomHeader, tooltip: customTooltip, panel: CustomPanelContent },
 ];
 
 function StubHeader(props: Pick<IDockviewPanelHeaderProps, 'api'>) {

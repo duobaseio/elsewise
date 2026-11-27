@@ -9,6 +9,7 @@ import '@/routes/_shell/dockview.css';
 import { ApplicationManagerContext } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { ProjectManager } from '@/projects/project-manager';
+import { fileTooltip } from '@/routes/_shell/$daemon/$project/$workspace/-file/file-header';
 import { FileTreeHeader } from '@/routes/_shell/$daemon/$project/$workspace/-file-tree/file-tree-header';
 import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../../commands';
@@ -26,6 +27,7 @@ async function mount(
     router,
     projects: new ProjectManager(client, router),
     panelComponents: stubComponents({
+      file: { tooltip: fileTooltip },
       fileTree: { header: FileTreeHeader },
     }),
   });
@@ -225,6 +227,20 @@ test.each(THEMES)('workspace dock context menu of file (%s)', async (theme) => {
   await expect.element(page.getByRole('menuitem').first()).toBeVisible();
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-context-menu-file-${theme}`);
+});
+
+test.each(THEMES)('workspace dock tab tooltip (%s)', async (theme) => {
+  // The tooltip is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  await mount(theme);
+
+  await userEvent.hover(page.getByText('$workspace.tsx'));
+  await expect.element(page.getByText(/^\/.*\$workspace\.tsx$/)).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-tooltip-${theme}`);
 });
 
 test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {

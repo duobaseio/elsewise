@@ -13,7 +13,7 @@ import { ApplicationManagerContext } from '@/application-context';
 import { FileHandle } from '@/fs/file-handle';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { fakeFileSystem } from '../../../../../../../test/fake-file-system';
-import { FileHeader } from './file-header';
+import { FileHeader, fileTooltip } from './file-header';
 
 const WORKSPACE = { daemon: 'local', project: 'elsewise', workspace: 'singapore' };
 
@@ -96,5 +96,30 @@ describe('FileHeader', () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(marked()).toBe(false);
+  });
+});
+
+describe('fileTooltip', () => {
+  test('returns absolute path', async () => {
+    const application = builtInApplication();
+    vi.spyOn(application.projects.workspaces, 'active', 'get').mockReturnValue({
+      id: WORKSPACE,
+      name: 'singapore',
+      state: 'ok',
+      main: false,
+      absolutePath: '/home/elsewise',
+    });
+
+    await render(
+      fileTooltip(application, {} as never, {
+        id: 'file:1',
+        type: 'file',
+        tab: true,
+        closable: true,
+        relativePath: 'src/main.ts',
+      }),
+    );
+
+    await expect.element(page.getByText('/home/elsewise/src/main.ts', { exact: true })).toBeVisible();
   });
 });

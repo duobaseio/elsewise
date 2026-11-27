@@ -323,4 +323,104 @@ describe('Tab', () => {
 
     await vi.waitFor(() => expect(files()).toHaveLength(1));
   });
+
+  // Adds the report, with a tooltip, after the file, and hovers its tab.
+  async function hoverReport({ application, dock }: Awaited<ReturnType<typeof mount>>, header = REPORT.header) {
+    application.docks.addPanelSources([{ ...REPORT, header, tooltip: () => <span>Report tooltip</span> }]);
+    dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
+    await userEvent.hover(page.getByText('Report header'));
+  }
+
+  test('shows tooltip below tab from its left edge', async () => {
+    await hoverReport(await mount());
+
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+    const tab = page.getByText('Report header').element().closest('.dv-tab') as HTMLElement;
+    await vi.waitFor(() => {
+      const tooltip = (document.querySelector('[data-slot="tooltip-content"]') as HTMLElement).getBoundingClientRect();
+      expect(tooltip.left).toBeCloseTo(tab.getBoundingClientRect().left, 0);
+      expect(tooltip.top).toBeGreaterThanOrEqual(tab.getBoundingClientRect().bottom);
+    });
+  });
+
+  test('shows no tooltip for component without one', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([REPORT]);
+    dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
+
+    await userEvent.hover(page.getByText('Report header'));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
+  });
+
+  test('closes tooltip of clicked tab', async () => {
+    await hoverReport(await mount());
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+
+    await userEvent.click(page.getByText('Report header'));
+
+    await vi.waitFor(() => expect(page.getByText('Report tooltip').elements()).toHaveLength(0));
+  });
+
+  test('closes tooltip once context menu opens', async () => {
+    await hoverReport(await mount());
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+
+    await userEvent.click(page.getByText('Report header'), { button: 'right' });
+
+    await expect.element(page.getByRole('menu')).toBeVisible();
+    await vi.waitFor(() => expect(page.getByText('Report tooltip').elements()).toHaveLength(0));
+  });
+
+  test('shows no tooltip while source returns none', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, tooltip: () => null }]);
+    dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
+
+    await userEvent.hover(page.getByText('Report header'));
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
+  });
+
+  test('closes tooltip once popover of header takes focus', async () => {
+    const mounted = await mount();
+    await hoverReport(mounted, RenamedHeader);
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+
+    mounted.application.terminals.renaming = { ...WORKSPACE, session: 'any' };
+
+    await expect.element(page.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+    await vi.waitFor(() => expect(page.getByText('Report tooltip').elements()).toHaveLength(0));
+  });
+
+  test('shows no tooltip when popover of header takes focus', async () => {
+    const mounted = await mount();
+    mounted.application.docks.addPanelSources([
+      { ...REPORT, header: RenamedHeader, tooltip: () => <span>Report tooltip</span> },
+    ]);
+    mounted.dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
+    await expect.element(page.getByText('Report header')).toBeVisible();
+
+    mounted.application.terminals.renaming = { ...WORKSPACE, session: 'any' };
+    await expect.element(page.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    expect(page.getByText('Report tooltip').elements()).toHaveLength(0);
+  });
+
+  test('shows tooltip again after popover of header closes', async () => {
+    const mounted = await mount();
+    await hoverReport(mounted, RenamedHeader);
+    mounted.application.terminals.renaming = { ...WORKSPACE, session: 'any' };
+    await expect.element(page.getByRole('textbox', { name: 'Name' })).toHaveFocus();
+    await userEvent.keyboard('{Escape}');
+    await vi.waitFor(() => expect(page.getByRole('textbox', { name: 'Name' }).elements()).toHaveLength(0));
+
+    await userEvent.hover(page.getByText('Report body'));
+    await userEvent.hover(page.getByText('Report header'));
+
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+  });
 });

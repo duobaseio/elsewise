@@ -30,6 +30,7 @@ export function TooltipContent({
   sideOffset = 4,
   align = 'center',
   alignOffset = 0,
+  anchor,
   container,
   children,
   ...props
@@ -38,12 +39,13 @@ export function TooltipContent({
   // target is the wrong one: a themed subtree, or a stacking context the popup
   // has to stay inside.
   Pick<TooltipPrimitive.Portal.Props, 'container'> &
-  Pick<TooltipPrimitive.Positioner.Props, 'align' | 'alignOffset' | 'side' | 'sideOffset'>) {
+  Pick<TooltipPrimitive.Positioner.Props, 'align' | 'alignOffset' | 'anchor' | 'side' | 'sideOffset'>) {
   return (
     <TooltipPrimitive.Portal container={container}>
       <TooltipPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
+        anchor={anchor}
         side={side}
         sideOffset={sideOffset}
         className="isolate z-50"

@@ -2,7 +2,7 @@ import type { CustomPanelProps, CustomPanelSource } from '@elsewise/frontend-plu
 import type { DockviewApi } from 'dockview-react';
 import { useImperativeHandle } from 'react';
 import { describe, expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
@@ -86,6 +86,39 @@ describe('CustomHeader', () => {
 
     await expect.element(page.getByText('Report body')).toBeVisible();
     expect(logged).toHaveBeenCalledWith('Header of panel source example/report failed', expect.any(Error));
+  });
+});
+
+describe('customTooltip', () => {
+  test('shows tooltip of source for its panel', async () => {
+    const tooltip = vi.fn(() => <span>Report tooltip</span>);
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, tooltip }]);
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await userEvent.hover(page.getByText('Report header'));
+
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+    expect(tooltip).toHaveBeenLastCalledWith(application, dock, panel);
+  });
+
+  test('shows no tooltip of source that throws', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([
+      {
+        ...REPORT,
+        tooltip: () => {
+          throw new Error('broken');
+        },
+      },
+    ]);
+    dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await userEvent.hover(page.getByText('Report header'));
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalled());
+    expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
   });
 });
 
