@@ -196,7 +196,7 @@ export interface CustomPanelSource {
   readonly closable: boolean;
 
   /**
-   * The panel's icon and title.
+   * The panel's header, e.g. its icon and title, in the tab bar and overflow menu.
    */
   readonly header: ComponentType<CustomPanelProps>;
 

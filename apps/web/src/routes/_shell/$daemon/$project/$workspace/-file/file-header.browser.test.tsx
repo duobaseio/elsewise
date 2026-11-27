@@ -5,7 +5,7 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router';
-import type { IDockviewPanelHeaderProps } from 'dockview-react';
+import type { DockviewPanelApi } from 'dockview-react';
 import { describe, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -13,11 +13,11 @@ import { ApplicationManagerContext } from '@/application-context';
 import { FileHandle } from '@/fs/file-handle';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { fakeFileSystem } from '../../../../../../../test/fake-file-system';
-import { FileTab } from './file-tab';
+import { FileHeader } from './file-header';
 
 const WORKSPACE = { daemon: 'local', project: 'elsewise', workspace: 'singapore' };
 
-// Renders the tab of main.ts in the workspace Singapore, and returns the application it runs in and a handle of the
+// Renders the header of main.ts in the workspace Singapore, and returns the application it runs in and a handle of the
 // file, which is not open yet.
 async function mount() {
   const root = createRootRoute();
@@ -26,17 +26,7 @@ async function mount() {
     getParentRoute: () => shell,
     path: '$daemon/$project/$workspace',
     component: () => (
-      <FileTab
-        {...({
-          api: { id: 'file:1', title: 'main.ts' },
-          containerApi: {
-            panels: [],
-            onDidAddPanel: () => ({ dispose() {} }),
-            onDidRemovePanel: () => ({ dispose() {} }),
-          },
-          params: { path: 'main.ts' },
-        } as unknown as IDockviewPanelHeaderProps<{ path: string }>)}
-      />
+      <FileHeader api={{ id: 'file:1', title: 'main.ts' } as DockviewPanelApi} params={{ path: 'main.ts' }} />
     ),
   });
   const router = createRouter({
@@ -57,8 +47,8 @@ function marked(): boolean {
   return page.getByRole('img', { name: 'Unsaved changes' }).elements().length > 0;
 }
 
-describe('FileTab', () => {
-  test('marks tab of file with unsaved changes', async () => {
+describe('FileHeader', () => {
+  test('marks file with unsaved changes', async () => {
     const { application, file } = await mount();
     application.files.add(WORKSPACE, file);
 
@@ -67,7 +57,7 @@ describe('FileTab', () => {
     await expect.poll(marked).toBe(true);
   });
 
-  test('unmarks tab once file has no unsaved changes', async () => {
+  test('unmarks file once it has no unsaved changes', async () => {
     const { application, file } = await mount();
     application.files.add(WORKSPACE, file);
     file.document = () => '';
@@ -78,7 +68,7 @@ describe('FileTab', () => {
     await expect.poll(marked).toBe(false);
   });
 
-  test('marks tab of file that opens with unsaved changes', async () => {
+  test('marks file that opens with unsaved changes', async () => {
     const { application, file } = await mount();
     file.document = () => '';
 

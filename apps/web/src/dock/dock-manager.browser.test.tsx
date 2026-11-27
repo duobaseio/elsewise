@@ -30,8 +30,8 @@ async function mount(close?: PanelComponent['close']) {
   const application = builtInApplication({
     terminals,
     panelComponents: [
-      { type: 'file', tab: () => null, panel: () => null, close },
-      { type: 'terminal', tab: () => null, panel: () => null, close },
+      { type: 'file', header: () => null, panel: () => null, close },
+      { type: 'terminal', header: () => null, panel: () => null, close },
     ],
   });
   const dock = new DockManager(

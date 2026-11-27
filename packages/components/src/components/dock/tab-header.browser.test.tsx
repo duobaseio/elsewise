@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../dropdown-menu';
 import { DockTabHeader } from './tab-header';
 
 describe('DockTabHeader', () => {
@@ -52,5 +53,52 @@ describe('DockTabHeader', () => {
 
     await expect.element(screen.getByTestId('status')).not.toBeVisible();
     expect(icon()).not.toBe('none');
+  });
+
+  test('shows status in place of close icon until menu item is highlighted', async () => {
+    const screen = await render(
+      <DropdownMenu open>
+        <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem recolor={false}>
+            <DockTabHeader onClose={() => {}} status={<span data-testid="status">●</span>} title="a.ts" />
+          </DropdownMenuItem>
+          <DropdownMenuItem>Other</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    );
+    const icon = () =>
+      getComputedStyle(screen.getByRole('button', { name: 'Close a.ts' }).element().querySelector('svg') as Element)
+        .display;
+    await userEvent.hover(screen.getByText('Other'));
+
+    await expect.element(screen.getByTestId('status')).toBeVisible();
+    expect(icon()).toBe('none');
+
+    await userEvent.hover(screen.getByText('a.ts'));
+
+    await expect.element(screen.getByTestId('status')).not.toBeVisible();
+    expect(icon()).not.toBe('none');
+  });
+
+  test('shows close button in highlighted menu item', async () => {
+    const screen = await render(
+      <DropdownMenu open>
+        <DropdownMenuTrigger>Open</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem recolor={false}>
+            <DockTabHeader onClose={() => {}} title="a.ts" />
+          </DropdownMenuItem>
+          <DropdownMenuItem>Other</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>,
+    );
+    const opacity = () => getComputedStyle(screen.getByRole('button', { name: 'Close a.ts' }).element()).opacity;
+    await userEvent.hover(screen.getByText('Other'));
+    await vi.waitFor(() => expect(opacity()).toBe('0'));
+
+    await userEvent.hover(screen.getByText('a.ts'));
+
+    await vi.waitFor(() => expect(opacity()).toBe('1'));
   });
 });

@@ -49,7 +49,7 @@ async function mount() {
   };
 }
 
-describe('CustomTab', () => {
+describe('CustomHeader', () => {
   test('renders header of source with its panel', async () => {
     const props: CustomPanelProps[] = [];
     const { application, dock } = await mount();
@@ -67,17 +67,6 @@ describe('CustomTab', () => {
 
     await expect.element(page.getByText('Report header')).toBeVisible();
     expect(props.at(-1)).toEqual({ application, dock, panel });
-  });
-
-  test('marks group of tabless panel', async () => {
-    const { application, dock } = await mount();
-    application.docks.addPanelSources([{ ...REPORT, tab: false }]);
-    const marked = () => document.querySelectorAll('.dv-groupview:has([data-tabless])').length;
-    const before = marked();
-
-    dock.addPanel(REPORT.id, { edge: 'bottom' });
-
-    await expect.poll(marked).toBe(before + 1);
   });
 
   test('hides header that throws', async () => {

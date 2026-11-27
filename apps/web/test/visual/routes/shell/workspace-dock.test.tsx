@@ -9,10 +9,11 @@ import '@/routes/_shell/dockview.css';
 import { ApplicationManagerContext } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { ProjectManager } from '@/projects/project-manager';
-import { FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
+import { FileTreeHeader } from '@/routes/_shell/$daemon/$project/$workspace/-file-tree/file-tree-header';
+import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../../commands';
 import { addFile, showWorkspace, WORKSPACE, workspaceRouter } from '../../../dock';
-import { StubTab, stubComponents } from '../../../dock-stubs';
+import { stubComponents } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
 
@@ -25,9 +26,7 @@ async function mount(
     router,
     projects: new ProjectManager(client, router),
     panelComponents: stubComponents({
-      fileTree: { tab: FileTreeTab },
-      file: { tab: StubTab },
-      terminal: { tab: StubTab },
+      fileTree: { header: FileTreeHeader },
     }),
   });
   configure?.(application);

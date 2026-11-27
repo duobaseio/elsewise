@@ -49,8 +49,8 @@ async function mount(shown = true, panelComponents: readonly PanelComponent[] = 
 }
 
 describe('addPanelComponents', () => {
-  const FILE_COMPONENT = { type: 'file', tab: () => null, panel: () => null } as const;
-  const TERMINAL_COMPONENT = { type: 'terminal', tab: () => null, panel: () => null } as const;
+  const FILE_COMPONENT = { type: 'file', header: () => null, panel: () => null } as const;
+  const TERMINAL_COMPONENT = { type: 'terminal', header: () => null, panel: () => null } as const;
 
   test('lists components in order of addition', async () => {
     const { docks } = await applicationOf(false);
@@ -278,7 +278,9 @@ describe('active', () => {
 describe('attach', () => {
   test('asks component of panel type before panel closes', async () => {
     const close = vi.fn(() => false);
-    const { application, attached } = await mount(true, [{ type: 'file', tab: () => null, panel: () => null, close }]);
+    const { application, attached } = await mount(true, [
+      { type: 'file', header: () => null, panel: () => null, close },
+    ]);
 
     await expect(attached.close(FILE)).resolves.toBe(false);
 

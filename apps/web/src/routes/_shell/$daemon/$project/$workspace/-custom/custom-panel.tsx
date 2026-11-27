@@ -3,24 +3,19 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { isCustomPanel } from '@/dock/dock-store';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
-import { DraggableTab } from '../-dock/draggable-tab';
 
 /**
- * A custom panel's tab, which renders the header of the panel's source once that source is added.
+ * A custom panel's header, which renders the header of the panel's source once that source is added.
  */
-export function CustomTab(props: IDockviewPanelHeaderProps<{ tab?: boolean }>) {
+export function CustomHeader(props: Pick<IDockviewPanelHeaderProps, 'api'>) {
   const custom = useCustomPanel(props.api.id);
 
   return (
-    <>
-      {props.params.tab !== true && <span data-tabless hidden />}
-      <DraggableTab api={props.api} />
-      {custom && (
-        <PluginBoundary name={`Header of panel source ${custom.source.id}`}>
-          <custom.source.header application={custom.application} dock={custom.dock} panel={custom.panel} />
-        </PluginBoundary>
-      )}
-    </>
+    custom && (
+      <PluginBoundary name={`Header of panel source ${custom.source.id}`}>
+        <custom.source.header application={custom.application} dock={custom.dock} panel={custom.panel} />
+      </PluginBoundary>
+    )
   );
 }
 

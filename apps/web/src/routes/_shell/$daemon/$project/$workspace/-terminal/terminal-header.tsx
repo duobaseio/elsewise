@@ -6,14 +6,13 @@ import type { IDockviewPanelHeaderProps } from 'dockview-react';
 import { useEffect } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { useTerminalManager } from '@/terminals/terminal-manager';
-import { DraggableTab } from '../-dock/draggable-tab';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
 /**
- * A terminal's tab, titled with its name, whose close button closes the terminal.
+ * A terminal's header, titled with its name, whose close button closes the terminal.
  */
-export function TerminalTab(props: IDockviewPanelHeaderProps<{ session?: string }>) {
+export function TerminalHeader(props: Pick<IDockviewPanelHeaderProps<{ session?: string }>, 'api' | 'params'>) {
   const { daemon, project, workspace } = route.useParams();
   const { docks } = useApplicationManager();
   const { session } = props.params;
@@ -28,29 +27,26 @@ export function TerminalTab(props: IDockviewPanelHeaderProps<{ session?: string 
   }, [name, props.api]);
 
   return (
-    <>
-      <DraggableTab api={props.api} />
-      <DockTabHeader
-        icon={<Icon className="size-4 shrink-0 text-text-3" name="terminal" />}
-        title={props.api.title}
-        onClose={() => {
-          if (session === undefined) {
-            props.api.close();
-            return;
-          }
+    <DockTabHeader
+      icon={<Icon className="size-4 shrink-0 text-text-3" name="terminal" />}
+      title={props.api.title}
+      onClose={() => {
+        if (session === undefined) {
+          props.api.close();
+          return;
+        }
 
-          const panel = docks.active?.get(props.api.id);
-          if (panel == null || !panel.closable) {
-            return;
-          }
+        const panel = docks.active?.get(props.api.id);
+        if (panel == null || !panel.closable) {
+          return;
+        }
 
-          docks.active
-            ?.close(panel)
-            .catch((error: Error) =>
-              toast.add({ type: 'error', title: 'Deleting the terminal failed', description: error.message }),
-            );
-        }}
-      />
-    </>
+        docks.active
+          ?.close(panel)
+          .catch((error: Error) =>
+            toast.add({ type: 'error', title: 'Deleting the terminal failed', description: error.message }),
+          );
+      }}
+    />
   );
 }

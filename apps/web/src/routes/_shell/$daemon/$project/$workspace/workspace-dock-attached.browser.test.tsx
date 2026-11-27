@@ -204,6 +204,7 @@ test('keeps overflowing tabs open when one closes', async () => {
 
   await vi.waitFor(() => expect(rows()).toEqual(others));
   expect(dock.panels.some((panel) => panel.type === 'file' && panel.relativePath === `src/${title}`)).toBe(false);
+  expect(dock.activePanel).toEqual(FILE);
 });
 
 test('closes overflowing tabs once every tab fits', async () => {

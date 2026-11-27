@@ -1,4 +1,4 @@
-export function PlaceholderTab() {
+export function PlaceholderHeader() {
   return <span data-placeholder hidden />;
 }
 

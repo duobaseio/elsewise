@@ -1,22 +1,15 @@
 import { Button } from '@elsewise/components/components/button';
-import { DockToolHeader } from '@elsewise/components/components/dock';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
 import type { Panel } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
-import {
-  type DockviewApi,
-  DockviewReact,
-  type DockviewReadyEvent,
-  type IDockviewPanelHeaderProps,
-  type SerializedDockview,
-} from 'dockview-react';
+import { type DockviewApi, DockviewReact, type DockviewReadyEvent, type SerializedDockview } from 'dockview-react';
 import { useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-dock/draggable-dock';
-import { DraggableTab } from './-dock/draggable-tab';
+import { Tab } from './-dock/tab';
 import { TabActions } from './-dock/tab-actions';
 import { CloseFileDialog } from './-file/close-file-dialog';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
@@ -86,7 +79,7 @@ export function WorkspaceDock({
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
   const { panelComponents } = useApplicationManager().docks;
   const tabs = useMemo(
-    () => Object.fromEntries(panelComponents.map((component) => [component.type, component.tab])),
+    () => Object.fromEntries(panelComponents.map((component) => [component.type, Tab])),
     [panelComponents],
   );
   const panels = useMemo(
@@ -156,20 +149,6 @@ export function WorkspaceDock({
       </div>
       <ToolStripe />
     </div>
-  );
-}
-
-/**
- * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tabless` is the adapter CSS hook for
- * tool-specific state painting.
- */
-export function FileTreeTab(props: IDockviewPanelHeaderProps) {
-  return (
-    <>
-      <span data-tabless hidden />
-      <DraggableTab api={props.api} />
-      <DockToolHeader title={props.api.title} />
-    </>
   );
 }
 

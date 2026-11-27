@@ -26,10 +26,11 @@ import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { stubComponents } from '../../../../../../../test/dock-stubs';
 import { SETTINGS, terminals } from '../../../../../../../test/terminal';
-import { FileTab } from '../-file/file-tab';
-import { FileTreeTab, WorkspaceDock } from '../route';
+import { FileHeader } from '../-file/file-header';
+import { FileTreeHeader } from '../-file-tree/file-tree-header';
+import { WorkspaceDock } from '../route';
+import { TerminalHeader } from './terminal-header';
 import { TerminalPanel } from './terminal-panel';
-import { TerminalTab } from './terminal-tab';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -82,9 +83,9 @@ async function mount({ client, manager }: ReturnType<typeof setUp>, layout?: unk
             router,
             terminals: manager,
             panelComponents: stubComponents({
-              fileTree: { tab: FileTreeTab },
-              file: { tab: FileTab },
-              terminal: { tab: TerminalTab, panel: TerminalPanel },
+              fileTree: { header: FileTreeHeader },
+              file: { header: FileHeader },
+              terminal: { header: TerminalHeader, panel: TerminalPanel },
             }),
           })}
         >
