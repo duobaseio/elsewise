@@ -3,6 +3,7 @@ import { keymap } from '@codemirror/view';
 import { PLATFORM } from '@elsewise/components/lib/platform';
 import {
   BundledKeymap,
+  DEFAULT_COMMANDS,
   DEFAULT_FRONTEND_SETTINGS,
   type FileTreeSelection,
   Keymap,
@@ -19,6 +20,10 @@ import elsewise from '@/command/keymap/bundled/elsewise.json';
 import { eventKeys } from '@/command/keymap/keys';
 import { usePluginStore } from '@/plugins/plugin-store';
 import { settingsQuery, useSettings, useUpdateSettings } from '@/settings/settings';
+
+// Commands that still run when their keybindings are pressed while a terminal has focus.
+// TODO: Let users and plugins change the list once we implement it in terminal settings.
+const TERMINAL_ALLOWED_COMMANDS: readonly string[] = [DEFAULT_COMMANDS.panel.view.close];
 
 export interface LoadedKeymap {
   readonly id: KeymapId;
@@ -342,6 +347,22 @@ export function runSidebarKeys(commands: CommandManager, target: Project | Works
 }
 
 /**
+ * Runs the panel commands bound to the key of `event`, pressed in the dock, on the active panel.
+ */
+export function runPanelKeys(commands: CommandManager, event: KeyboardEvent): void {
+  if (event.defaultPrevented || event.isComposing) {
+    return;
+  }
+
+  for (const key of eventKeys(event, PLATFORM)) {
+    if (commands.keymap.keys.panel.get(key)?.some((id) => commands.run(id))) {
+      event.preventDefault();
+      return;
+    }
+  }
+}
+
+/**
  * Runs the file tree commands bound to the key of `event`, pressed in a file tree, on `selection`.
  *
  * Does nothing without a selection, or for a key typed into an input, e.g. the tree's search.
@@ -384,7 +405,8 @@ export function editorKeymap(commands: CommandManager, keys: ReadonlyMap<string,
 /**
  * Returns an add-on that runs the terminal commands bound to a key pressed in a terminal.
  *
- * A key that does not run a command is handled by the shell.
+ * A key that does not run a command is handled by the shell, unless it is bound to an allowed command, which is left
+ * to the dock.
  */
 export function terminalKeymap(
   commands: CommandManager,
@@ -402,6 +424,10 @@ export function terminalKeymap(
           if (view !== null && commands.keymap.keys.terminal.get(key)?.some((id) => commands.run(id, view))) {
             // Chromium would also paste on its own paste event, which xterm listens for, so the text would land twice.
             event.preventDefault();
+            return false;
+          }
+
+          if (commands.keymap.keys.panel.get(key)?.some((id) => TERMINAL_ALLOWED_COMMANDS.includes(id))) {
             return false;
           }
         }

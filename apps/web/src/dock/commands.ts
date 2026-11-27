@@ -14,10 +14,10 @@ import { FILE_MANAGER } from '@/projects/commands';
 
 export const PANEL_CLOSE: PanelCommand = {
   scope: 'panel',
-  id: DEFAULT_COMMANDS.panel.close.panel,
+  id: DEFAULT_COMMANDS.panel.view.close,
   group: DEFAULT_COMMAND_GROUPS.panel.id,
   label: 'Close',
-  defaultKeys: DEFAULT_KEYS.panel.close.panel,
+  defaultKeys: DEFAULT_KEYS.panel.view.close,
   shown: (_, panel) => panel.closable,
   enabled: (_, panel) => panel.closable,
   run: (application, panel) => close(application, [panel]),
@@ -25,10 +25,10 @@ export const PANEL_CLOSE: PanelCommand = {
 
 export const PANEL_CLOSE_OTHERS: PanelCommand = {
   scope: 'panel',
-  id: DEFAULT_COMMANDS.panel.close.others,
+  id: DEFAULT_COMMANDS.panel.view.closeOthers,
   group: DEFAULT_COMMAND_GROUPS.panel.id,
   label: 'Close others',
-  defaultKeys: DEFAULT_KEYS.panel.close.others,
+  defaultKeys: DEFAULT_KEYS.panel.view.closeOthers,
   shown: (_, panel) => panel.tab,
   enabled: (application, panel) => panel.tab && closable(application, panel).some((other) => other.id !== panel.id),
   run: (application, panel) =>
@@ -40,10 +40,10 @@ export const PANEL_CLOSE_OTHERS: PanelCommand = {
 
 export const PANEL_CLOSE_ALL: PanelCommand = {
   scope: 'panel',
-  id: DEFAULT_COMMANDS.panel.close.all,
+  id: DEFAULT_COMMANDS.panel.view.closeAll,
   group: DEFAULT_COMMAND_GROUPS.panel.id,
   label: 'Close all',
-  defaultKeys: DEFAULT_KEYS.panel.close.all,
+  defaultKeys: DEFAULT_KEYS.panel.view.closeAll,
   shown: (_, panel) => panel.tab,
   enabled: (application, panel) => panel.tab && closable(application, panel).length > 0,
   run: (application, panel) => close(application, closable(application, panel)),
@@ -51,10 +51,10 @@ export const PANEL_CLOSE_ALL: PanelCommand = {
 
 export const PANEL_CLOSE_LEFT: PanelCommand = {
   scope: 'panel',
-  id: DEFAULT_COMMANDS.panel.close.left,
+  id: DEFAULT_COMMANDS.panel.view.closeLeft,
   group: DEFAULT_COMMAND_GROUPS.panel.id,
   label: 'Close to the left',
-  defaultKeys: DEFAULT_KEYS.panel.close.left,
+  defaultKeys: DEFAULT_KEYS.panel.view.closeLeft,
   shown: (application, panel) => panel.tab && closableBefore(application, panel).length > 0,
   enabled: (application, panel) => panel.tab && closableBefore(application, panel).length > 0,
   run: (application, panel) => close(application, closableBefore(application, panel)),
@@ -62,13 +62,27 @@ export const PANEL_CLOSE_LEFT: PanelCommand = {
 
 export const PANEL_CLOSE_RIGHT: PanelCommand = {
   scope: 'panel',
-  id: DEFAULT_COMMANDS.panel.close.right,
+  id: DEFAULT_COMMANDS.panel.view.closeRight,
   group: DEFAULT_COMMAND_GROUPS.panel.id,
   label: 'Close to the right',
-  defaultKeys: DEFAULT_KEYS.panel.close.right,
+  defaultKeys: DEFAULT_KEYS.panel.view.closeRight,
   shown: (application, panel) => panel.tab && closableAfter(application, panel).length > 0,
   enabled: (application, panel) => panel.tab && closableAfter(application, panel).length > 0,
   run: (application, panel) => close(application, closableAfter(application, panel)),
+};
+
+export const PANEL_HIDE: PanelCommand = {
+  scope: 'panel',
+  id: DEFAULT_COMMANDS.panel.view.hide,
+  group: DEFAULT_COMMAND_GROUPS.panel.id,
+  label: 'Hide',
+  defaultKeys: DEFAULT_KEYS.panel.view.hide,
+  shown: (_, panel) => !panel.tab && !panel.closable,
+  enabled: (_, panel) => !panel.tab && !panel.closable,
+  run: ({ docks }, panel) => {
+    docks.active?.hide(panel);
+    return docks.active !== null;
+  },
 };
 
 export const PANEL_SPLIT_MOVE_RIGHT: PanelCommand = {

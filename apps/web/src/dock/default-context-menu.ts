@@ -8,11 +8,11 @@ export const DEFAULT_CONTEXT_MENU: readonly ContextMenuGroup[] = [
     id: close.id,
     order: close.order,
     items: [
-      { order: close.items.close, command: DEFAULT_COMMANDS.panel.close.panel },
-      { order: close.items.closeOthers, command: DEFAULT_COMMANDS.panel.close.others },
-      { order: close.items.closeAll, command: DEFAULT_COMMANDS.panel.close.all },
-      { order: close.items.closeLeft, command: DEFAULT_COMMANDS.panel.close.left },
-      { order: close.items.closeRight, command: DEFAULT_COMMANDS.panel.close.right },
+      { order: close.items.close, command: DEFAULT_COMMANDS.panel.view.close },
+      { order: close.items.closeOthers, command: DEFAULT_COMMANDS.panel.view.closeOthers },
+      { order: close.items.closeAll, command: DEFAULT_COMMANDS.panel.view.closeAll },
+      { order: close.items.closeLeft, command: DEFAULT_COMMANDS.panel.view.closeLeft },
+      { order: close.items.closeRight, command: DEFAULT_COMMANDS.panel.view.closeRight },
     ],
   },
   {

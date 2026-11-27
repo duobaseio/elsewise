@@ -189,12 +189,13 @@ export const DEFAULT_COMMANDS = {
     },
   },
   panel: {
-    close: {
-      panel: 'elsewise.panel.close.panel',
-      others: 'elsewise.panel.close.others',
-      all: 'elsewise.panel.close.all',
-      left: 'elsewise.panel.close.left',
-      right: 'elsewise.panel.close.right',
+    view: {
+      close: 'elsewise.panel.view.close',
+      closeOthers: 'elsewise.panel.view.closeOthers',
+      closeAll: 'elsewise.panel.view.closeAll',
+      closeLeft: 'elsewise.panel.view.closeLeft',
+      closeRight: 'elsewise.panel.view.closeRight',
+      hide: 'elsewise.panel.view.hide',
     },
     split: {
       moveRight: 'elsewise.panel.split.moveRight',
@@ -376,12 +377,13 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
     },
   },
   panel: {
-    close: {
-      panel: [{ key: 'Ctrl-F4', mac: 'Mod-w' }],
-      others: [],
-      all: [],
-      left: [],
-      right: [],
+    view: {
+      close: [{ key: 'Ctrl-F4', mac: 'Mod-w' }],
+      closeOthers: [],
+      closeAll: [],
+      closeLeft: [],
+      closeRight: [],
+      hide: ['Shift-Escape', { key: 'Ctrl-F4', mac: 'Mod-w' }],
     },
     split: {
       moveRight: [],
@@ -728,6 +730,8 @@ export interface FileTreeCommand extends BaseCommand {
 
 /**
  * A command that runs on a panel, e.g. from its tab's context menu.
+ *
+ * Its keys fire while the dock has focus, on the active panel.
  */
 export interface PanelCommand extends BaseCommand {
   readonly scope: 'panel';

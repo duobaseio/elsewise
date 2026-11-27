@@ -7,6 +7,7 @@ import { createFileRoute } from '@tanstack/react-router';
 import { type DockviewApi, DockviewReact, type DockviewReadyEvent, type SerializedDockview } from 'dockview-react';
 import { useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
+import { runPanelKeys } from '@/command/keymap/keymap';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-dock/draggable-dock';
 import { Tab } from './-dock/tab';
@@ -77,7 +78,8 @@ export function WorkspaceDock({
   onLayoutChange?: (layout: SerializedDockview) => void;
 }) {
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
-  const { panelComponents } = useApplicationManager().docks;
+  const { commands, docks } = useApplicationManager();
+  const { panelComponents } = docks;
   const tabs = useMemo(
     () => Object.fromEntries(panelComponents.map((component) => [component.type, Tab])),
     [panelComponents],
@@ -132,7 +134,16 @@ export function WorkspaceDock({
   };
 
   return (
-    <div className="flex h-full">
+    // biome-ignore lint/a11y/noStaticElementInteractions: the keys run commands on the active panel inside.
+    <div
+      className="flex h-full"
+      onKeyDown={(event) => {
+        // The keys pressed in a menu or popover of the dock bubble here too.
+        if (event.target instanceof Node && event.currentTarget.contains(event.target)) {
+          runPanelKeys(commands, event.nativeEvent);
+        }
+      }}
+    >
       <div className="min-w-0 flex-1">
         <DraggableDock dockview={dockview}>
           <DockviewReact

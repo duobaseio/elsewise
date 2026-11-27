@@ -235,11 +235,11 @@ describe('addContextMenu', () => {
         id: 'io.duobase.elsewise.dock.contextMenu.close',
         order: 10,
         items: [
-          { order: 10, command: 'elsewise.panel.close.panel' },
-          { order: 20, command: 'elsewise.panel.close.others' },
-          { order: 30, command: 'elsewise.panel.close.all' },
-          { order: 40, command: 'elsewise.panel.close.left' },
-          { order: 50, command: 'elsewise.panel.close.right' },
+          { order: 10, command: 'elsewise.panel.view.close' },
+          { order: 20, command: 'elsewise.panel.view.closeOthers' },
+          { order: 30, command: 'elsewise.panel.view.closeAll' },
+          { order: 40, command: 'elsewise.panel.view.closeLeft' },
+          { order: 50, command: 'elsewise.panel.view.closeRight' },
         ],
       },
       {

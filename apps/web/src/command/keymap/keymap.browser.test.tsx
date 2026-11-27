@@ -9,7 +9,7 @@ import {
 import { Terminal as XTerm } from '@xterm/xterm';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { editorKeymap, terminalKeymap } from '@/command/keymap/keymap';
-import { builtInCommands } from '../../../test/commands';
+import { builtInApplication, builtInCommands } from '../../../test/commands';
 
 const views: EditorView[] = [];
 const terminals: XTerm[] = [];
@@ -203,6 +203,61 @@ describe('terminalKeymap', () => {
     expect(run).toHaveBeenCalledOnce();
     expect(run.mock.lastCall?.[1]?.terminal).toBe(terminal);
     expect(sent).not.toHaveBeenCalled();
+  });
+
+  test('leaves key that closes panel to dock, keeping it from shell', () => {
+    const commands = builtInApplication({}, 'linux').commands;
+    const terminal = new XTerm();
+    terminal.loadAddon(
+      terminalKeymap(commands, (xterm) => ({ session: {}, terminal: xterm }) as unknown as TerminalView),
+    );
+    terminal.open(document.body);
+    terminals.push(terminal);
+    const sent = vi.fn<(data: string) => void>();
+    terminal.onData(sent);
+    const reached = vi.fn<(event: KeyboardEvent) => void>();
+    document.body.addEventListener('keydown', reached, { once: true });
+
+    terminal.textarea?.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'F4',
+        code: 'F4',
+        keyCode: 115,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      }),
+    );
+
+    expect(sent).not.toHaveBeenCalled();
+    expect(reached).toHaveBeenCalledOnce();
+    expect(reached.mock.lastCall?.[0].defaultPrevented).toBe(false);
+  });
+
+  test('sends key of other panel command to shell', () => {
+    const commands = builtInCommands();
+    commands.add([
+      {
+        id: 'a',
+        label: 'A',
+        scope: 'panel',
+        group: DEFAULT_COMMAND_GROUPS.panel.id,
+        defaultKeys: ['Ctrl-k'],
+        run: () => true,
+      },
+    ]);
+    const terminal = new XTerm();
+    terminal.loadAddon(
+      terminalKeymap(commands, (xterm) => ({ session: {}, terminal: xterm }) as unknown as TerminalView),
+    );
+    terminal.open(document.body);
+    terminals.push(terminal);
+    const sent = vi.fn<(data: string) => void>();
+    terminal.onData(sent);
+
+    pressTerminal(terminal);
+
+    expect(sent).toHaveBeenCalledWith('\x0b');
   });
 
   test('sends unbound key to shell', () => {

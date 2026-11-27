@@ -11,6 +11,7 @@ import {
   PANEL_FILE_COPY_PATH,
   PANEL_FILE_COPY_RELATIVE_PATH,
   PANEL_FILE_OPEN_FILE_MANAGER,
+  PANEL_HIDE,
   PANEL_SPLIT_MOVE_DOWN,
   PANEL_SPLIT_MOVE_RIGHT,
   PANEL_TERMINAL_RENAME,
@@ -203,6 +204,26 @@ describe('PANEL_CLOSE_RIGHT', () => {
     expect(PANEL_CLOSE_RIGHT.run(application, FILE)).toBe(true);
 
     await vi.waitFor(() => expect(ids(dock.groups[0]?.panels)).toEqual([FILE.id]));
+  });
+});
+
+describe('PANEL_HIDE', () => {
+  test('shows and enables for tabless panel that cannot be closed only', async () => {
+    const { application, tool } = await mount();
+
+    for (const check of [PANEL_HIDE.shown, PANEL_HIDE.enabled]) {
+      expect(check?.(application, FILE_TREE)).toBe(true);
+      expect(check?.(application, FILE)).toBe(false);
+      expect(check?.(application, tool)).toBe(false);
+    }
+  });
+
+  test('hides group of panel', async () => {
+    const { application, dock } = await mount();
+
+    expect(PANEL_HIDE.run(application, FILE_TREE)).toBe(true);
+
+    expect(dock.groups.find((group) => group.panels.some((panel) => panel.id === FILE_TREE.id))?.shown).toBeNull();
   });
 });
 
