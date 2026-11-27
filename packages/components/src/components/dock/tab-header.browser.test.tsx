@@ -40,11 +40,15 @@ describe('DockTabHeader', () => {
 
   test('shows status in place of close icon until hovered', async () => {
     const screen = await render(
-      <div className="dv-tab">
-        <DockTabHeader onClose={() => {}} status={<span data-testid="status">●</span>} title="a.ts" />
-      </div>,
+      <>
+        <div className="dv-tab">
+          <DockTabHeader onClose={() => {}} status={<span data-testid="status">●</span>} title="a.ts" />
+        </div>
+        <p>Other</p>
+      </>,
     );
     const icon = () => getComputedStyle(screen.getByRole('button').element().querySelector('svg') as Element).display;
+    await userEvent.hover(screen.getByText('Other'));
 
     await expect.element(screen.getByTestId('status')).toBeVisible();
     expect(icon()).toBe('none');
