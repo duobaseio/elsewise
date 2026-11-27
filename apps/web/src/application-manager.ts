@@ -7,6 +7,7 @@ import { DocksManager } from '@/dock/docks-manager';
 import type { EditorManager } from '@/editor/editor-manager';
 import { FileHandleStore } from '@/fs/file-handle-store';
 import type { FileTreeManager } from '@/fs/file-tree-manager';
+import { GitStatusStore } from '@/git/git-status-store';
 import { PlatformManager } from '@/platform-manager';
 import type { ProjectManager } from '@/projects/project-manager';
 import { SidebarStore } from '@/projects/sidebar-store';
@@ -21,6 +22,7 @@ export class ApplicationManager implements Application {
   readonly commands: CommandManager;
   readonly sidebar = new SidebarStore();
   readonly files = new FileHandleStore();
+  readonly git = new GitStatusStore();
   readonly docks: DocksManager;
 
   constructor(

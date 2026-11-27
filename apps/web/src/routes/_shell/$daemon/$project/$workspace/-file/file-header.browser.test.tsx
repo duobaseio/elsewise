@@ -1,3 +1,4 @@
+import { create } from '@bufbuild/protobuf';
 import {
   createMemoryHistory,
   createRootRoute,
@@ -10,7 +11,10 @@ import { describe, expect, test, vi } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
 import { FileHandle } from '@/fs/file-handle';
+import { Change } from '@/gen/elsewise/daemon/git/v1/git_pb';
+import { WatchStatusResponseSchema } from '@/gen/elsewise/daemon/git/v1/git_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { fakeFileSystem } from '../../../../../../../test/fake-file-system';
 import { FileHeader, fileTooltip } from './file-header';
@@ -41,6 +45,38 @@ async function mount() {
   );
   await expect.element(page.getByText('main.ts')).toBeVisible();
   return { application, file: new FileHandle(fakeFileSystem().fileSystem, '/elsewise', 'main.ts') };
+}
+
+// Gives main.ts the git status `kind` in `workspace`, and returns once the application has it.
+async function watch(application: ApplicationManager, kind: 'modified' | 'ignored', workspace = WORKSPACE) {
+  application.git.watch(
+    {
+      watchStatus: async function* () {
+        yield create(WatchStatusResponseSchema, {
+          status: {
+            entries: [
+              {
+                relativePath: 'main.ts',
+                kind:
+                  kind === 'modified'
+                    ? { case: 'changed', value: { unstaged: Change.MODIFIED } }
+                    : { case: 'ignored', value: {} },
+              },
+            ],
+          },
+        });
+        await new Promise(() => {});
+      },
+    },
+    workspace,
+    '/elsewise',
+  );
+  await vi.waitFor(() => expect(application.git.get(workspace, 'main.ts')).toBe(kind));
+  await new Promise(requestAnimationFrame);
+}
+
+function color(): string {
+  return getComputedStyle(page.getByText('main.ts').element()).color;
 }
 
 function marked(): boolean {
@@ -96,6 +132,35 @@ describe('FileHeader', () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     expect(marked()).toBe(false);
+  });
+
+  test('colours title of modified file', async () => {
+    const { application } = await mount();
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--info)';
+    document.body.append(probe);
+
+    await watch(application, 'modified');
+
+    expect(color()).toBe(getComputedStyle(probe).color);
+  });
+
+  test('keeps title colour of ignored file', async () => {
+    const { application } = await mount();
+    const before = color();
+
+    await watch(application, 'ignored');
+
+    expect(color()).toBe(before);
+  });
+
+  test('ignores status of other workspace', async () => {
+    const { application } = await mount();
+    const before = color();
+
+    await watch(application, 'modified', { ...WORKSPACE, workspace: 'other' });
+
+    expect(color()).toBe(before);
   });
 });
 

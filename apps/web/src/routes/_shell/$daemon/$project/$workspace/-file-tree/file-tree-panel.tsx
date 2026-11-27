@@ -15,7 +15,6 @@ import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
 import { DirectoryWatcher } from '@/fs/directory-watcher';
 import { useFileTreeManager } from '@/fs/file-tree-manager';
 import { type PasteEntry, pasteEntries } from '@/fs/paste';
-import { watchGitStatus } from '@/git/status';
 import { sameWorkspace, useWorkspace } from '@/projects/workspace-manager';
 import { useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { useSettings } from '@/settings/settings';
@@ -173,7 +172,7 @@ function useWorkspaceTree(
   client: Daemon | undefined,
   workspace: Workspace | undefined,
 ): FileTreeModel {
-  const { fileTree } = useApplicationManager();
+  const { fileTree, git } = useApplicationManager();
   const store = useWorkspaceStateStore();
   const hidden = useSettings((settings) => settings.fileTree.hidden);
   const root = workspace?.absolutePath;
@@ -294,15 +293,25 @@ function useWorkspaceTree(
       store.get(id)?.fileTree ?? DEFAULT_WORKSPACE_STATE.fileTree,
       hidden,
     );
-    const unsubscribeGitStatus = watchGitStatus(client.git, root, model);
     const unsubscribeFileSystem = model.subscribe(() => store.update(id, { fileTree: watcher.snapshot() }));
 
     return () => {
       watcher.dispose();
-      unsubscribeGitStatus();
       unsubscribeFileSystem();
     };
   }, [client, root, model, store, daemon, project, name, hidden]);
+
+  useEffect(() => {
+    const id = { daemon, project, workspace: name };
+    let statuses = git.list(id);
+    model.setGitStatus(statuses);
+    return git.onChange(() => {
+      if (git.list(id) !== statuses) {
+        statuses = git.list(id);
+        model.setGitStatus(statuses);
+      }
+    });
+  }, [git, model, daemon, project, name]);
 
   return model;
 }
