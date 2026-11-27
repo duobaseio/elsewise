@@ -1,4 +1,5 @@
 import {
+  type ContextMenuGroup,
   type CustomPanelSource,
   DEFAULT_PANEL_MENU,
   DEFAULT_PANEL_SOURCES,
@@ -17,6 +18,7 @@ import { useApplicationManager } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { MenuManager } from '@/collections/menu-manager';
 import { sameWorkspace } from '@/projects/workspace-manager';
+import { DEFAULT_CONTEXT_MENU } from './default-context-menu';
 import { DockManager } from './dock-manager';
 import type { PanelComponent } from './panel-component';
 
@@ -42,6 +44,12 @@ export class DocksManager implements Docks {
     DEFAULT_PANEL_MENU_GROUPS,
     () => this.call(this.menuListeners),
     'Panel menu',
+  );
+  private readonly contextMenuListeners = new Set<() => void>();
+  private readonly contextMenus = new MenuManager(
+    DEFAULT_CONTEXT_MENU,
+    () => this.call(this.contextMenuListeners),
+    'Context menu',
   );
   private attached: DockManager | null = null;
   private addedComponents: readonly (readonly PanelComponent[])[] = [];
@@ -107,6 +115,17 @@ export class DocksManager implements Docks {
 
   addPanelMenu(groups: readonly PanelMenuGroup[]): Disposable {
     return this.menu.add(groups);
+  }
+
+  /**
+   * The context menu's groups, one per id, in order of first addition.
+   */
+  get contextMenu(): readonly ContextMenuGroup[] {
+    return this.contextMenus.groups;
+  }
+
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    return this.contextMenus.add(groups);
   }
 
   /**
@@ -202,6 +221,16 @@ export class DocksManager implements Docks {
   }
 
   /**
+   * Calls `listener` when the context menu's groups change.
+   */
+  onContextMenuChange(listener: () => void): Disposable {
+    this.contextMenuListeners.add(listener);
+    return () => {
+      this.contextMenuListeners.delete(listener);
+    };
+  }
+
+  /**
    * Calls `listener` with each panel that opens, and its dock.
    */
   onPanelOpen(listener: (dock: Dock, panel: Panel) => void): Disposable {
@@ -242,4 +271,10 @@ export function usePanelMenu(): readonly PanelMenuGroup[] {
   const { docks } = useApplicationManager();
   const subscribe = useCallback((listener: () => void) => docks.onPanelMenuChange(listener), [docks]);
   return useSyncExternalStore(subscribe, () => docks.panelMenu);
+}
+
+export function useDockContextMenu(): readonly ContextMenuGroup[] {
+  const { docks } = useApplicationManager();
+  const subscribe = useCallback((listener: () => void) => docks.onContextMenuChange(listener), [docks]);
+  return useSyncExternalStore(subscribe, () => docks.contextMenu);
 }

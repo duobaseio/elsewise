@@ -199,6 +199,20 @@ test.each(THEMES)('workspace dock panel menu (%s)', async (theme) => {
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-panel-menu-${theme}`);
 });
 
+test.each(THEMES)('workspace dock context menu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  await addEditorGroupTerminals(await mount(theme));
+
+  await userEvent.click(page.getByText('zsh 2'), { button: 'right' });
+  await expect.element(page.getByRole('menuitem').first()).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-context-menu-${theme}`);
+});
+
 test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {
   const api = await mount(theme);
 

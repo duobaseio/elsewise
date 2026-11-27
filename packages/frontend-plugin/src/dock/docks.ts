@@ -1,5 +1,6 @@
 import type { Disposable } from '@elsewise/plugin';
 import type { ComponentType } from 'react';
+import type { ContextMenuGroup } from '../context-menu';
 import type { Application } from '../plugin';
 import type { Workspace } from '../projects/workspaces';
 import type { TerminalOptions } from '../terminal';
@@ -47,6 +48,22 @@ export interface Docks {
    * Returns a disposable that removes the `groups`.
    */
   addPanelMenu(groups: readonly PanelMenuGroup[]): Disposable;
+
+  /**
+   * Adds `groups`, and their items, to the context menu of a panel's header.
+   *
+   * ```ts
+   * docks.addContextMenu([{ id: 'example.panels', order: 30, items: [{ order: 10, command: 'example.pin' }] }]);
+   * ```
+   *
+   * A panel command is run on the panel. An item for one kind of panel is hidden for the others by its command's
+   * `shown`, e.g. `panel.type === 'example/report'`.
+   *
+   * See {@link ContextMenuGroup} for adding to a built-in group or submenu.
+   *
+   * Returns a disposable that removes the `groups`.
+   */
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
 }
 
 /**

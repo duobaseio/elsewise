@@ -161,6 +161,22 @@ export const DEFAULT_FILE_TREE_CONTEXT_MENU = {
 } as const;
 
 /**
+ * The dock context menu's built-in groups and items.
+ */
+export const DEFAULT_DOCK_CONTEXT_MENU = {
+  close: {
+    id: 'io.duobase.elsewise.dock.contextMenu.close',
+    order: 10,
+    items: { close: 10, closeOthers: 20, closeAll: 30, closeLeft: 40, closeRight: 50 },
+  },
+  split: {
+    id: 'io.duobase.elsewise.dock.contextMenu.split',
+    order: 20,
+    items: { moveRight: 10, moveDown: 20 },
+  },
+} as const;
+
+/**
  * A group of items, separated from other groups in a context menu.
  *
  * Groups with the same id in a scope, e.g. the editor or the terminal, are merged. `order`, `in` and items with duplicate ids all use

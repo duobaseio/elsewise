@@ -25,6 +25,7 @@ export {
   type ContextMenuGroup,
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
+  DEFAULT_DOCK_CONTEXT_MENU,
   DEFAULT_EDITOR_CONTEXT_MENU,
   DEFAULT_FILE_TREE_CONTEXT_MENU,
   DEFAULT_PROJECT_CONTEXT_MENU,

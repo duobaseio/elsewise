@@ -5,6 +5,7 @@ import {
   type Command,
   type ContextMenuGroup,
   DEFAULT_COMMAND_GROUPS,
+  type Panel,
   type TerminalView,
 } from '@elsewise/frontend-plugin';
 import { describe, expect, test, vi } from 'vitest';
@@ -136,6 +137,7 @@ describe('CommandContextMenu', () => {
       },
       'File tree',
     ],
+    ['panel', { id: 'file:1', type: 'file', tab: true, closable: true, relativePath: 'a.ts' } satisfies Panel, 'Panel'],
   ])('shows commands of %s target only', async (_, target, shown) => {
     const application = setUp([
       {
@@ -159,8 +161,15 @@ describe('CommandContextMenu', () => {
         label: 'File tree',
         run: () => true,
       },
+      {
+        scope: 'panel',
+        group: DEFAULT_COMMAND_GROUPS.panel.id,
+        id: 'Panel',
+        label: 'Panel',
+        run: () => true,
+      },
     ]);
-    await mount([group('a', [item('Editor'), item('Terminal'), item('File tree')])], application, {
+    await mount([group('a', [item('Editor'), item('Terminal'), item('File tree'), item('Panel')])], application, {
       target: { current: target },
     });
 

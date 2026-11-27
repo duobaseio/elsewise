@@ -225,6 +225,57 @@ describe('onPanelMenuChange', () => {
   });
 });
 
+describe('addContextMenu', () => {
+  test('lists built-in groups', async () => {
+    const { docks } = await applicationOf(false);
+
+    expect(docks.contextMenu).toEqual([
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.close',
+        order: 10,
+        items: [
+          { order: 10, command: 'elsewise.panel.close.panel' },
+          { order: 20, command: 'elsewise.panel.close.others' },
+          { order: 30, command: 'elsewise.panel.close.all' },
+          { order: 40, command: 'elsewise.panel.close.left' },
+          { order: 50, command: 'elsewise.panel.close.right' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.split',
+        order: 20,
+        items: [
+          { order: 10, command: 'elsewise.panel.split.moveRight' },
+          { order: 20, command: 'elsewise.panel.split.moveDown' },
+        ],
+      },
+    ]);
+  });
+
+  test('removes groups when disposed', async () => {
+    const { docks } = await applicationOf(false);
+
+    const dispose = docks.addContextMenu([{ id: 'example.panels', items: [{ command: 'example.pin' }] }]);
+    expect(docks.contextMenu).toHaveLength(3);
+    void dispose();
+
+    expect(docks.contextMenu).toHaveLength(2);
+  });
+});
+
+describe('onContextMenuChange', () => {
+  test('reports added and removed groups', async () => {
+    const { docks } = await applicationOf(false);
+    const changed = vi.fn();
+    docks.onContextMenuChange(changed);
+
+    const dispose = docks.addContextMenu([{ id: 'example.panels', items: [{ command: 'example.pin' }] }]);
+    void dispose();
+
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('closeSourcelessPanels', () => {
   test('closes panels whose source was not added', async () => {
     const { docks, attached, api } = await mount();

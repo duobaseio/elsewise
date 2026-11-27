@@ -16,6 +16,7 @@ import type {
   Application,
   ContextMenuGroup,
   FileTreeSelection,
+  Panel,
   Project,
   TerminalView,
   Workspace,
@@ -26,6 +27,7 @@ import {
   type CommandManager,
   isEditor,
   isFileTreeSelection,
+  isPanel,
   isProject,
   isTerminalView,
   isWorkspace,
@@ -38,9 +40,9 @@ export interface CommandContextMenuProps {
    */
   menu: readonly ContextMenuGroup[];
   /**
-   * The project, workspace, editor, terminal or file tree selection that the menu's commands run against.
+   * The project, workspace, editor, terminal, file tree selection or panel that the menu's commands run against.
    */
-  target?: RefObject<Project | Workspace | EditorView | TerminalView | FileTreeSelection | null>;
+  target?: RefObject<Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel | null>;
   /**
    * Returns whether the menu opens for `event`, e.g. a right-click or a touch's long-press. Defaults to true.
    */
@@ -149,7 +151,7 @@ function resolve(
   menu: readonly ContextMenuGroup[],
   application: Application,
   commands: CommandManager,
-  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | null,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel | null,
   path: readonly string[],
 ): Group[] {
   const groups: Group[] = [];
@@ -218,6 +220,10 @@ function resolve(
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);
         } else if (command.scope === 'fileTree' && target !== null && isFileTreeSelection(target)) {
+          shown = command.shown?.(application, target);
+          enabled = command.enabled?.(application, target);
+          active = command.active?.(application, target);
+        } else if (command.scope === 'panel' && target !== null && isPanel(target)) {
           shown = command.shown?.(application, target);
           enabled = command.enabled?.(application, target);
           active = command.active?.(application, target);
