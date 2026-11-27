@@ -7,6 +7,8 @@ import {
   type FileTreeCommand,
   type FileTreeSelection,
   type Keys,
+  type Panel,
+  type PanelCommand,
   type Project,
   type ProjectCommand,
   type TerminalCommand,
@@ -48,6 +50,17 @@ const WORKSPACE: Workspace = {
   state: 'ok',
   main: false,
   absolutePath: '/p/w',
+};
+
+const FILE: Panel = { id: 'file:1', type: 'file', tab: true, closable: true, relativePath: 'a.ts' };
+
+const TERMINAL_PANEL: Panel = {
+  id: 'terminal:a',
+  type: 'terminal',
+  tab: true,
+  closable: true,
+  session: SESSION.id,
+  closeConfirmation: false,
 };
 
 // Returns the commands of an application whose editor is `editor` and terminal is `terminals`, on `platform`.
@@ -205,7 +218,7 @@ describe('addGroups', () => {
     const manager = commands();
     manager.addGroups([{ id: 'io.example', label: 'Example' }]);
 
-    expect([...manager.groups.keys()].slice(-2)).toEqual([DEFAULT_COMMAND_GROUPS.workspace.id, 'io.example']);
+    expect([...manager.groups.keys()].slice(-2)).toEqual([DEFAULT_COMMAND_GROUPS.panel.id, 'io.example']);
     expect(manager.groups.get('io.example')?.label).toBe('Example');
   });
 
@@ -396,6 +409,41 @@ describe('run', () => {
 
     expect(manager.run('c', selection)).toBe(true);
     expect(run.mock.lastCall?.[1]).toBe(selection);
+  });
+
+  test('runs panel command against panel, else active panel', () => {
+    const application = builtInApplication();
+    const run = vi.fn<PanelCommand['run']>(() => true);
+    application.commands.add([{ id: 'c', label: 'C', scope: 'panel', group: APPLICATION, run }]);
+
+    expect(application.commands.run('c')).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+
+    application.docks.active = { activePanel: FILE } as never;
+    expect(application.commands.run('c')).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(FILE);
+
+    expect(application.commands.run('c', TERMINAL_PANEL)).toBe(true);
+    expect(run.mock.lastCall?.[1]).toBe(TERMINAL_PANEL);
+  });
+
+  test('refuses panel for command of other surface', () => {
+    const manager = commands();
+    const run = vi.fn(() => true);
+    manager.add([
+      { id: 'editor', label: 'Editor', scope: 'editor', group: EDITOR, run },
+      { id: 'terminal', label: 'Terminal', scope: 'terminal', group: TERMINAL, run },
+      { id: 'fileTree', label: 'File tree', scope: 'fileTree', group: APPLICATION, run },
+      { id: 'panel', label: 'Panel', scope: 'panel', group: APPLICATION, run },
+    ]);
+
+    expect(manager.run('editor', FILE)).toBe(false);
+    expect(manager.run('terminal', TERMINAL_PANEL)).toBe(false);
+    expect(manager.run('fileTree', FILE)).toBe(false);
+    expect(manager.run('panel', view('a'))).toBe(false);
+    expect(manager.run('panel', { session: SESSION, terminal: new XTerm({ allowProposedApi: true }) })).toBe(false);
+    expect(run).not.toHaveBeenCalled();
+    expect(warn).toHaveBeenCalledTimes(5);
   });
 
   test('refuses target of other surface', () => {

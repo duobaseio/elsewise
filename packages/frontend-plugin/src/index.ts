@@ -15,6 +15,7 @@ export type {
   Commands,
   EditorCommand,
   FileTreeCommand,
+  PanelCommand,
   ProjectCommand,
   TerminalCommand,
   WorkspaceCommand,
