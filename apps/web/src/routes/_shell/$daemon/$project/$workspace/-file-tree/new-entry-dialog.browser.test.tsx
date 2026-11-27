@@ -2,6 +2,7 @@ import { create } from '@bufbuild/protobuf';
 import type { Workspace } from '@elsewise/frontend-plugin';
 import { Code, TransportError } from '@elsewise/transport';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { describe, expect, test, vi } from 'vitest';
 import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
@@ -13,6 +14,9 @@ import {
   WriteFileResponseSchema,
 } from '@/gen/elsewise/daemon/file_system/v1/file_system_service_pb';
 import { builtInApplication } from '../../../../../../../test/commands';
+import { stubComponents } from '../../../../../../../test/dock-stubs';
+import { usePanelFocus } from '../-dock/panel';
+import { WorkspaceDock } from '../route';
 import { NewEntryDialog } from './new-entry-dialog';
 
 const WORKSPACE: Workspace = {
@@ -47,6 +51,50 @@ async function mount({
   return application;
 }
 
+// An editor that has nothing to focus until it has loaded.
+function Editor() {
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    const timeout = setTimeout(() => setLoaded(true), 30);
+    return () => clearTimeout(timeout);
+  }, []);
+  usePanelFocus(loaded ? (content) => content.querySelector('textarea')?.focus() : null);
+  return loaded ? <textarea aria-label="Editor" /> : null;
+}
+
+// Renders the dialog beside the workspace's active dock, whose file tree has the focus.
+async function mountWithDock(): Promise<ApplicationManager> {
+  const client = new QueryClient();
+  client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, {
+    fileSystem: {
+      writeFile: async () => create(WriteFileResponseSchema),
+      createDirectory: async () => create(CreateDirectoryResponseSchema),
+    },
+  } as unknown as Daemon);
+  const application = builtInApplication({
+    panelComponents: stubComponents({
+      file: { panel: Editor },
+      fileTree: { panel: () => <button type="button">Tree</button> },
+    }),
+  });
+  await render(
+    <QueryClientProvider client={client}>
+      <ApplicationManagerContext value={application}>
+        <div style={{ width: 1100, height: 700 }}>
+          <WorkspaceDock
+            onDockviewReady={(dockview) => {
+              application.docks.active = application.docks.attach(WORKSPACE.id, dockview);
+            }}
+          />
+        </div>
+        <NewEntryDialog />
+      </ApplicationManagerContext>
+    </QueryClientProvider>,
+  );
+  await userEvent.click(page.getByRole('button', { name: 'Tree' }));
+  return application;
+}
+
 function open(application: ApplicationManager, folder: string, kind: 'file' | 'folder') {
   application.fileTree.newDialog.openWithPayload({ workspace: WORKSPACE, folder, kind });
 }
@@ -63,6 +111,30 @@ describe('NewEntryDialog', () => {
 
     await expect.element(page.getByRole('dialog')).not.toBeInTheDocument();
     expect(writeFile.mock.calls).toEqual([[{ root: '/elsewise', relativePath: 'src/notes.md' }]]);
+  });
+
+  test('opens created file and focuses its editor', async () => {
+    const application = await mountWithDock();
+    open(application, 'src/', 'file');
+
+    await userEvent.fill(page.getByLabelText('Name'), 'notes.md');
+    await userEvent.click(page.getByRole('button', { name: 'Create' }));
+
+    await expect
+      .poll(() => application.docks.active?.activePanel)
+      .toMatchObject({ type: 'file', relativePath: 'src/notes.md' });
+    await expect.element(page.getByLabelText('Editor')).toHaveFocus();
+  });
+
+  test('returns focus to file tree for created folder', async () => {
+    const application = await mountWithDock();
+    open(application, 'src/', 'folder');
+
+    await userEvent.fill(page.getByLabelText('Name'), 'docs');
+    await userEvent.click(page.getByRole('button', { name: 'Create' }));
+
+    await expect.element(page.getByRole('button', { name: 'Tree' })).toHaveFocus();
+    expect(application.docks.active?.panels.filter((panel) => panel.type === 'file')).toEqual([]);
   });
 
   test('creates folder in root on enter', async () => {
