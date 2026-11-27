@@ -22,6 +22,7 @@ import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { fakeFileSystem } from '../../../../../../../test/fake-file-system';
+import { Panel } from '../-dock/panel';
 import { FilePanel } from './file-panel';
 
 // Renders the panel of main.ts in the workspace Singapore at /elsewise, and returns the file system it reads from and
@@ -57,10 +58,12 @@ async function mount(content: string | Uint8Array) {
     path: '$daemon/$project/$workspace',
     component: () => (
       <div style={{ width: 600, height: 300 }}>
-        <FilePanel
-          {...({ params: { path: 'main.ts' }, api: { updateParameters } } as unknown as IDockviewPanelProps<{
-            path: string;
-          }>)}
+        <Panel
+          {...({
+            params: { path: 'main.ts' },
+            api: { id: 'file:1', updateParameters },
+          } as unknown as IDockviewPanelProps)}
+          component={{ type: 'file', header: () => null, panel: FilePanel }}
         />
       </div>
     ),
@@ -98,6 +101,24 @@ describe('FilePanel', () => {
     await mount('let a;\n');
 
     await expect.element(page.getByText('let a;')).toBeVisible();
+  });
+
+  test('focuses editor when its panel is asked', async () => {
+    const { application, screen } = await mount('let a;\n');
+    await expect.element(page.getByText('let a;')).toBeVisible();
+
+    application.docks.requestPanelFocus('file:1');
+
+    await vi.waitFor(() => expect(editor(screen.container).hasFocus).toBe(true));
+  });
+
+  test('focuses editor once file loads after its panel was asked', async () => {
+    const { application, screen } = await mount('let a;\n');
+    application.docks.requestPanelFocus('file:1');
+
+    await expect.element(page.getByText('let a;')).toBeVisible();
+
+    await vi.waitFor(() => expect(editor(screen.container).hasFocus).toBe(true));
   });
 
   test('shows message for binary file', async () => {

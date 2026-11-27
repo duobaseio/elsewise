@@ -1,39 +1,54 @@
+import type { CustomPanelHandle, Panel } from '@elsewise/frontend-plugin';
 import type { IDockviewPanelHeaderProps, IDockviewPanelProps } from 'dockview-react';
-import { useCallback, useSyncExternalStore } from 'react';
+import { type ReactNode, useCallback, useRef, useSyncExternalStore } from 'react';
 import { useApplicationManager } from '@/application-context';
+import type { ApplicationManager } from '@/application-manager';
+import type { DockManager } from '@/dock/dock-manager';
 import { isCustomPanel } from '@/dock/dock-store';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
-import { DraggableTab } from '../-dock/draggable-tab';
+import { usePanelFocus } from '../-dock/panel';
 
 /**
- * A custom panel's tab, which renders the header of the panel's source once that source is added.
+ * A custom panel's header, which renders the header of the panel's source once that source is added.
  */
-export function CustomTab(props: IDockviewPanelHeaderProps<{ tab?: boolean }>) {
-  const custom = useCustomPanel(props.api.id);
-
-  return (
-    <>
-      {props.params.tab !== true && <span data-tabless hidden />}
-      <DraggableTab api={props.api} />
-      {custom && (
-        <PluginBoundary name={`Header of panel source ${custom.source.id}`}>
-          <custom.source.header application={custom.application} dock={custom.dock} panel={custom.panel} />
-        </PluginBoundary>
-      )}
-    </>
-  );
-}
-
-/**
- * A custom panel, which renders the panel of its source once that source is added.
- */
-export function CustomPanelContent(props: IDockviewPanelProps) {
+export function CustomHeader(props: Pick<IDockviewPanelHeaderProps, 'api'>) {
   const custom = useCustomPanel(props.api.id);
 
   return (
     custom && (
+      <PluginBoundary name={`Header of panel source ${custom.source.id}`}>
+        <custom.source.header application={custom.application} dock={custom.dock} panel={custom.panel} />
+      </PluginBoundary>
+    )
+  );
+}
+
+export function customTooltip(application: ApplicationManager, dock: DockManager, panel: Panel): ReactNode | null {
+  const source = application.docks.panelSources.find((other) => other.id === panel.type);
+  if (source?.tooltip === undefined || !isCustomPanel(panel)) {
+    return null;
+  }
+
+  try {
+    const tooltip = source.tooltip(application, dock, panel);
+    return tooltip === null ? null : (
+      <PluginBoundary name={`Tooltip of panel source ${source.id}`}>{tooltip}</PluginBoundary>
+    );
+  } catch (error) {
+    console.error(`Tooltip of panel source ${source.id} failed`, error);
+    return null;
+  }
+}
+
+export function CustomPanelContent(props: IDockviewPanelProps) {
+  const custom = useCustomPanel(props.api.id);
+  const handle = useRef<CustomPanelHandle>(null);
+  usePanelFocus(custom === null ? null : () => handle.current?.focus());
+
+  return (
+    custom && (
       <PluginBoundary name={`Panel of panel source ${custom.source.id}`}>
-        <custom.source.panel application={custom.application} dock={custom.dock} panel={custom.panel} />
+        <custom.source.panel application={custom.application} dock={custom.dock} panel={custom.panel} ref={handle} />
       </PluginBoundary>
     )
   );

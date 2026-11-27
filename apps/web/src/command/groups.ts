@@ -1,6 +1,6 @@
 import { type CommandGroup, DEFAULT_COMMAND_GROUPS } from '@elsewise/frontend-plugin';
 
-const { application, editor, terminal, fileTree, project, workspace } = DEFAULT_COMMAND_GROUPS;
+const { application, editor, terminal, fileTree, project, workspace, panel } = DEFAULT_COMMAND_GROUPS;
 
 export const APPLICATION: CommandGroup = { id: application.id, label: 'Application' };
 
@@ -21,3 +21,5 @@ export const FILE_TREE: CommandGroup = { id: fileTree.id, label: 'File tree' };
 export const PROJECT: CommandGroup = { id: project.id, label: 'Project' };
 
 export const WORKSPACE: CommandGroup = { id: workspace.id, label: 'Workspace' };
+
+export const PANEL: CommandGroup = { id: panel.id, label: 'Panel' };

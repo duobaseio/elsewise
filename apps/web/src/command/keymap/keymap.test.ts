@@ -7,6 +7,8 @@ import {
   type FileTreeCommand,
   Keymap,
   type KeymapId,
+  type Panel,
+  type PanelCommand,
 } from '@elsewise/frontend-plugin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createElement } from 'react';
@@ -18,6 +20,7 @@ import {
   type LoadedKeymap,
   resolveKeymap,
   runFileTreeKeys,
+  runPanelKeys,
   useCopyKeymap,
   useDeleteKeymap,
   useLoadedKeymaps,
@@ -27,7 +30,7 @@ import {
 } from '@/command/keymap/keymap';
 import { PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
-import { builtInCommands } from '../../../test/commands';
+import { builtInApplication, builtInCommands } from '../../../test/commands';
 import { pluginStore } from '../../../test/plugins';
 
 const ELSEWISE: LoadedKeymap = { id: { source: 'elsewise', id: 'elsewise' }, keymap: Keymap.parse(elsewise) };
@@ -227,6 +230,71 @@ describe('installApplicationKeys', () => {
     window.dispatchEvent(press());
 
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+describe('runPanelKeys', () => {
+  const PANEL: Panel = { id: 'file:1', type: 'file', tab: true, closable: true, relativePath: 'a.ts' };
+
+  // Returns the commands of an application whose shown dock has the panel active, with a panel command bound to Ctrl-k
+  // that runs `run`.
+  function bound(run: PanelCommand['run'], enabled = true) {
+    const application = builtInApplication();
+    application.docks.active = { activePanel: PANEL } as never;
+    application.commands.add([
+      {
+        id: 'a',
+        label: 'a',
+        scope: 'panel',
+        group: DEFAULT_COMMAND_GROUPS.panel.id,
+        defaultKeys: ['Ctrl-k'],
+        enabled: () => enabled,
+        run,
+      },
+    ]);
+    return application;
+  }
+
+  test('runs bound command on active panel', () => {
+    const run = vi.fn<PanelCommand['run']>(() => true);
+    const event = press();
+
+    runPanelKeys(bound(run).commands, event);
+
+    expect(run.mock.lastCall?.[1]).toBe(PANEL);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  test('skips handled key', () => {
+    const run = vi.fn<PanelCommand['run']>(() => true);
+    const event = press();
+    event.preventDefault();
+
+    runPanelKeys(bound(run).commands, event);
+
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  test('leaves key of disabled command', () => {
+    const run = vi.fn<PanelCommand['run']>(() => true);
+    const event = press();
+
+    runPanelKeys(bound(run, false).commands, event);
+
+    expect(run).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  test('leaves key without shown dock', () => {
+    const run = vi.fn<PanelCommand['run']>(() => true);
+    const application = bound(run);
+    application.docks.active = null;
+    const event = press();
+
+    runPanelKeys(application.commands, event);
+
+    expect(run).not.toHaveBeenCalled();
+    expect(event.defaultPrevented).toBe(false);
   });
 });
 

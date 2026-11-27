@@ -15,6 +15,7 @@ export class ApplicationKeymap implements ActiveKeymap {
     editor: new Map(),
     terminal: new Map(),
     fileTree: new Map(),
+    panel: new Map(),
   };
 
   constructor(private readonly platform: Platform = PLATFORM) {}
@@ -50,6 +51,7 @@ export class ApplicationKeymap implements ActiveKeymap {
       editor: new Map<string, string[]>(),
       terminal: new Map<string, string[]>(),
       fileTree: new Map<string, string[]>(),
+      panel: new Map<string, string[]>(),
     };
     for (const command of commands) {
       const entry = Object.hasOwn(keymap.keys, command.id) ? keymap.keys[command.id] : undefined;

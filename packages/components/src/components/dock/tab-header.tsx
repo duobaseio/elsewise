@@ -34,7 +34,9 @@ export function DockTabHeader({
   return (
     <div className="flex h-full items-center gap-1.5 px-2 text-base/6">
       {icon}
-      <span id={`${id}-title`}>{title}</span>
+      <span className="min-w-0 grow truncate" id={`${id}-title`}>
+        {title}
+      </span>
       {onClose === undefined ? (
         marked && <span className="-mx-0.5 flex size-4 items-center justify-center text-text-3">{status}</span>
       ) : (
@@ -42,7 +44,7 @@ export function DockTabHeader({
           aria-label="Close"
           aria-labelledby={`${id}-close ${id}-title`}
           className={cn(
-            '-mx-0.5 size-4 text-text-3 opacity-0 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
+            '-mx-0.5 size-4 text-text-3 opacity-0 group-data-highlighted/dropdown-menu-item:opacity-100 focus-visible:opacity-100 in-[.dv-active-tab]:opacity-100 in-[.dv-tab:hover]:opacity-100',
             marked && 'opacity-100',
           )}
           id={`${id}-close`}
@@ -54,8 +56,18 @@ export function DockTabHeader({
           size="icon-xs"
           variant="ghost"
         >
-          {marked && <span className="contents in-[.dv-tab:hover]:hidden">{status}</span>}
-          <Icon className={cn('size-3', marked && 'hidden in-[.dv-tab:hover]:block')} name="close" />
+          {marked && (
+            <span className="contents group-data-highlighted/dropdown-menu-item:hidden in-[.dv-tab:hover]:hidden">
+              {status}
+            </span>
+          )}
+          <Icon
+            className={cn(
+              'size-3',
+              marked && 'hidden group-data-highlighted/dropdown-menu-item:block in-[.dv-tab:hover]:block',
+            )}
+            name="close"
+          />
         </Button>
       )}
     </div>

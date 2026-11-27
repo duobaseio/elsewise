@@ -15,6 +15,7 @@ export type {
   Commands,
   EditorCommand,
   FileTreeCommand,
+  PanelCommand,
   ProjectCommand,
   TerminalCommand,
   WorkspaceCommand,
@@ -24,6 +25,7 @@ export {
   type ContextMenuGroup,
   type ContextMenuItem,
   type ContextMenuSubmenuItem,
+  DEFAULT_DOCK_CONTEXT_MENU,
   DEFAULT_EDITOR_CONTEXT_MENU,
   DEFAULT_FILE_TREE_CONTEXT_MENU,
   DEFAULT_PROJECT_CONTEXT_MENU,
@@ -31,6 +33,7 @@ export {
   DEFAULT_WORKSPACE_CONTEXT_MENU,
 } from './context-menu';
 export {
+  type CustomPanelHandle,
   type CustomPanelProps,
   type CustomPanelSource,
   DEFAULT_PANEL_SOURCES,
@@ -98,6 +101,7 @@ export {
   Brightness,
   BundledKeymap,
   BundledTheme,
+  CloseActivation,
   CursorStyle,
   DEFAULT_FRONTEND_SETTINGS,
   DEFAULT_LANGUAGES,

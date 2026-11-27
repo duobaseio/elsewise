@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
+import { FILE_MANAGER } from '@/projects/commands';
 import { ProjectManager } from '@/projects/project-manager';
 import { builtInApplication } from '../../test/commands';
 import {
@@ -49,8 +50,8 @@ async function mount(shown = true, panelComponents: readonly PanelComponent[] = 
 }
 
 describe('addPanelComponents', () => {
-  const FILE_COMPONENT = { type: 'file', tab: () => null, panel: () => null } as const;
-  const TERMINAL_COMPONENT = { type: 'terminal', tab: () => null, panel: () => null } as const;
+  const FILE_COMPONENT = { type: 'file', header: () => null, panel: () => null } as const;
+  const TERMINAL_COMPONENT = { type: 'terminal', header: () => null, panel: () => null } as const;
 
   test('lists components in order of addition', async () => {
     const { docks } = await applicationOf(false);
@@ -225,6 +226,156 @@ describe('onPanelMenuChange', () => {
   });
 });
 
+describe('addContextMenu', () => {
+  test('lists built-in groups', async () => {
+    const { docks } = await applicationOf(false);
+
+    expect(docks.contextMenu).toEqual([
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.close',
+        order: 10,
+        items: [
+          { order: 10, command: 'elsewise.panel.view.close' },
+          { order: 20, command: 'elsewise.panel.view.closeOthers' },
+          { order: 30, command: 'elsewise.panel.view.closeAll' },
+          { order: 40, command: 'elsewise.panel.view.closeLeft' },
+          { order: 50, command: 'elsewise.panel.view.closeRight' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.split',
+        order: 20,
+        items: [
+          { order: 10, label: 'Split and move', submenu: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove.directions',
+        order: 10,
+        in: 'io.duobase.elsewise.dock.contextMenu.split.splitAndMove',
+        items: [
+          { order: 10, label: 'Right', command: 'elsewise.panel.split.moveRight' },
+          { order: 20, label: 'Down', command: 'elsewise.panel.split.moveDown' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.edit',
+        order: 30,
+        items: [{ order: 10, command: 'elsewise.panel.terminal.rename' }],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.clipboard',
+        order: 40,
+        items: [{ order: 10, label: 'Copy path', submenu: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath' }],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath.paths',
+        order: 10,
+        in: 'io.duobase.elsewise.dock.contextMenu.clipboard.copyPath',
+        items: [
+          { order: 10, label: 'Absolute', command: 'elsewise.panel.file.copyPath' },
+          { order: 20, label: 'From workspace', command: 'elsewise.panel.file.copyRelativePath' },
+        ],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.open',
+        order: 50,
+        items: [{ order: 10, label: 'Open in', submenu: 'io.duobase.elsewise.dock.contextMenu.open.openIn' }],
+      },
+      {
+        id: 'io.duobase.elsewise.dock.contextMenu.open.openIn.apps',
+        order: 10,
+        in: 'io.duobase.elsewise.dock.contextMenu.open.openIn',
+        items: [{ order: 10, label: FILE_MANAGER, command: 'elsewise.panel.file.openFileManager' }],
+      },
+    ]);
+  });
+
+  test('removes groups when disposed', async () => {
+    const { docks } = await applicationOf(false);
+
+    const dispose = docks.addContextMenu([{ id: 'example.panels', items: [{ command: 'example.pin' }] }]);
+    expect(docks.contextMenu).toHaveLength(9);
+    void dispose();
+
+    expect(docks.contextMenu).toHaveLength(8);
+  });
+});
+
+describe('onContextMenuChange', () => {
+  test('reports added and removed groups', async () => {
+    const { docks } = await applicationOf(false);
+    const changed = vi.fn();
+    docks.onContextMenuChange(changed);
+
+    const dispose = docks.addContextMenu([{ id: 'example.panels', items: [{ command: 'example.pin' }] }]);
+    void dispose();
+
+    expect(changed).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('requestPanelFocus', () => {
+  test('asks active panel of attached dock', async () => {
+    const application = await applicationOf(true);
+
+    await mountDock((ready) => {
+      ready.getPanel(FILE.id)?.api.setActive();
+      application.docks.attach(WORKSPACE, ready);
+    });
+
+    expect(application.docks.focusRequest?.panel).toBe(FILE.id);
+  });
+
+  test('asks panel that becomes active', async () => {
+    const { docks, attached } = await mount();
+
+    attached.activate(FILE_TREE);
+
+    expect(docks.focusRequest?.panel).toBe(FILE_TREE.id);
+  });
+
+  test('asks panel that becomes active once another closes', async () => {
+    const { docks, attached } = await mount();
+    attached.activate(FILE);
+
+    await attached.close(FILE);
+
+    expect(docks.focusRequest?.panel).toBe(attached.activePanel?.id);
+    expect(attached.activePanel).not.toEqual(FILE);
+  });
+
+  test('asks panel that becomes active once another hides', async () => {
+    const { docks, attached } = await mount();
+    attached.activate(FILE_TREE);
+
+    attached.hide(FILE_TREE);
+
+    expect(attached.activePanel).toEqual(FILE);
+    expect(docks.focusRequest?.panel).toBe(FILE.id);
+  });
+
+  test('asks active panel again when it is activated', async () => {
+    const { docks, attached } = await mount();
+    attached.activate(FILE);
+    const before = docks.focusRequest;
+
+    attached.activate(FILE);
+
+    expect(docks.focusRequest).toEqual({ panel: FILE.id, monotonic: (before?.monotonic ?? 0) + 1 });
+  });
+
+  test('reports request', async () => {
+    const { docks } = await mount();
+    const changed = vi.fn();
+    docks.onFocusRequestChange(changed);
+
+    docks.requestPanelFocus(FILE.id);
+
+    expect(changed).toHaveBeenCalledOnce();
+  });
+});
+
 describe('closeSourcelessPanels', () => {
   test('closes panels whose source was not added', async () => {
     const { docks, attached, api } = await mount();
@@ -278,7 +429,9 @@ describe('active', () => {
 describe('attach', () => {
   test('asks component of panel type before panel closes', async () => {
     const close = vi.fn(() => false);
-    const { application, attached } = await mount(true, [{ type: 'file', tab: () => null, panel: () => null, close }]);
+    const { application, attached } = await mount(true, [
+      { type: 'file', header: () => null, panel: () => null, close },
+    ]);
 
     await expect(attached.close(FILE)).resolves.toBe(false);
 

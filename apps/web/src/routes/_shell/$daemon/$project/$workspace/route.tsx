@@ -1,22 +1,23 @@
 import { Button } from '@elsewise/components/components/button';
-import { DockToolHeader } from '@elsewise/components/components/dock';
 import { Icon } from '@elsewise/components/components/icon';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@elsewise/components/components/tooltip';
 import { cn } from '@elsewise/components/lib/utils';
-import type { Panel } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
 import {
   type DockviewApi,
   DockviewReact,
   type DockviewReadyEvent,
-  type IDockviewPanelHeaderProps,
+  type IDockviewPanelProps,
   type SerializedDockview,
 } from 'dockview-react';
 import { useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
+import { runPanelKeys } from '@/command/keymap/keymap';
+import type { PanelComponent } from '@/dock/panel-component';
 import { useWorkspaceState, useWorkspaceStateStore } from '@/projects/workspace-state-store';
 import { DraggableDock } from './-dock/draggable-dock';
-import { DraggableTab } from './-dock/draggable-tab';
+import { Panel } from './-dock/panel';
+import { Tab } from './-dock/tab';
 import { TabActions } from './-dock/tab-actions';
 import { CloseFileDialog } from './-file/close-file-dialog';
 import { DeleteEntriesDialog } from './-file-tree/delete-entries-dialog';
@@ -84,13 +85,20 @@ export function WorkspaceDock({
   onLayoutChange?: (layout: SerializedDockview) => void;
 }) {
   const [dockview, setDockview] = useState<DockviewApi | null>(null);
-  const { panelComponents } = useApplicationManager().docks;
+  const { commands, docks } = useApplicationManager();
+  const { panelComponents } = docks;
   const tabs = useMemo(
-    () => Object.fromEntries(panelComponents.map((component) => [component.type, component.tab])),
+    () => Object.fromEntries(panelComponents.map((component) => [component.type, Tab])),
     [panelComponents],
   );
   const panels = useMemo(
-    () => Object.fromEntries(panelComponents.map((component) => [component.type, component.panel])),
+    () =>
+      Object.fromEntries(
+        panelComponents.map((component) => [
+          component.type,
+          (props: IDockviewPanelProps) => <Panel component={component} {...props} />,
+        ]),
+      ),
     [panelComponents],
   );
 
@@ -118,8 +126,8 @@ export function WorkspaceDock({
 
     event.api.addPanel({
       id: 'fileTree',
-      tabComponent: 'fileTree' satisfies Panel['type'],
-      component: 'fileTree' satisfies Panel['type'],
+      tabComponent: 'fileTree' satisfies PanelComponent['type'],
+      component: 'fileTree' satisfies PanelComponent['type'],
       title: 'Files',
       params: { path: '/' },
       minimumWidth: 10,
@@ -127,8 +135,8 @@ export function WorkspaceDock({
     });
     event.api.addPanel({
       id: 'placeholder',
-      tabComponent: 'placeholder' satisfies Panel['type'],
-      component: 'placeholder' satisfies Panel['type'],
+      tabComponent: 'placeholder' satisfies PanelComponent['type'],
+      component: 'placeholder' satisfies PanelComponent['type'],
       position: { referencePanel: 'fileTree', direction: 'left' },
       minimumWidth: 10,
       minimumHeight: 10,
@@ -139,7 +147,16 @@ export function WorkspaceDock({
   };
 
   return (
-    <div className="flex h-full">
+    // biome-ignore lint/a11y/noStaticElementInteractions: the keys run commands on the active panel inside.
+    <div
+      className="flex h-full"
+      onKeyDown={(event) => {
+        // The keys pressed in a menu or popover of the dock bubble here too.
+        if (event.target instanceof Node && event.currentTarget.contains(event.target)) {
+          runPanelKeys(commands, event.nativeEvent);
+        }
+      }}
+    >
       <div className="min-w-0 flex-1">
         <DraggableDock dockview={dockview}>
           <DockviewReact
@@ -156,20 +173,6 @@ export function WorkspaceDock({
       </div>
       <ToolStripe />
     </div>
-  );
-}
-
-/**
- * Tool tabs: icon + title, no close — tools hide via the stripe, not the tab. `data-tabless` is the adapter CSS hook for
- * tool-specific state painting.
- */
-export function FileTreeTab(props: IDockviewPanelHeaderProps) {
-  return (
-    <>
-      <span data-tabless hidden />
-      <DraggableTab api={props.api} />
-      <DockToolHeader title={props.api.title} />
-    </>
   );
 }
 

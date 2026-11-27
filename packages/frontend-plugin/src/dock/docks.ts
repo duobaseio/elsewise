@@ -1,5 +1,6 @@
 import type { Disposable } from '@elsewise/plugin';
-import type { ComponentType } from 'react';
+import type { ComponentType, ReactNode, Ref } from 'react';
+import type { ContextMenuGroup } from '../context-menu';
 import type { Application } from '../plugin';
 import type { Workspace } from '../projects/workspaces';
 import type { TerminalOptions } from '../terminal';
@@ -47,6 +48,22 @@ export interface Docks {
    * Returns a disposable that removes the `groups`.
    */
   addPanelMenu(groups: readonly PanelMenuGroup[]): Disposable;
+
+  /**
+   * Adds `groups`, and their items, to the context menu of a panel's header.
+   *
+   * ```ts
+   * docks.addContextMenu([{ id: 'example.panels', order: 30, items: [{ order: 10, command: 'example.pin' }] }]);
+   * ```
+   *
+   * A panel command is run on the panel. An item for one kind of panel is hidden for the others by its command's
+   * `shown`, e.g. `panel.type === 'example/report'`.
+   *
+   * See {@link ContextMenuGroup} for adding to a built-in group or submenu.
+   *
+   * Returns a disposable that removes the `groups`.
+   */
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable;
 }
 
 /**
@@ -196,14 +213,32 @@ export interface CustomPanelSource {
   readonly closable: boolean;
 
   /**
-   * The panel's icon and title.
+   * The panel's header, e.g. its icon and title, in the tab bar and overflow menu.
    */
   readonly header: ComponentType<CustomPanelProps>;
 
   /**
-   * The panel.
+   * Returns the tooltip shown below the panel's header in the tab bar, e.g. a file's path, or null for none.
+   *
+   * Called each time the tooltip is about to open. Defaults to none.
    */
-  readonly panel: ComponentType<CustomPanelProps>;
+  tooltip?(application: Application, dock: Dock, panel: CustomPanel): ReactNode | null;
+
+  /**
+   * The panel.
+   *
+   * When the panel is focused, the dock calls the handle's `focus`. Without a handle, the panel's first focusable
+   * element takes the focus.
+   *
+   * ```tsx
+   * panel: ({ ref }) => {
+   *   const field = useRef<HTMLTextAreaElement>(null);
+   *   useImperativeHandle(ref, () => ({ focus: () => field.current?.focus() }));
+   *   return <textarea ref={field} />;
+   * }
+   * ```
+   */
+  readonly panel: ComponentType<CustomPanelProps & { readonly ref?: Ref<CustomPanelHandle> }>;
 
   /**
    * Called before `panel` closes. Returns false if the panel stays open.
@@ -227,4 +262,14 @@ export interface CustomPanelProps {
   readonly dock: Dock;
 
   readonly panel: CustomPanel;
+}
+
+/**
+ * The functions that the dock calls on a custom panel.
+ */
+export interface CustomPanelHandle {
+  /**
+   * Focuses what the panel shows, e.g. its editor.
+   */
+  focus(): void;
 }

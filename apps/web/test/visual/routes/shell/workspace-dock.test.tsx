@@ -9,10 +9,12 @@ import '@/routes/_shell/dockview.css';
 import { ApplicationManagerContext } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { ProjectManager } from '@/projects/project-manager';
-import { FileTreeTab, WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
+import { fileTooltip } from '@/routes/_shell/$daemon/$project/$workspace/-file/file-header';
+import { FileTreeHeader } from '@/routes/_shell/$daemon/$project/$workspace/-file-tree/file-tree-header';
+import { WorkspaceDock } from '@/routes/_shell/$daemon/$project/$workspace/route';
 import { builtInApplication } from '../../../commands';
 import { addFile, showWorkspace, WORKSPACE, workspaceRouter } from '../../../dock';
-import { StubTab, stubComponents } from '../../../dock-stubs';
+import { stubComponents } from '../../../dock-stubs';
 
 import { forcePseudoStates, THEMES } from '../../../sheet';
 
@@ -25,9 +27,8 @@ async function mount(
     router,
     projects: new ProjectManager(client, router),
     panelComponents: stubComponents({
-      fileTree: { tab: FileTreeTab },
-      file: { tab: StubTab },
-      terminal: { tab: StubTab },
+      file: { tooltip: fileTooltip },
+      fileTree: { header: FileTreeHeader },
     }),
   });
   configure?.(application);
@@ -198,6 +199,48 @@ test.each(THEMES)('workspace dock panel menu (%s)', async (theme) => {
   await expect.element(page.getByRole('menuitem', { name: 'Terminal' })).toBeVisible();
 
   await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-panel-menu-${theme}`);
+});
+
+test.each(THEMES)('workspace dock context menu (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  await addEditorGroupTerminals(await mount(theme));
+
+  await userEvent.click(page.getByText('zsh 2'), { button: 'right' });
+  await expect.element(page.getByRole('menuitem').first()).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-context-menu-${theme}`);
+});
+
+test.each(THEMES)('workspace dock context menu of file (%s)', async (theme) => {
+  // The menu is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  await addEditorGroupTerminals(await mount(theme));
+
+  await userEvent.click(page.getByText('$workspace.tsx'), { button: 'right' });
+  await expect.element(page.getByRole('menuitem').first()).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-context-menu-file-${theme}`);
+});
+
+test.each(THEMES)('workspace dock tab tooltip (%s)', async (theme) => {
+  // The tooltip is portalled to the body, outside the sheet's brightness, so the page takes it as the app does.
+  document.documentElement.dataset.brightness = theme;
+  onTestFinished(() => {
+    delete document.documentElement.dataset.brightness;
+  });
+  await mount(theme);
+
+  await userEvent.hover(page.getByText('$workspace.tsx'));
+  await expect.element(page.getByText(/^\/.*\$workspace\.tsx$/)).toBeVisible();
+
+  await expect(page.getByTestId('sheet')).toMatchScreenshot(`workspace-dock-tab-tooltip-${theme}`);
 });
 
 test.each(THEMES)('workspace dock tree collapsed (%s)', async (theme) => {

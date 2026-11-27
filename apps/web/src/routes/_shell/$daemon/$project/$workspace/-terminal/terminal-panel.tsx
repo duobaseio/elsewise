@@ -7,11 +7,13 @@ import { useEffect, useState } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { Terminal } from '@/terminals/terminal';
 
+import { usePanelFocus } from '../-dock/panel';
+
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
 
 export function TerminalPanel(props: IDockviewPanelProps<{ session?: string }>) {
   const { daemon, project, workspace } = route.useParams();
-  const { terminals } = useApplicationManager();
+  const { docks, terminals } = useApplicationManager();
   const { session } = props.params;
   const [view, setView] = useState<TerminalView | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -43,7 +45,13 @@ export function TerminalPanel(props: IDockviewPanelProps<{ session?: string }>) 
 
     const subscription = terminals.onClose((view) => {
       if (view.session.id.daemon === daemon && view.session.id.session === session) {
-        props.api.close();
+        const dock = docks.active;
+        const panel = dock?.get(props.api.id);
+        if (dock != null && panel != null) {
+          void dock.close(panel, true);
+        } else {
+          props.api.close();
+        }
       }
     });
 
@@ -51,7 +59,9 @@ export function TerminalPanel(props: IDockviewPanelProps<{ session?: string }>) 
       mounted = false;
       void subscription();
     };
-  }, [terminals, daemon, project, workspace, session, failure, props.api]);
+  }, [docks, terminals, daemon, project, workspace, session, failure, props.api]);
+
+  usePanelFocus(view === null ? null : () => view.terminal.focus());
 
   if (failure !== null) {
     return (

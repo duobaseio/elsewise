@@ -4,6 +4,7 @@ import { EDITOR_TERMS, Editor } from '@/routes/settings/local/editor';
 import { FILE_TREE_TERMS, FileTree } from '@/routes/settings/local/file-tree';
 import { KEYMAP_TERMS, Keymap } from '@/routes/settings/local/keymap';
 import { TERMINAL_TERMS, Terminal } from '@/routes/settings/local/terminal';
+import { WORKSPACE_TERMS, Workspace } from '@/routes/settings/local/workspace';
 import type { FileRouteTypes } from '@/routeTree.gen';
 
 export const DEFAULT_PANELS = {
@@ -22,6 +23,14 @@ export const DEFAULT_PANELS = {
     route: '/settings/local/keymap',
     terms: KEYMAP_TERMS,
     component: Keymap,
+  },
+  workspace: {
+    scope: 'local',
+    id: 'io.duobase.elsewise.settings.workspace',
+    label: 'Workspace',
+    route: '/settings/local/workspace',
+    terms: WORKSPACE_TERMS,
+    component: Workspace,
   },
   editor: {
     scope: 'local',

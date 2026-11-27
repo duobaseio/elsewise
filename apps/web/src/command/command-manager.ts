@@ -8,6 +8,7 @@ import type {
   Disposable,
   FileTreeSelection,
   Keymap,
+  Panel,
   Project,
   TerminalView,
   Workspace,
@@ -23,11 +24,26 @@ import {
   EDITOR_EDIT,
   EDITOR_NAVIGATE,
   FILE_TREE,
+  PANEL,
   PROJECT,
   TERMINAL,
   WORKSPACE,
 } from '@/command/groups';
 import { ApplicationKeymap } from '@/command/keymap/application-keymap';
+import {
+  PANEL_CLOSE,
+  PANEL_CLOSE_ALL,
+  PANEL_CLOSE_LEFT,
+  PANEL_CLOSE_OTHERS,
+  PANEL_CLOSE_RIGHT,
+  PANEL_FILE_COPY_PATH,
+  PANEL_FILE_COPY_RELATIVE_PATH,
+  PANEL_FILE_OPEN_FILE_MANAGER,
+  PANEL_HIDE,
+  PANEL_SPLIT_MOVE_DOWN,
+  PANEL_SPLIT_MOVE_RIGHT,
+  PANEL_TERMINAL_RENAME,
+} from '@/dock/commands';
 import { EDITOR_APPLY_TOP_FIX, EDITOR_SHOW_ACTIONS } from '@/editor/actions';
 import {
   EDITOR_ADD_CARET_ABOVE,
@@ -128,6 +144,7 @@ export const DEFAULT_GROUPS: readonly CommandGroup[] = [
   FILE_TREE,
   PROJECT,
   WORKSPACE,
+  PANEL,
 ];
 
 export const DEFAULT_COMMANDS: readonly Command[] = [
@@ -226,6 +243,19 @@ export const DEFAULT_COMMANDS: readonly Command[] = [
   FILE_TREE_DELETE,
   FILE_TREE_OPEN_FILE,
   FILE_TREE_OPEN_FILE_MANAGER,
+  // Panel
+  PANEL_CLOSE,
+  PANEL_CLOSE_OTHERS,
+  PANEL_CLOSE_ALL,
+  PANEL_CLOSE_LEFT,
+  PANEL_CLOSE_RIGHT,
+  PANEL_HIDE,
+  PANEL_SPLIT_MOVE_RIGHT,
+  PANEL_SPLIT_MOVE_DOWN,
+  PANEL_FILE_COPY_PATH,
+  PANEL_FILE_COPY_RELATIVE_PATH,
+  PANEL_FILE_OPEN_FILE_MANAGER,
+  PANEL_TERMINAL_RENAME,
 ];
 
 /**
@@ -375,7 +405,7 @@ export class CommandManager implements Commands {
     this.notify();
   }
 
-  run(id: string, target?: Project | Workspace | EditorView | TerminalView | FileTreeSelection): boolean {
+  run(id: string, target?: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel): boolean {
     const command = this.currentCommands.get(id);
     if (command === undefined) {
       console.warn(`Unknown command ${id}`);
@@ -471,6 +501,24 @@ export class CommandManager implements Commands {
         return command.run(this.application, target);
       }
 
+      if (command.scope === 'panel') {
+        if (target !== undefined && !isPanel(target)) {
+          console.warn(`Command ${id} runs on a panel`);
+          return false;
+        }
+
+        const panel = target ?? this.application.docks.active?.activePanel ?? null;
+        if (panel === null) {
+          return false;
+        }
+
+        if (command.enabled?.(this.application, panel) === false) {
+          return false;
+        }
+
+        return command.run(this.application, panel);
+      }
+
       if (command.enabled?.(this.application) === false) {
         return false;
       }
@@ -501,33 +549,39 @@ export class CommandManager implements Commands {
 }
 
 export function isProject(
-  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel,
 ): target is Project {
   return 'absolutePath' in target && !('main' in target);
 }
 
 export function isWorkspace(
-  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel,
 ): target is Workspace {
   return 'absolutePath' in target && 'main' in target;
 }
 
 export function isEditor(
-  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel,
 ): target is EditorView {
-  return !('absolutePath' in target) && !('relativePaths' in target) && !('session' in target);
+  return !('absolutePath' in target) && !('relativePaths' in target) && !('session' in target) && !isPanel(target);
 }
 
 export function isTerminalView(
-  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel,
 ): target is TerminalView {
-  return 'session' in target;
+  return 'session' in target && !isPanel(target);
 }
 
 export function isFileTreeSelection(
-  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection,
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel,
 ): target is FileTreeSelection {
   return 'relativePaths' in target;
+}
+
+export function isPanel(
+  target: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel,
+): target is Panel {
+  return 'closable' in target;
 }
 
 export function useCommandManager(): CommandManager;

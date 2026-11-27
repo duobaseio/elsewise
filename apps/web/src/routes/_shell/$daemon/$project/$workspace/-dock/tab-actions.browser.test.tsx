@@ -1,6 +1,7 @@
 import type { CustomPanelSource } from '@elsewise/frontend-plugin';
+import type { DockviewApi } from 'dockview-react';
 import { describe, expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
@@ -27,6 +28,7 @@ async function mount() {
   await showWorkspace(router);
   await vi.waitFor(() => expect(application.projects.workspaces.active).not.toBeNull());
 
+  let api: DockviewApi | undefined;
   await render(
     <ApplicationManagerContext value={application}>
       <div style={{ width: 1100, height: 700 }}>
@@ -34,6 +36,7 @@ async function mount() {
           onDockviewReady={(ready) => {
             addFile(ready);
             application.docks.attach(WORKSPACE, ready);
+            api = ready;
           }}
         />
       </div>
@@ -42,7 +45,7 @@ async function mount() {
   await vi.waitFor(() => expect(application.docks.active).not.toBeNull());
   const dock = application.docks.active as NonNullable<typeof application.docks.active>;
   const addedTerminal = vi.spyOn(dock, 'addTerminal').mockResolvedValue(null);
-  return { docks: application.docks, dock, addedTerminal };
+  return { api: api as DockviewApi, docks: application.docks, dock, addedTerminal };
 }
 
 describe('AddTabAction', () => {
@@ -153,5 +156,45 @@ describe('AddTabAction', () => {
     await page.getByRole('menuitem', { name: 'More' }).click();
 
     await expect.element(page.getByRole('menuitem', { name: 'Report' })).toBeVisible();
+  });
+});
+
+describe('OverflowTabsAction', () => {
+  // Adds files until tabs overflow, shows the first tab again, and opens the menu of the overflowing ones.
+  async function openOverflowing(dock: Awaited<ReturnType<typeof mount>>['dock']) {
+    for (let index = 0; index < 12; index++) {
+      dock.addFile(`src/overflowing-tab-${index}.ts`, { tab: 'first', with: FILE });
+    }
+    dock.activate(dock.groups[0]?.panels[0] ?? FILE);
+    const button = page.getByRole('button', { name: 'Show hidden tabs' });
+    await vi.waitFor(() => expect(getComputedStyle(button.element()).visibility).toBe('visible'));
+    await userEvent.click(button);
+    await expect.element(page.getByRole('menuitem').first()).toBeVisible();
+  }
+
+  test('shows header of custom panel', async () => {
+    const { docks, dock } = await mount();
+    docks.addPanelSources([REPORT]);
+    dock.addPanel(REPORT.id, { tab: 'last', with: FILE });
+
+    await openOverflowing(dock);
+
+    await expect.element(page.getByRole('menuitem', { name: 'Report header' })).toBeVisible();
+  });
+
+  test('omits custom panel without source', async () => {
+    const { api, dock } = await mount();
+    api.addPanel({
+      id: 'custom:1',
+      tabComponent: 'custom',
+      component: 'custom',
+      params: { type: REPORT.id, tab: true, closable: true },
+      position: { referencePanel: FILE.id },
+    });
+
+    await openOverflowing(dock);
+
+    const rows = page.getByRole('menuitem').elements();
+    expect(rows.at(-1)?.textContent).toBe('$workspace.tsx');
   });
 });

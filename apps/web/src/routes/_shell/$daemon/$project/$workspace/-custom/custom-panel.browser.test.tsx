@@ -1,7 +1,8 @@
 import type { CustomPanelProps, CustomPanelSource } from '@elsewise/frontend-plugin';
 import type { DockviewApi } from 'dockview-react';
+import { useImperativeHandle } from 'react';
 import { describe, expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { ProjectManager } from '@/projects/project-manager';
@@ -49,7 +50,7 @@ async function mount() {
   };
 }
 
-describe('CustomTab', () => {
+describe('CustomHeader', () => {
   test('renders header of source with its panel', async () => {
     const props: CustomPanelProps[] = [];
     const { application, dock } = await mount();
@@ -67,17 +68,6 @@ describe('CustomTab', () => {
 
     await expect.element(page.getByText('Report header')).toBeVisible();
     expect(props.at(-1)).toEqual({ application, dock, panel });
-  });
-
-  test('marks group of tabless panel', async () => {
-    const { application, dock } = await mount();
-    application.docks.addPanelSources([{ ...REPORT, tab: false }]);
-    const marked = () => document.querySelectorAll('.dv-groupview:has([data-tabless])').length;
-    const before = marked();
-
-    dock.addPanel(REPORT.id, { edge: 'bottom' });
-
-    await expect.poll(marked).toBe(before + 1);
   });
 
   test('hides header that throws', async () => {
@@ -99,6 +89,39 @@ describe('CustomTab', () => {
   });
 });
 
+describe('customTooltip', () => {
+  test('shows tooltip of source for its panel', async () => {
+    const tooltip = vi.fn(() => <span>Report tooltip</span>);
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, tooltip }]);
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await userEvent.hover(page.getByText('Report header'));
+
+    await expect.element(page.getByText('Report tooltip')).toBeVisible();
+    expect(tooltip).toHaveBeenLastCalledWith(application, dock, panel);
+  });
+
+  test('shows no tooltip of source that throws', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([
+      {
+        ...REPORT,
+        tooltip: () => {
+          throw new Error('broken');
+        },
+      },
+    ]);
+    dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await userEvent.hover(page.getByText('Report header'));
+
+    await vi.waitFor(() => expect(error).toHaveBeenCalled());
+    expect(document.querySelectorAll('[data-slot="tooltip-content"]')).toHaveLength(0);
+  });
+});
+
 describe('CustomPanelContent', () => {
   test('renders panel of source with its panel', async () => {
     const props: CustomPanelProps[] = [];
@@ -116,7 +139,38 @@ describe('CustomPanelContent', () => {
     const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
 
     await expect.element(page.getByText('Report body')).toBeVisible();
-    expect(props.at(-1)).toEqual({ application, dock, panel });
+    expect(props.at(-1)).toEqual({ application, dock, panel, ref: expect.any(Object) });
+  });
+
+  test('focuses through handle of panel that becomes active', async () => {
+    const focused = vi.fn();
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([
+      {
+        ...REPORT,
+        panel: ({ ref }) => {
+          useImperativeHandle(ref, () => ({ focus: focused }));
+          return <p>Report body</p>;
+        },
+      },
+    ]);
+
+    dock.addPanel(REPORT.id, { tab: 'after', of: FILE });
+
+    await vi.waitFor(() => expect(focused).toHaveBeenCalled());
+  });
+
+  test('focuses first focusable element of panel without handle', async () => {
+    const { application, dock } = await mount();
+    application.docks.addPanelSources([{ ...REPORT, panel: () => <input aria-label="Query" /> }]);
+
+    const panel = dock.addPanel(REPORT.id, { tab: 'after', of: FILE }, false);
+    await expect.element(page.getByRole('textbox', { name: 'Query' })).toBeVisible();
+    if (panel !== null) {
+      dock.activate(panel);
+    }
+
+    await expect.element(page.getByRole('textbox', { name: 'Query' })).toHaveFocus();
   });
 
   test('renders panel once its source is added', async () => {

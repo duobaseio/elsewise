@@ -10,7 +10,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@elsewise/components/components/dropdown-menu';
-import { FileIcon } from '@elsewise/components/components/file-icon';
 import { Icon } from '@elsewise/components/components/icon';
 import { toast } from '@elsewise/components/components/toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@elsewise/components/components/tooltip';
@@ -25,6 +24,7 @@ import {
 import type { IDockviewHeaderActionsProps } from 'dockview-react';
 import { Fragment, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { ApplicationManagerContext, useApplicationManager } from '@/application-context';
+import { isCustomPanel } from '@/dock/dock-store';
 import { usePanelMenu, usePanelSources } from '@/dock/docks-manager';
 
 export function TabActions(props: IDockviewHeaderActionsProps) {
@@ -247,6 +247,7 @@ function PanelMenuGroups({
 
 function OverflowTabsAction(props: IDockviewHeaderActionsProps) {
   const docks = useContext(ApplicationManagerContext)?.docks;
+  const sources = usePanelSources();
   const [overflow, setOverflow] = useState<readonly string[]>([]);
   const [open, setOpen] = useState(false);
   const focusing = useRef<{ closed: string; next: string | undefined }>(undefined);
@@ -331,34 +332,23 @@ function OverflowTabsAction(props: IDockviewHeaderActionsProps) {
         {overflow.map((id) => {
           const dock = docks?.active;
           const panel = dock?.get(id);
-          const title = props.panels.find((open) => open.id === id)?.title ?? '';
-          if (dock == null || panel == null) {
+          const open = props.panels.find((other) => other.id === id);
+          const custom = panel != null && isCustomPanel(panel);
+          const component = docks?.panelComponents.find((other) => other.type === (custom ? 'custom' : panel?.type));
+          if (
+            dock == null ||
+            panel == null ||
+            open === undefined ||
+            component === undefined ||
+            (custom && !sources.some((source) => source.id === panel.type))
+          ) {
             return null;
           }
-
-          const close = () => {
-            if (panel.closable) {
-              // TODO: Log this properly
-              dock
-                .close(panel)
-                .then((closed) => {
-                  if (!closed && focusing.current?.closed === id) {
-                    focusing.current = undefined;
-                  }
-                })
-                .catch((error: Error) =>
-                  toast.add({
-                    type: 'error',
-                    title: panel.type === 'terminal' ? 'Deleting the terminal failed' : 'Closing the tab failed',
-                    description: error.message,
-                  }),
-                );
-            }
-          };
 
           return (
             <DropdownMenuItem
               aria-keyshortcuts={panel.closable ? (PLATFORM === 'mac' ? 'Meta+Backspace' : 'Delete') : undefined}
+              className="h-6.5 p-0"
               key={id}
               onClick={() => {
                 dock.activate(panel);
@@ -367,13 +357,31 @@ function OverflowTabsAction(props: IDockviewHeaderActionsProps) {
                   ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
               }}
               onKeyDown={(event) => {
-                if (PLATFORM === 'mac' ? event.key === 'Backspace' && event.metaKey : event.key === 'Delete') {
+                if (
+                  panel.closable &&
+                  (PLATFORM === 'mac' ? event.key === 'Backspace' && event.metaKey : event.key === 'Delete')
+                ) {
                   event.preventDefault();
                   const at = overflow.indexOf(id);
                   focusing.current = { closed: id, next: overflow[at + 1] ?? overflow[at - 1] };
-                  close();
+                  // TODO: Log this properly
+                  dock
+                    .close(panel)
+                    .then((closed) => {
+                      if (!closed && focusing.current?.closed === id) {
+                        focusing.current = undefined;
+                      }
+                    })
+                    .catch((error: Error) =>
+                      toast.add({
+                        type: 'error',
+                        title: panel.type === 'terminal' ? 'Deleting the terminal failed' : 'Closing the tab failed',
+                        description: error.message,
+                      }),
+                    );
                 }
               }}
+              recolor={false}
               ref={(node) => {
                 if (node !== null && focusing.current?.next === id && !overflow.includes(focusing.current.closed)) {
                   focusing.current = undefined;
@@ -381,31 +389,9 @@ function OverflowTabsAction(props: IDockviewHeaderActionsProps) {
                 }
               }}
             >
-              {/* TODO: Use the panel component's icon and title once a panel component has them. */}
-              {panel.type === 'file' && (
-                <FileIcon
-                  className="text-(--icon-tint-light)! **:text-inherit! dark:text-(--icon-tint-dark)!"
-                  name={title}
-                />
-              )}
-              {panel.type === 'terminal' && <Icon className="text-text-3" name="terminal" />}
-              <span className="flex-1 truncate">{title}</span>
-              {panel.closable && (
-                <Button
-                  aria-label={`Close ${title}`}
-                  className="-mr-0.5 size-4 opacity-0 group-data-highlighted/dropdown-menu-item:opacity-100"
-                  nativeButton={false}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    close();
-                  }}
-                  render={<span />}
-                  size="icon-xs"
-                  variant="ghost"
-                >
-                  <Icon className="size-3 text-text-3! **:text-inherit!" name="close" />
-                </Button>
-              )}
+              <div className="h-full min-w-0 flex-1">
+                <component.header api={open.api} params={open.params ?? {}} />
+              </div>
             </DropdownMenuItem>
           );
         })}

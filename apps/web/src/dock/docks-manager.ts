@@ -1,4 +1,5 @@
 import {
+  type ContextMenuGroup,
   type CustomPanelSource,
   DEFAULT_PANEL_MENU,
   DEFAULT_PANEL_SOURCES,
@@ -17,6 +18,7 @@ import { useApplicationManager } from '@/application-context';
 import type { ApplicationManager } from '@/application-manager';
 import { MenuManager } from '@/collections/menu-manager';
 import { sameWorkspace } from '@/projects/workspace-manager';
+import { DEFAULT_CONTEXT_MENU } from './default-context-menu';
 import { DockManager } from './dock-manager';
 import type { PanelComponent } from './panel-component';
 
@@ -37,17 +39,25 @@ export class DocksManager implements Docks {
   private readonly closeListeners = new Set<(dock: Dock, panel: Panel) => void>();
   private readonly changeListeners = new Set<(dock: Dock | null) => void>();
   private readonly sourceListeners = new Set<() => void>();
+  private currentSources: readonly CustomPanelSource[] = [];
+  private pendingPanelSources = true;
   private readonly menuListeners = new Set<() => void>();
   private readonly menu = new MenuManager<PanelMenuItem | PanelMenuSubmenuItem>(
     DEFAULT_PANEL_MENU_GROUPS,
     () => this.call(this.menuListeners),
     'Panel menu',
   );
+  private readonly contextMenuListeners = new Set<() => void>();
+  private readonly contextMenus = new MenuManager(
+    DEFAULT_CONTEXT_MENU,
+    () => this.call(this.contextMenuListeners),
+    'Context menu',
+  );
   private attached: DockManager | null = null;
   private addedComponents: readonly (readonly PanelComponent[])[] = [];
   private currentComponents: readonly PanelComponent[] = [];
-  private currentSources: readonly CustomPanelSource[] = [];
-  private pendingPanelSources = true;
+  private readonly focusListeners = new Set<() => void>();
+  private currentFocusRequest: { readonly panel: string; readonly monotonic: number } | null = null;
 
   constructor(private readonly application: ApplicationManager) {
     application.projects.workspaces.onActiveChange(() => this.update());
@@ -110,6 +120,32 @@ export class DocksManager implements Docks {
   }
 
   /**
+   * The context menu's groups, one per id, in order of first addition.
+   */
+  get contextMenu(): readonly ContextMenuGroup[] {
+    return this.contextMenus.groups;
+  }
+
+  addContextMenu(groups: readonly ContextMenuGroup[]): Disposable {
+    return this.contextMenus.add(groups);
+  }
+
+  /**
+   * The panel that was last asked to take the focus, with a count that tells one request from the next.
+   */
+  get focusRequest(): { readonly panel: string; readonly monotonic: number } | null {
+    return this.currentFocusRequest;
+  }
+
+  /**
+   * Asks the panel with `id` to take the focus.
+   */
+  requestPanelFocus(id: string) {
+    this.currentFocusRequest = { panel: id, monotonic: (this.currentFocusRequest?.monotonic ?? 0) + 1 };
+    this.call(this.focusListeners);
+  }
+
+  /**
    * Attaches the dockview that shows `workspace`.
    *
    * Returns its dock, which is not active until the workspace is.
@@ -139,6 +175,9 @@ export class DocksManager implements Docks {
     this.attached = dock;
     if (!this.pendingPanelSources) {
       dock.closeSourcelessPanels();
+    }
+    if (dock.activePanel !== null) {
+      this.requestPanelFocus(dock.activePanel.id);
     }
     this.update();
     return dock;
@@ -202,6 +241,26 @@ export class DocksManager implements Docks {
   }
 
   /**
+   * Calls `listener` when the context menu's groups change.
+   */
+  onContextMenuChange(listener: () => void): Disposable {
+    this.contextMenuListeners.add(listener);
+    return () => {
+      this.contextMenuListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Calls `listener` when a panel is asked to take the focus.
+   */
+  onFocusRequestChange(listener: () => void): Disposable {
+    this.focusListeners.add(listener);
+    return () => {
+      this.focusListeners.delete(listener);
+    };
+  }
+
+  /**
    * Calls `listener` with each panel that opens, and its dock.
    */
   onPanelOpen(listener: (dock: Dock, panel: Panel) => void): Disposable {
@@ -242,4 +301,16 @@ export function usePanelMenu(): readonly PanelMenuGroup[] {
   const { docks } = useApplicationManager();
   const subscribe = useCallback((listener: () => void) => docks.onPanelMenuChange(listener), [docks]);
   return useSyncExternalStore(subscribe, () => docks.panelMenu);
+}
+
+export function useDockContextMenu(): readonly ContextMenuGroup[] {
+  const { docks } = useApplicationManager();
+  const subscribe = useCallback((listener: () => void) => docks.onContextMenuChange(listener), [docks]);
+  return useSyncExternalStore(subscribe, () => docks.contextMenu);
+}
+
+export function useFocusRequest(): DocksManager['focusRequest'] {
+  const { docks } = useApplicationManager();
+  const subscribe = useCallback((listener: () => void) => docks.onFocusRequestChange(listener), [docks]);
+  return useSyncExternalStore(subscribe, () => docks.focusRequest);
 }

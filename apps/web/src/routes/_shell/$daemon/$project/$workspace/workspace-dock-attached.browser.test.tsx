@@ -77,6 +77,53 @@ test('adds terminal with close confirmation as set', async () => {
   expect(added).toHaveBeenCalledExactlyOnceWith({ closeConfirmation: true }, { tab: 'last', with: FILE });
 });
 
+const CLOSE_PANEL = PLATFORM === 'mac' ? '{Meta>}w{/Meta}' : '{Control>}{F4}{/Control}';
+
+test('closes active tab on key pressed in dock', async () => {
+  const dock = await mount();
+  const other = dock.addFile('src/other.ts', { tab: 'last', with: FILE });
+  await userEvent.click(page.getByText('other.ts'));
+
+  await userEvent.keyboard(CLOSE_PANEL);
+
+  await vi.waitFor(() => expect(dock.get(other?.id ?? '')).toBeNull());
+  expect(dock.get(FILE.id)).toEqual(FILE);
+});
+
+test('hides file tree on key pressed in it', async () => {
+  const dock = await mount();
+  await userEvent.click(page.getByText('Files'));
+  expect(dock.activePanel).toEqual(FILE_TREE);
+
+  await userEvent.keyboard(CLOSE_PANEL);
+
+  await vi.waitFor(() => expect(dock.groups[1]).toEqual({ panels: [FILE_TREE], shown: null }));
+  expect(dock.get(FILE.id)).toEqual(FILE);
+});
+
+test('keeps tab on key pressed outside dock', async () => {
+  const dock = await mount();
+  await userEvent.click(page.getByText('$workspace.tsx'));
+  (document.activeElement as HTMLElement).blur();
+
+  await userEvent.keyboard(CLOSE_PANEL);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  expect(dock.get(FILE.id)).toEqual(FILE);
+});
+
+test('keeps tab on key pressed in menu of dock', async () => {
+  const dock = await mount();
+  const other = dock.addFile('src/other.ts', { tab: 'last', with: FILE });
+  await userEvent.click(page.getByText('other.ts'), { button: 'right' });
+  await expect.element(page.getByRole('menu')).toBeVisible();
+
+  await userEvent.keyboard(CLOSE_PANEL);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  expect(dock.get(other?.id ?? '')).toEqual(other);
+});
+
 const hiddenTabs = () => document.querySelector('button[aria-label="Show hidden tabs"]') as HTMLElement;
 
 test('shows tab actions after tabs only', async () => {
@@ -204,6 +251,7 @@ test('keeps overflowing tabs open when one closes', async () => {
 
   await vi.waitFor(() => expect(rows()).toEqual(others));
   expect(dock.panels.some((panel) => panel.type === 'file' && panel.relativePath === `src/${title}`)).toBe(false);
+  expect(dock.activePanel).toEqual(FILE);
 });
 
 test('closes overflowing tabs once every tab fits', async () => {

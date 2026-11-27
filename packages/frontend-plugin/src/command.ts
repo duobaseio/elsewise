@@ -1,5 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import type { Disposable } from '@elsewise/plugin';
+import type { Panel } from './dock/panels';
 import type { FileTreeSelection } from './file-tree';
 import type { Key, Keys } from './keymap';
 import type { Application } from './plugin';
@@ -23,6 +24,7 @@ export const DEFAULT_COMMAND_GROUPS = {
   fileTree: { id: 'elsewise.fileTree' },
   project: { id: 'elsewise.project' },
   workspace: { id: 'elsewise.workspace' },
+  panel: { id: 'elsewise.panel' },
 } as const;
 
 /**
@@ -184,6 +186,28 @@ export const DEFAULT_COMMANDS = {
     open: {
       file: 'elsewise.fileTree.open.file',
       fileManager: 'elsewise.fileTree.open.fileManager',
+    },
+  },
+  panel: {
+    view: {
+      close: 'elsewise.panel.view.close',
+      closeOthers: 'elsewise.panel.view.closeOthers',
+      closeAll: 'elsewise.panel.view.closeAll',
+      closeLeft: 'elsewise.panel.view.closeLeft',
+      closeRight: 'elsewise.panel.view.closeRight',
+      hide: 'elsewise.panel.view.hide',
+    },
+    split: {
+      moveRight: 'elsewise.panel.split.moveRight',
+      moveDown: 'elsewise.panel.split.moveDown',
+    },
+    file: {
+      copyPath: 'elsewise.panel.file.copyPath',
+      copyRelativePath: 'elsewise.panel.file.copyRelativePath',
+      openFileManager: 'elsewise.panel.file.openFileManager',
+    },
+    terminal: {
+      rename: 'elsewise.panel.terminal.rename',
     },
   },
 } as const;
@@ -352,6 +376,28 @@ export const DEFAULT_KEYS: KeysOf<typeof DEFAULT_COMMANDS> = {
       fileManager: [],
     },
   },
+  panel: {
+    view: {
+      close: [{ key: 'Ctrl-F4', mac: 'Mod-w' }],
+      closeOthers: [],
+      closeAll: [],
+      closeLeft: [],
+      closeRight: [],
+      hide: ['Shift-Escape', { key: 'Ctrl-F4', mac: 'Mod-w' }],
+    },
+    split: {
+      moveRight: [],
+      moveDown: [],
+    },
+    file: {
+      copyPath: [],
+      copyRelativePath: [],
+      openFileManager: [],
+    },
+    terminal: {
+      rename: [],
+    },
+  },
 };
 
 type KeysOf<T> = { readonly [K in keyof T]: T[K] extends string ? Keys : KeysOf<T[K]> };
@@ -365,7 +411,8 @@ export type Command =
   | WorkspaceCommand
   | EditorCommand
   | TerminalCommand
-  | FileTreeCommand;
+  | FileTreeCommand
+  | PanelCommand;
 
 /**
  * The commands.
@@ -398,14 +445,14 @@ export interface Commands {
 
   /**
    * Runs the command with `id` against an optional `target` of the command's scope, e.g. an editor for an editor
-   * command. Without `target`, it runs against the active workspace, editor or terminal, and a project or file tree
-   * command does nothing.
+   * command. Without `target`, it runs against the active workspace, editor, terminal or panel, and a project or file
+   * tree command does nothing.
    *
    * Does nothing if the command is unknown, has nothing to run against, or is disabled.
    *
    * Returns whether the command ran and applied.
    */
-  run(id: string, target?: Project | Workspace | EditorView | TerminalView | FileTreeSelection): boolean;
+  run(id: string, target?: Project | Workspace | EditorView | TerminalView | FileTreeSelection | Panel): boolean;
 }
 
 /**
@@ -455,7 +502,7 @@ export interface BaseCommand {
   /**
    * The surface the command runs in.
    */
-  readonly scope: 'application' | 'project' | 'workspace' | 'editor' | 'terminal' | 'fileTree';
+  readonly scope: 'application' | 'project' | 'workspace' | 'editor' | 'terminal' | 'fileTree' | 'panel';
 
   /**
    * The command's id, namespaced by the plugin's, e.g. `io.example.rename`.
@@ -679,4 +726,38 @@ export interface FileTreeCommand extends BaseCommand {
    * Returns whether the command applied.
    */
   run(application: Application, selection: FileTreeSelection): boolean;
+}
+
+/**
+ * A command that runs on a panel, e.g. from its tab's context menu.
+ *
+ * Its keys fire while the dock has focus, on the active panel.
+ */
+export interface PanelCommand extends BaseCommand {
+  readonly scope: 'panel';
+
+  /**
+   * Returns whether the command can run. Defaults to true.
+   *
+   * A disabled command is greyed out in menus.
+   */
+  enabled?(application: Application, panel: Panel): boolean;
+
+  /**
+   * Returns whether the command is shown in menus. Defaults to true.
+   */
+  shown?(application: Application, panel: Panel): boolean;
+
+  /**
+   * Returns whether the command's effect is active. Menus show a check beside an active command. Defaults to none, for
+   * a command that is neither.
+   */
+  active?(application: Application, panel: Panel): boolean;
+
+  /**
+   * Runs the command on `panel`.
+   *
+   * Returns whether the command applied.
+   */
+  run(application: Application, panel: Panel): boolean;
 }

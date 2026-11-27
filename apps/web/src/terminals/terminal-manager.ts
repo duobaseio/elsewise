@@ -50,6 +50,7 @@ export class TerminalManager implements Terminals {
   private readonly opening = new KeyedMap<TerminalSessionId, Promise<TerminalEntry | null>>(keyOf);
   private readonly factories = new Set<AddonFactory>();
   private current: TerminalSessionId | null = null;
+  private currentRenaming: TerminalSessionId | null = null;
   private readonly contextMenus = new MenuManager(DEFAULT_CONTEXT_MENU, () => this.notify(), 'Context menu');
 
   constructor(private readonly client: QueryClient) {
@@ -269,6 +270,18 @@ export class TerminalManager implements Terminals {
   }
 
   /**
+   * The session whose name is edited in its panel's header.
+   */
+  get renaming(): TerminalSessionId | null {
+    return this.currentRenaming;
+  }
+
+  set renaming(renaming: TerminalSessionId | null) {
+    this.currentRenaming = renaming;
+    this.notify();
+  }
+
+  /**
    * Calls `listener` with each terminal that opens.
    */
   onOpen(listener: (view: TerminalView) => void): Disposable {
@@ -351,6 +364,17 @@ export class TerminalManager implements Terminals {
       }
     }
   }
+}
+
+export function sameSession(a: TerminalSessionId | undefined, b: TerminalSessionId | undefined): boolean {
+  return (
+    a !== undefined &&
+    b !== undefined &&
+    a.daemon === b.daemon &&
+    a.project === b.project &&
+    a.workspace === b.workspace &&
+    a.session === b.session
+  );
 }
 
 export function useTerminalManager(): TerminalManager;

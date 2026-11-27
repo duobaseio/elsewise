@@ -15,6 +15,7 @@ import { useId, useMemo, useRef } from 'react';
 import { useApplicationManager } from '@/application-context';
 import { CommandContextMenu } from '@/command/context-menu/context-menu';
 import { runSidebarKeys } from '@/command/keymap/keymap';
+import { NameInput } from '@/components/name-input';
 import type { Workspace } from '@/gen/elsewise/daemon/project/v1/project_service_pb';
 import { PluginBoundary } from '@/plugins/plugin-boundary';
 import { useRenaming } from '@/projects/sidebar-store';
@@ -24,7 +25,6 @@ import {
   useWorkspaceSidebarItems,
   useWorkspaceStatus,
 } from '@/projects/workspace-manager';
-import { NameInput } from './name-input';
 
 const UNAVAILABLE = { missing: 'Folder missing', broken: 'Not a worktree' } as const;
 

@@ -6,6 +6,7 @@ import { useApplicationManager } from '@/application-context';
 import { daemonQuery } from '@/daemon';
 import { FileHandle, type FileHandleState } from '@/fs/file-handle';
 import { useWorkspace } from '@/projects/workspace-manager';
+import { usePanelFocus } from '../-dock/panel';
 import { EditorFileView, type EditorFileViewParams } from './editor-file-view';
 
 const route = getRouteApi('/_shell/$daemon/$project/$workspace');
@@ -54,6 +55,13 @@ export function FilePanel(props: IDockviewPanelProps<FilePanelParams>) {
   const subscribe = useCallback((listener: () => void) => file?.onChange(listener) ?? (() => {}), [file]);
   const state = useSyncExternalStore(subscribe, () => file?.state ?? LOADING);
   const onViewParamsChange = useCallback((view: FileViewParams) => props.api.updateParameters({ view }), [props.api]);
+
+  // A split comparison has two editors.
+  usePanelFocus(
+    state.type === 'text'
+      ? (content) => [...content.querySelectorAll<HTMLElement>('.cm-content')].at(-1)?.focus()
+      : null,
+  );
 
   if (file === null || state.type === 'loading') {
     return null;

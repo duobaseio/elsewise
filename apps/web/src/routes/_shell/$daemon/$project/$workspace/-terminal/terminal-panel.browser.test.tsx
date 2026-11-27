@@ -11,7 +11,7 @@ import {
 import type { Terminal } from '@xterm/xterm';
 import type { DockviewApi } from 'dockview-react';
 import { expect, test, vi } from 'vitest';
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
 import { ApplicationManagerContext } from '@/application-context';
 import { type Daemon, daemonQuery, LOCAL_DAEMON_ID } from '@/daemon';
@@ -19,6 +19,7 @@ import {
   CreateTerminalResponseSchema,
   DeleteTerminalsResponseSchema,
   GetTerminalsResponseSchema,
+  UpdateTerminalResponseSchema,
 } from '@/gen/elsewise/daemon/terminal/v1/terminal_service_pb';
 import { PluginStore, PluginStoreContext } from '@/plugins/plugin-store';
 import { settingsQuery } from '@/settings/settings';
@@ -26,10 +27,11 @@ import { TerminalManager } from '@/terminals/terminal-manager';
 import { builtInApplication } from '../../../../../../../test/commands';
 import { stubComponents } from '../../../../../../../test/dock-stubs';
 import { SETTINGS, terminals } from '../../../../../../../test/terminal';
-import { FileTab } from '../-file/file-tab';
-import { FileTreeTab, WorkspaceDock } from '../route';
+import { FileHeader } from '../-file/file-header';
+import { FileTreeHeader } from '../-file-tree/file-tree-header';
+import { WorkspaceDock } from '../route';
+import { TerminalHeader } from './terminal-header';
 import { TerminalPanel } from './terminal-panel';
-import { TerminalTab } from './terminal-tab';
 
 import 'dockview-react/dist/styles/dockview.css';
 
@@ -44,6 +46,7 @@ function setUp(program = '') {
     createTerminal: async () => create(CreateTerminalResponseSchema, { terminal }),
     getTerminals,
     deleteTerminals,
+    updateTerminal: async ({ name }) => create(UpdateTerminalResponseSchema, { terminal: { ...terminal, name } }),
   });
   const client = new QueryClient();
   client.setQueryData(daemonQuery(LOCAL_DAEMON_ID).queryKey, { terminals: fake.client } as unknown as Daemon);
@@ -74,27 +77,26 @@ async function mount({ client, manager }: ReturnType<typeof setUp>, layout?: unk
     routeTree: root.addChildren([shell.addChildren([workspace])]),
     history: createMemoryHistory({ initialEntries: [`/${LOCAL_DAEMON_ID}/elsewise/singapore`] }),
   });
+  const application = builtInApplication({
+    router,
+    terminals: manager,
+    panelComponents: stubComponents({
+      fileTree: { header: FileTreeHeader },
+      file: { header: FileHeader },
+      terminal: { header: TerminalHeader, panel: TerminalPanel },
+    }),
+  });
   const screen = await render(
     <QueryClientProvider client={client}>
       <PluginStoreContext value={new PluginStore()}>
-        <ApplicationManagerContext
-          value={builtInApplication({
-            router,
-            terminals: manager,
-            panelComponents: stubComponents({
-              fileTree: { tab: FileTreeTab },
-              file: { tab: FileTab },
-              terminal: { tab: TerminalTab, panel: TerminalPanel },
-            }),
-          })}
-        >
+        <ApplicationManagerContext value={application}>
           <RouterProvider router={router} />
         </ApplicationManagerContext>
       </PluginStoreContext>
     </QueryClientProvider>,
   );
   await expect.poll(() => api).toBeDefined();
-  return { api: api as DockviewApi, unmount: () => screen.unmount() };
+  return { api: api as DockviewApi, application, unmount: () => screen.unmount() };
 }
 
 // Adds tokyo-1 to Singapore and shows it.
@@ -141,6 +143,74 @@ test('attaches shown terminal', async () => {
 
   expect(api.getPanel('terminal:tokyo-1')?.title).toBe('Terminal');
   expect(setup.sent[0]).toMatchObject({ event: { case: 'open', value: { terminalId: 'tokyo-1' } } });
+});
+
+test('titles tab with renamed session', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+
+  await setup.manager.rename(id, 'Build');
+
+  await expect.element(page.getByText('Build')).toBeVisible();
+  expect(api.getPanel('terminal:tokyo-1')?.title).toBe('Build');
+});
+
+test('renames session from field and focuses terminal', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+
+  setup.manager.renaming = id;
+  await userEvent.fill(page.getByRole('textbox', { name: 'Session name' }), 'Build');
+  await userEvent.keyboard('{Enter}');
+
+  await expect.element(page.getByText('Build')).toBeVisible();
+  await vi.waitFor(() => expect(page.getByRole('textbox', { name: 'Session name' }).elements()).toHaveLength(0));
+  expect(document.activeElement?.classList.contains('xterm-helper-textarea')).toBe(true);
+});
+
+test('leaves close button unfocused once session of hidden terminal is renamed', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+  api.addPanel({ id: 'file:a.ts', component: 'file', tabComponent: 'file', title: 'a.ts', params: { path: 'a.ts' } });
+  await expect.element(page.getByText('a.ts')).toBeVisible();
+  // The context menu that starts the rename leaves the focus on the tab's first button.
+  page.getByRole('button', { name: 'Close Terminal' }).element().focus();
+
+  setup.manager.renaming = id;
+  await userEvent.fill(page.getByRole('textbox', { name: 'Session name' }), 'Build');
+  await userEvent.keyboard('{Enter}');
+
+  await vi.waitFor(() => expect(page.getByRole('textbox', { name: 'Session name' }).elements()).toHaveLength(0));
+  expect(document.activeElement).toBe(document.body);
+});
+
+test('opens rename popover below tab from its left edge', async () => {
+  const setup = setUp();
+  const { api } = await mount(setup);
+  const id = await show(setup, api);
+
+  setup.manager.renaming = id;
+  await expect.element(page.getByRole('textbox', { name: 'Session name' })).toHaveFocus();
+
+  const tab = document.querySelector('.dv-tab[data-tab-panel-id="terminal:tokyo-1"]') as HTMLElement;
+  await vi.waitFor(() => {
+    const popover = (document.querySelector('[data-slot="popover-content"]') as HTMLElement).getBoundingClientRect();
+    expect(popover.left).toBeCloseTo(tab.getBoundingClientRect().left, 0);
+    expect(popover.top).toBeGreaterThanOrEqual(tab.getBoundingClientRect().bottom);
+  });
+});
+
+test('focuses terminal when its panel is asked', async () => {
+  const setup = setUp();
+  const { api, application } = await mount(setup);
+  await show(setup, api);
+
+  application.docks.requestPanelFocus('terminal:tokyo-1');
+
+  await vi.waitFor(() => expect(document.activeElement?.classList.contains('xterm-helper-textarea')).toBe(true));
 });
 
 test('keeps terminal across remount', async () => {
