@@ -83,6 +83,10 @@ export const FrontendSettings = z.lazy(() =>
       (section) => section ?? {},
       z.object({
         /**
+         * The default branch prefix for new workspaces.
+         */
+        defaultBranchPrefix: z.string().catch('elsewise/'),
+        /**
          * The tab shown after closing the current tab.
          */
         closeActivation: CloseActivation.catch('left'),
@@ -93,11 +97,11 @@ export const FrontendSettings = z.lazy(() =>
         /**
          * Whether to prefix file tabs that share a name with their folders.
          */
-        folderPrefix: z.boolean().catch(true),
+        uniqueTabNames: z.boolean().catch(true),
         /**
-         * Whether a file tab with unsaved changes is marked.
+         * Whether a file tab with unsaved changes has a badge.
          */
-        markModifiedTabs: z.boolean().catch(false),
+        unsavedBadges: z.boolean().catch(false),
       }),
     ),
     editor: z.preprocess(

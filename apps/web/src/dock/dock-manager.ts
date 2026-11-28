@@ -429,7 +429,7 @@ export class DockManager implements Dock {
     const files = this.panels.filter(
       (panel): panel is FilePanel => panel.type === 'file' && panel.relativePath !== undefined,
     );
-    const names = this.application.settings.frontend.workspace.folderPrefix
+    const names = this.application.settings.frontend.workspace.uniqueTabNames
       ? uniqueFileNames(files.map((file) => file.relativePath))
       : null;
     for (const { id, relativePath } of files) {

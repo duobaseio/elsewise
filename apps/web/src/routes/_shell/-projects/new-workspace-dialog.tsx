@@ -24,6 +24,7 @@ import { Icon } from '@elsewise/components/components/icon';
 import { Input } from '@elsewise/components/components/input';
 import { Kbd } from '@elsewise/components/components/kbd';
 import { Label } from '@elsewise/components/components/label';
+import { kebabCase } from '@elsewise/core';
 import { DEFAULT_ROUTES, type NewWorkspace, type ProjectId } from '@elsewise/frontend-plugin';
 import { Code, TransportError } from '@elsewise/transport';
 import { useMutation, useQuery } from '@tanstack/react-query';
@@ -33,6 +34,7 @@ import { daemonQuery } from '@/daemon';
 import { refsQuery } from '@/git/refs';
 import { projectsQuery } from '@/projects/project-manager';
 import { workspacesQuery } from '@/projects/workspace-manager';
+import { useSettings } from '@/settings/settings';
 
 interface Section<T> {
   readonly value: string;
@@ -125,6 +127,7 @@ function NewWorkspaceForm({
   const [name, setName] = useState(initialName);
   const [branch, setBranch] = useState('');
   const [base, setBase] = useState('');
+  const defaultBranchPrefix = useSettings((settings) => settings.workspace.defaultBranchPrefix);
 
   const project = useQuery({
     ...projectsQuery(id.daemon),
@@ -184,6 +187,8 @@ function NewWorkspaceForm({
 
   const query = branch.trim();
   const match = branches.find((item) => item.label === query);
+  const workspaceFolder = kebabCase(name.trim() || generated);
+  const defaultBranch = workspaceFolder === '' ? '' : defaultBranchPrefix + workspaceFolder;
   const usedWorkspace =
     match?.checkedOut != null && 'workspace' in match.checkedOut ? match.checkedOut.workspace : null;
   const usedWorktree = match?.checkedOut != null && 'worktree' in match.checkedOut ? match.checkedOut.worktree : null;
@@ -203,7 +208,7 @@ function NewWorkspaceForm({
                     branch: match.label,
                     base: match.remote === '' ? '' : `${match.remote}/${match.label}`,
                   }
-                : { type: 'new', name: name.trim() || generated, branch: query, base },
+                : { type: 'new', name: name.trim() || generated, branch: query || defaultBranch, base },
             );
           }}
         >
@@ -227,7 +232,14 @@ function NewWorkspaceForm({
               <Label className="text-text-2" htmlFor={branchId}>
                 Branch
               </Label>
-              <BranchInput id={branchId} branches={branches} value={branch} readOnly={pending} onChange={setBranch} />
+              <BranchInput
+                id={branchId}
+                branches={branches}
+                value={branch}
+                placeholder={defaultBranch}
+                readOnly={pending}
+                onChange={setBranch}
+              />
               <div className="flex h-6 items-center text-sm text-text-2">
                 {usedWorkspace !== null && <p>Already in {usedWorkspace}</p>}
                 {usedWorktree !== null && (
@@ -295,12 +307,14 @@ function BranchInput({
   id,
   branches,
   value,
+  placeholder,
   readOnly,
   onChange,
 }: {
   id: string;
   branches: readonly BranchItem[];
   value: string;
+  placeholder: string;
   readOnly: boolean;
   onChange: (value: string) => void;
 }) {
@@ -340,7 +354,7 @@ function BranchInput({
               event.preventDefault();
             }
           }}
-          placeholder="Same as name"
+          placeholder={placeholder}
           render={<Input className="pr-8" />}
         />
         {value !== '' && (

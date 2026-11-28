@@ -379,7 +379,7 @@ describe('titles', () => {
   test('keeps names without folder prefix', async () => {
     const mounted = await mount();
     const { frontend } = mounted.application.settings;
-    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, folderPrefix: false } };
+    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, uniqueTabNames: false } };
 
     const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
 
@@ -405,12 +405,12 @@ describe('titles', () => {
     expect(dockview.getPanel('file:src/settings/index.tsx')?.title).toBe('settings/index.tsx');
   });
 
-  test('follows folder prefix setting', async () => {
+  test('follows unique tab names setting', async () => {
     const mounted = await mount();
     const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
     const { frontend } = mounted.application.settings;
 
-    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, folderPrefix: false } };
+    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, uniqueTabNames: false } };
 
     expect(titles()).toEqual(['index.tsx', 'index.tsx']);
   });

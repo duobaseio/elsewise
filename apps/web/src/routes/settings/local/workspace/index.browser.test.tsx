@@ -46,6 +46,20 @@ async function mount(settings: FrontendSettings = DEFAULT_FRONTEND_SETTINGS) {
 }
 
 describe('Workspace', () => {
+  test('saves default branch prefix', async () => {
+    const save = await mount();
+
+    const field = page.getByRole('textbox', { name: 'Default branch prefix' });
+    await userEvent.clear(field);
+    await userEvent.type(field, 'me/');
+
+    await expect.poll(() => save.mock.calls.length).toBe(4);
+    expect(save).toHaveBeenLastCalledWith({
+      ...DEFAULT_FRONTEND_SETTINGS,
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, defaultBranchPrefix: 'me/' },
+    });
+  });
+
   test('shows tab on the left by default', async () => {
     await mount();
 
@@ -81,27 +95,27 @@ describe('Workspace', () => {
     });
   });
 
-  test('saves folder prefix', async () => {
+  test('saves unique tab names', async () => {
     const save = await mount();
 
-    await userEvent.click(page.getByRole('switch', { name: 'Folder prefix' }));
+    await userEvent.click(page.getByRole('switch', { name: 'Unique tab names' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith({
       ...DEFAULT_FRONTEND_SETTINGS,
-      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, folderPrefix: false },
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, uniqueTabNames: false },
     });
   });
 
-  test('saves mark modified tabs', async () => {
+  test('saves unsaved badges', async () => {
     const save = await mount();
 
-    await userEvent.click(page.getByRole('switch', { name: 'Mark modified tabs' }));
+    await userEvent.click(page.getByRole('switch', { name: 'Unsaved badges' }));
 
     await expect.poll(() => save.mock.calls.length).toBe(1);
     expect(save).toHaveBeenCalledWith({
       ...DEFAULT_FRONTEND_SETTINGS,
-      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, markModifiedTabs: true },
+      workspace: { ...DEFAULT_FRONTEND_SETTINGS.workspace, unsavedBadges: true },
     });
   });
 });

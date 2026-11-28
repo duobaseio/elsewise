@@ -29,7 +29,7 @@ export function FileHeader(props: Pick<IDockviewPanelHeaderProps<{ path: string 
   const subscribe = useCallback((listener: () => void) => file?.onChange(listener) ?? (() => {}), [file]);
   const dirty = useSyncExternalStore(subscribe, () => file?.document != null);
   const subscribeSettings = useCallback((listener: () => void) => settings.onFrontendChange(listener), [settings]);
-  const marker = useSyncExternalStore(subscribeSettings, () => settings.frontend.workspace.markModifiedTabs);
+  const marker = useSyncExternalStore(subscribeSettings, () => settings.frontend.workspace.unsavedBadges);
 
   const subscribeGit = useCallback((listener: () => void) => git.onChange(listener), [git]);
   const status = useSyncExternalStore(subscribeGit, () => git.get({ daemon, project, workspace }, path));

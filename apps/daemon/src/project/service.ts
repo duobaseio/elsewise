@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { MessageInitShape } from '@bufbuild/protobuf';
+import { kebabCase } from '@elsewise/core';
 import { Code, type HandlerContext, type ServiceImpl, TransportError } from '@elsewise/transport';
 import type { CodeDirectory } from '../directories';
 import { refuseExisting } from '../fs/directory';
@@ -32,7 +33,7 @@ import { attempt, GitError, gitToTransportError } from '../git/error';
 import { Git } from '../git/git';
 import { transfer } from '../git/transfer';
 import type { TerminalServiceImpl } from '../terminal/service';
-import { kebabCase, randomAnimal, repositoryName } from './name';
+import { randomAnimal, repositoryName } from './name';
 import type { ProjectRow, ProjectStore, WorkspaceRow } from './store';
 
 type ProjectInit = MessageInitShape<typeof ProjectSchema>;

@@ -28,7 +28,7 @@ export function TabTooltipsHelp({ enabled }: { enabled: boolean }) {
   );
 }
 
-export function FolderPrefixHelp({ enabled }: { enabled: boolean }) {
+export function UniqueTabNamesHelp({ enabled }: { enabled: boolean }) {
   return (
     <HelpIllustration className="h-24 bg-background">
       <div className="flex h-9 border-border border-b bg-surface px-1">
