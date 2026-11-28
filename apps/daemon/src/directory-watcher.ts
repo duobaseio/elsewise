@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import watcher from '@parcel/watcher';
-import { toProtocolPath } from './fs/path';
+import { relativeTo } from './fs/path';
 
 export interface DirectoryWatcherOptions {
   /**
@@ -206,21 +205,6 @@ class Root {
       this.#onStateChange();
     }
   }
-}
-
-/**
- * Returns the `/`-separated path or nothing for an entry outside the root.
- */
-function relativeTo(root: string, absoluteNativePath: string): string[] {
-  const relativeNativePath = path.relative(root, absoluteNativePath);
-  if (
-    relativeNativePath === '..' ||
-    relativeNativePath.startsWith(`..${path.sep}`) ||
-    path.isAbsolute(relativeNativePath)
-  ) {
-    return [];
-  }
-  return [toProtocolPath(relativeNativePath)];
 }
 
 /**

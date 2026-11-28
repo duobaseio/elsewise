@@ -58,3 +58,18 @@ export function toNativePath(protocolRoot: string, relativeProtocolPath: string)
 export function toProtocolPath(nativePath: string): string {
   return path.sep === '/' ? nativePath : nativePath.replaceAll(path.sep, '/');
 }
+
+/**
+ * Returns the `/`-separated path or nothing for an entry outside the root.
+ */
+export function relativeTo(root: string, absoluteNativePath: string): string[] {
+  const relativeNativePath = path.relative(root, absoluteNativePath);
+  if (
+    relativeNativePath === '..' ||
+    relativeNativePath.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeNativePath)
+  ) {
+    return [];
+  }
+  return [toProtocolPath(relativeNativePath)];
+}
