@@ -190,7 +190,7 @@ describe('WatchFiles', () => {
     call.cancel();
   });
 
-  test.each([
+  test.runIf(posix).each([
     ['link.txt', 'dir/a.txt'],
     ['dir/a.txt', 'link.txt'],
     ['other/link.txt', 'link.txt'],
