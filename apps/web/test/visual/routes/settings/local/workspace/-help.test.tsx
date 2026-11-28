@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { UniqueTabNamesHelp, TabTooltipsHelp } from '@/routes/settings/local/workspace/-help';
+import { TabTooltipsHelp, UniqueTabNamesHelp } from '@/routes/settings/local/workspace/-help';
 
 import { THEMES } from '../../../../../sheet';
 

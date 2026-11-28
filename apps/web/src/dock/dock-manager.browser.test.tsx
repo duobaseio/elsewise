@@ -379,7 +379,10 @@ describe('titles', () => {
   test('keeps names without folder prefix', async () => {
     const mounted = await mount();
     const { frontend } = mounted.application.settings;
-    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, uniqueTabNames: false } };
+    mounted.application.settings.frontend = {
+      ...frontend,
+      workspace: { ...frontend.workspace, uniqueTabNames: false },
+    };
 
     const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
 
@@ -410,7 +413,10 @@ describe('titles', () => {
     const titles = add(mounted, 'src/routes/index.tsx', 'src/settings/index.tsx');
     const { frontend } = mounted.application.settings;
 
-    mounted.application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, uniqueTabNames: false } };
+    mounted.application.settings.frontend = {
+      ...frontend,
+      workspace: { ...frontend.workspace, uniqueTabNames: false },
+    };
 
     expect(titles()).toEqual(['index.tsx', 'index.tsx']);
   });
