@@ -68,6 +68,11 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
    */
   protected abstract readonly version: string | undefined;
 
+  /**
+   * The platform the daemon runs on (e.g. `linux-x64-musl`). If undefined, the resolver does not validate the target.
+   */
+  protected readonly target: string | undefined = undefined;
+
   get plugins(): readonly PluginSnapshot<Enabled>[] {
     return this.snapshot;
   }
@@ -99,7 +104,11 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
   protected abstract installed(id: string): Promise<Installed | InvalidPlugin | undefined>;
 
   private async settle(): Promise<void> {
-    for (const [id, unsatisfied] of resolve(this.entries, { part: this.part, version: this.version }).unsatisfied) {
+    for (const [id, unsatisfied] of resolve(this.entries, {
+      part: this.part,
+      version: this.version,
+      target: this.target,
+    }).unsatisfied) {
       const state = this.entries.get(id)?.state;
       if (state?.status === 'enabled' && state.running !== undefined) {
         await this.disable(id, unsatisfied);
@@ -144,7 +153,7 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
    * Enables every plugin flagged as enabled.
    */
   async enableAll(host: Host): Promise<void> {
-    const { graph, modified } = resolve(this.entries, { part: this.part, version: this.version });
+    const { graph, modified } = resolve(this.entries, { part: this.part, version: this.version, target: this.target });
     if (modified) {
       this.publish();
     }
@@ -179,7 +188,11 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
       return;
     }
 
-    const { graph, unsatisfied, modified } = resolve(this.entries, { part: this.part, version: this.version });
+    const { graph, unsatisfied, modified } = resolve(this.entries, {
+      part: this.part,
+      version: this.version,
+      target: this.target,
+    });
     if (modified) {
       this.publish();
     }
@@ -281,6 +294,10 @@ export abstract class PluginResolver<Installed extends InstalledPlugin, Host, Pl
   private reason(manifest: Manifest, unsatisfied: Unsatisfied): string {
     if ('elsewise' in unsatisfied) {
       return `needs Elsewise ${unsatisfied.elsewise}`;
+    }
+
+    if ('target' in unsatisfied) {
+      return `does not run on ${unsatisfied.target}`;
     }
 
     if ('cycle' in unsatisfied) {

@@ -15,8 +15,11 @@ listing fields, `description`, `homepage`, `repository`, `issues`, `license` and
 - **`dist/` is the plugin as installed.** `manifest.json`, and a folder per part, laid out as in the data folder.
 - **Peer modules stay out of the frontend bundle.** `frontend/vite.config.ts` externalizes the `PEER_MODULES`, which
   Elsewise provides at runtime. Declare the ones the part imports as peer dependencies, never as dependencies.
-- **Everything goes into the daemon bundle.** The daemon provides no modules, so `daemon/vite.config.ts` is a server
-  build with nothing external.
+- **Only the part's own code goes into the daemon bundle.** The daemon provides no modules, so the packages the part
+  imports at runtime are the `dependencies` and `optionalDependencies` of `daemon/package.json`, and ship beside the
+  bundle in `node_modules`. `daemon/vite.config.ts` is a server build that leaves them as imports, and `linkNodeModules`
+  links `daemon/node_modules` to `dist/daemon/node_modules` for this machine. `devDependencies` are for building only,
+  the linked contract included. Packaging a target's `node_modules` is the CLI's job, not `build`'s.
 - **The contracts are linked**, `link:../../../packages/frontend-plugin` and `link:../../../packages/daemon-plugin`,
   so the starter builds against the source. `@elsewise/plugin` is linked at the root, for its `elsewise-plugin`
   command. Nothing else from the repo may be imported.

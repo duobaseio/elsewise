@@ -4,7 +4,7 @@ import { type EnabledSnapshot, type InstalledPlugin, type InvalidPlugin, PluginR
 import { readPluginsSync } from '@elsewise/core/node';
 import type { Daemon, Disposable, Plugin } from '@elsewise/daemon-plugin';
 import type { DataDirectory } from '../directories';
-import { VERSION } from '../global';
+import { TARGET, VERSION } from '../global';
 
 /**
  * The installed plugins, loaded from the data directory, whose daemon parts run in the daemon.
@@ -15,6 +15,7 @@ import { VERSION } from '../global';
 export class PluginStore extends PluginResolver<InstalledPlugin, Daemon, Plugin, EnabledSnapshot> {
   protected readonly part = 'daemon';
   protected readonly version = VERSION;
+  protected override readonly target = TARGET;
   private readonly data: DataDirectory;
 
   constructor(data: DataDirectory) {

@@ -31,6 +31,12 @@ Write them once, in the root `package.json`: `build` adds the ones it finds ther
 written in `manifest.json` wins over `package.json`'s. The URLs are plain `http` or `https` URLs, so npm's object form
 of `repository` is not accepted: `build` fails on a malformed manifest.
 
+A daemon part with native code lists the platforms it runs on in `daemon.targets`, e.g.
+`["darwin-arm64", "linux-x64"]`, and ships one bundle per target. A target is Node's `process.platform` and
+`process.arch` joined by a hyphen, one of `darwin-arm64`, `darwin-x64`, `linux-arm64`, `linux-arm64-musl`, `linux-x64`,
+`linux-x64-musl`, `win32-arm64` and `win32-x64`, each listed once; a Linux target is for glibc, or for musl with the
+`-musl` suffix. Without `targets`, the daemon part is one bundle that runs on any platform.
+
 See [`Manifest`](../../packages/plugin/src/manifest.ts) in `@elsewise/plugin` for a detailed description.
 
 ## Frontend
@@ -76,6 +82,12 @@ Elsewise provides several modules, e.g. React, listed in [`PEER_MODULES`](../../
 that a plugin's frontend can reuse. If you require those modules in your frontend part, declare them as
 `peerDependencies`. Do **NOT** declare them as `dependencies` as that installs a copy of its own, which may cause
 runtime issues.
+
+The daemon part's `main.js` holds only its own code. A package it imports at runtime goes in the `dependencies` of
+`daemon/package.json`, or its `optionalDependencies` when it only installs on some platforms: `build` leaves it as an
+import and links `daemon/node_modules` to `dist/daemon/node_modules`, so the build runs on this machine.
+`devDependencies` are for building only. If a dependency has native code, e.g. `@parcel/watcher`, list the platforms
+the part runs on in `daemon.targets`.
 
 ### Existing pnpm workspace
 

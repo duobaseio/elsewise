@@ -1,5 +1,6 @@
 export {
   DaemonManifestPart,
+  DaemonTarget,
   type Disposable,
   FrontendManifestPart,
   Manifest,

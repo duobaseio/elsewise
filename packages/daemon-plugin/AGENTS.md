@@ -7,6 +7,10 @@ Run pnpm from the **repo root**: `pnpm --filter @elsewise/daemon-plugin <script>
 
 This is a **source package**: `exports` points straight at `src/` and there is no build step.
 
+`src/build.ts`, exported as `@elsewise/daemon-plugin/build`, is for a plugin's build rather than its runtime:
+`linkNodeModules` is a Vite plugin that links a daemon part's `node_modules` into the output folder, for the bundle to
+find its dependencies.
+
 ## Rules
 
 - **`@elsewise/plugin` is the only dependency.**
