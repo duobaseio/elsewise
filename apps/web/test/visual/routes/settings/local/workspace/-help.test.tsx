@@ -2,13 +2,13 @@ import type { ReactNode } from 'react';
 import { expect, test } from 'vitest';
 import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-react';
-import { FolderPrefixHelp, TabTooltipsHelp } from '@/routes/settings/local/workspace/-help';
+import { TabTooltipsHelp, UniqueTabNamesHelp } from '@/routes/settings/local/workspace/-help';
 
 import { THEMES } from '../../../../../sheet';
 
 const HELPS: Record<string, ReactNode> = {
-  'folder-prefix-help': <FolderPrefixHelp enabled />,
-  'folder-prefix-help-disabled': <FolderPrefixHelp enabled={false} />,
+  'unique-tab-names-help': <UniqueTabNamesHelp enabled />,
+  'unique-tab-names-help-disabled': <UniqueTabNamesHelp enabled={false} />,
   'tab-tooltips-help': <TabTooltipsHelp enabled />,
   'tab-tooltips-help-disabled': <TabTooltipsHelp enabled={false} />,
 };

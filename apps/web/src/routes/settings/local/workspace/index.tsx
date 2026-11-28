@@ -1,15 +1,21 @@
+import { Input } from '@elsewise/components/components/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@elsewise/components/components/select';
 import { Separator } from '@elsewise/components/components/separator';
 import { Page, Row } from '@elsewise/components/components/settings';
 import { Switch } from '@elsewise/components/components/switch';
 import type { CloseActivation, FrontendSettings, SettingsSearchTerm } from '@elsewise/frontend-plugin';
 import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
 import { useSettings, useUpdateSettingsSection } from '@/settings/settings';
-import { FolderPrefixHelp, TabTooltipsHelp } from './-help';
+import { TabTooltipsHelp, UniqueTabNamesHelp } from './-help';
 
 export const Route = createFileRoute('/settings/local/workspace/')({ component: Workspace });
 
 export const WORKSPACE_TERMS = {
+  defaultBranchPrefix: {
+    label: 'Default branch prefix',
+    keywords: ['branch', 'prefix', 'git', 'worktree', 'new', 'name'],
+  },
   closeActivation: {
     label: 'Tab after close',
     keywords: ['close', 'tab', 'neighbour', 'left', 'right', 'recent', 'activate', 'focus'],
@@ -18,12 +24,12 @@ export const WORKSPACE_TERMS = {
     label: 'Tab tooltips',
     keywords: ['tooltip', 'hover', 'tab', 'path', 'name', 'hint'],
   },
-  folderPrefix: {
-    label: 'Folder prefix',
-    keywords: ['folder', 'directory', 'path', 'tab', 'name', 'same', 'duplicate', 'unique'],
+  uniqueTabNames: {
+    label: 'Unique tab names',
+    keywords: ['folder', 'directory', 'path', 'tab', 'name', 'same', 'duplicate', 'prefix'],
   },
-  markModifiedTabs: {
-    label: 'Mark modified tabs',
+  unsavedBadges: {
+    label: 'Unsaved badges',
     keywords: ['unsaved', 'dirty', 'dot', 'tab', 'changes', 'indicator'],
   },
 } as const satisfies Record<keyof FrontendSettings['workspace'], SettingsSearchTerm>;
@@ -37,9 +43,35 @@ const CLOSE_ACTIVATIONS: Record<CloseActivation, string> = {
 export function Workspace() {
   const workspace = useSettings((settings) => settings.workspace);
   const set = useUpdateSettingsSection('workspace');
+  const [defaultBranchPrefix, setDefaultBranchPrefix] = useState(workspace.defaultBranchPrefix);
+  const [savedBranchPrefix, setSavedBranchPrefix] = useState(workspace.defaultBranchPrefix);
+  if (savedBranchPrefix !== workspace.defaultBranchPrefix) {
+    setSavedBranchPrefix(workspace.defaultBranchPrefix);
+    setDefaultBranchPrefix(workspace.defaultBranchPrefix);
+  }
 
   return (
     <Page title="Workspace">
+      <Row
+        id="defaultBranchPrefix"
+        label={WORKSPACE_TERMS.defaultBranchPrefix.label}
+        description="The default branch prefix for new workspaces."
+      >
+        <Input
+          aria-label={WORKSPACE_TERMS.defaultBranchPrefix.label}
+          className="h-7 w-40 rounded-[min(var(--radius-md),12px)] text-sm"
+          onChange={(event) => {
+            setDefaultBranchPrefix(event.target.value);
+            set({ defaultBranchPrefix: event.target.value });
+          }}
+          placeholder="None"
+          spellCheck={false}
+          value={defaultBranchPrefix}
+        />
+      </Row>
+
+      <Separator />
+
       <Row
         id="closeActivation"
         label={WORKSPACE_TERMS.closeActivation.label}
@@ -83,27 +115,27 @@ export function Workspace() {
       <Separator />
 
       <Row
-        id="folderPrefix"
-        label={WORKSPACE_TERMS.folderPrefix.label}
-        description="Prefix file tabs that share a name."
-        help={<FolderPrefixHelp enabled={workspace.folderPrefix} />}
+        id="uniqueTabNames"
+        label={WORKSPACE_TERMS.uniqueTabNames.label}
+        description="Distinguish file tabs that share a name by their folders."
+        help={<UniqueTabNamesHelp enabled={workspace.uniqueTabNames} />}
       >
         <Switch
-          aria-label={WORKSPACE_TERMS.folderPrefix.label}
-          checked={workspace.folderPrefix}
-          onCheckedChange={(folderPrefix) => set({ folderPrefix })}
+          aria-label={WORKSPACE_TERMS.uniqueTabNames.label}
+          checked={workspace.uniqueTabNames}
+          onCheckedChange={(uniqueTabNames) => set({ uniqueTabNames })}
         />
       </Row>
 
       <Row
-        id="markModifiedTabs"
-        label={WORKSPACE_TERMS.markModifiedTabs.label}
-        description="Mark file tabs with unsaved changes."
+        id="unsavedBadges"
+        label={WORKSPACE_TERMS.unsavedBadges.label}
+        description="Indicate unsaved file tabs with a badge."
       >
         <Switch
-          aria-label={WORKSPACE_TERMS.markModifiedTabs.label}
-          checked={workspace.markModifiedTabs}
-          onCheckedChange={(markModifiedTabs) => set({ markModifiedTabs })}
+          aria-label={WORKSPACE_TERMS.unsavedBadges.label}
+          checked={workspace.unsavedBadges}
+          onCheckedChange={(unsavedBadges) => set({ unsavedBadges })}
         />
       </Row>
     </Page>

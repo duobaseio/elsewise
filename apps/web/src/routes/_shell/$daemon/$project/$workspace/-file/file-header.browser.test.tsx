@@ -38,7 +38,7 @@ async function mount(marker = true) {
   });
   const application = builtInApplication({ router });
   const frontend = application.settings.frontend;
-  application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, markModifiedTabs: marker } };
+  application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, unsavedBadges: marker } };
   await render(
     <ApplicationManagerContext value={application}>
       <RouterProvider router={router} />
@@ -131,7 +131,7 @@ describe('FileHeader', () => {
     open().document = () => '';
     const frontend = application.settings.frontend;
 
-    application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, markModifiedTabs: true } };
+    application.settings.frontend = { ...frontend, workspace: { ...frontend.workspace, unsavedBadges: true } };
 
     await expect.poll(marked).toBe(true);
   });

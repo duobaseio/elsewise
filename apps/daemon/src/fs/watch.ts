@@ -3,7 +3,7 @@ import path from 'node:path';
 import { Code, TransportError } from '@elsewise/transport';
 import type { DirectoryWatcher } from '../directory-watcher';
 import { errnoOf } from './error';
-import { parseProtocolPath, toNativeAbsolutePath } from './path';
+import { parseProtocolPath, relativeTo, toNativeAbsolutePath } from './path';
 
 /**
  * A watched path's state.
@@ -84,6 +84,13 @@ interface Tracked {
   absoluteNativePath: string;
 
   /**
+   * The relative protocol path the entry last resolved to through symbolic links, if it lies in the root.
+   *
+   * Changes are notified by this path.
+   */
+  realRelativeProtocolPath?: string;
+
+  /**
    * The entry's `stat` when its state was last read (e.g. `dev:ino:size:mtimeNs:ctimeNs` or `!<errno>`).
    */
   stat?: string;
@@ -133,6 +140,7 @@ class Session<S> {
   readonly #options: WatchOptions<S>;
   readonly #tracked = new Map<string, Tracked>(); // Relative protocol path -> Tracked
   #nativeRoot: string | undefined;
+  #realNativeRoot: Promise<string> | undefined;
 
   #watch: { ready: Promise<void>; close(): void } | undefined;
   #pollTimer: NodeJS.Timeout | undefined;
@@ -212,9 +220,11 @@ class Session<S> {
   #applyRequest(request: WatchRequest): void {
     let nativeRoot = this.#nativeRoot;
     if (nativeRoot === undefined) {
-      nativeRoot = toNativeAbsolutePath(request.root);
-      this.#nativeRoot = nativeRoot;
-      this.#watch = this.#options.watcher.watch(nativeRoot, (relativeProtocolPaths) =>
+      const root = toNativeAbsolutePath(request.root);
+      nativeRoot = root;
+      this.#nativeRoot = root;
+      this.#realNativeRoot = fs.realpath(root).catch(() => root);
+      this.#watch = this.#options.watcher.watch(root, (relativeProtocolPaths) =>
         this.#onNotified(relativeProtocolPaths),
       );
       this.#pollTimer = setInterval(() => this.#pollAll(), this.#options.pollIntervalMs);
@@ -249,9 +259,11 @@ class Session<S> {
   #onNotified(relativeProtocolPaths: string[]): void {
     const exact = new Set(relativeProtocolPaths);
     const parents = new Set(this.#options.includesChildren ? relativeProtocolPaths.map(parentOf) : []);
-    for (const relativeProtocolPath of this.#tracked.keys()) {
-      if (parents.has(relativeProtocolPath) || isAtOrBelow(relativeProtocolPath, exact)) {
-        this.#debounceBuffer.add(relativeProtocolPath);
+    for (const [relativeProtocolPath, { realRelativeProtocolPath }] of this.#tracked) {
+      for (const candidate of [relativeProtocolPath, realRelativeProtocolPath]) {
+        if (candidate !== undefined && (parents.has(candidate) || isAtOrBelow(candidate, exact))) {
+          this.#debounceBuffer.add(relativeProtocolPath);
+        }
       }
     }
     if (this.#debounceBuffer.size > 0) {
@@ -296,6 +308,11 @@ class Session<S> {
         tracked.stale = false;
         const stat = await statOf(tracked.absoluteNativePath);
         if (innerForce || stat !== tracked.stat) {
+          const realNativeRoot = await this.#realNativeRoot;
+          const realNativePath = await fs.realpath(tracked.absoluteNativePath).catch(() => undefined);
+          if (realNativeRoot !== undefined && realNativePath !== undefined) {
+            [tracked.realRelativeProtocolPath] = relativeTo(realNativeRoot, realNativePath);
+          }
           const snapshot = await this.#options.snapshot(tracked.absoluteNativePath);
 
           // Ensures that `tracked` isn't changed by `#applyRequest()` or `end()`.

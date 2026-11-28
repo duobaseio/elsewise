@@ -1,3 +1,4 @@
+export { kebabCase } from './name';
 export type { Part, Unsatisfied } from './plugins/graph';
 export { InstalledPlugin, InvalidPlugin, PluginEntry } from './plugins/plugin';
 export {

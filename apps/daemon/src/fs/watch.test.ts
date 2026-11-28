@@ -233,6 +233,51 @@ test('reads a path on the poll only once it changes without a notification', asy
   await vi.waitFor(() => expect(stream.seen.at(-1)).toEqual({ relativePath: 'a.txt', state: 'BB' }));
 });
 
+test('reads a link when its target is notified', async () => {
+  await fs.mkdir(at('dir'));
+  await fs.writeFile(at('dir', 'a.txt'), 'A');
+  await fs.symlink(path.join('dir', 'a.txt'), at('link.txt'));
+  const stream = start();
+  stream.requests.push({ root, relativePaths: ['link.txt'] });
+  await vi.waitFor(() => expect(stream.seen).toHaveLength(1));
+
+  await fs.writeFile(at('dir', 'a.txt'), 'B');
+  stream.notify(['dir/a.txt']);
+
+  await vi.waitFor(() => expect(stream.seen.at(-1)).toEqual({ relativePath: 'link.txt', state: 'B' }));
+});
+
+test('reads a link when its deleted target is created again', async () => {
+  await fs.mkdir(at('dir'));
+  await fs.writeFile(at('dir', 'a.txt'), 'A');
+  await fs.symlink(path.join('dir', 'a.txt'), at('link.txt'));
+  const stream = start();
+  stream.requests.push({ root, relativePaths: ['link.txt'] });
+  await vi.waitFor(() => expect(stream.seen).toHaveLength(1));
+  await fs.rm(at('dir', 'a.txt'));
+  stream.notify(['dir/a.txt']);
+  await vi.waitFor(() => expect(stream.seen.at(-1)).toEqual({ relativePath: 'link.txt', state: 'missing' }));
+  await settleDebounce();
+
+  await fs.writeFile(at('dir', 'a.txt'), 'B');
+  stream.notify(['dir/a.txt']);
+
+  await vi.waitFor(() => expect(stream.seen.at(-1)).toEqual({ relativePath: 'link.txt', state: 'B' }));
+});
+
+test('resolves a path on the poll only once it changes', async () => {
+  await fs.writeFile(at('a.txt'), 'A');
+  const realpath = vi.spyOn(fs, 'realpath');
+  const stream = start({ pollIntervalMs: 20 });
+  stream.requests.push({ root, relativePaths: ['a.txt'] });
+  await vi.waitFor(() => expect(stream.seen).toHaveLength(1));
+
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  expect(realpath.mock.calls.filter(([target]) => target === at('a.txt'))).toHaveLength(1);
+  realpath.mockRestore();
+});
+
 test('drops a path a later request leaves out, even while it is being read', async () => {
   const stream = start();
   let finish: (() => void) | undefined;

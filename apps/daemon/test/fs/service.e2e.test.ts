@@ -190,6 +190,28 @@ describe('WatchFiles', () => {
     call.cancel();
   });
 
+  test.runIf(posix).each([
+    ['link.txt', 'dir/a.txt'],
+    ['dir/a.txt', 'link.txt'],
+    ['other/link.txt', 'link.txt'],
+  ])('reports a file written through %s at %s', async (written, other) => {
+    await fs.mkdir(harness.nativeAt('dir'));
+    await fs.mkdir(harness.nativeAt('other'));
+    await fs.writeFile(harness.nativeAt('dir', 'a.txt'), 'one');
+    await fs.symlink(path.join('dir', 'a.txt'), harness.nativeAt('link.txt'));
+    await fs.symlink(path.join('..', 'dir', 'a.txt'), harness.nativeAt('other', 'link.txt'));
+    const call = harness.client.watchFiles();
+    const { seen } = collect(call.responses);
+    await call.send({ root, relativePaths: ['dir/a.txt', 'link.txt', 'other/link.txt'] });
+    await expect.poll(() => fileHash(seen, other)).toEqual(sha256('one'));
+
+    const content = new TextEncoder().encode('two');
+    await harness.client.writeFile({ root, relativePath: written, content, overwrite: true });
+
+    await expect.poll(() => fileHash(seen, other)).toEqual(sha256('two'));
+    call.cancel();
+  });
+
   test('reports a file whose directory was changed', async () => {
     await fs.mkdir(harness.nativeAt('src'));
     await fs.writeFile(harness.nativeAt('src', 'a.ts'), '');

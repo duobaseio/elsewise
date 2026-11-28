@@ -19,7 +19,7 @@ const CODE = ['alpha', 'BETA', 'gamma', 'epsilon'].join('\n');
 
 // Renders a `SplitLayout` with `props` in the app's contexts, and returns its sides' views and a way to render it
 // again.
-async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManager()) {
+async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManager(), height = 200) {
   const client = new QueryClient();
   client.setQueryData(settingsQuery.queryKey, DEFAULT_FRONTEND_SETTINGS);
   const application = builtInApplication({ editor });
@@ -32,7 +32,7 @@ async function mount(props: Partial<SplitLayoutProps>, editor = new EditorManage
       <PluginStoreContext value={new PluginStore()}>
         <ApplicationManagerContext value={application}>
           <LanguageServersContext value={servers}>
-            <div style={{ height: 200 }}>
+            <div style={{ height }}>
               <SplitLayout
                 relativePath="main.txt"
                 base={{ source: { type: 'blob' }, code: BASE }}
@@ -200,6 +200,14 @@ describe('SplitLayout', () => {
     await expect.poll(() => changedLines(target())).toBe(1);
 
     expect([...reverts(base()), ...reverts(target())]).toEqual([]);
+  });
+
+  test('fills height past short files', async () => {
+    const { base, target } = await mount({ header: () => <div style={{ height: 30 }} /> }, undefined, 600);
+
+    const bottom = base().dom.closest('.cm-mergeView')?.getBoundingClientRect().bottom;
+    expect(base().scrollDOM.getBoundingClientRect().bottom).toBe(bottom);
+    expect(target().scrollDOM.getBoundingClientRect().bottom).toBe(bottom);
   });
 
   test('scrolls sides together', async () => {
